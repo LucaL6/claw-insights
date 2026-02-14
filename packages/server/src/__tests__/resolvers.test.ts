@@ -1,0 +1,130 @@
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
+
+let proc: ReturnType<typeof Bun.spawn>;
+const GQL = (query: string, variables?: Record<string, unknown>) =>
+  fetch('http://127.0.0.1:4000/graphql', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+  }).then((r) => r.json());
+
+beforeAll(async () => {
+  proc = Bun.spawn(['bun', 'run', 'src/index.ts'], {
+    cwd: import.meta.dir + '/../..',
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  for (let i = 0; i < 30; i++) {
+    try {
+      await GQL('{ gateway { running } }');
+      break;
+    } catch {
+      await Bun.sleep(200);
+    }
+  }
+});
+
+afterAll(() => proc?.kill());
+
+describe('GraphQL Resolvers', () => {
+  // F1.1 Gateway status
+  it('F1.1: gateway query returns running status', async () => {
+    const d = (await GQL('{ gateway { running pid version uptime } }')) as { data: { gateway: Record<string, unknown> } };
+    expect(typeof d.data.gateway.running).toBe('boolean');
+    expect(typeof d.data.gateway.version).toBe('string');
+  });
+
+  // F1.3 System resources
+  it('F1.3: resources query returns CPU/MEM/DISK', async () => {
+    const d = (await GQL('{ resources { cpu memoryMB diskMB sampledAt } }')) as { data: { resources: Record<string, unknown> } };
+    expect(typeof d.data.resources.cpu).toBe('number');
+    expect(typeof d.data.resources.memoryMB).toBe('number');
+    expect(typeof d.data.resources.diskMB).toBe('number');
+    expect(d.data.resources.diskMB).toBeGreaterThan(0);
+  });
+
+  // F1.2 Channels
+  it('F1.2: channels query returns array', async () => {
+    const d = (await GQL('{ channels { name connected } }')) as { data: { channels: unknown[] } };
+    expect(Array.isArray(d.data.channels)).toBe(true);
+  });
+
+  // F2.1 Sessions
+  it('F2.1: sessions query returns list with required fields', async () => {
+    const d = (await GQL(`{
+      sessions { key displayName kind model channel totalTokens contextTokens usagePercent status updatedAt subAgents { key } }
+    }`)) as { data: { sessions: Array<Record<string, unknown>> } };
+    expect(d.data.sessions.length).toBeGreaterThan(0);
+    const s = d.data.sessions[0];
+    expect(typeof s.key).toBe('string');
+    expect(typeof s.usagePercent).toBe('number');
+    expect(Array.isArray(s.subAgents)).toBe(true);
+  });
+
+  // F2.2 Session filter: activeOnly
+  it('F2.2: sessions filter activeOnly', async () => {
+    const all = (await GQL('{ sessions { key status } }')) as { data: { sessions: Array<{ status: string }> } };
+    const active = (await GQL('{ sessions(filter: { activeOnly: true }) { key status } }')) as {
+      data: { sessions: Array<{ status: string }> };
+    };
+    expect(active.data.sessions.length).toBeLessThanOrEqual(all.data.sessions.length);
+    for (const s of active.data.sessions) {
+      expect(s.status).toBe('ACTIVE');
+    }
+  });
+
+  // F2.2 Session sort by tokens
+  it('F2.2: sessions sort by TOKENS_DESC', async () => {
+    const d = (await GQL('{ sessions(filter: { sortBy: TOKENS_DESC }) { totalTokens } }')) as {
+      data: { sessions: Array<{ totalTokens: number }> };
+    };
+    for (let i = 1; i < d.data.sessions.length; i++) {
+      expect(d.data.sessions[i - 1].totalTokens).toBeGreaterThanOrEqual(d.data.sessions[i].totalTokens);
+    }
+  });
+
+  // F3 Metrics
+  it('F3: metrics query returns 24 hours', async () => {
+    const d = (await GQL(
+      '{ metrics { date hours { hour sessions tokensK errors warnings gatewayUp restartEvent } totalErrors uptimePercent } }',
+    )) as { data: { metrics: { hours: unknown[]; date: string } } };
+    expect(d.data.metrics.hours.length).toBe(24);
+    expect(d.data.metrics.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  // F3 Metrics with date param
+  it('F3: metrics query accepts date parameter', async () => {
+    const d = (await GQL('{ metrics(date: "2026-02-14") { date totalErrors } }')) as {
+      data: { metrics: { date: string } };
+    };
+    expect(d.data.metrics.date).toBe('2026-02-14');
+  });
+
+  // Cron jobs
+  it('cronJobs query returns list', async () => {
+    const d = (await GQL('{ cronJobs { id name enabled schedule } }')) as { data: { cronJobs: unknown[] } };
+    expect(Array.isArray(d.data.cronJobs)).toBe(true);
+  });
+
+  // F5 Mutations
+  it('F5.1: restartGateway mutation returns OperationResult', async () => {
+    const d = (await GQL('mutation { restartGateway { success message } }')) as {
+      data: { restartGateway: { success: boolean } };
+    };
+    expect(typeof d.data.restartGateway.success).toBe('boolean');
+  });
+
+  it('F5.2: runDoctor mutation returns OperationResult', async () => {
+    const d = (await GQL('mutation { runDoctor(options: { channelCheck: true }) { success message } }')) as {
+      data: { runDoctor: { success: boolean } };
+    };
+    expect(typeof d.data.runDoctor.success).toBe('boolean');
+  });
+
+  it('F5.3: updateGateway mutation returns OperationResult', async () => {
+    const d = (await GQL('mutation { updateGateway { success message } }')) as {
+      data: { updateGateway: { success: boolean } };
+    };
+    expect(typeof d.data.updateGateway.success).toBe('boolean');
+  });
+});

@@ -1,0 +1,192 @@
+# ═══════════════════════════════════════════════════
+# OpenClaw Dashboard — GraphQL Schema (MVP)
+# ═══════════════════════════════════════════════════
+
+# ── Enums ──
+
+enum SessionStatus {
+  ACTIVE
+  IDLE
+  DONE
+  FAILED
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}
+
+enum ChannelProvider {
+  telegram
+  slack
+  discord
+  webchat
+  signal
+  whatsapp
+}
+
+# ── Gateway ──
+
+"""Gateway 进程状态"""
+type GatewayStatus {
+  running: Boolean!
+  pid: Int
+  version: String!
+  updateAvailable: String
+  uptime: String!
+  startedAt: String
+}
+
+"""系统资源使用"""
+type SystemResources {
+  cpu: Float!
+  memoryMB: Int!
+  diskMB: Int!
+  sampledAt: String!
+}
+
+"""Channel 连通性"""
+type Channel {
+  provider: ChannelProvider!
+  name: String!
+  connected: Boolean!
+  latencyMs: Int
+}
+
+# ── Sessions ──
+
+type Session {
+  key: String!
+  displayName: String!
+  kind: String!
+  model: String!
+  channel: String
+  totalTokens: Int!
+  contextTokens: Int!
+  usagePercent: Float!
+  status: SessionStatus!
+  updatedAt: Float!
+  subAgents: [SubAgent!]!
+}
+
+type SubAgent {
+  key: String!
+  label: String!
+  status: SessionStatus!
+  totalTokens: Int!
+  updatedAt: Float!
+}
+
+input SessionFilter {
+  activeOnly: Boolean
+  grouped: Boolean
+  sortBy: SessionSortBy
+}
+
+enum SessionSortBy {
+  UPDATED_AT
+  TOKENS_DESC
+  NAME
+}
+
+# ── Logs ──
+
+type LogEntry {
+  time: String!
+  level: LogLevel!
+  module: String!
+  message: String!
+}
+
+type LogBatch {
+  entries: [LogEntry!]!
+  counts: LogCounts!
+}
+
+type LogCounts {
+  debug: Int!
+  info: Int!
+  warn: Int!
+  error: Int!
+}
+
+input LogFilter {
+  level: LogLevel
+  module: String
+}
+
+# ── Metrics ──
+
+type HourlyMetrics {
+  hour: Int!
+  sessions: Int!
+  tokensK: Float!
+  apiCalls: Int!
+  toolCalls: Int!
+  errors: Int!
+  warnings: Int!
+  gatewayUp: Boolean!
+  restartEvent: Boolean!
+}
+
+type MetricsSummary {
+  date: String!
+  hours: [HourlyMetrics!]!
+  totalTokensK: Float!
+  totalErrors: Int!
+  totalWarnings: Int!
+  uptimePercent: Float!
+}
+
+# ── Cron ──
+
+type CronJob {
+  id: String!
+  name: String
+  enabled: Boolean!
+  schedule: String!
+  lastRunAt: String
+  lastRunSuccess: Boolean
+  nextRunAt: String
+}
+
+# ── Operations ──
+
+type OperationResult {
+  success: Boolean!
+  message: String
+  output: String
+  duration: Int
+}
+
+input DoctorOptions {
+  channelCheck: Boolean
+  securityAudit: Boolean
+  deepProbe: Boolean
+  autoFix: Boolean
+}
+
+# ── Root Types ──
+
+type Query {
+  gateway: GatewayStatus!
+  resources: SystemResources!
+  channels: [Channel!]!
+  sessions(filter: SessionFilter): [Session!]!
+  metrics(date: String): MetricsSummary!
+  cronJobs: [CronJob!]!
+}
+
+type Subscription {
+  logs(filter: LogFilter): LogBatch!
+  sessionChanged: Session!
+  gatewayHealth: GatewayStatus!
+}
+
+type Mutation {
+  restartGateway: OperationResult!
+  runDoctor(options: DoctorOptions!): OperationResult!
+  updateGateway: OperationResult!
+}

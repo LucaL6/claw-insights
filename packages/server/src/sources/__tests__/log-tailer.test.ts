@@ -1,0 +1,114 @@
+import { describe, it, expect } from 'bun:test';
+import { parseLogLine, redact, LogTailer } from '../log-tailer';
+import { writeFileSync, mkdirSync, rmSync, appendFileSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+
+describe('LogTailer', () => {
+  describe('parseLogLine', () => {
+    it('should parse a standard log line', () => {
+      const line = JSON.stringify({
+        '0': '[tools] exec completed: ls',
+        _meta: { logLevelName: 'INFO', path: { filePath: '/dist/exec.js' } },
+        time: '2026-02-15T14:05:04.615Z',
+      });
+      const entry = parseLogLine(line);
+      expect(entry).not.toBeNull();
+      expect(entry!.level).toBe('INFO');
+      expect(entry!.module).toBe('tools');
+      expect(entry!.message).toBe('exec completed: ls');
+      expect(entry!.time).toBe('14:05:04.615');
+    });
+
+    it('should parse ERROR level', () => {
+      const line = JSON.stringify({
+        '0': '[tools] exec failed: timeout',
+        _meta: { logLevelName: 'ERROR', path: {} },
+        time: '2026-02-15T14:05:04.615Z',
+      });
+      const entry = parseLogLine(line);
+      expect(entry!.level).toBe('ERROR');
+    });
+
+    it('should infer module from file path when no bracket tag', () => {
+      const line = JSON.stringify({
+        '0': 'some message without tag',
+        _meta: { logLevelName: 'INFO', path: { filePath: '/dist/cron-handler.js' } },
+        time: '2026-02-15T14:05:04.615Z',
+      });
+      const entry = parseLogLine(line);
+      expect(entry!.module).toBe('cron');
+    });
+
+    it('should handle malformed JSON gracefully', () => {
+      expect(parseLogLine('not json')).toBeNull();
+      expect(parseLogLine('')).toBeNull();
+    });
+  });
+
+  describe('redact', () => {
+    it('should redact tokens', () => {
+      expect(redact('token=abc123def')).toBe('token= ***');
+      expect(redact('Authorization: Bearer xyz')).toBe('Authorization: ***');
+    });
+
+    it('should redact API keys', () => {
+      expect(redact('api_key=sk-12345')).toBe('api_key= ***');
+    });
+
+    it('should leave safe messages alone', () => {
+      expect(redact('run completed successfully')).toBe('run completed successfully');
+    });
+  });
+});
+
+describe('LogTailer integration', () => {
+  it('should emit log events when file is appended', async () => {
+    const dir = join(tmpdir(), `logtail-${Date.now()}/`);
+    mkdirSync(dir, { recursive: true });
+    const d = new Date();
+    const fname = `openclaw-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.log`;
+    const fpath = join(dir, fname);
+    writeFileSync(fpath, ''); // empty initial
+
+    const tailer = new LogTailer(dir);
+    const received: Array<{ level: string; message: string }> = [];
+    tailer.on('log', (e: { level: string; message: string }) => received.push(e));
+
+    // Append a log line
+    const line = JSON.stringify({
+      '0': '[tools] exec completed',
+      _meta: { logLevelName: 'INFO', path: {} },
+      time: new Date().toISOString(),
+    });
+    appendFileSync(fpath, line + '\n');
+
+    // Wait for fs.watch to fire
+    await Bun.sleep(500);
+    expect(received.length).toBeGreaterThanOrEqual(1);
+    expect(received[0].message).toContain('exec completed');
+
+    tailer.destroy();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('should handle empty/corrupt lines gracefully', async () => {
+    const dir = join(tmpdir(), `logtail-corrupt-${Date.now()}/`);
+    mkdirSync(dir, { recursive: true });
+    const d = new Date();
+    const fname = `openclaw-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.log`;
+    const fpath = join(dir, fname);
+    writeFileSync(fpath, '');
+
+    const tailer = new LogTailer(dir);
+    const received: unknown[] = [];
+    tailer.on('log', (e: unknown) => received.push(e));
+
+    appendFileSync(fpath, 'not json at all\n{"broken\n');
+    await Bun.sleep(500);
+    expect(received.length).toBe(0); // Both lines should be silently skipped
+
+    tailer.destroy();
+    rmSync(dir, { recursive: true, force: true });
+  });
+});

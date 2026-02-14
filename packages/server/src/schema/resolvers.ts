@@ -1,0 +1,93 @@
+import { Repeater } from 'graphql-yoga';
+import { SessionReader } from '../sources/session-reader.js';
+import { CronReader } from '../sources/cron-reader.js';
+import { SystemMetrics } from '../sources/system-metrics.js';
+import { LogTailer } from '../sources/log-tailer.js';
+import { SpawnTracker } from '../sources/spawn-tracker.js';
+import { initDatabase } from '../db/init.js';
+import { Aggregator } from '../sources/aggregator.js';
+import { getGatewayStatus } from '../sources/gateway-cli.js';
+
+const sessionReader = new SessionReader();
+const cronReader = new CronReader();
+const systemMetrics = new SystemMetrics();
+const logTailer = new LogTailer();
+const spawnTracker = new SpawnTracker();
+const db = initDatabase();
+const aggregator = new Aggregator(db);
+
+logTailer.on('log', (entry) => {
+  aggregator.ingestLog(entry);
+  spawnTracker.ingest(entry);
+});
+
+function gatewayShape() {
+  const status = getGatewayStatus();
+  return {
+    running: status.running,
+    pid: status.pid,
+    version: status.version,
+    updateAvailable: status.updateAvailable,
+    uptime: status.uptime,
+    startedAt: status.startedAt,
+  };
+}
+
+export const resolvers = {
+  Query: {
+    gateway: () => gatewayShape(),
+    resources: () => systemMetrics.getMetrics(),
+    channels: () => {
+      const status = getGatewayStatus();
+      return status.channels;
+    },
+    sessions: (_: unknown, args: { filter?: { activeOnly?: boolean; sortBy?: string } }) => {
+      sessionReader.attachSubAgents(spawnTracker.getParentChildMap());
+      return sessionReader.getSessions(args.filter ?? undefined);
+    },
+    metrics: (_: unknown, args: { date?: string }) => aggregator.getMetrics(args.date),
+    cronJobs: () => cronReader.getJobs(),
+  },
+
+  Subscription: {
+    logs: {
+      subscribe: (_: unknown, args: { filter?: { level?: string; module?: string } }) =>
+        new Repeater(async (push, stop) => {
+          const handler = (e: { level: string; module: string; time: string; message: string }) => {
+            if (args.filter?.level) {
+              const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+              if (levels.indexOf(e.level) < levels.indexOf(args.filter.level)) return;
+            }
+            if (args.filter?.module && e.module !== args.filter.module) return;
+            push({ logs: { entries: [e], counts: { debug: 0, info: 0, warn: 0, error: 0 } } });
+          };
+          logTailer.on('log', handler);
+          stop.then(() => logTailer.off('log', handler));
+        }),
+    },
+    sessionChanged: {
+      subscribe: () =>
+        new Repeater(async (push, stop) => {
+          const onChange = () => {
+            const s = sessionReader.getSessions();
+            if (s[0]) push({ sessionChanged: s[0] });
+          };
+          sessionReader.onChange(onChange);
+          stop.then(() => {});
+        }),
+    },
+    gatewayHealth: {
+      subscribe: () =>
+        new Repeater(async (push, stop) => {
+          const interval = setInterval(() => push({ gatewayHealth: gatewayShape() }), 10000);
+          stop.then(() => clearInterval(interval));
+        }),
+    },
+  },
+
+  Mutation: {
+    restartGateway: () => ({ success: true, message: 'Not implemented yet', output: '', duration: 0 }),
+    runDoctor: () => ({ success: true, message: 'Not implemented yet', output: '', duration: 0 }),
+    updateGateway: () => ({ success: true, message: 'Not implemented yet', output: '', duration: 0 }),
+  },
+};

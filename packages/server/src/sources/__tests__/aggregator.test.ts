@@ -1,0 +1,114 @@
+import { describe, it, expect } from 'bun:test';
+import { initDatabase } from '../../db/init';
+import { Aggregator } from '../aggregator';
+import { rmSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+
+function setup() {
+  const dbPath = join(tmpdir(), `agg-${Date.now()}-${Math.random()}.db`);
+  const db = initDatabase(dbPath);
+  const agg = new Aggregator(db);
+  return {
+    db,
+    agg,
+    dbPath,
+    cleanup: () => {
+      db.close();
+      rmSync(dbPath, { force: true });
+      rmSync(dbPath + '-wal', { force: true });
+      rmSync(dbPath + '-shm', { force: true });
+    },
+  };
+}
+
+describe('Aggregator', () => {
+  it('should ingest logs and produce metrics summary', () => {
+    const { agg, cleanup } = setup();
+
+    agg.ingestLog({ time: '10:00:00.000', level: 'ERROR', module: 'tools', message: 'exec failed' });
+    agg.ingestLog({ time: '10:00:01.000', level: 'WARN', module: 'agent/embedded', message: 'slow' });
+    agg.ingestLog({ time: '10:00:02.000', level: 'INFO', module: 'tools', message: 'tool start exec' });
+    agg.ingestLog({ time: '10:00:03.000', level: 'INFO', module: 'agent/embedded', message: 'embedded run tool start' });
+
+    const m = agg.getMetrics() as { totalErrors: number; totalWarnings: number; hours: unknown[] };
+    expect(m.totalErrors).toBe(1);
+    expect(m.totalWarnings).toBe(1);
+    expect(m.hours.length).toBe(24);
+
+    cleanup();
+  });
+
+  it('should count tool_call events', () => {
+    const { agg, cleanup } = setup();
+    agg.ingestLog({ time: '10:00:00', level: 'INFO', module: 'tools', message: 'tool start exec' });
+    agg.ingestLog({ time: '10:00:01', level: 'INFO', module: 'tools', message: 'tool start read' });
+    const m = agg.getMetrics() as { hours: Array<{ toolCalls: number }> };
+    const totalToolCalls = m.hours.reduce((s, h) => s + h.toolCalls, 0);
+    expect(totalToolCalls).toBe(2);
+    cleanup();
+  });
+
+  it('should count api_call events (embedded run tool start)', () => {
+    const { agg, cleanup } = setup();
+    agg.ingestLog({ time: '10:00:00', level: 'INFO', module: 'agent/embedded', message: 'embedded run tool start sessions_list' });
+    const m = agg.getMetrics() as { hours: Array<{ apiCalls: number }> };
+    const totalApiCalls = m.hours.reduce((s, h) => s + h.apiCalls, 0);
+    expect(totalApiCalls).toBe(1);
+    cleanup();
+  });
+
+  it('should parse token usage from log message', () => {
+    const { agg, cleanup } = setup();
+    agg.ingestLog({ time: '10:00:00', level: 'INFO', module: 'agent', message: 'run completed totalTokens=51200' });
+    const m = agg.getMetrics() as { totalTokensK: number };
+    expect(m.totalTokensK).toBeGreaterThan(0);
+    cleanup();
+  });
+
+  it('should detect gateway restart events', () => {
+    const { agg, cleanup } = setup();
+    agg.ingestLog({ time: '10:00:00', level: 'INFO', module: 'system', message: 'gateway restart completed' });
+    const m = agg.getMetrics() as { hours: Array<{ restartEvent: boolean }> };
+    const hasRestart = m.hours.some((h) => h.restartEvent);
+    expect(hasRestart).toBe(true);
+    cleanup();
+  });
+
+  it('should cache metrics for 60s', () => {
+    const { agg, cleanup } = setup();
+    agg.ingestLog({ time: '10:00:00', level: 'ERROR', module: 'tools', message: 'fail' });
+    const m1 = agg.getMetrics() as { totalErrors: number };
+    agg.ingestLog({ time: '10:00:01', level: 'ERROR', module: 'tools', message: 'fail again' });
+    const m2 = agg.getMetrics() as { totalErrors: number };
+    // Should be same cached object (1 error, not 2)
+    expect(m1.totalErrors).toBe(m2.totalErrors);
+    cleanup();
+  });
+
+  it('should return empty metrics for future date', () => {
+    const { agg, cleanup } = setup();
+    const m = agg.getMetrics('2099-01-01') as { totalErrors: number; totalTokensK: number; hours: unknown[] };
+    expect(m.totalErrors).toBe(0);
+    expect(m.totalTokensK).toBe(0);
+    expect(m.hours.length).toBe(24);
+    cleanup();
+  });
+
+  it('should separate metrics by date', () => {
+    const { agg, db, cleanup } = setup();
+    // Insert event with an old date timestamp
+    db.prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)').run(
+      '2025-01-01T10:00:00Z',
+      'error',
+      null,
+      '{"module":"test"}',
+    );
+    agg.ingestLog({ time: '10:00:00', level: 'ERROR', module: 'test', message: 'today error' });
+    const today = agg.getMetrics() as { totalErrors: number };
+    const oldDate = agg.getMetrics('2025-01-01') as { totalErrors: number };
+    expect(today.totalErrors).toBe(1);
+    expect(oldDate.totalErrors).toBe(1);
+    cleanup();
+  });
+});

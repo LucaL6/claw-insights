@@ -1,0 +1,10 @@
+{
+  "name": "openclaw-dashboard",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev": "bun run --filter '*' dev",
+    "dev:server": "bun run --filter @openclaw-dashboard/server dev",
+    "dev:web": "bun run --filter @openclaw-dashboard/web dev"
+  }
+}
