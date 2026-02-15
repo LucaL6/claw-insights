@@ -4,11 +4,14 @@ import { SessionsQuery } from '../../graphql/queries';
 import { CollapsibleSection } from '../layout/CollapsibleSection';
 import { SessionGroup } from './SessionGroup';
 
+type ViewMode = 'active' | 'all';
 type SortBy = 'UPDATED_AT' | 'TOKENS_DESC' | 'NAME';
 
 export function SessionPanel() {
-  const [activeOnly, setActiveOnly] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('active');
   const [sortBy, setSortBy] = useState<SortBy>('UPDATED_AT');
+
+  const activeOnly = viewMode === 'active';
 
   const [result] = useQuery({
     query: SessionsQuery,
@@ -18,36 +21,62 @@ export function SessionPanel() {
   });
 
   const sessions = result.data?.sessions ?? [];
-
-  // Compute stats
   const activeCount = sessions.filter((s: { status: string }) => s.status === 'ACTIVE').length;
+
+  const isActive = (v: ViewMode) => viewMode === v;
+  const isSortActive = (s: SortBy) => sortBy === s;
 
   return (
     <CollapsibleSection title="Sessions" badge={`${activeCount} active · ${sessions.length} total`}>
-      {/* Filters */}
-      <div className="flex items-center gap-2 mb-3 text-[10px]">
-        <button
-          onClick={() => setActiveOnly(!activeOnly)}
-          className={`px-2 py-0.5 rounded border ${
-            activeOnly ? 'border-cyan-700 text-cyan-400 bg-cyan-950/30' : 'border-zinc-700 text-zinc-500'
-          }`}
-        >
-          Active Only
-        </button>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortBy)}
-          className="bg-zinc-900 border border-zinc-700 text-zinc-400 rounded px-1.5 py-0.5 text-[10px]"
-        >
-          <option value="UPDATED_AT">Recent</option>
-          <option value="TOKENS_DESC">Tokens ↓</option>
-          <option value="NAME">Name</option>
-        </select>
+      {/* V7 Filter Buttons */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex gap-1">
+          <button
+            onClick={() => setViewMode('active')}
+            className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
+              isActive('active')
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-zinc-800 text-zinc-500 border-zinc-700'
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setViewMode('all')}
+            className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
+              isActive('all')
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-zinc-800 text-zinc-500 border-zinc-700'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setSortBy('NAME')}
+            className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
+              isSortActive('NAME')
+                ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+                : 'bg-zinc-800 text-zinc-500 border-zinc-700'
+            }`}
+          >
+            🌲 Group
+          </button>
+          <button
+            onClick={() => setSortBy(sortBy === 'TOKENS_DESC' ? 'UPDATED_AT' : 'TOKENS_DESC')}
+            className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
+              isSortActive('TOKENS_DESC')
+                ? 'bg-zinc-700 text-zinc-300 border-zinc-600'
+                : 'bg-zinc-800 text-zinc-500 border-zinc-700'
+            }`}
+          >
+            Token ↓
+          </button>
+        </div>
       </div>
 
       {/* Session List */}
       <div className="space-y-2">
-        {sessions.map((s: { key: string; displayName: string; kind: string; model: string; channel: string | null; totalTokens: number; usagePercent: number; status: string; subAgents: Array<{ key: string; label: string; status: string; totalTokens: number; updatedAt: number }> }) => (
+        {sessions.map((s: { key: string; displayName: string; kind: string; model: string; channel: string | null; totalTokens: number; contextTokens: number; usagePercent: number; status: string; updatedAt: number; subAgents: Array<{ key: string; label: string; status: string; totalTokens: number; updatedAt: number }> }) => (
           <SessionGroup key={s.key} session={s} />
         ))}
         {sessions.length === 0 && (

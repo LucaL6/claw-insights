@@ -27,6 +27,10 @@ export interface ParsedStatus {
   uptime: string;
   startedAt: string | null;
   channels: ChannelInfo[];
+  connectLatencyMs: number | null;
+  latestVersion: string | null;
+  securitySummary: { critical: number; warn: number; info: number };
+  sessionDefaults: { model: string; contextTokens: number } | null;
 }
 
 function execCli(args: string): string {
@@ -86,6 +90,11 @@ function parseStatus(json: string): ParsedStatus {
     const latest = update?.latestVersion ?? null;
     const updateAvailable = latest && latest !== version ? latest : null;
 
+    const connectLatencyMs = gw?.connectLatencyMs ?? null;
+    const latestVersion = update?.latestVersion ?? null;
+    const secAudit = d?.securityAudit?.summary ?? { critical: 0, warn: 0, info: 0 };
+    const sessionDefaults = d?.sessions?.defaults ?? null;
+
     return {
       running: Boolean(running),
       pid,
@@ -94,9 +103,17 @@ function parseStatus(json: string): ParsedStatus {
       uptime: 'unknown',
       startedAt: null,
       channels: parseChannels(channelSummary),
+      connectLatencyMs,
+      latestVersion,
+      securitySummary: {
+        critical: secAudit.critical ?? 0,
+        warn: secAudit.warn ?? 0,
+        info: secAudit.info ?? 0,
+      },
+      sessionDefaults,
     };
   } catch {
-    return { running: false, pid: null, version: 'unknown', updateAvailable: null, uptime: 'unknown', startedAt: null, channels: [] };
+    return { running: false, pid: null, version: 'unknown', updateAvailable: null, uptime: 'unknown', startedAt: null, channels: [], connectLatencyMs: null, latestVersion: null, securitySummary: { critical: 0, warn: 0, info: 0 }, sessionDefaults: null };
   }
 }
 

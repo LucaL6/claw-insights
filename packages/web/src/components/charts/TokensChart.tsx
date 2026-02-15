@@ -1,48 +1,51 @@
-import { useCallback } from 'react';
-import { useCanvas } from './useCanvas';
-import { drawYAxis, drawXAxis, PAD } from './chart-utils';
+import { useMemo } from 'react';
+import { BaseChart } from './BaseChart';
+import { CHART_GRID, COLORS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import type { EChartsOption } from 'echarts';
 
 interface HourlyData { hour: number; tokensK: number }
 
 export function TokensChart({ data }: { data: HourlyData[] }) {
-  const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
-    const plotW = w - PAD.left - PAD.right;
-    const plotH = h - PAD.top - PAD.bottom;
+  const currentHour = new Date().getHours();
 
-    // Cumulative
+  const option = useMemo((): EChartsOption => {
     let cum = 0;
-    const cumData = data.map(d => { cum += d.tokensK; return { hour: d.hour, cumK: cum }; });
-    const max = Math.max(1, cum);
-    const stepX = plotW / 24;
+    const cumData = data.map(d => { cum += d.tokensK; return cum; });
 
-    drawYAxis(ctx, PAD.left, h, max, 4, PAD);
-    drawXAxis(ctx, h - PAD.bottom, PAD.left, plotW);
+    return {
+      grid: CHART_GRID,
+      xAxis: {
+        type: 'category',
+        data: hourLabels(currentHour),
+        axisLabel: { interval: 5 },
+      },
+      yAxis: { type: 'value' },
+      tooltip: { trigger: 'axis', formatter: (params: unknown) => {
+        const p = (params as Array<{ name: string; value: number; dataIndex: number }>)[0];
+        const hourly = data[p.dataIndex]?.tokensK ?? 0;
+        return `<b>${p.name}</b><br/>+${hourly}k this hour<br/><b style="color:${COLORS.sky}">${p.value}k</b> cumulative`;
+      }},
+      series: [{
+        type: 'line',
+        data: cumData,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: (value: number, params: { dataIndex: number }) =>
+          params.dataIndex === currentHour ? 6 : 0,
+        lineStyle: { color: COLORS.sky, width: 1.5 },
+        itemStyle: { color: COLORS.sky },
+        areaStyle: {
+          color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(56,189,248,0.2)' },
+              { offset: 1, color: 'rgba(56,189,248,0.02)' },
+            ],
+          },
+        },
+        markArea: futureZoneMarkArea(currentHour) as EChartsOption['series'],
+      }],
+    };
+  }, [data, currentHour]);
 
-    // Area fill
-    ctx.beginPath();
-    ctx.moveTo(PAD.left, PAD.top + plotH);
-    for (const d of cumData) {
-      const x = PAD.left + d.hour * stepX + stepX / 2;
-      const y = PAD.top + plotH - (d.cumK / max) * plotH;
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(PAD.left + 23 * stepX + stepX / 2, PAD.top + plotH);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
-    ctx.fill();
-
-    // Line
-    ctx.beginPath();
-    for (const d of cumData) {
-      const x = PAD.left + d.hour * stepX + stepX / 2;
-      const y = PAD.top + plotH - (d.cumK / max) * plotH;
-      d.hour === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = '#10b981';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }, [data]);
-
-  const ref = useCanvas(draw);
-  return <canvas ref={ref} className="w-full h-full" />;
+  return <BaseChart option={option} height={58} testId="tokens-chart" />;
 }

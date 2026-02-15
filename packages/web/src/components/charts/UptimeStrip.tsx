@@ -1,37 +1,56 @@
-import { useCallback } from 'react';
-import { useCanvas } from './useCanvas';
-import { PAD } from './chart-utils';
+import { useMemo } from 'react';
+import { BaseChart } from './BaseChart';
+import { COLORS, hourLabels } from './echarts-theme';
+import type { EChartsOption } from 'echarts';
 
 interface HourlyData { hour: number; gatewayUp: boolean; restartEvent: boolean }
 
 export function UptimeStrip({ data }: { data: HourlyData[] }) {
-  const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
-    const plotW = w - PAD.left - PAD.right;
-    const cellW = plotW / 24;
-    const y = 14;
-    const cellH = h - 20;
+  const currentHour = new Date().getHours();
 
-    for (const d of data) {
-      const x = PAD.left + d.hour * cellW;
-      if (d.restartEvent) {
-        ctx.fillStyle = '#fbbf24';
-      } else if (d.gatewayUp) {
-        ctx.fillStyle = '#065f46';
-      } else {
-        ctx.fillStyle = '#7f1d1d';
-      }
-      ctx.fillRect(x + 0.5, y, cellW - 1, cellH);
-    }
+  const option = useMemo((): EChartsOption => ({
+    grid: { top: 4, right: 12, bottom: 16, left: 36, containLabel: false },
+    xAxis: {
+      type: 'category',
+      data: hourLabels(currentHour),
+      axisLabel: { interval: 5, fontSize: 8 },
+      axisLine: { show: false },
+      axisTick: { show: false },
+    },
+    yAxis: { show: false, max: 1 },
+    tooltip: { trigger: 'axis', formatter: (params: unknown) => {
+      const p = (params as Array<{ dataIndex: number; name: string }>)[0];
+      const d = data[p.dataIndex];
+      if (!d) return '';
+      const status = d.gatewayUp ? '<b style="color:#34d399">UP</b>' : '<b style="color:#ef4444">DOWN</b>';
+      let html = `<b>${p.name}</b> ${status}`;
+      if (d.restartEvent) html += '<br/><span style="color:#fbbf24">↻ restart</span>';
+      return html;
+    }},
+    series: [{
+      type: 'bar',
+      data: data.map(d => ({
+        value: 1,
+        itemStyle: {
+          color: d.hour > currentHour ? 'rgba(63,63,70,0.1)' :
+                 !d.gatewayUp ? COLORS.red :
+                 d.restartEvent ? COLORS.amber :
+                 'rgba(52,211,153,0.25)',
+          borderColor: !d.gatewayUp ? COLORS.red : d.restartEvent ? COLORS.amber : 'transparent',
+          borderWidth: d.gatewayUp && !d.restartEvent ? 0 : 1,
+          borderRadius: 2,
+        },
+      })),
+      barWidth: '90%',
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        lineStyle: { color: 'rgba(52,211,153,0.4)', type: 'dashed', width: 1 },
+        data: [{ xAxis: 'now' }],
+        label: { show: false },
+      },
+    }],
+  }), [data, currentHour]);
 
-    // Hour labels
-    ctx.fillStyle = '#52525b';
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'center';
-    for (let i = 0; i < 24; i += 6) {
-      ctx.fillText(`${i}`, PAD.left + i * cellW + cellW / 2, h - 2);
-    }
-  }, [data]);
-
-  const ref = useCanvas(draw);
-  return <canvas ref={ref} className="w-full h-full" />;
+  return <BaseChart option={option} height={50} testId="uptime-chart" />;
 }

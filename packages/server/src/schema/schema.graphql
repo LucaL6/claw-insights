@@ -37,6 +37,19 @@ type GatewayStatus {
   updateAvailable: String
   uptime: String!
   startedAt: String
+  connectLatencyMs: Int
+  latestVersion: String
+  securityCritical: Int!
+  securityWarn: Int!
+}
+
+"""Usage cost summary from gateway"""
+type UsageCost {
+  totalCost: Float!
+  totalTokensM: Float!
+  todayCost: Float!
+  todayTokensM: Float!
+  fetchedAt: String!
 }
 
 """系统资源使用"""
@@ -138,6 +151,7 @@ type MetricsSummary {
   totalErrors: Int!
   totalWarnings: Int!
   uptimePercent: Float!
+  warnings: [String!]!
 }
 
 # ── Cron ──
@@ -177,6 +191,7 @@ type Query {
   sessions(filter: SessionFilter): [Session!]!
   metrics(date: String): MetricsSummary!
   cronJobs: [CronJob!]!
+  usageCost: UsageCost!
 }
 
 type Subscription {

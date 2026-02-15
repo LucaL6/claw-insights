@@ -17,8 +17,10 @@ interface Session {
   model: string;
   channel: string | null;
   totalTokens: number;
+  contextTokens: number;
   usagePercent: number;
   status: string;
+  updatedAt: number;
   subAgents: SubAgent[];
 }
 
@@ -28,17 +30,24 @@ export function SessionGroup({ session }: { session: Session }) {
 
   return (
     <div>
-      <div className={hasChildren ? 'cursor-pointer' : ''} onClick={() => hasChildren && setExpanded(!expanded)}>
-        <SessionCard {...session} />
+      <div onClick={() => hasChildren && setExpanded(!expanded)}>
+        <SessionCard
+          {...session}
+          hasChildren={hasChildren}
+          expanded={expanded}
+          onToggle={() => setExpanded(!expanded)}
+          subAgentCount={hasChildren ? session.subAgents.length : undefined}
+        />
       </div>
       {hasChildren && expanded && (
-        <div className="ml-4 mt-1 space-y-1">
+        <div className="pl-3 mt-1 space-y-1">
           {session.subAgents.map((sa, i) => (
             <SubAgentCard
               key={sa.key}
               label={sa.label}
               status={sa.status}
               totalTokens={sa.totalTokens}
+              updatedAt={sa.updatedAt}
               isLast={i === session.subAgents.length - 1}
             />
           ))}

@@ -7,6 +7,8 @@ import { SpawnTracker } from '../sources/spawn-tracker.js';
 import { initDatabase } from '../db/init.js';
 import { Aggregator } from '../sources/aggregator.js';
 import { getGatewayStatus } from '../sources/gateway-cli.js';
+import { getUsageCost } from '../sources/usage-cost.js';
+import { DataValidator } from '../sources/data-validator.js';
 
 const sessionReader = new SessionReader();
 const cronReader = new CronReader();
@@ -15,6 +17,16 @@ const logTailer = new LogTailer();
 const spawnTracker = new SpawnTracker();
 const db = initDatabase();
 const aggregator = new Aggregator(db);
+
+const dataValidator = new DataValidator(
+  db,
+  () => {
+    const m = aggregator.getMetrics() as { totalTokensK: number };
+    return m.totalTokensK;
+  },
+  () => 0, // Will be refined when status parsing provides token totals
+);
+dataValidator.start();
 
 logTailer.on('log', (entry) => {
   aggregator.ingestLog(entry);
@@ -30,6 +42,10 @@ function gatewayShape() {
     updateAvailable: status.updateAvailable,
     uptime: status.uptime,
     startedAt: status.startedAt,
+    connectLatencyMs: status.connectLatencyMs,
+    latestVersion: status.latestVersion,
+    securityCritical: status.securitySummary.critical,
+    securityWarn: status.securitySummary.warn,
   };
 }
 
@@ -45,8 +61,14 @@ export const resolvers = {
       sessionReader.attachSubAgents(spawnTracker.getParentChildMap());
       return sessionReader.getSessions(args.filter ?? undefined);
     },
-    metrics: (_: unknown, args: { date?: string }) => aggregator.getMetrics(args.date),
+    metrics: (_: unknown, args: { date?: string }) => {
+      const m = aggregator.getMetrics(args.date) as Record<string, unknown>;
+      const validationResults = dataValidator.runValidation();
+      const warnings = validationResults.filter(r => !r.pass).map(r => r.message);
+      return { ...m, warnings };
+    },
     cronJobs: () => cronReader.getJobs(),
+    usageCost: () => getUsageCost(),
   },
 
   Subscription: {

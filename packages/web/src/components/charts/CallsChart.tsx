@@ -1,36 +1,39 @@
-import { useCallback } from 'react';
-import { useCanvas } from './useCanvas';
-import { drawYAxis, drawXAxis, PAD } from './chart-utils';
+import { useMemo } from 'react';
+import { BaseChart } from './BaseChart';
+import { CHART_GRID, COLORS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import type { EChartsOption } from 'echarts';
 
 interface HourlyData { hour: number; apiCalls: number; toolCalls: number }
 
 export function CallsChart({ data }: { data: HourlyData[] }) {
-  const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
-    const plotW = w - PAD.left - PAD.right;
-    const plotH = h - PAD.top - PAD.bottom;
-    const max = Math.max(1, ...data.map(d => Math.max(d.apiCalls, d.toolCalls)));
-    const barW = plotW / 24;
+  const currentHour = new Date().getHours();
 
-    drawYAxis(ctx, PAD.left, h, max, 4, PAD);
-    drawXAxis(ctx, h - PAD.bottom, PAD.left, plotW);
+  const option = useMemo((): EChartsOption => ({
+    grid: CHART_GRID,
+    xAxis: {
+      type: 'category',
+      data: hourLabels(currentHour),
+      axisLabel: { interval: 5 },
+    },
+    yAxis: { type: 'value', minInterval: 1 },
+    tooltip: { trigger: 'axis' },
+    legend: { show: false },
+    series: [
+      {
+        name: 'API',
+        type: 'bar',
+        data: data.map(d => d.apiCalls),
+        itemStyle: { color: COLORS.violet, borderRadius: [1.5, 1.5, 0, 0] },
+        markArea: futureZoneMarkArea(currentHour) as EChartsOption['series'],
+      },
+      {
+        name: 'Tool',
+        type: 'bar',
+        data: data.map(d => d.toolCalls),
+        itemStyle: { color: COLORS.amber, borderRadius: [1.5, 1.5, 0, 0] },
+      },
+    ],
+  }), [data, currentHour]);
 
-    for (const d of data) {
-      const halfBar = (barW - 3) / 2;
-      const x = PAD.left + d.hour * barW + 1;
-
-      // API calls (left bar)
-      const apiH = (d.apiCalls / max) * plotH;
-      ctx.fillStyle = '#8b5cf6';
-      ctx.fillRect(x, PAD.top + plotH - apiH, halfBar, apiH);
-
-      // Tool calls (right bar)
-      const toolH = (d.toolCalls / max) * plotH;
-      ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(x + halfBar + 1, PAD.top + plotH - toolH, halfBar, toolH);
-    }
-
-  }, [data]);
-
-  const ref = useCanvas(draw);
-  return <canvas ref={ref} className="w-full h-full" />;
+  return <BaseChart option={option} height={58} testId="calls-chart" />;
 }

@@ -1,6 +1,6 @@
 export const GatewayQuery = /* GraphQL */ `
   query Gateway {
-    gateway { running pid version updateAvailable uptime startedAt }
+    gateway { running pid version updateAvailable uptime startedAt connectLatencyMs latestVersion securityCritical securityWarn }
   }
 `;
 
@@ -35,7 +35,14 @@ export const MetricsQuery = /* GraphQL */ `
         errors warnings gatewayUp restartEvent
       }
       totalTokensK totalErrors totalWarnings uptimePercent
+      warnings
     }
+  }
+`;
+
+export const UsageCostQuery = /* GraphQL */ `
+  query UsageCost {
+    usageCost { totalCost totalTokensM todayCost todayTokensM fetchedAt }
   }
 `;
 

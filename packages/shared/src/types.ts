@@ -15,6 +15,15 @@ export interface GatewayStatus {
   memoryMB: number;
 }
 
+/** Usage cost summary */
+export interface UsageCost {
+  totalCost: number;
+  totalTokensM: number;
+  todayCost: number;
+  todayTokensM: number;
+  fetchedAt: string;
+}
+
 /** Channel connectivity */
 export interface Channel {
   name: string;

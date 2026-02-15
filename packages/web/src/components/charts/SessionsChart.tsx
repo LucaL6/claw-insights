@@ -1,28 +1,37 @@
-import { useCallback } from 'react';
-import { useCanvas } from './useCanvas';
-import { drawYAxis, drawXAxis, PAD } from './chart-utils';
+import { useMemo } from 'react';
+import { BaseChart } from './BaseChart';
+import { CHART_GRID, COLORS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import type { EChartsOption } from 'echarts';
 
 interface HourlyData { hour: number; sessions: number }
 
 export function SessionsChart({ data }: { data: HourlyData[] }) {
-  const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
-    const plotW = w - PAD.left - PAD.right;
-    const plotH = h - PAD.top - PAD.bottom;
-    const max = Math.max(1, ...data.map(d => d.sessions));
-    const barW = plotW / 24;
+  const currentHour = new Date().getHours();
 
-    drawYAxis(ctx, PAD.left, h, max, 4, PAD);
-    drawXAxis(ctx, h - PAD.bottom, PAD.left, plotW);
+  const option = useMemo((): EChartsOption => ({
+    grid: CHART_GRID,
+    xAxis: {
+      type: 'category',
+      data: hourLabels(currentHour),
+      axisLabel: { interval: 5 },
+    },
+    yAxis: { type: 'value', minInterval: 1 },
+    tooltip: { trigger: 'axis', formatter: (params: unknown) => {
+      const p = (params as Array<{ name: string; value: number }>)[0];
+      return `<b>${p.name}</b><br/>Sessions: <b style="color:${COLORS.emerald}">${p.value}</b>`;
+    }},
+    series: [{
+      type: 'bar',
+      data: data.map(d => d.sessions),
+      itemStyle: {
+        color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{ offset: 0, color: COLORS.emerald }, { offset: 1, color: COLORS.emeraldDark }],
+        },
+        borderRadius: [2, 2, 0, 0],
+      },
+      markArea: futureZoneMarkArea(currentHour) as EChartsOption['series'],
+    }],
+  }), [data, currentHour]);
 
-    for (const d of data) {
-      const barH = (d.sessions / max) * plotH;
-      const x = PAD.left + d.hour * barW + 1;
-      const y = PAD.top + plotH - barH;
-      ctx.fillStyle = '#06b6d4';
-      ctx.fillRect(x, y, barW - 2, barH);
-    }
-  }, [data]);
-
-  const ref = useCanvas(draw);
-  return <canvas ref={ref} className="w-full h-full" />;
+  return <BaseChart option={option} height={58} testId="sessions-chart" />;
 }

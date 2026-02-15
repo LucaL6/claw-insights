@@ -1,1 +1,41 @@
 @import "tailwindcss";
+
+/* ── Fonts ── */
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+.mono, code, .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ── Pulse dot (status indicators) ── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* ── Scrollbar ── */
+.sb::-webkit-scrollbar,
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.sb::-webkit-scrollbar-track,
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sb::-webkit-scrollbar-thumb,
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 2px;
+}
+
+/* ── Grid background ── */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(63,63,70,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(63,63,70,0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
