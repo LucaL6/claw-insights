@@ -1,4 +1,6 @@
 import { Repeater } from 'graphql-yoga';
+import { dataBus } from '../events.js';
+import type { DataChangeEvent } from '../events.js';
 import { SessionReader } from '../sources/session-reader.js';
 import { CronReader } from '../sources/cron-reader.js';
 import { SystemMetrics } from '../sources/system-metrics.js';
@@ -9,6 +11,7 @@ import { Aggregator } from '../sources/aggregator.js';
 import { getGatewayStatus } from '../sources/gateway-cli.js';
 import { getUsageCost } from '../sources/usage-cost.js';
 import { DataValidator } from '../sources/data-validator.js';
+import { MetricsCollector } from '../sources/metrics-collector.js';
 
 const sessionReader = new SessionReader();
 const cronReader = new CronReader();
@@ -17,6 +20,15 @@ const logTailer = new LogTailer();
 const spawnTracker = new SpawnTracker();
 const db = initDatabase();
 const aggregator = new Aggregator(db);
+
+const metricsCollector = new MetricsCollector(
+  db,
+  sessionReader,
+  () => systemMetrics.getMetrics(),
+  () => getUsageCost(),
+  aggregator,
+);
+metricsCollector.start();
 
 const dataValidator = new DataValidator(
   db,
@@ -69,6 +81,7 @@ export const resolvers = {
     },
     cronJobs: () => cronReader.getJobs(),
     usageCost: () => getUsageCost(),
+    recentLogs: (_: unknown, args: { count?: number }) => logTailer.getRecentEntries(args.count ?? 50),
   },
 
   Subscription: {
@@ -87,22 +100,14 @@ export const resolvers = {
           stop.then(() => logTailer.off('log', handler));
         }),
     },
-    sessionChanged: {
+    dataChanged: {
       subscribe: () =>
         new Repeater(async (push, stop) => {
-          const onChange = () => {
-            const s = sessionReader.getSessions();
-            if (s[0]) push({ sessionChanged: s[0] });
+          const handler = (event: DataChangeEvent) => {
+            push({ dataChanged: event });
           };
-          sessionReader.onChange(onChange);
-          stop.then(() => {});
-        }),
-    },
-    gatewayHealth: {
-      subscribe: () =>
-        new Repeater(async (push, stop) => {
-          const interval = setInterval(() => push({ gatewayHealth: gatewayShape() }), 10000);
-          stop.then(() => clearInterval(interval));
+          dataBus.on('change', handler);
+          stop.then(() => dataBus.off('change', handler));
         }),
     },
   },

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { BaseChart } from './BaseChart';
-import { CHART_GRID, COLORS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import { CHART_GRID, COLORS, COMPACT_Y_AXIS, futureZoneMarkArea, hourLabels } from './echarts-theme';
 import type { EChartsOption } from 'echarts';
 
 interface HourlyData { hour: number; errors: number; warnings: number; restartEvent: boolean }
@@ -20,7 +20,7 @@ export function ErrorsChart({ data }: { data: HourlyData[] }) {
         data: hourLabels(currentHour),
         axisLabel: { interval: 2 },
       },
-      yAxis: { type: 'value', minInterval: 1 },
+      yAxis: { ...COMPACT_Y_AXIS, minInterval: 1 },
       tooltip: { trigger: 'axis', formatter: (params: unknown) => {
         const items = params as Array<{ seriesName: string; value: number; name: string; color: string }>;
         let html = `<b>${items[0]?.name}</b>`;

@@ -18,6 +18,21 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time
 
 CREATE INDEX IF NOT EXISTS idx_events_time
   ON metric_events(timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS metric_samples (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp        TEXT NOT NULL,
+  active_sessions  INTEGER NOT NULL DEFAULT 0,
+  total_tokens_k   REAL NOT NULL DEFAULT 0,
+  token_delta_k    REAL NOT NULL DEFAULT 0,
+  cost_today       REAL NOT NULL DEFAULT 0,
+  tokens_today_m   REAL NOT NULL DEFAULT 0,
+  cpu              REAL NOT NULL DEFAULT 0,
+  memory_mb        INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_samples_time
+  ON metric_samples(timestamp DESC);
 `;
 
 export function initDatabase(dbPath: string = DEFAULT_DB_PATH): Database {

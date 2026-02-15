@@ -30,6 +30,15 @@ export const CHART_GRID: EChartsOption['grid'] = {
   top: 8, right: 12, bottom: 24, left: 36, containLabel: false,
 };
 
+/** Compact Y-axis config for small charts (58px height) */
+export const COMPACT_Y_AXIS = {
+  type: 'value' as const,
+  splitNumber: 2,
+  axisLabel: {
+    formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : String(v),
+  },
+};
+
 /** Color palette for consistent chart colors */
 export const COLORS = {
   emerald: '#34d399',

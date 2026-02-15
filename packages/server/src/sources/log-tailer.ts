@@ -87,12 +87,29 @@ export class LogTailer extends EventEmitter {
 
     try {
       const stat = statSync(this.currentFile);
-      this.offset = stat.size; // Start from end (don't replay history)
+      this.offset = stat.size;
     } catch {
       this.offset = 0;
     }
 
     this.startWatching();
+  }
+
+  /** Read last N lines from current log file and return parsed entries */
+  getRecentEntries(count: number = 50): Array<{ time: string; level: string; module: string; message: string }> {
+    try {
+      const content = readFileSync(this.currentFile, 'utf-8');
+      const lines = content.split('\n').filter(l => l.trim());
+      const recent = lines.slice(-count);
+      const entries: Array<{ time: string; level: string; module: string; message: string }> = [];
+      for (const line of recent) {
+        const entry = parseLogLine(line);
+        if (entry) entries.push(entry);
+      }
+      return entries;
+    } catch {
+      return [];
+    }
   }
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;

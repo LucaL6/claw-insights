@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { BaseChart } from './BaseChart';
-import { CHART_GRID, COLORS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import { CHART_GRID, COLORS, COMPACT_Y_AXIS, futureZoneMarkArea, hourLabels } from './echarts-theme';
 import type { EChartsOption } from 'echarts';
 
 interface HourlyData { hour: number; apiCalls: number; toolCalls: number }
@@ -15,7 +15,7 @@ export function CallsChart({ data }: { data: HourlyData[] }) {
       data: hourLabels(currentHour),
       axisLabel: { interval: 5 },
     },
-    yAxis: { type: 'value', minInterval: 1 },
+    yAxis: { ...COMPACT_Y_AXIS, minInterval: 1 },
     tooltip: { trigger: 'axis' },
     legend: { show: false },
     series: [

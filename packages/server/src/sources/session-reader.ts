@@ -1,5 +1,6 @@
 import { readFileSync, watch, type FSWatcher } from 'fs';
 import type { Session, SessionStatus, SubAgent } from '@openclaw-dashboard/shared';
+import { emitChange } from '../events.js';
 
 interface RawSession {
   sessionId: string;
@@ -104,6 +105,7 @@ export class SessionReader {
       this.watcher = watch(this.filePath, () => {
         this.reload();
         for (const fn of this.listeners) fn();
+        emitChange('sessions');
       });
     } catch {
       // File might not exist yet

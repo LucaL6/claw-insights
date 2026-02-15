@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { emitChange } from '../events.js';
 
 interface CachedResult<T> {
   data: T;
@@ -123,6 +124,10 @@ export function getGatewayStatus(): ParsedStatus {
   }
   const raw = execCli('status --json');
   const status = parseStatus(raw);
+  const prevJson = statusCache ? JSON.stringify(statusCache.data) : '';
   statusCache = { data: status, ts: Date.now() };
+  if (JSON.stringify(status) !== prevJson) {
+    emitChange('gateway');
+  }
   return status;
 }

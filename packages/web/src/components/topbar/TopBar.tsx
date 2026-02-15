@@ -1,5 +1,5 @@
-import { useQuery } from 'urql';
 import { GatewayQuery, ResourcesQuery, ChannelsQuery, MetricsQuery } from '../../graphql/queries';
+import { useReactiveQuery } from '../../hooks/useReactiveQuery';
 
 function formatUptime(startedAt: string | null | undefined): string {
   if (!startedAt) return '';
@@ -29,10 +29,22 @@ function channelShortName(name: string): string {
 }
 
 export function TopBar({ onAction }: { onAction?: (action: 'restart' | 'doctor' | 'update') => void }) {
-  const [gw] = useQuery({ query: GatewayQuery, requestPolicy: 'cache-and-network', pollInterval: 10_000 });
-  const [res] = useQuery({ query: ResourcesQuery, requestPolicy: 'cache-and-network', pollInterval: 10_000 });
-  const [ch] = useQuery({ query: ChannelsQuery, requestPolicy: 'cache-and-network', pollInterval: 10_000 });
-  const [met] = useQuery({ query: MetricsQuery, requestPolicy: 'cache-and-network', pollInterval: 60_000 });
+  const [gw] = useReactiveQuery(
+    { query: GatewayQuery, requestPolicy: 'cache-and-network' },
+    { sources: ['gateway'] },
+  );
+  const [res] = useReactiveQuery(
+    { query: ResourcesQuery, requestPolicy: 'cache-and-network' },
+    { sources: ['gateway', 'metrics'] },
+  );
+  const [ch] = useReactiveQuery(
+    { query: ChannelsQuery, requestPolicy: 'cache-and-network' },
+    { sources: ['gateway'] },
+  );
+  const [met] = useReactiveQuery(
+    { query: MetricsQuery, requestPolicy: 'cache-and-network' },
+    { sources: ['metrics'] },
+  );
 
   const gateway = gw.data?.gateway;
   const resources = res.data?.resources;

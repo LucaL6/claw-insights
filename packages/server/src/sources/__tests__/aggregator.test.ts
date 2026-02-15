@@ -58,11 +58,19 @@ describe('Aggregator', () => {
     cleanup();
   });
 
-  it('should parse token usage from log message', () => {
-    const { agg, cleanup } = setup();
-    agg.ingestLog({ time: '10:00:00', level: 'INFO', module: 'agent', message: 'run completed totalTokens=51200' });
-    const m = agg.getMetrics() as { totalTokensK: number };
-    expect(m.totalTokensK).toBeGreaterThan(0);
+  it('should read sessions and tokens from metric_samples', () => {
+    const { agg, db, cleanup } = setup();
+    const now = new Date();
+    const ts = now.toISOString();
+    db.prepare('INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, 0, 0, 0, 0)').run(
+      ts, 7, 250, 12
+    );
+
+    const m = agg.getMetrics() as { totalTokensK: number; hours: Array<{ sessions: number; tokensK: number }> };
+    const currentHour = now.getHours();
+    expect(m.hours[currentHour].sessions).toBe(7);
+    expect(m.hours[currentHour].tokensK).toBe(250); // MAX(total_tokens_k)
+    expect(m.totalTokensK).toBe(250); // MAX across all hours
     cleanup();
   });
 
@@ -83,6 +91,22 @@ describe('Aggregator', () => {
     const m2 = agg.getMetrics() as { totalErrors: number };
     // Should be same cached object (1 error, not 2)
     expect(m1.totalErrors).toBe(m2.totalErrors);
+    cleanup();
+  });
+
+  it('should invalidate cache when clearCache is called', () => {
+    const { agg, cleanup } = setup();
+    agg.ingestLog({ time: '10:00:00', level: 'ERROR', module: 'test', message: 'error1' });
+    const m1 = agg.getMetrics() as { totalErrors: number };
+    expect(m1.totalErrors).toBe(1);
+
+    agg.ingestLog({ time: '10:00:01', level: 'ERROR', module: 'test', message: 'error2' });
+    const m2 = agg.getMetrics() as { totalErrors: number };
+    expect(m2.totalErrors).toBe(1); // still cached
+
+    agg.clearCache();
+    const m3 = agg.getMetrics() as { totalErrors: number };
+    expect(m3.totalErrors).toBe(2); // cache cleared
     cleanup();
   });
 

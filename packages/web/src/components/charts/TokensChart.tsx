@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { BaseChart } from './BaseChart';
-import { CHART_GRID, COLORS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import { CHART_GRID, COLORS, COMPACT_Y_AXIS, futureZoneMarkArea, hourLabels } from './echarts-theme';
 import type { EChartsOption } from 'echarts';
 
 interface HourlyData { hour: number; tokensK: number }
@@ -9,8 +9,13 @@ export function TokensChart({ data }: { data: HourlyData[] }) {
   const currentHour = new Date().getHours();
 
   const option = useMemo((): EChartsOption => {
-    let cum = 0;
-    const cumData = data.map(d => { cum += d.tokensK; return cum; });
+    // tokensK is cumulative (MAX total_tokens_k per hour) — carry forward through current hour
+    const cumData: number[] = [];
+    let last = 0;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].tokensK > 0) last = data[i].tokensK;
+      cumData.push(i <= currentHour ? last : 0);
+    }
 
     return {
       grid: CHART_GRID,
@@ -19,11 +24,10 @@ export function TokensChart({ data }: { data: HourlyData[] }) {
         data: hourLabels(currentHour),
         axisLabel: { interval: 5 },
       },
-      yAxis: { type: 'value' },
+      yAxis: COMPACT_Y_AXIS,
       tooltip: { trigger: 'axis', formatter: (params: unknown) => {
-        const p = (params as Array<{ name: string; value: number; dataIndex: number }>)[0];
-        const hourly = data[p.dataIndex]?.tokensK ?? 0;
-        return `<b>${p.name}</b><br/>+${hourly}k this hour<br/><b style="color:${COLORS.sky}">${p.value}k</b> cumulative`;
+        const p = (params as Array<{ name: string; value: number }>)[0];
+        return `<b>${p.name}</b><br/><b style="color:${COLORS.sky}">${p.value.toFixed(1)}k</b> total tokens`;
       }},
       series: [{
         type: 'line',

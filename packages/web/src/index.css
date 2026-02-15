@@ -32,6 +32,18 @@ body {
   border-radius: 2px;
 }
 
+/* ── Horizontal scrollbar (ticker) ── */
+.sb-h::-webkit-scrollbar {
+  height: 2px;
+}
+.sb-h::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sb-h::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 1px;
+}
+
 /* ── Grid background ── */
 .grid-bg {
   background-image:

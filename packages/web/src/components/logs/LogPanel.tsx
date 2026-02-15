@@ -1,20 +1,19 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useSubscription } from 'urql';
+import { useSubscription, useQuery } from 'urql';
 import { LogsSubscription } from '../../graphql/subscriptions';
+import { RecentLogsQuery } from '../../graphql/queries';
 import { CollapsibleSection } from '../layout/CollapsibleSection';
 import { LogEntryRow } from './LogEntry';
-
-interface LogEntry {
-  time: string;
-  level: string;
-  module: string;
-  message: string;
-}
+import { LogTicker } from './LogTicker';
+import { isNoise, dedupKey } from './log-utils';
+import type { LogEntry } from './log-utils';
 
 const MAX_ENTRIES = 500;
+const MAX_NOISE = 50;
 
 export function LogPanel() {
-  const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [signalEntries, setSignalEntries] = useState<LogEntry[]>([]);
+  const [noiseEntries, setNoiseEntries] = useState<LogEntry[]>([]);
   const [counts, setCounts] = useState({ ERROR: 0, WARN: 0, INFO: 0, DEBUG: 0 });
   const [levelFilter, setLevelFilter] = useState<string | null>(null);
   const [moduleFilter, setModuleFilter] = useState<string>('');
@@ -22,21 +21,83 @@ export function LogPanel() {
   const [showSearch, setShowSearch] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const seenKeys = useRef(new Set<string>());
+  const backfillDone = useRef(false);
+
+  // Backfill: fetch recent logs on mount
+  const [recentResult] = useQuery({ query: RecentLogsQuery, variables: { count: 50 }, requestPolicy: 'network-only' });
+
+  useEffect(() => {
+    if (backfillDone.current || !recentResult.data?.recentLogs) return;
+    backfillDone.current = true;
+
+    const logs = recentResult.data.recentLogs as LogEntry[];
+    const signal: LogEntry[] = [];
+    const noise: LogEntry[] = [];
+
+    for (const e of logs) {
+      const key = dedupKey(e);
+      seenKeys.current.add(key);
+      if (isNoise(e)) noise.push(e);
+      else signal.push(e);
+    }
+
+    if (signal.length > 0) setSignalEntries(signal);
+    if (noise.length > 0) setNoiseEntries(noise);
+
+    const c = { ERROR: 0, WARN: 0, INFO: 0, DEBUG: 0 };
+    for (const e of logs) {
+      if (e.level in c) c[e.level as keyof typeof c]++;
+    }
+    setCounts(c);
+  }, [recentResult.data]);
 
   const handleSubscription = useCallback((_prev: unknown, data: { logs: { entries: LogEntry[] } }) => {
-    if (data?.logs?.entries) {
-      setEntries((prev) => {
-        const next = [...prev, ...data.logs.entries];
+    if (!data?.logs?.entries) return data;
+
+    const newSignal: LogEntry[] = [];
+    const newNoise: LogEntry[] = [];
+
+    for (const e of data.logs.entries) {
+      const key = dedupKey(e);
+      if (seenKeys.current.has(key)) continue; // dedup
+      seenKeys.current.add(key);
+
+      // Keep set bounded
+      if (seenKeys.current.size > MAX_ENTRIES * 2) {
+        const arr = Array.from(seenKeys.current);
+        seenKeys.current = new Set(arr.slice(-MAX_ENTRIES));
+      }
+
+      if (isNoise(e)) {
+        newNoise.push(e);
+      } else {
+        newSignal.push(e);
+      }
+    }
+
+    if (newSignal.length > 0) {
+      setSignalEntries(prev => {
+        const next = [...prev, ...newSignal];
         return next.length > MAX_ENTRIES ? next.slice(-MAX_ENTRIES) : next;
       });
-      setCounts((prev) => {
-        const updated = { ...prev };
-        for (const e of data.logs.entries) {
-          if (e.level in updated) updated[e.level as keyof typeof updated]++;
-        }
-        return updated;
+    }
+
+    if (newNoise.length > 0) {
+      setNoiseEntries(prev => {
+        const next = [...prev, ...newNoise];
+        return next.length > MAX_NOISE ? next.slice(-MAX_NOISE) : next;
       });
     }
+
+    setCounts(prev => {
+      const updated = { ...prev };
+      for (const e of [...newSignal, ...newNoise]) {
+        if (e.level in updated) updated[e.level as keyof typeof updated]++;
+      }
+      return updated;
+    });
+
     return data;
   }, []);
 
@@ -48,22 +109,22 @@ export function LogPanel() {
     handleSubscription,
   );
 
-  // Unique modules from entries
+  // Unique modules from signal entries
   const modules = useMemo(() => {
-    const set = new Set(entries.map(e => e.module));
+    const set = new Set(signalEntries.map(e => e.module));
     return Array.from(set).sort();
-  }, [entries]);
+  }, [signalEntries]);
 
   // Filtered entries
   const filtered = useMemo(() => {
-    let result = entries;
+    let result = signalEntries;
     if (moduleFilter) result = result.filter(e => e.module === moduleFilter);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(e => e.message.toLowerCase().includes(q));
     }
     return result;
-  }, [entries, moduleFilter, searchQuery]);
+  }, [signalEntries, moduleFilter, searchQuery]);
 
   // Auto-scroll
   useEffect(() => {
@@ -78,13 +139,18 @@ export function LogPanel() {
     setAutoScroll(scrollHeight - scrollTop - clientHeight < 50);
   };
 
+  const totalEntries = signalEntries.length + noiseEntries.length;
+
   return (
     <CollapsibleSection title={
       <span className="flex items-center gap-2">
         Live Logs
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot" />
       </span>
-    } badge={entries.length}>
+    } badge={totalEntries}>
+      {/* Noise ticker */}
+      <LogTicker entries={noiseEntries} />
+
       {/* Filters */}
       <div className="flex items-center justify-between mb-2 text-[10px]">
         {/* Left: level filters */}
@@ -129,7 +195,12 @@ export function LogPanel() {
             🔍
           </button>
           <button
-            onClick={() => { setEntries([]); setCounts({ ERROR: 0, WARN: 0, INFO: 0, DEBUG: 0 }); }}
+            onClick={() => {
+              setSignalEntries([]);
+              setNoiseEntries([]);
+              setCounts({ ERROR: 0, WARN: 0, INFO: 0, DEBUG: 0 });
+              seenKeys.current.clear();
+            }}
             className="px-2 py-0.5 rounded border border-zinc-800 text-zinc-600 hover:text-zinc-400"
           >
             Clear
@@ -154,19 +225,20 @@ export function LogPanel() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="bg-zinc-900 border border-zinc-800 rounded-lg h-60 overflow-y-auto sb"
+        className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-y-auto sb"
+        style={{ minHeight: filtered.length > 0 ? 120 : 60, maxHeight: 320 }}
       >
         {filtered.map((e, i) => (
-          <LogEntryRow key={i} {...e} />
+          <LogEntryRow key={`${e.time}-${i}`} {...e} />
         ))}
         {filtered.length === 0 && (
           <p className="text-zinc-600 text-xs p-4 text-center">
-            {entries.length > 0 ? 'No logs match filters' : 'Waiting for logs...'}
+            {signalEntries.length > 0 ? 'No logs match filters' : noiseEntries.length > 0 ? 'Only system noise — no signal logs yet' : 'Waiting for logs...'}
           </p>
         )}
       </div>
 
-      {autoScroll && entries.length > 0 && (
+      {autoScroll && signalEntries.length > 0 && (
         <div className="flex items-center gap-1.5 mt-1 text-[10px] text-emerald-600">
           <span className="w-1.5 h-3.5 bg-emerald-400/60 pulse-dot rounded-sm" />
           streaming...

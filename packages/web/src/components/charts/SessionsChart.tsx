@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { BaseChart } from './BaseChart';
-import { CHART_GRID, COLORS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import { CHART_GRID, COLORS, COMPACT_Y_AXIS, futureZoneMarkArea, hourLabels } from './echarts-theme';
 import type { EChartsOption } from 'echarts';
 
 interface HourlyData { hour: number; sessions: number }
@@ -15,7 +15,7 @@ export function SessionsChart({ data }: { data: HourlyData[] }) {
       data: hourLabels(currentHour),
       axisLabel: { interval: 5 },
     },
-    yAxis: { type: 'value', minInterval: 1 },
+    yAxis: { ...COMPACT_Y_AXIS, minInterval: 1 },
     tooltip: { trigger: 'axis', formatter: (params: unknown) => {
       const p = (params as Array<{ name: string; value: number }>)[0];
       return `<b>${p.name}</b><br/>Sessions: <b style="color:${COLORS.emerald}">${p.value}</b>`;

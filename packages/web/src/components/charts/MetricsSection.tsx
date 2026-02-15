@@ -1,23 +1,22 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from 'urql';
 import { MetricsQuery } from '../../graphql/queries';
+import { useReactiveQuery } from '../../hooks/useReactiveQuery';
 import { CollapsibleSection } from '../layout/CollapsibleSection';
 import { SessionsChart } from './SessionsChart';
 import { TokensChart } from './TokensChart';
-import { CallsChart } from './CallsChart';
 import { ErrorsChart } from './ErrorsChart';
 import { UptimeStrip } from './UptimeStrip';
 import { useMetricsValidation } from './useMetricsValidation';
+import { ChartSkeleton, Skeleton } from '../layout/Skeleton';
 
 export function MetricsSection() {
   const [lastFetchTime, setLastFetchTime] = useState(Date.now());
   const [now, setNow] = useState(Date.now());
 
-  const [result] = useQuery({
-    query: MetricsQuery,
-    requestPolicy: 'cache-and-network',
-    pollInterval: 60_000,
-  });
+  const [result] = useReactiveQuery(
+    { query: MetricsQuery, requestPolicy: 'cache-and-network' },
+    { sources: ['metrics'] },
+  );
 
   useEffect(() => {
     if (result.data) setLastFetchTime(Date.now());
@@ -34,11 +33,30 @@ export function MetricsSection() {
 
   const totalSessions = hours.reduce((s: number, h: { sessions: number }) => s + h.sessions, 0);
   const totalTokensK = metrics?.totalTokensK ?? 0;
-  const totalApi = hours.reduce((s: number, h: { apiCalls: number }) => s + h.apiCalls, 0);
-  const totalTool = hours.reduce((s: number, h: { toolCalls: number }) => s + h.toolCalls, 0);
   const totalErrors = metrics?.totalErrors ?? 0;
   const uptimePct = metrics?.uptimePercent ?? 0;
   const validationWarnings = useMetricsValidation(hours);
+
+  if (result.fetching && !result.data) {
+    return (
+      <CollapsibleSection title="Metrics (24h)">
+        <div className="flex gap-4 mb-3">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <ChartSkeleton />
+          <ChartSkeleton />
+        </div>
+        <div className="grid grid-cols-5 gap-2 mt-2">
+          <div className="col-span-3"><ChartSkeleton /></div>
+          <div className="col-span-2"><ChartSkeleton /></div>
+        </div>
+      </CollapsibleSection>
+    );
+  }
 
   return (
     <CollapsibleSection title="Metrics (24h)">
@@ -74,8 +92,8 @@ export function MetricsSection() {
         </div>
       )}
 
-      {/* Row 1: Sessions / Tokens / Calls */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* Row 1: Sessions / Tokens */}
+      <div className="grid grid-cols-2 gap-2">
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg px-3 py-2.5 relative">
           <div className="flex items-center justify-between mb-0.5">
             <span className="text-[10px] text-zinc-400 font-medium">Active Sessions</span>
@@ -91,17 +109,6 @@ export function MetricsSection() {
           </div>
           <div className="text-[8px] text-zinc-600 mb-1">Y: tokens (k) · X: hour · cumulative</div>
           <TokensChart data={hours} />
-        </div>
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg px-3 py-2.5 relative">
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[10px] text-zinc-400 font-medium">API / Tool Calls</span>
-            <div className="flex gap-2">
-              <span className="mono text-[10px] text-violet-400">{totalApi} api</span>
-              <span className="mono text-[10px] text-amber-400">{totalTool} tool</span>
-            </div>
-          </div>
-          <div className="text-[8px] text-zinc-600 mb-1">Y: count/h · <span style={{color:'#a78bfa'}}>■</span> API <span style={{color:'#fbbf24'}}>■</span> Tool</div>
-          <CallsChart data={hours} />
         </div>
       </div>
 

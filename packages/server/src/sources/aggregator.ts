@@ -1,20 +1,20 @@
 import type { LogEntry } from '@openclaw-dashboard/shared';
 import type { Database } from 'bun:sqlite';
-import { insertEvent, getHourlyCount, getHourlyDistinctSessions, getHourlySum, getGatewayEvents } from '../db/queries.js';
+import { insertEvent, getHourlyCount, getHourlySum, getGatewayEvents, getHourlySampledSessions, getHourlySampledTokens } from '../db/queries.js';
 
 export class Aggregator {
   private cache: { key: string; data: unknown; ts: number } | null = null;
   constructor(private db: Database) {}
 
+  clearCache() {
+    this.cache = null;
+  }
+
   ingestLog(entry: LogEntry) {
     const msg = entry.message;
     if (entry.level === 'ERROR') insertEvent(this.db, 'error', null, { module: entry.module, message: msg });
     if (entry.level === 'WARN') insertEvent(this.db, 'warning', null, { module: entry.module, message: msg });
-    if (msg.includes('run start')) insertEvent(this.db, 'session_start', null, { key: 'unknown' });
-    if (msg.includes('totalTokens')) {
-      const m = msg.match(/totalTokens\D+(\d+)/i);
-      if (m) insertEvent(this.db, 'token_usage', Number(m[1]) / 1000, {});
-    }
+    // Removed: run start, totalTokens patterns — now sampled via MetricsCollector
     if (msg.includes('tool start')) insertEvent(this.db, 'tool_call', 1, { module: entry.module });
     if (msg.includes('embedded run tool start')) insertEvent(this.db, 'api_call', 1, { module: entry.module });
     if (msg.includes('gateway restart')) insertEvent(this.db, 'gateway_restart', null, {});
@@ -29,8 +29,10 @@ export class Aggregator {
 
     const errors = new Map(getHourlyCount(this.db, day, 'error').map((r) => [r.hour, r.count]));
     const warnings = new Map(getHourlyCount(this.db, day, 'warning').map((r) => [r.hour, r.count]));
-    const sessions = new Map(getHourlyDistinctSessions(this.db, day).map((r) => [r.hour, r.sessions]));
-    const tokens = new Map(getHourlySum(this.db, day, 'token_usage').map((r) => [r.hour, r.total || 0]));
+    const sampledSessions = getHourlySampledSessions(this.db, day);
+    const sampledTokens = getHourlySampledTokens(this.db, day);
+    const sessions = new Map(sampledSessions.map((r) => [r.hour, r.sessions]));
+    const tokens = new Map(sampledTokens.map((r) => [r.hour, r.tokensK]));
     const apiCalls = new Map(getHourlyCount(this.db, day, 'api_call').map((r) => [r.hour, r.count]));
     const toolCalls = new Map(getHourlyCount(this.db, day, 'tool_call').map((r) => [r.hour, r.count]));
     const gwEvents = getGatewayEvents(this.db, day);
@@ -51,7 +53,7 @@ export class Aggregator {
     const summary = {
       date: day,
       hours,
-      totalTokensK: hours.reduce((s, h) => s + h.tokensK, 0),
+      totalTokensK: Math.max(...hours.map(h => h.tokensK), 0),
       totalErrors: hours.reduce((s, h) => s + h.errors, 0),
       totalWarnings: hours.reduce((s, h) => s + h.warnings, 0),
       uptimePercent: 100,

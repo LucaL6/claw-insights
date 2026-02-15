@@ -6,6 +6,6 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: false,
-    include: ['src/components/charts/__tests__/**/*.test.{ts,tsx}'],
+    include: ['src/__tests__/**/*.test.{ts,tsx}', 'src/components/charts/__tests__/**/*.test.{ts,tsx}'],
   },
 });

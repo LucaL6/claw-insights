@@ -51,3 +51,9 @@ export const CronJobsQuery = /* GraphQL */ `
     cronJobs { id name enabled schedule lastRunAt lastRunSuccess nextRunAt }
   }
 `;
+
+export const RecentLogsQuery = /* GraphQL */ `
+  query RecentLogs($count: Int) {
+    recentLogs(count: $count) { time level module message }
+  }
+`;

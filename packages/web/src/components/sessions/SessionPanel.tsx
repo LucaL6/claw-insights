@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useQuery } from 'urql';
 import { SessionsQuery } from '../../graphql/queries';
+import { useReactiveQuery } from '../../hooks/useReactiveQuery';
 import { CollapsibleSection } from '../layout/CollapsibleSection';
+import { SessionSkeleton } from '../layout/Skeleton';
 import { SessionGroup } from './SessionGroup';
 
 type ViewMode = 'active' | 'all';
@@ -13,12 +14,10 @@ export function SessionPanel() {
 
   const activeOnly = viewMode === 'active';
 
-  const [result] = useQuery({
-    query: SessionsQuery,
-    variables: { filter: { activeOnly, sortBy, grouped: true } },
-    requestPolicy: 'cache-and-network',
-    pollInterval: 30_000,
-  });
+  const [result] = useReactiveQuery(
+    { query: SessionsQuery, variables: { filter: { activeOnly, sortBy, grouped: true } }, requestPolicy: 'cache-and-network' },
+    { sources: ['sessions'], debounceMs: 500 },
+  );
 
   const sessions = result.data?.sessions ?? [];
   const activeCount = sessions.filter((s: { status: string }) => s.status === 'ACTIVE').length;
@@ -79,7 +78,14 @@ export function SessionPanel() {
         {sessions.map((s: { key: string; displayName: string; kind: string; model: string; channel: string | null; totalTokens: number; contextTokens: number; usagePercent: number; status: string; updatedAt: number; subAgents: Array<{ key: string; label: string; status: string; totalTokens: number; updatedAt: number }> }) => (
           <SessionGroup key={s.key} session={s} />
         ))}
-        {sessions.length === 0 && (
+        {result.fetching && !result.data && (
+          <>
+            <SessionSkeleton />
+            <SessionSkeleton />
+            <SessionSkeleton />
+          </>
+        )}
+        {!result.fetching && sessions.length === 0 && (
           <p className="text-zinc-600 text-xs">No sessions</p>
         )}
       </div>

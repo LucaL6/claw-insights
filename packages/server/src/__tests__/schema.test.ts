@@ -26,8 +26,7 @@ describe('GraphQL Schema', () => {
     expect(subType).toBeDefined();
     const fields = Object.keys(subType!.getFields());
     expect(fields).toContain('logs');
-    expect(fields).toContain('sessionChanged');
-    expect(fields).toContain('gatewayHealth');
+    expect(fields).toContain('dataChanged');
   });
 
   it('should contain mutations', () => {
