@@ -37,7 +37,7 @@ export const MetricsQuery = /* GraphQL */ `
       bucketMinutes
       timezone
       buckets {
-        bucket label sessions tokensK
+        bucket label epochStart sessions tokensK
         tokensByModel { model tokensK }
         apiCalls toolCalls
         errors warnings gatewayUp restartEvent

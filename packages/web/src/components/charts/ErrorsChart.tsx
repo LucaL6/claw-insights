@@ -6,7 +6,7 @@ import { TOOLTIPS } from './metricsTooltips';
 
 interface BucketData { bucket: number; label: string; errors: number; warnings: number; restartEvent: boolean }
 
-export function ErrorsChart({ data }: { data: BucketData[] }) {
+export function ErrorsChart({ data, onBucketClick }: { data: BucketData[]; onBucketClick?: (index: number) => void }) {
   const option = useMemo((): EChartsOption => {
     const labels = data.map((d) => d.label);
     const restartPoints = data
@@ -21,7 +21,7 @@ export function ErrorsChart({ data }: { data: BucketData[] }) {
         axisLabel: { interval: bucketLabelInterval(data.length) },
       },
       yAxis: { ...COMPACT_Y_AXIS, minInterval: 1 },
-      tooltip: { trigger: 'axis', formatter: (params: unknown) => {
+      tooltip: { appendToBody: true, trigger: 'axis', formatter: (params: unknown) => {
         const items = params as Array<{ seriesName: string; value: number; name: string; color: string }>;
         let html = `<b>${items[0]?.name}</b>`;
         for (const p of items) {
@@ -61,5 +61,11 @@ export function ErrorsChart({ data }: { data: BucketData[] }) {
     };
   }, [data]);
 
-  return <BaseChart option={option} height={80} testId="errors-chart" />;
+  const onEvents = useMemo(() => onBucketClick ? {
+    click: (params: { dataIndex: number; seriesName: string }) => {
+      if (params.seriesName !== 'Restart') onBucketClick(params.dataIndex);
+    },
+  } : undefined, [onBucketClick]);
+
+  return <BaseChart option={option} height={80} testId="errors-chart" onEvents={onEvents} />;
 }

@@ -23,12 +23,13 @@ function SubAgentGroup({ prefix, items, totalTokens }: { prefix: string; items: 
     <div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 w-full pl-4 py-1 text-left hover:bg-zinc-800/30 rounded transition-colors"
+        className="flex items-center gap-2 w-full pl-4 py-1 text-left rounded transition-colors"
+        style={{ color: 'var(--text-muted)' }}
       >
-        <span className={`text-[10px] text-zinc-600 transition-transform ${expanded ? '' : '-rotate-90'}`}>▼</span>
-        <span className="text-[12px] font-medium text-zinc-400">{prefix} tasks</span>
-        <span className="text-[11px] text-zinc-600">({items.length})</span>
-        <span className="text-[11px] mono text-zinc-500 ml-auto">{(totalTokens / 1000).toFixed(1)}k total</span>
+        <span className={`text-[10px] transition-transform ${expanded ? '' : '-rotate-90'}`}>▼</span>
+        <span className="text-[12px] font-medium">{prefix} tasks</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-dim)' }}>({items.length})</span>
+        <span className="text-[11px] mono ml-auto" style={{ color: 'var(--text-muted)' }}>{(totalTokens / 1000).toFixed(1)}k total</span>
       </button>
       {expanded && (
         <div className="pl-3 mt-1 space-y-1">

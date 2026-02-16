@@ -65,6 +65,7 @@ export class Aggregator {
       buckets.push({
         bucket: b - startBucket,
         label: bucketLabel(b, config.bucketMinutes),
+        epochStart: b * bucketSeconds,
         sessions: sessions.get(b) ?? 0,
         tokensK: Number(tokens.get(b) ?? 0),
         tokensByModel: modelByBucket.get(b) ?? [],

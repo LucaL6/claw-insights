@@ -56,7 +56,7 @@ export function futureZoneMarkArea(currentHour: number): EChartsOption['series']
   if (currentHour >= 23) return undefined;
   return [{
     silent: true,
-    itemStyle: { color: 'rgba(9,9,11,0.4)' },
+    itemStyle: { color: 'var(--chart-future-overlay)' },
     data: [[
       { xAxis: `${currentHour + 1}h` },
       { xAxis: '23h' },
@@ -103,4 +103,34 @@ export function shortModelName(model: string): string {
   const gpt = model.match(/^(?:openai\/)?gpt-([\d.]+)/);
   if (gpt) return `GPT ${gpt[1]}`;
   return model.length > 15 ? model.slice(0, 15) + '…' : model;
+}
+
+/** Build ECharts theme from current CSS variables (for dynamic theme switching) */
+export function buildEChartsTheme() {
+  const s = getComputedStyle(document.documentElement);
+  const v = (name: string) => s.getPropertyValue(name).trim();
+
+  return {
+    backgroundColor: 'transparent',
+    textStyle: { color: v('--text-muted'), fontFamily: "'JetBrains Mono', monospace", fontSize: 9 },
+    title: { textStyle: { color: v('--text-secondary') } },
+    legend: { textStyle: { color: v('--text-muted') } },
+    categoryAxis: {
+      axisLine: { lineStyle: { color: v('--chart-axis') } },
+      axisTick: { lineStyle: { color: v('--border') } },
+      axisLabel: { color: v('--chart-axis-label') },
+      splitLine: { lineStyle: { color: v('--chart-axis'), opacity: 0.3 } },
+    },
+    valueAxis: {
+      axisLine: { lineStyle: { color: v('--chart-axis') } },
+      axisTick: { lineStyle: { color: v('--border') } },
+      axisLabel: { color: v('--chart-axis-label') },
+      splitLine: { lineStyle: { color: v('--chart-axis'), opacity: 0.3 } },
+    },
+    tooltip: {
+      backgroundColor: v('--chart-tooltip-bg'),
+      borderColor: v('--chart-tooltip-border'),
+      textStyle: { color: v('--chart-tooltip-text'), fontSize: 11 },
+    },
+  };
 }

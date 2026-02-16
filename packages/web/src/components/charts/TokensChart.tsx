@@ -53,7 +53,7 @@ export function TokensChart({ data, selectedModel }: Props) {
           axisLabel: { interval: bucketLabelInterval(data.length) },
         },
         yAxis: TOKEN_Y_AXIS,
-        tooltip: { trigger: 'axis', formatter: (params: unknown) => {
+        tooltip: { appendToBody: true, trigger: 'axis', formatter: (params: unknown) => {
           const p = (params as Array<{ name: string; value: number }>)[0];
           if (!p) return '';
           return `<b>${p.name}</b><br/><b style="color:#38bdf8">${p.value.toFixed(1)}k</b> tokens`
@@ -99,6 +99,7 @@ export function TokensChart({ data, selectedModel }: Props) {
       },
       yAxis: TOKEN_Y_AXIS,
       tooltip: {
+        appendToBody: true,
         trigger: 'axis',
         formatter: (params: unknown) => {
           const items = params as Array<{ seriesName: string; value: number; color: string; name: string }>;
@@ -116,12 +117,6 @@ export function TokensChart({ data, selectedModel }: Props) {
           return html;
         },
       },
-      legend: visibleModels.length > 1 ? {
-        bottom: 0,
-        textStyle: { color: '#71717a', fontSize: 9 },
-        itemWidth: 8,
-        itemHeight: 8,
-      } : undefined,
       series,
     };
   }, [data, selectedModel]);

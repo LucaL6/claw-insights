@@ -1,8 +1,9 @@
 @import "tailwindcss";
+@import "./styles/theme.css";
 
 /* ── Fonts ── */
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
 }
 .mono, code, .font-mono {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -24,11 +25,11 @@ body {
 }
 .sb::-webkit-scrollbar-track,
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scrollbar-track);
 }
 .sb::-webkit-scrollbar-thumb,
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: var(--scrollbar-thumb);
   border-radius: 2px;
 }
 
@@ -37,17 +38,17 @@ body {
   height: 2px;
 }
 .sb-h::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scrollbar-track);
 }
 .sb-h::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--scrollbar-thumb);
   border-radius: 1px;
 }
 
 /* ── Grid background ── */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(63,63,70,0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(63,63,70,0.08) 1px, transparent 1px);
+    linear-gradient(var(--chart-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--chart-grid) 1px, transparent 1px);
   background-size: 40px 40px;
 }

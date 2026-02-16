@@ -18,7 +18,7 @@ export function SessionsChart({ data }: { data: BucketData[] }) {
         axisLabel: { interval: bucketLabelInterval(data.length) },
       },
       yAxis: { ...COMPACT_Y_AXIS, minInterval: 1 },
-      tooltip: { trigger: 'axis', formatter: (params: unknown) => {
+      tooltip: { appendToBody: true, trigger: 'axis', formatter: (params: unknown) => {
         const p = (params as Array<{ name: string; value: number }>)[0];
         return `<b>${p.name}</b><br/>Sessions: <b style="color:${COLORS.emerald}">${p.value}</b>`
           + `<div style="color:#71717a;font-size:10px;margin-top:4px">${TOOLTIPS.chartFooter.sessions}</div>`;

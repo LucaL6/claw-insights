@@ -1,0 +1,279 @@
+/* packages/web/src/styles/theme.css */
+
+/* ═══════════ Dark Theme (default) ═══════════ */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-base: #09090b;
+  --bg-surface: rgba(24, 24, 27, 0.6);
+  --bg-surface-solid: #18181b;
+  --bg-elevated: #27272a;
+  --bg-overlay: rgba(39, 39, 42, 0.8);
+  --bg-input: #27272a;
+
+  /* Borders */
+  --border: #3f3f46;
+  --border-subtle: rgba(63, 63, 70, 0.6);
+
+  /* Text */
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-dim: #52525b;
+
+  /* Accent colors */
+  --emerald: #34d399;
+  --emerald-dim: rgba(52, 211, 153, 0.25);
+  --emerald-bg: rgba(16, 185, 129, 0.1);
+  --emerald-border: rgba(16, 185, 129, 0.2);
+
+  --red: #f87171;
+  --red-dim: rgba(239, 68, 68, 0.6);
+  --red-bg: rgba(239, 68, 68, 0.1);
+  --red-border: rgba(239, 68, 68, 0.2);
+
+  --sky: #38bdf8;
+  --sky-dim: rgba(56, 189, 248, 0.1);
+  --sky-bg: rgba(56, 189, 248, 0.08);
+  --sky-border: rgba(56, 189, 248, 0.12);
+
+  --amber: #fbbf24;
+  --amber-dim: rgba(251, 191, 36, 0.4);
+  --amber-bg: rgba(251, 191, 36, 0.1);
+  --amber-border: rgba(251, 191, 36, 0.2);
+
+  --violet: #a78bfa;
+  --violet-bg: rgba(167, 139, 250, 0.08);
+  --violet-border: rgba(167, 139, 250, 0.12);
+
+  --orange: #f97316;
+  --orange-bg: rgba(249, 115, 22, 0.1);
+  --orange-border: rgba(249, 115, 22, 0.2);
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-tooltip: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #3f3f46;
+  --scrollbar-track: transparent;
+
+  /* Chart-specific */
+  --chart-grid: rgba(63, 63, 70, 0.08);
+  --chart-axis: #27272a;
+  --chart-axis-label: #52525b;
+  --chart-future-overlay: rgba(9, 9, 11, 0.4);
+  --chart-tooltip-bg: #18181b;
+  --chart-tooltip-border: #3f3f46;
+  --chart-tooltip-text: #d4d4d8;
+  --chart-tooltip-dim: #71717a;
+
+  /* Card accent bars (invisible in dark) */
+  --card-accent-sessions: transparent;
+  --card-accent-tokens: transparent;
+  --card-accent-errors: transparent;
+  --card-accent-uptime: transparent;
+  --card-bg-sessions: transparent;
+  --card-bg-tokens: transparent;
+  --card-bg-errors: transparent;
+  --card-bg-uptime: transparent;
+
+  /* Progress bar track */
+  --progress-track: #27272a;
+
+  /* Skeleton */
+  --skeleton: rgba(39, 39, 42, 0.5);
+
+  /* Tag pills */
+  --tag-model-bg: rgba(56, 189, 248, 0.08);
+  --tag-model-text: rgba(56, 189, 248, 0.8);
+  --tag-model-border: rgba(56, 189, 248, 0.12);
+  --tag-channel-bg: rgba(167, 139, 250, 0.08);
+  --tag-channel-text: rgba(167, 139, 250, 0.8);
+  --tag-channel-border: rgba(167, 139, 250, 0.12);
+  --tag-kind-bg: rgba(113, 113, 122, 0.08);
+  --tag-kind-text: #a1a1aa;
+  --tag-kind-border: rgba(113, 113, 122, 0.12);
+  --tag-sub-bg: rgba(52, 211, 153, 0.08);
+  --tag-sub-text: rgba(52, 211, 153, 0.7);
+  --tag-sub-border: rgba(52, 211, 153, 0.12);
+  --tag-cron-bg: rgba(167, 139, 250, 0.15);
+  --tag-cron-text: #a78bfa;
+  --tag-cron-border: rgba(167, 139, 250, 0.2);
+
+  /* Sub-agent tree */
+  --tree-line: rgba(34, 211, 238, 0.2);
+  --subagent-border: rgba(34, 211, 238, 0.1);
+  --subagent-hover-border: rgba(34, 211, 238, 0.2);
+  --subagent-bg: rgba(24, 24, 27, 0.4);
+
+  /* Status dot */
+  --status-active: #34d399;
+  --status-active-shadow: rgba(52, 211, 153, 0.4);
+  --status-idle: #71717a;
+  --status-done: #3b82f6;
+  --status-failed: #ef4444;
+
+  /* Session card borders */
+  --session-active-border: rgba(16, 185, 129, 0.2);
+  --session-active-border-hover: rgba(16, 185, 129, 0.3);
+  --session-warn-border: rgba(249, 115, 22, 0.2);
+  --session-warn-border-hover: rgba(249, 115, 22, 0.3);
+  --session-idle-border: rgba(39, 39, 42, 0.6);
+  --session-idle-border-hover: #3f3f46;
+  --session-failed-border: rgba(239, 68, 68, 0.15);
+  --session-failed-border-hover: rgba(239, 68, 68, 0.25);
+
+  /* Toggle active states */
+  --toggle-active-bg: rgba(16, 185, 129, 0.1);
+  --toggle-active-text: #34d399;
+  --toggle-active-border: rgba(16, 185, 129, 0.2);
+  --toggle-sort-bg: rgba(56, 189, 248, 0.1);
+  --toggle-sort-text: #38bdf8;
+  --toggle-sort-border: rgba(56, 189, 248, 0.2);
+  --toggle-inactive-bg: #27272a;
+  --toggle-inactive-text: #71717a;
+  --toggle-inactive-border: #3f3f46;
+
+  /* Theme button */
+  --theme-btn-bg: rgba(39, 39, 42, 0.8);
+  --theme-btn-text: #a1a1aa;
+}
+
+/* ═══════════ Light Theme ═══════════ */
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-base: #ebebef;
+  --bg-surface: #ffffff;
+  --bg-surface-solid: #ffffff;
+  --bg-elevated: #f4f4f5;
+  --bg-overlay: rgba(244, 244, 245, 0.9);
+  --bg-input: #f4f4f5;
+
+  /* Borders */
+  --border: #d4d4d8;
+  --border-subtle: rgba(212, 212, 216, 0.6);
+
+  /* Text */
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+  --text-dim: #a1a1aa;
+
+  /* Accent colors (darkened for white-bg contrast) */
+  --emerald: #059669;
+  --emerald-dim: rgba(5, 150, 105, 0.15);
+  --emerald-bg: rgba(5, 150, 105, 0.06);
+  --emerald-border: rgba(5, 150, 105, 0.15);
+
+  --red: #dc2626;
+  --red-dim: rgba(220, 38, 38, 0.5);
+  --red-bg: rgba(220, 38, 38, 0.06);
+  --red-border: rgba(220, 38, 38, 0.15);
+
+  --sky: #0284c7;
+  --sky-dim: rgba(2, 132, 199, 0.1);
+  --sky-bg: rgba(2, 132, 199, 0.06);
+  --sky-border: rgba(2, 132, 199, 0.12);
+
+  --amber: #d97706;
+  --amber-dim: rgba(217, 119, 6, 0.3);
+  --amber-bg: rgba(217, 119, 6, 0.06);
+  --amber-border: rgba(217, 119, 6, 0.15);
+
+  --violet: #7c3aed;
+  --violet-bg: rgba(124, 58, 237, 0.06);
+  --violet-border: rgba(124, 58, 237, 0.12);
+
+  --orange: #ea580c;
+  --orange-bg: rgba(234, 88, 12, 0.06);
+  --orange-border: rgba(234, 88, 12, 0.15);
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-tooltip: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #d4d4d8;
+  --scrollbar-track: #f4f4f5;
+
+  /* Chart-specific */
+  --chart-grid: rgba(212, 212, 216, 0.3);
+  --chart-axis: #e4e4e7;
+  --chart-axis-label: #71717a;
+  --chart-future-overlay: rgba(244, 244, 245, 0.5);
+  --chart-tooltip-bg: #18181b;
+  --chart-tooltip-border: #3f3f46;
+  --chart-tooltip-text: #d4d4d8;
+  --chart-tooltip-dim: #71717a;
+
+  /* Card accent bars (visible in light) */
+  --card-accent-sessions: linear-gradient(to right, #34d399, #6ee7b7);
+  --card-accent-tokens: linear-gradient(to right, #38bdf8, #7dd3fc);
+  --card-accent-errors: linear-gradient(to right, #f87171, #fca5a5);
+  --card-accent-uptime: linear-gradient(to right, #34d399, #5eead4);
+  --card-bg-sessions: linear-gradient(to bottom, rgba(5,150,105,0.04), transparent);
+  --card-bg-tokens: linear-gradient(to bottom, rgba(2,132,199,0.04), transparent);
+  --card-bg-errors: linear-gradient(to bottom, rgba(220,38,38,0.03), transparent);
+  --card-bg-uptime: linear-gradient(to bottom, rgba(5,150,105,0.03), transparent);
+
+  /* Progress bar track */
+  --progress-track: #e4e4e7;
+
+  /* Skeleton */
+  --skeleton: rgba(212, 212, 216, 0.5);
+
+  /* Tag pills */
+  --tag-model-bg: rgba(2, 132, 199, 0.08);
+  --tag-model-text: #0369a1;
+  --tag-model-border: rgba(2, 132, 199, 0.15);
+  --tag-channel-bg: rgba(124, 58, 237, 0.06);
+  --tag-channel-text: #6d28d9;
+  --tag-channel-border: rgba(124, 58, 237, 0.15);
+  --tag-kind-bg: rgba(113, 113, 122, 0.08);
+  --tag-kind-text: #52525b;
+  --tag-kind-border: rgba(113, 113, 122, 0.15);
+  --tag-sub-bg: rgba(5, 150, 105, 0.06);
+  --tag-sub-text: #047857;
+  --tag-sub-border: rgba(5, 150, 105, 0.15);
+  --tag-cron-bg: rgba(124, 58, 237, 0.08);
+  --tag-cron-text: #7c3aed;
+  --tag-cron-border: rgba(124, 58, 237, 0.2);
+
+  /* Sub-agent tree */
+  --tree-line: rgba(2, 132, 199, 0.2);
+  --subagent-border: rgba(2, 132, 199, 0.1);
+  --subagent-hover-border: rgba(2, 132, 199, 0.2);
+  --subagent-bg: rgba(255, 255, 255, 0.6);
+
+  /* Status dot */
+  --status-active: #059669;
+  --status-active-shadow: rgba(5, 150, 105, 0.3);
+  --status-idle: #a1a1aa;
+  --status-done: #2563eb;
+  --status-failed: #dc2626;
+
+  /* Session card borders */
+  --session-active-border: rgba(5, 150, 105, 0.2);
+  --session-active-border-hover: rgba(5, 150, 105, 0.35);
+  --session-warn-border: rgba(234, 88, 12, 0.2);
+  --session-warn-border-hover: rgba(234, 88, 12, 0.35);
+  --session-idle-border: rgba(212, 212, 216, 0.6);
+  --session-idle-border-hover: #d4d4d8;
+  --session-failed-border: rgba(220, 38, 38, 0.15);
+  --session-failed-border-hover: rgba(220, 38, 38, 0.25);
+
+  /* Toggle active states */
+  --toggle-active-bg: rgba(5, 150, 105, 0.08);
+  --toggle-active-text: #059669;
+  --toggle-active-border: rgba(5, 150, 105, 0.2);
+  --toggle-sort-bg: rgba(2, 132, 199, 0.08);
+  --toggle-sort-text: #0284c7;
+  --toggle-sort-border: rgba(2, 132, 199, 0.2);
+  --toggle-inactive-bg: #f4f4f5;
+  --toggle-inactive-text: #a1a1aa;
+  --toggle-inactive-border: #e4e4e7;
+
+  /* Theme button */
+  --theme-btn-bg: rgba(251, 191, 36, 0.1);
+  --theme-btn-text: #d97706;
+}

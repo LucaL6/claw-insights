@@ -4,7 +4,7 @@ interface Props {
   title: string;
   children: ReactNode;
   confirmText?: string;
-  confirmColor?: string;
+  confirmStyle?: React.CSSProperties;
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -14,7 +14,7 @@ export function ConfirmModal({
   title,
   children,
   confirmText = 'Confirm',
-  confirmColor = 'bg-cyan-600 hover:bg-cyan-500',
+  confirmStyle,
   loading = false,
   onConfirm,
   onCancel,
@@ -22,22 +22,37 @@ export function ConfirmModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[4px]" onClick={onCancel}>
       <div
-        className="bg-zinc-900 border border-zinc-700 rounded-2xl w-[420px] p-6 shadow-2xl"
+        className="rounded-2xl w-[420px] p-6"
+        style={{
+          backgroundColor: 'var(--bg-surface-solid)',
+          border: '1px solid var(--border)',
+          boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        {title && <h2 className="text-lg font-semibold text-zinc-100 mb-4">{title}</h2>}
-        <div className="text-sm text-zinc-400">{children}</div>
+        {title && <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>{title}</h2>}
+        <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{children}</div>
         <div className="flex justify-end gap-2 mt-4">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-xs bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-lg hover:bg-zinc-700"
+            className="px-4 py-2 text-xs rounded-lg"
+            style={{
+              backgroundColor: 'var(--bg-elevated)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border)',
+            }}
           >
             取消
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className={`px-4 py-2 text-xs rounded-lg font-medium ${confirmColor} disabled:opacity-50`}
+            className="px-4 py-2 text-xs rounded-lg font-medium disabled:opacity-50"
+            style={confirmStyle ?? {
+              backgroundColor: 'var(--sky-bg)',
+              color: 'var(--sky)',
+              border: '1px solid var(--sky-border)',
+            }}
           >
             {loading ? 'Running...' : confirmText}
           </button>

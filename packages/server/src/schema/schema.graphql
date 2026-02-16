@@ -139,6 +139,7 @@ type ModelTokens {
 type MetricsBucket {
   bucket: Int!
   label: String!
+  epochStart: Int!
   sessions: Int!
   tokensK: Float!
   tokensByModel: [ModelTokens!]!
@@ -207,6 +208,36 @@ input DoctorOptions {
   autoFix: Boolean
 }
 
+# ── Events ──
+
+type EventEntry {
+  timestamp: String!
+  type: String!
+  module: String!
+  message: String!
+}
+
+type EventCounts {
+  error: Int!
+  warning: Int!
+  restart: Int!
+}
+
+type EventsResult {
+  events: [EventEntry!]!
+  total: Int!
+  counts: EventCounts!
+}
+
+type EventDensityBucket {
+  hour: Int!
+  count: Int!
+  hasError: Boolean!
+  hasWarning: Boolean!
+  hasRestart: Boolean!
+  epochStart: Int!
+}
+
 # ── Root Types ──
 
 type Query {
@@ -218,6 +249,8 @@ type Query {
   cronJobs: [CronJob!]!
   usageCost: UsageCost!
   recentLogs(count: Int): [LogEntry!]!
+  events(from: Int, to: Int, types: [String!], limit: Int): EventsResult!
+  eventDensity: [EventDensityBucket!]!
 }
 
 """Lightweight signal emitted when a data source updates"""

@@ -26,18 +26,19 @@ interface Props {
 
 export function RangePicker({ value, onChange }: Props) {
   return (
-    <div className="inline-flex bg-zinc-900/80 border border-zinc-800 rounded-md p-0.5 gap-px">
+    <div
+      className="inline-flex rounded-md p-0.5 gap-px"
+      style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+    >
       {OPTIONS.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className={`
-            mono text-[10px] font-medium px-2.5 py-1 rounded transition-all duration-150
-            ${value === opt.value
-              ? 'text-sky-400 bg-sky-500/10 border border-sky-500/20 -m-px'
-              : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/30 border border-transparent'
-            }
-          `}
+          className="mono text-[10px] font-medium px-2.5 py-1 rounded transition-all duration-150"
+          style={value === opt.value
+            ? { color: 'var(--toggle-sort-text)', backgroundColor: 'var(--toggle-sort-bg)', border: '1px solid var(--toggle-sort-border)', margin: '-1px' }
+            : { color: 'var(--text-dim)', border: '1px solid transparent' }
+          }
         >
           {opt.label}
         </button>

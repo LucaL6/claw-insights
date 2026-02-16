@@ -7,6 +7,7 @@ import { SystemMetrics } from '../sources/system-metrics.js';
 import { LogTailer } from '../sources/log-tailer.js';
 import { SpawnTracker } from '../sources/spawn-tracker.js';
 import { initDatabase } from '../db/init.js';
+import { queryEvents, getEventDensity } from '../db/queries.js';
 import { Aggregator } from '../sources/aggregator.js';
 import { getGatewayStatus } from '../sources/gateway-cli.js';
 import { getUsageCost } from '../sources/usage-cost.js';
@@ -82,6 +83,10 @@ export const resolvers = {
     cronJobs: () => cronReader.getJobs(),
     usageCost: () => getUsageCost(),
     recentLogs: (_: unknown, args: { count?: number }) => logTailer.getRecentEntries(args.count ?? 50),
+    events: (_: unknown, args: { from?: number; to?: number; types?: string[]; limit?: number }) => {
+      return queryEvents(db, { from: args.from, to: args.to, types: args.types, limit: args.limit });
+    },
+    eventDensity: () => getEventDensity(db),
   },
 
   Subscription: {
