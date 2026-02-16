@@ -1,24 +1,24 @@
 import { useMemo } from 'react';
 import { BaseChart } from './BaseChart';
-import { CHART_GRID, COLORS, COMPACT_Y_AXIS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import { CHART_GRID, COLORS, COMPACT_Y_AXIS, bucketLabelInterval } from './echarts-theme';
 import type { EChartsOption } from 'echarts';
+import { TOOLTIPS } from './metricsTooltips';
 
-interface HourlyData { hour: number; errors: number; warnings: number; restartEvent: boolean }
+interface BucketData { bucket: number; label: string; errors: number; warnings: number; restartEvent: boolean }
 
-export function ErrorsChart({ data }: { data: HourlyData[] }) {
-  const currentHour = new Date().getHours();
-
+export function ErrorsChart({ data }: { data: BucketData[] }) {
   const option = useMemo((): EChartsOption => {
+    const labels = data.map((d) => d.label);
     const restartPoints = data
       .filter(d => d.restartEvent)
-      .map(d => [d.hour, 0]);
+      .map(d => [d.bucket, 0]);
 
     return {
       grid: CHART_GRID,
       xAxis: {
         type: 'category',
-        data: hourLabels(currentHour),
-        axisLabel: { interval: 2 },
+        data: labels,
+        axisLabel: { interval: bucketLabelInterval(data.length) },
       },
       yAxis: { ...COMPACT_Y_AXIS, minInterval: 1 },
       tooltip: { trigger: 'axis', formatter: (params: unknown) => {
@@ -28,8 +28,9 @@ export function ErrorsChart({ data }: { data: HourlyData[] }) {
           if (p.seriesName === 'Restart') continue;
           html += `<br/><span style="color:${p.color}">●</span> ${p.seriesName}: <b>${p.value}</b>`;
         }
-        const hasRestart = data.find(d => hourLabels(currentHour)[d.hour] === items[0]?.name && d.restartEvent);
+        const hasRestart = data.find(d => d.label === items[0]?.name && d.restartEvent);
         if (hasRestart) html += '<br/><span style="color:#fbbf24">↻</span> Gateway restarted';
+        html += `<div style="color:#71717a;font-size:10px;margin-top:4px">${TOOLTIPS.chartFooter.errors}</div>`;
         return html;
       }},
       series: [
@@ -46,7 +47,6 @@ export function ErrorsChart({ data }: { data: HourlyData[] }) {
           stack: 'errors',
           data: data.map(d => d.errors),
           itemStyle: { color: 'rgba(239,68,68,0.6)', borderRadius: [2, 2, 0, 0] },
-          markArea: futureZoneMarkArea(currentHour) as EChartsOption['series'],
         },
         {
           name: 'Restart',
@@ -59,7 +59,7 @@ export function ErrorsChart({ data }: { data: HourlyData[] }) {
         },
       ],
     };
-  }, [data, currentHour]);
+  }, [data]);
 
-  return <BaseChart option={option} height={50} testId="errors-chart" />;
+  return <BaseChart option={option} height={80} testId="errors-chart" />;
 }

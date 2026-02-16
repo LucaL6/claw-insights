@@ -34,7 +34,7 @@ describe('dataBus integration', () => {
 
     const mc = new MetricsCollector(
       db,
-      { getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens: 1000 }] },
+      { getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens: 1000 }], getTokensByModel: () => new Map(), getTotalTokensK: () => 1 },
       () => ({ cpu: 1, memoryMB: 100, diskMB: 500, sampledAt: new Date().toISOString() }),
       () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: new Date().toISOString() }),
     );

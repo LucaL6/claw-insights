@@ -15,7 +15,7 @@ export class SystemMetrics {
   /** Get Gateway PID from launchctl */
   getPid(): number | null {
     try {
-      const out = execSync('launchctl list 2>/dev/null | grep openclaw', { encoding: 'utf-8' });
+      const out = execSync('launchctl list 2>/dev/null | grep ai.openclaw.gateway', { encoding: 'utf-8' });
       const match = out.match(/^(\d+)/);
       return match ? parseInt(match[1], 10) : null;
     } catch {

@@ -29,6 +29,8 @@ describe('MetricsCollector', () => {
         { key: 'b', status: 'ACTIVE', totalTokens: 30000 },
         { key: 'c', status: 'IDLE', totalTokens: 20000 },
       ],
+      getTokensByModel: () => new Map([['test-model', 100000]]),
+      getTotalTokensK: () => 100,
     };
     const collector = new MetricsCollector(
       db,
@@ -53,6 +55,8 @@ describe('MetricsCollector', () => {
       getSessions: () => [
         { key: 'a', status: 'ACTIVE', totalTokens },
       ],
+      getTokensByModel: () => new Map([['test-model', totalTokens]]),
+      getTotalTokensK: () => totalTokens / 1000,
     };
     const collector = new MetricsCollector(
       db,
@@ -67,7 +71,7 @@ describe('MetricsCollector', () => {
 
     const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as any[];
     expect(rows[0].token_delta_k).toBe(0); // first sample, no delta
-    expect(rows[1].token_delta_k).toBe(15); // 15k delta
+    expect(rows[1].token_delta_k).toBe(0); // delta computed at query time, not write time
     cleanup();
   });
 
@@ -78,6 +82,8 @@ describe('MetricsCollector', () => {
         { key: 'a', status: 'ACTIVE', totalTokens: 60000 },
         { key: 'b', status: 'ACTIVE', totalTokens: 40000 },
       ],
+      getTokensByModel: () => new Map([['test-model', 100000]]),
+      getTotalTokensK: () => 100,
     };
     const collector = new MetricsCollector(
       db,
@@ -104,7 +110,7 @@ describe('MetricsCollector', () => {
 
   it('should start and stop timers', () => {
     const { db, cleanup } = setup();
-    const mockSessionReader = { getSessions: () => [] };
+    const mockSessionReader = { getSessions: () => [], getTokensByModel: () => new Map(), getTotalTokensK: () => 0 };
     const collector = new MetricsCollector(
       db,
       mockSessionReader as any,

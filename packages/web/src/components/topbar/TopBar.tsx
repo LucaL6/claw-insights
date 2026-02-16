@@ -1,5 +1,7 @@
 import { GatewayQuery, ResourcesQuery, ChannelsQuery, MetricsQuery } from '../../graphql/queries';
 import { useReactiveQuery } from '../../hooks/useReactiveQuery';
+import { RANGE_INFO, type MetricsRange } from '../charts/GranularityPicker';
+import { InfoTooltip } from '../ui/InfoTooltip';
 
 function formatUptime(startedAt: string | null | undefined): string {
   if (!startedAt) return '';
@@ -28,7 +30,7 @@ function channelShortName(name: string): string {
   return name.slice(0, 6);
 }
 
-export function TopBar({ onAction }: { onAction?: (action: 'restart' | 'doctor' | 'update') => void }) {
+export function TopBar({ onAction, metricsRange }: { onAction?: (action: 'restart' | 'doctor' | 'update') => void; metricsRange?: MetricsRange }) {
   const [gw] = useReactiveQuery(
     { query: GatewayQuery, requestPolicy: 'cache-and-network' },
     { sources: ['gateway'] },
@@ -42,14 +44,18 @@ export function TopBar({ onAction }: { onAction?: (action: 'restart' | 'doctor' 
     { sources: ['gateway'] },
   );
   const [met] = useReactiveQuery(
-    { query: MetricsQuery, requestPolicy: 'cache-and-network' },
+    { query: MetricsQuery, variables: { range: metricsRange ?? 'TWENTY_FOUR_HOUR' }, requestPolicy: 'cache-and-network' },
     { sources: ['metrics'] },
   );
 
   const gateway = gw.data?.gateway;
   const resources = res.data?.resources;
   const channels = (ch.data?.channels ?? []) as Array<{ name: string; connected: boolean; latencyMs: number | null; provider: string }>;
-  const metrics = met.data?.metrics as { totalTokensK: number; totalErrors: number; totalWarnings: number } | undefined;
+  const metrics = met.data?.metrics as { totalTokensK: number; totalErrors: number; totalWarnings: number; buckets?: Array<{ tokensK: number }> } | undefined;
+  const rangeLabel = RANGE_INFO[metricsRange ?? 'TWENTY_FOUR_HOUR'].label;
+
+  // Compute range-scoped token sum from buckets (same as MetricsSection)
+  const rangeTokensK = metrics?.buckets?.reduce((s: number, b: { tokensK: number }) => s + Number(b.tokensK ?? 0), 0) ?? 0;
 
   const uptime = formatUptime(gateway?.startedAt);
   const version = gateway?.version ?? '...';
@@ -66,7 +72,7 @@ export function TopBar({ onAction }: { onAction?: (action: 'restart' | 'doctor' 
         <div className="flex items-center gap-2">
           <span className="text-lg">🦞</span>
           <span className="text-sm font-semibold tracking-tight">OpenClaw</span>
-          <span className="text-[10px] text-zinc-500 mono">{version}</span>
+          <span className="text-[10px] text-zinc-500 mono">v{version}</span>
         </div>
 
         {/* UP/DOWN badge */}
@@ -94,31 +100,36 @@ export function TopBar({ onAction }: { onAction?: (action: 'restart' | 'doctor' 
         ))}
       </div>
 
-      {/* Center: Resources + Token/Err/Warn */}
-      <div className="flex items-center gap-3 text-[10px]">
-        <div className="flex items-center gap-3 px-3 py-1 bg-zinc-900/40 border border-zinc-800/60 rounded-md">
-          {resources && (
-            <>
-              <span className="text-zinc-500">CPU</span>
-              <span className="mono text-zinc-300">{resources.cpu.toFixed(1)}%</span>
-              <span className="w-px h-3 bg-zinc-800" />
-              <span className="text-zinc-500">MEM</span>
-              <span className="mono text-zinc-300">{resources.memoryMB}M</span>
-            </>
-          )}
-          {metrics && (
-            <>
-              <span className="w-px h-3 bg-zinc-800" />
-              <span className="text-zinc-500">Token</span>
-              <span className="mono text-zinc-200 font-medium">{metrics.totalTokensK > 0 ? `${Math.round(metrics.totalTokensK)}k` : '0'}</span>
-              <span className="w-px h-3 bg-zinc-800" />
-              <span className="text-zinc-500">Err</span>
-              <span className="mono text-red-400">{metrics.totalErrors}</span>
-              <span className="text-zinc-500">Warn</span>
-              <span className="mono text-yellow-400">{metrics.totalWarnings}</span>
-            </>
-          )}
-        </div>
+      {/* Center: System metrics (real-time) | Aggregate stats (range-scoped) */}
+      <div className="flex items-center gap-2 text-[10px]">
+        {/* Left group: real-time system */}
+        {resources && (
+          <div className="flex items-center gap-3 px-3 py-1 bg-zinc-900/40 border border-zinc-800/60 rounded-md">
+            <span className="text-zinc-500">CPU</span>
+            <span className="mono text-zinc-300">{resources.cpu.toFixed(1)}%</span>
+            <InfoTooltip label="Gateway 进程 CPU 使用率" detail="ps -o pcpu= -p <gateway_pid> · real-time" />
+            <span className="w-px h-3 bg-zinc-800" />
+            <span className="text-zinc-500">MEM</span>
+            <span className="mono text-zinc-300">{resources.memoryMB}M</span>
+            <InfoTooltip label="Gateway 进程内存占用 (RSS)" detail="ps -o rss= -p <gateway_pid> · real-time" />
+          </div>
+        )}
+        {/* Right group: aggregate stats with range label */}
+        {metrics && (
+          <div className="flex items-center gap-3 px-3 py-1 bg-zinc-900/40 border border-zinc-800/60 rounded-md">
+            <span className="text-zinc-500">Token</span>
+            <span className="mono text-zinc-200 font-medium">{rangeTokensK > 0 ? `${Math.round(rangeTokensK)}k` : '0'}</span>
+            <span className="text-zinc-600 mono">({rangeLabel})</span>
+            <InfoTooltip label="所选范围内的 token 消耗总量" detail="SUM of per-bucket delta(total_tokens_k)" />
+            <span className="w-px h-3 bg-zinc-800" />
+            <span className="text-zinc-500">Err</span>
+            <span className="mono text-red-400">{metrics.totalErrors}</span>
+            <InfoTooltip label="所选范围内的错误总数" detail="SUM(error events) in range" />
+            <span className="text-zinc-500">Warn</span>
+            <span className="mono text-yellow-400">{metrics.totalWarnings}</span>
+            <InfoTooltip label="所选范围内的警告总数" detail="SUM(warning events) in range" alignRight />
+          </div>
+        )}
       </div>
 
       {/* Right: Actions + Update + Uptime */}

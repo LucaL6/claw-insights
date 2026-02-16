@@ -1,5 +1,5 @@
 import type { Database } from 'bun:sqlite';
-import { insertSample } from '../db/queries.js';
+import { insertSample, insertModelSample } from '../db/queries.js';
 import { emitChange } from '../events.js';
 
 interface SessionLike {
@@ -10,6 +10,8 @@ interface SessionLike {
 
 interface SessionReaderLike {
   getSessions(): SessionLike[];
+  getTokensByModel(): Map<string, number>;
+  getTotalTokensK(): number;
 }
 
 interface SystemMetricsResult {
@@ -51,29 +53,38 @@ export class MetricsCollector {
   sampleFast() {
     const sessions = this.sessionReader.getSessions();
     const activeSessions = sessions.filter(s => s.status === 'ACTIVE').length;
-    const totalTokensK = sessions.reduce((sum, s) => sum + s.totalTokens, 0) / 1000;
 
-    const delta = this.lastTotalTokensK > 0
-      ? Math.max(0, totalTokensK - this.lastTotalTokensK)
-      : 0;
+    // Use full token data (bypasses dedup filter)
+    const tokensByModel = this.sessionReader.getTokensByModel();
+    const totalTokensK = this.sessionReader.getTotalTokensK();
+
     this.lastActiveSessions = activeSessions;
     this.lastTotalTokensK = totalTokensK;
 
+    // Write global sample (no delta — computed at query time via MAX-MIN)
     insertSample(this.db, {
       activeSessions,
       totalTokensK,
-      tokenDeltaK: delta,
+      tokenDeltaK: 0,
       costToday: this.lastCostToday,
       tokensTodayM: this.lastTokensTodayM,
       cpu: this.lastCpu,
       memoryMb: this.lastMemoryMb,
     });
 
+    // Write per-model samples
+    for (const [model, tokens] of tokensByModel) {
+      insertModelSample(this.db, {
+        model,
+        totalTokensK: tokens / 1000,
+      });
+    }
+
     this.aggregator?.clearCache();
     emitChange('metrics');
   }
 
-  /** Slow sample: cost + system metrics (every 2min) — carries forward last session/token values */
+  /** Slow sample: cost + system metrics (every 2min) */
   sampleSlow() {
     const cost = this.getUsageCost();
     const sys = this.getSystemMetrics();
@@ -83,7 +94,9 @@ export class MetricsCollector {
     this.lastCpu = sys.cpu;
     this.lastMemoryMb = sys.memoryMB;
 
-    // Carry forward last known session/token values (don't write zeros)
+    // Only write cost + system metrics, carry forward token values.
+    // Note: totalTokensK here is the last value from sampleFast (at most 30s stale).
+    // This is acceptable because MAX-MIN delta calculation tolerates minor staleness.
     insertSample(this.db, {
       activeSessions: this.lastActiveSessions,
       totalTokensK: this.lastTotalTokensK,
@@ -98,11 +111,21 @@ export class MetricsCollector {
     emitChange('metrics');
   }
 
+  /** Prune old samples older than 48h */
+  private pruneOldSamples() {
+    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    this.db.prepare('DELETE FROM model_token_samples WHERE timestamp < ?').run(cutoff);
+    this.db.prepare('DELETE FROM metric_samples WHERE timestamp < ?').run(cutoff);
+  }
+
   start() {
     this.sampleFast();
     this.sampleSlow();
     this.fastTimer = setInterval(() => this.sampleFast(), this.fastIntervalMs);
     this.slowTimer = setInterval(() => this.sampleSlow(), this.slowIntervalMs);
+    // Prune on startup and every 6 hours
+    this.pruneOldSamples();
+    setInterval(() => this.pruneOldSamples(), 6 * 60 * 60 * 1000);
   }
 
   stop() {

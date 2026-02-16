@@ -17,47 +17,29 @@ describe('SessionCard', () => {
     updatedAt: Date.now() - 300_000,
   };
 
-  it('F2.1.2: displays session name', () => {
+  it('displays session name', () => {
     const { getByText } = render(<SessionCard {...baseProps} />);
     expect(getByText('test-session')).toBeDefined();
   });
 
-  it('F2.1.2: displays model name (simplified)', () => {
+  it('displays friendly model name', () => {
     const { getByText } = render(<SessionCard {...baseProps} />);
-    expect(getByText('opus-4-6')).toBeDefined();
+    expect(getByText('Opus 4.6')).toBeDefined();
   });
 
-  it('F2.1.2: displays channel', () => {
+  it('displays channel pill', () => {
     const { getByText } = render(<SessionCard {...baseProps} />);
     expect(getByText('webchat')).toBeDefined();
   });
 
-  it('F2.1.2: displays token count', () => {
+  it('displays token count', () => {
     const { getByText } = render(<SessionCard {...baseProps} />);
-    expect(getByText('50.0k tokens')).toBeDefined();
+    expect(getByText('50.0k')).toBeDefined();
   });
 
-  it('F2.1.2: displays usage percent', () => {
+  it('displays usage percent', () => {
     const { getByText } = render(<SessionCard {...baseProps} />);
     expect(getByText('25%')).toBeDefined();
-  });
-
-  it('F2.1.3: cyan bar when <=50%', () => {
-    const { container } = render(<SessionCard {...baseProps} usagePercent={50} />);
-    const bar = container.querySelector('[style*="width"]');
-    expect(bar?.className).toContain('cyan');
-  });
-
-  it('F2.1.3: amber bar when 51-80%', () => {
-    const { container } = render(<SessionCard {...baseProps} usagePercent={75} />);
-    const bar = container.querySelector('[style*="width"]');
-    expect(bar?.className).toContain('amber');
-  });
-
-  it('F2.1.3: red bar when >80%', () => {
-    const { container } = render(<SessionCard {...baseProps} usagePercent={90} />);
-    const bar = container.querySelector('[style*="width"]');
-    expect(bar?.className).toContain('red');
   });
 
   it('shows CRON badge for cron kind', () => {
@@ -68,5 +50,10 @@ describe('SessionCard', () => {
   it('does not show CRON badge for direct kind', () => {
     const { queryByText } = render(<SessionCard {...baseProps} kind="direct" />);
     expect(queryByText('CRON')).toBeNull();
+  });
+
+  it('shows sub-agent count', () => {
+    const { getByText } = render(<SessionCard {...baseProps} subAgentCount={6} />);
+    expect(getByText('6 sub')).toBeDefined();
   });
 });

@@ -1,37 +1,45 @@
 import { useMemo } from 'react';
 import { BaseChart } from './BaseChart';
-import { CHART_GRID, COLORS, COMPACT_Y_AXIS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import { CHART_GRID, COLORS, COMPACT_Y_AXIS, bucketLabelInterval } from './echarts-theme';
 import type { EChartsOption } from 'echarts';
+import { TOOLTIPS } from './metricsTooltips';
 
-interface HourlyData { hour: number; sessions: number }
+interface BucketData { bucket: number; label: string; sessions: number }
 
-export function SessionsChart({ data }: { data: HourlyData[] }) {
-  const currentHour = new Date().getHours();
+export function SessionsChart({ data }: { data: BucketData[] }) {
+  const option = useMemo((): EChartsOption => {
+    const labels = data.map((d) => d.label);
 
-  const option = useMemo((): EChartsOption => ({
-    grid: CHART_GRID,
-    xAxis: {
-      type: 'category',
-      data: hourLabels(currentHour),
-      axisLabel: { interval: 5 },
-    },
-    yAxis: { ...COMPACT_Y_AXIS, minInterval: 1 },
-    tooltip: { trigger: 'axis', formatter: (params: unknown) => {
-      const p = (params as Array<{ name: string; value: number }>)[0];
-      return `<b>${p.name}</b><br/>Sessions: <b style="color:${COLORS.emerald}">${p.value}</b>`;
-    }},
-    series: [{
-      type: 'bar',
-      data: data.map(d => d.sessions),
-      itemStyle: {
-        color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [{ offset: 0, color: COLORS.emerald }, { offset: 1, color: COLORS.emeraldDark }],
-        },
-        borderRadius: [2, 2, 0, 0],
+    return {
+      grid: CHART_GRID,
+      xAxis: {
+        type: 'category',
+        data: labels,
+        axisLabel: { interval: bucketLabelInterval(data.length) },
       },
-      markArea: futureZoneMarkArea(currentHour) as EChartsOption['series'],
-    }],
-  }), [data, currentHour]);
+      yAxis: { ...COMPACT_Y_AXIS, minInterval: 1 },
+      tooltip: { trigger: 'axis', formatter: (params: unknown) => {
+        const p = (params as Array<{ name: string; value: number }>)[0];
+        return `<b>${p.name}</b><br/>Sessions: <b style="color:${COLORS.emerald}">${p.value}</b>`
+          + `<div style="color:#71717a;font-size:10px;margin-top:4px">${TOOLTIPS.chartFooter.sessions}</div>`;
+      }},
+      series: [{
+        type: 'line',
+        step: 'end',
+        data: data.map(d => d.sessions),
+        symbol: 'none',
+        lineStyle: { color: COLORS.emerald, width: 1.5 },
+        areaStyle: {
+          color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(52,211,153,0.25)' },
+              { offset: 1, color: 'rgba(52,211,153,0.02)' },
+            ],
+          },
+        },
+      }],
+    };
+  }, [data]);
 
-  return <BaseChart option={option} height={58} testId="sessions-chart" />;
+  return <BaseChart option={option} height={120} testId="sessions-chart" />;
 }

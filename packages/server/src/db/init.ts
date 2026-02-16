@@ -33,6 +33,19 @@ CREATE TABLE IF NOT EXISTS metric_samples (
 
 CREATE INDEX IF NOT EXISTS idx_samples_time
   ON metric_samples(timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS model_token_samples (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp      TEXT NOT NULL,
+  model          TEXT NOT NULL,
+  total_tokens_k REAL NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_model_samples_time
+  ON model_token_samples(timestamp DESC);
+
+CREATE INDEX IF NOT EXISTS idx_model_samples_model_time
+  ON model_token_samples(model, timestamp);
 `;
 
 export function initDatabase(dbPath: string = DEFAULT_DB_PATH): Database {

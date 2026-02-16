@@ -1,55 +1,130 @@
 import { useMemo } from 'react';
 import { BaseChart } from './BaseChart';
-import { CHART_GRID, COLORS, COMPACT_Y_AXIS, futureZoneMarkArea, hourLabels } from './echarts-theme';
+import { CHART_GRID, COMPACT_Y_AXIS, bucketLabelInterval, getModelColor, shortModelName } from './echarts-theme';
+
+/** Y-axis for token charts: values are already in k, so always show "k" suffix */
+const TOKEN_Y_AXIS = {
+  ...COMPACT_Y_AXIS,
+  axisLabel: {
+    ...COMPACT_Y_AXIS.axisLabel,
+    formatter: (v: number) => v === 0 ? '0' : v >= 1000 ? `${(v / 1000).toFixed(1)}M` : `${v}k`,
+  },
+};
 import type { EChartsOption } from 'echarts';
+import { TOOLTIPS } from './metricsTooltips';
 
-interface HourlyData { hour: number; tokensK: number }
+interface ModelTokens {
+  model: string;
+  tokensK: number;
+}
 
-export function TokensChart({ data }: { data: HourlyData[] }) {
-  const currentHour = new Date().getHours();
+interface BucketData {
+  bucket: number;
+  label: string;
+  tokensK: number;
+  tokensByModel?: ModelTokens[];
+}
 
+interface Props {
+  data: BucketData[];
+  selectedModel?: string | null;
+}
+
+export function TokensChart({ data, selectedModel }: Props) {
   const option = useMemo((): EChartsOption => {
-    // tokensK is cumulative (MAX total_tokens_k per hour) — carry forward through current hour
-    const cumData: number[] = [];
-    let last = 0;
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].tokensK > 0) last = data[i].tokensK;
-      cumData.push(i <= currentHour ? last : 0);
+    const labels = data.map((d) => d.label);
+
+    // Collect all unique models
+    const modelSet = new Set<string>();
+    for (const d of data) {
+      for (const mt of d.tokensByModel ?? []) {
+        modelSet.add(mt.model);
+      }
     }
+    const models = Array.from(modelSet).sort();
+
+    // Fallback: no model data yet → single bar series
+    if (models.length === 0) {
+      return {
+        grid: CHART_GRID,
+        xAxis: {
+          type: 'category',
+          data: labels,
+          axisLabel: { interval: bucketLabelInterval(data.length) },
+        },
+        yAxis: TOKEN_Y_AXIS,
+        tooltip: { trigger: 'axis', formatter: (params: unknown) => {
+          const p = (params as Array<{ name: string; value: number }>)[0];
+          if (!p) return '';
+          return `<b>${p.name}</b><br/><b style="color:#38bdf8">${p.value.toFixed(1)}k</b> tokens`
+            + `<div style="color:#71717a;font-size:10px;margin-top:4px">${TOOLTIPS.chartFooter.tokens}</div>`;
+        }},
+        series: [{
+          type: 'bar',
+          data: data.map(d => d.tokensK),
+          barMaxWidth: 12,
+          itemStyle: { color: '#38bdf8', borderRadius: [2, 2, 0, 0] },
+        }],
+      };
+    }
+
+    // Filter if specific model selected
+    const visibleModels = selectedModel
+      ? models.filter(m => m === selectedModel)
+      : models;
+
+    const series = visibleModels.map((model, idx) => ({
+      name: shortModelName(model),
+      type: 'bar' as const,
+      stack: 'tokens',
+      barMaxWidth: 12,
+      data: data.map(d => {
+        const mt = (d.tokensByModel ?? []).find(m => m.model === model);
+        return mt ? Number(mt.tokensK) : 0;
+      }),
+      itemStyle: {
+        color: getModelColor(model),
+        borderRadius: idx === visibleModels.length - 1
+          ? [2, 2, 0, 0] as [number, number, number, number]
+          : [0, 0, 0, 0] as [number, number, number, number],
+      },
+    }));
 
     return {
       grid: CHART_GRID,
       xAxis: {
         type: 'category',
-        data: hourLabels(currentHour),
-        axisLabel: { interval: 5 },
+        data: labels,
+        axisLabel: { interval: bucketLabelInterval(data.length) },
       },
-      yAxis: COMPACT_Y_AXIS,
-      tooltip: { trigger: 'axis', formatter: (params: unknown) => {
-        const p = (params as Array<{ name: string; value: number }>)[0];
-        return `<b>${p.name}</b><br/><b style="color:${COLORS.sky}">${p.value.toFixed(1)}k</b> total tokens`;
-      }},
-      series: [{
-        type: 'line',
-        data: cumData,
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: (value: number, params: { dataIndex: number }) =>
-          params.dataIndex === currentHour ? 6 : 0,
-        lineStyle: { color: COLORS.sky, width: 1.5 },
-        itemStyle: { color: COLORS.sky },
-        areaStyle: {
-          color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(56,189,248,0.2)' },
-              { offset: 1, color: 'rgba(56,189,248,0.02)' },
-            ],
-          },
+      yAxis: TOKEN_Y_AXIS,
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params: unknown) => {
+          const items = params as Array<{ seriesName: string; value: number; color: string; name: string }>;
+          if (!items?.length) return '';
+          let html = `<b>${items[0].name}</b>`;
+          let total = 0;
+          for (const item of items) {
+            if (item.value > 0) {
+              html += `<br/><span style="color:${item.color}">■</span> ${item.seriesName}: <b>${item.value.toFixed(1)}k</b>`;
+              total += item.value;
+            }
+          }
+          if (items.length > 1) html += `<br/>Total: <b>${total.toFixed(1)}k</b>`;
+          html += `<div style="color:#71717a;font-size:10px;margin-top:4px">${TOOLTIPS.chartFooter.tokens}</div>`;
+          return html;
         },
-        markArea: futureZoneMarkArea(currentHour) as EChartsOption['series'],
-      }],
+      },
+      legend: visibleModels.length > 1 ? {
+        bottom: 0,
+        textStyle: { color: '#71717a', fontSize: 9 },
+        itemWidth: 8,
+        itemHeight: 8,
+      } : undefined,
+      series,
     };
-  }, [data, currentHour]);
+  }, [data, selectedModel]);
 
-  return <BaseChart option={option} height={58} testId="tokens-chart" />;
+  return <BaseChart option={option} height={120} testId="tokens-chart" />;
 }

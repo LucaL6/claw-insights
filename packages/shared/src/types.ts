@@ -43,16 +43,7 @@ export interface Session {
   usagePercent: number;
   status: SessionStatus;
   updatedAt: number;
-  subAgents: SubAgent[];
-}
-
-/** Sub-agent */
-export interface SubAgent {
-  key: string;
-  label: string;
-  status: SessionStatus;
-  totalTokens: number;
-  updatedAt: number;
+  subAgents: Session[];
 }
 
 /** Log entry */

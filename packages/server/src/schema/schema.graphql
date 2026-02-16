@@ -81,15 +81,7 @@ type Session {
   usagePercent: Float!
   status: SessionStatus!
   updatedAt: Float!
-  subAgents: [SubAgent!]!
-}
-
-type SubAgent {
-  key: String!
-  label: String!
-  status: SessionStatus!
-  totalTokens: Int!
-  updatedAt: Float!
+  subAgents: [Session!]!
 }
 
 input SessionFilter {
@@ -132,6 +124,33 @@ input LogFilter {
 
 # ── Metrics ──
 
+enum MetricsRange {
+  ONE_HOUR
+  SIX_HOUR
+  TWELVE_HOUR
+  TWENTY_FOUR_HOUR
+}
+
+type ModelTokens {
+  model: String!
+  tokensK: Float!
+}
+
+type MetricsBucket {
+  bucket: Int!
+  label: String!
+  sessions: Int!
+  tokensK: Float!
+  tokensByModel: [ModelTokens!]!
+  apiCalls: Int!
+  toolCalls: Int!
+  errors: Int!
+  warnings: Int!
+  gatewayUp: Boolean!
+  restartEvent: Boolean!
+}
+
+"""Kept for backward compat"""
 type HourlyMetrics {
   hour: Int!
   sessions: Int!
@@ -146,8 +165,14 @@ type HourlyMetrics {
 
 type MetricsSummary {
   date: String!
+  range: MetricsRange!
+  bucketMinutes: Int!
+  timezone: String!
+  buckets: [MetricsBucket!]!
+  """@deprecated use buckets"""
   hours: [HourlyMetrics!]!
   totalTokensK: Float!
+  rangeTokensK: Float!
   totalErrors: Int!
   totalWarnings: Int!
   uptimePercent: Float!
@@ -189,7 +214,7 @@ type Query {
   resources: SystemResources!
   channels: [Channel!]!
   sessions(filter: SessionFilter): [Session!]!
-  metrics(date: String): MetricsSummary!
+  metrics(date: String, range: MetricsRange): MetricsSummary!
   cronJobs: [CronJob!]!
   usageCost: UsageCost!
   recentLogs(count: Int): [LogEntry!]!

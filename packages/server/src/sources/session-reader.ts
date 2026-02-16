@@ -1,5 +1,6 @@
-import { readFileSync, watch, type FSWatcher } from 'fs';
-import type { Session, SessionStatus, SubAgent } from '@openclaw-dashboard/shared';
+import { readFileSync, watch, statSync, type FSWatcher } from 'fs';
+import { dirname, basename } from 'path';
+import type { Session, SessionStatus } from '@openclaw-dashboard/shared';
 import { emitChange } from '../events.js';
 
 interface RawSession {
@@ -78,8 +79,11 @@ function parseSession(key: string, raw: RawSession): Session {
 export class SessionReader {
   private sessions: Map<string, Session> = new Map();
   private rawSessions: Map<string, RawSession> = new Map();
+  private attachedChildKeys: Set<string> = new Set();
   private watcher: FSWatcher | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private listeners: Array<() => void> = [];
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private filePath: string = SESSIONS_PATH) {
     this.reload();
@@ -96,24 +100,50 @@ export class SessionReader {
         this.sessions.set(key, parseSession(key, entry));
       }
     } catch (err) {
-      console.error('[SessionReader] Failed to read sessions:', err);
+      console.error('[SessionReader] Failed to read sessions:', err instanceof Error ? err.message : err);
     }
+  }
+
+  private scheduleReload() {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      this.reload();
+      for (const fn of this.listeners) fn();
+      emitChange('sessions');
+    }, 300);
   }
 
   private startWatching() {
+    const targetName = basename(this.filePath);
+    const dir = dirname(this.filePath);
+
+    // Primary: watch the directory (reliable on macOS where file-level
+    // fs.watch can silently miss in-place writes to large files)
     try {
-      this.watcher = watch(this.filePath, () => {
-        this.reload();
-        for (const fn of this.listeners) fn();
-        emitChange('sessions');
+      this.watcher = watch(dir, (_event, filename) => {
+        if (filename === targetName) this.scheduleReload();
       });
     } catch {
-      // File might not exist yet
+      // Directory might not exist yet
     }
+
+    // Fallback: poll file mtime every 5s in case watcher misses events
+    let lastMtime = 0;
+    try { lastMtime = statSync(this.filePath).mtimeMs; } catch { /* ignore */ }
+    this.pollTimer = setInterval(() => {
+      try {
+        const mtime = statSync(this.filePath).mtimeMs;
+        if (mtime > lastMtime) {
+          lastMtime = mtime;
+          this.scheduleReload();
+        }
+      } catch { /* file may not exist */ }
+    }, 5_000);
   }
 
   getSessions(filter?: { activeOnly?: boolean; sortBy?: string }): Session[] {
-    let result = Array.from(this.sessions.values());
+    let result = Array.from(this.sessions.values())
+      .filter(s => !this.attachedChildKeys.has(s.key));
     if (filter?.activeOnly) {
       result = result.filter((s) => s.status === 'ACTIVE');
     }
@@ -168,23 +198,38 @@ export class SessionReader {
       const parent = this.sessions.get(parentKey);
       if (!parent) continue;
       parent.subAgents = childKeys
-        .map((ck) => {
-          const child = this.sessions.get(ck);
-          if (!child) return null;
-          return {
-            key: child.key,
-            label: child.displayName,
-            status: child.status,
-            totalTokens: child.totalTokens,
-            updatedAt: child.updatedAt,
-          } satisfies SubAgent;
-        })
-        .filter((s): s is SubAgent => s !== null);
+        .map((ck) => this.sessions.get(ck))
+        .filter((s): s is Session => s !== null);
     }
+
+    // Record which keys are attached as children
+    this.attachedChildKeys = new Set(
+      [...bySpawn.values()].flat()
+    );
+  }
+
+  /** Full token stats by model (bypasses dedup filter) */
+  getTokensByModel(): Map<string, number> {
+    const result = new Map<string, number>();
+    for (const session of this.sessions.values()) {
+      const model = session.model || 'unknown';
+      result.set(model, (result.get(model) ?? 0) + session.totalTokens);
+    }
+    return result;
+  }
+
+  /** Full total tokens in K (bypasses dedup filter) */
+  getTotalTokensK(): number {
+    let total = 0;
+    for (const session of this.sessions.values()) {
+      total += session.totalTokens;
+    }
+    return total / 1000;
   }
 
   destroy() {
     this.watcher?.close();
+    if (this.pollTimer) clearInterval(this.pollTimer);
     this.listeners = [];
   }
 }

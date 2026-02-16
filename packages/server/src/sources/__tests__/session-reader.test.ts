@@ -139,7 +139,7 @@ describe('SessionReader', () => {
     reader.attachSubAgents(map);
     const parent = reader.getSession('agent:main:parent');
     expect(parent!.subAgents.length).toBe(2);
-    expect(parent!.subAgents[0].label).toBe('child1');
+    expect(parent!.subAgents[0].displayName).toBe('child1');
     reader.destroy();
   });
 

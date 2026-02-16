@@ -73,8 +73,8 @@ export const resolvers = {
       sessionReader.attachSubAgents(spawnTracker.getParentChildMap());
       return sessionReader.getSessions(args.filter ?? undefined);
     },
-    metrics: (_: unknown, args: { date?: string }) => {
-      const m = aggregator.getMetrics(args.date) as Record<string, unknown>;
+    metrics: (_: unknown, args: { date?: string; range?: string }) => {
+      const m = aggregator.getMetrics(args.date, (args.range as 'TWENTY_FOUR_HOUR') ?? 'TWENTY_FOUR_HOUR') as Record<string, unknown>;
       const validationResults = dataValidator.runValidation();
       const warnings = validationResults.filter(r => !r.pass).map(r => r.message);
       return { ...m, warnings };

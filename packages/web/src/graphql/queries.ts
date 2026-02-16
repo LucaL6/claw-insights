@@ -21,20 +21,28 @@ export const SessionsQuery = /* GraphQL */ `
     sessions(filter: $filter) {
       key displayName kind model channel
       totalTokens contextTokens usagePercent status updatedAt
-      subAgents { key label status totalTokens updatedAt }
+      subAgents {
+        key displayName kind model channel
+        totalTokens contextTokens usagePercent status updatedAt
+      }
     }
   }
 `;
 
 export const MetricsQuery = /* GraphQL */ `
-  query Metrics($date: String) {
-    metrics(date: $date) {
+  query Metrics($date: String, $range: MetricsRange) {
+    metrics(date: $date, range: $range) {
       date
-      hours {
-        hour sessions tokensK apiCalls toolCalls
+      range
+      bucketMinutes
+      timezone
+      buckets {
+        bucket label sessions tokensK
+        tokensByModel { model tokensK }
+        apiCalls toolCalls
         errors warnings gatewayUp restartEvent
       }
-      totalTokensK totalErrors totalWarnings uptimePercent
+      totalTokensK rangeTokensK totalErrors totalWarnings uptimePercent
       warnings
     }
   }
