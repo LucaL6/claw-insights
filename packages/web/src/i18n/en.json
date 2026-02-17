@@ -40,6 +40,8 @@
   "topbar.up": "UP",
   "topbar.down": "DOWN",
   "topbar.connecting": "CONNECTING",
+  "topbar.screenshot": "Screenshot",
+  "topbar.screenshotting": "Capturing...",
 
   "time.justNow": "just now",
   "time.mAgo": "{n}m ago",
@@ -51,5 +53,23 @@
   "logs.viewAll": "View all events",
   "logs.noEvents": "No events in this range",
   "logs.title": "Events",
-  "logs.filterPlaceholder": "Filter events..."
+  "logs.filterPlaceholder": "Filter events...",
+
+  "brand.name": "Claw Insights",
+  "modal.restart.title": "Restart Gateway",
+  "modal.restart.desc": "All active sessions will briefly disconnect",
+  "modal.restart.confirm": "Confirm Restart",
+  "modal.restart.command": "$ openclaw gateway restart",
+  "modal.restart.commandNote": "# Active sessions will reconnect",
+  "modal.update.title": "Update Gateway",
+  "modal.update.confirm": "Confirm Update",
+  "modal.update.command": "$ openclaw update",
+  "modal.update.commandNote": "# Gateway will restart automatically",
+  "modal.doctor.title": "Run Diagnostics",
+  "modal.doctor.desc": "Health check + auto-fix",
+  "modal.doctor.confirm": "Run Check",
+  "modal.doctor.channelCheck": "Channel connectivity check",
+  "modal.doctor.securityAudit": "Security audit",
+  "modal.doctor.deepProbe": "Deep probe",
+  "modal.doctor.autoFix": "Auto-fix"
 }

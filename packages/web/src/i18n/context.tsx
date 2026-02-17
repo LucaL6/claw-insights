@@ -17,6 +17,10 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 function getInitialLang(): Lang {
   if (typeof window === 'undefined') return 'en';
+  // URL param override (for screenshot API) — params may be in hash query
+  const hashQs = window.location.hash.split('?')[1] ?? '';
+  const urlLang = new URLSearchParams(hashQs).get('lang');
+  if (urlLang === 'en' || urlLang === 'zh') return urlLang;
   const stored = localStorage.getItem('lang');
   if (stored === 'en' || stored === 'zh') return stored;
   return navigator.language.startsWith('zh') ? 'zh' : 'en';

@@ -40,6 +40,8 @@
   "topbar.up": "运行中",
   "topbar.down": "已停止",
   "topbar.connecting": "连接中",
+  "topbar.screenshot": "截图",
+  "topbar.screenshotting": "截图中...",
 
   "time.justNow": "刚刚",
   "time.mAgo": "{n}分钟前",
@@ -51,5 +53,23 @@
   "logs.viewAll": "查看全部事件",
   "logs.noEvents": "该时间段无事件",
   "logs.title": "事件",
-  "logs.filterPlaceholder": "过滤事件..."
+  "logs.filterPlaceholder": "过滤事件...",
+
+  "brand.name": "Claw Insights",
+  "modal.restart.title": "重启 Gateway",
+  "modal.restart.desc": "所有活跃 session 会短暂中断",
+  "modal.restart.confirm": "确认重启",
+  "modal.restart.command": "$ openclaw gateway restart",
+  "modal.restart.commandNote": "# 活跃 session 将自动重连",
+  "modal.update.title": "更新 Gateway",
+  "modal.update.confirm": "确认更新",
+  "modal.update.command": "$ openclaw update",
+  "modal.update.commandNote": "# Gateway 将自动重启",
+  "modal.doctor.title": "运行诊断",
+  "modal.doctor.desc": "健康检查 + 自动修复",
+  "modal.doctor.confirm": "运行检查",
+  "modal.doctor.channelCheck": "Channel 连通性检查",
+  "modal.doctor.securityAudit": "安全审计",
+  "modal.doctor.deepProbe": "深度探测",
+  "modal.doctor.autoFix": "自动修复"
 }

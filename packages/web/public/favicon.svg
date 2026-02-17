@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Base -->
+  <line x1="9" y1="28" x2="23" y2="28" />
+  <!-- Tower -->
+  <path d="M13 28 L14.5 12 H17.5 L19 28" />
+  <!-- Lamp -->
+  <rect x="14" y="8" width="4" height="4" rx="1" fill="currentColor" opacity="0.15" />
+  <path d="M14 8 Q16 5 18 8" />
+  <!-- Beams -->
+  <line x1="10" y1="7" x2="6" y2="5" opacity="0.4" />
+  <line x1="22" y1="7" x2="26" y2="5" opacity="0.4" />
+  <line x1="10" y1="10" x2="5" y2="10" opacity="0.4" />
+  <line x1="22" y1="10" x2="27" y2="10" opacity="0.4" />
+</svg>

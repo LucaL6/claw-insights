@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SessionsQuery } from '../../graphql/queries';
 import { useReactiveQuery } from '../../hooks/useReactiveQuery';
 import { CollapsibleSection } from '../layout/CollapsibleSection';
@@ -9,7 +9,7 @@ import { useI18n } from '../../i18n/context';
 type ViewMode = 'active' | 'all';
 type SortBy = 'UPDATED_AT' | 'TOKENS_DESC' | 'NAME';
 
-export function SessionPanel() {
+export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
   const { t } = useI18n();
   const [viewMode, setViewMode] = useState<ViewMode>('active');
   const [sortBy, setSortBy] = useState<SortBy>('UPDATED_AT');
@@ -25,6 +25,10 @@ export function SessionPanel() {
   useEffect(() => {
     if (result.data) setLastFetchTime(Date.now());
   }, [result.data]);
+
+  useEffect(() => {
+    if (result.data && onReady) onReady();
+  }, [result.data, onReady]);
 
   const sessions = result.data?.sessions ?? [];
   const activeCount = sessions.filter((s: { status: string }) => s.status === 'ACTIVE').length;

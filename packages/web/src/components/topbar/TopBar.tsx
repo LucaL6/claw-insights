@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import type { Page } from '../../hooks/useHashRoute';
-import { GatewayQuery, ResourcesQuery, ChannelsQuery, MetricsQuery } from '../../graphql/queries';
+import { GatewayQuery, ResourcesQuery, ChannelsQuery } from '../../graphql/queries';
 import { useReactiveQuery } from '../../hooks/useReactiveQuery';
-import { RANGE_INFO, type MetricsRange } from '../charts/GranularityPicker';
+import type { MetricsRange } from '../charts/GranularityPicker';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { useTheme } from '../../theme/context';
 import { useI18n } from '../../i18n/context';
@@ -41,6 +42,7 @@ export function TopBar({ currentPage, onNavigate, onAction, metricsRange }: {
 }) {
   const { theme, toggleTheme } = useTheme();
   const { lang, toggleLang, t } = useI18n();
+  const [screenshotting, setScreenshotting] = useState(false);
 
   const [gw] = useReactiveQuery(
     { query: GatewayQuery, requestPolicy: 'cache-and-network' },
@@ -54,18 +56,9 @@ export function TopBar({ currentPage, onNavigate, onAction, metricsRange }: {
     { query: ChannelsQuery, requestPolicy: 'cache-and-network' },
     { sources: ['gateway'] },
   );
-  const [met] = useReactiveQuery(
-    { query: MetricsQuery, variables: { range: metricsRange ?? 'TWENTY_FOUR_HOUR' }, requestPolicy: 'cache-and-network' },
-    { sources: ['metrics'] },
-  );
-
   const gateway = gw.data?.gateway;
   const resources = res.data?.resources;
   const channels = (ch.data?.channels ?? []) as Array<{ name: string; connected: boolean; latencyMs: number | null; provider: string }>;
-  const metrics = met.data?.metrics as { totalTokensK: number; totalErrors: number; totalWarnings: number; buckets?: Array<{ tokensK: number }> } | undefined;
-  const rangeLabel = RANGE_INFO[metricsRange ?? 'TWENTY_FOUR_HOUR'].label;
-
-  const rangeTokensK = metrics?.buckets?.reduce((s: number, b: { tokensK: number }) => s + Number(b.tokensK ?? 0), 0) ?? 0;
 
   const uptime = formatUptime(gateway?.startedAt);
   const version = gateway?.version ?? '...';
@@ -79,8 +72,8 @@ export function TopBar({ currentPage, onNavigate, onAction, metricsRange }: {
       {/* Left: Logo + Version + Status + Channels */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-lg">🦞</span>
-          <span className="text-sm font-semibold tracking-tight" style={{ color: 'var(--text-primary)' }}>OpenClaw</span>
+          <img src="/logo.svg" alt="" className="w-5 h-5" style={{ filter: 'var(--icon-filter, none)' }} />
+          <span className="text-sm font-semibold tracking-tight" style={{ color: 'var(--text-primary)' }}>{t('brand.name')}</span>
           {gw.fetching && !gw.data
             ? <span className="inline-block w-16 h-3 rounded animate-pulse" style={{ backgroundColor: 'var(--skeleton)' }} />
             : <span className="text-[10px] mono" style={{ color: 'var(--text-dim)' }}>v{version}</span>
@@ -167,35 +160,48 @@ export function TopBar({ currentPage, onNavigate, onAction, metricsRange }: {
             <InfoTooltip label="Gateway 进程内存占用 (RSS)" detail="ps -o rss= -p <gateway_pid> · real-time" />
           </div>
         ) : null}
-        {met.fetching && !met.data ? (
-          <div className="flex items-center gap-3 px-3 py-1 rounded-md" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
-            <span style={{ color: 'var(--text-dim)' }}>{t('topbar.token')}</span>
-            <span className="inline-block w-10 h-3 rounded animate-pulse" style={{ backgroundColor: 'var(--skeleton)' }} />
-            <span className="w-px h-3" style={{ backgroundColor: 'var(--border)' }} />
-            <span style={{ color: 'var(--text-dim)' }}>{t('topbar.err')}</span>
-            <span className="inline-block w-6 h-3 rounded animate-pulse" style={{ backgroundColor: 'var(--skeleton)' }} />
-            <span style={{ color: 'var(--text-dim)' }}>{t('topbar.warn')}</span>
-            <span className="inline-block w-6 h-3 rounded animate-pulse" style={{ backgroundColor: 'var(--skeleton)' }} />
-          </div>
-        ) : metrics ? (
-          <div className="flex items-center gap-3 px-3 py-1 rounded-md" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
-            <span style={{ color: 'var(--text-dim)' }}>{t('topbar.token')}</span>
-            <span className="mono font-medium" style={{ color: 'var(--text-primary)' }}>{rangeTokensK > 0 ? `${Math.round(rangeTokensK)}k` : '0'}</span>
-            <span className="mono" style={{ color: 'var(--text-dim)' }}>({rangeLabel})</span>
-            <InfoTooltip label="所选范围内的 token 消耗总量" detail="SUM of per-bucket delta(total_tokens_k)" />
-            <span className="w-px h-3" style={{ backgroundColor: 'var(--border)' }} />
-            <span style={{ color: 'var(--text-dim)' }}>{t('topbar.err')}</span>
-            <span className="mono" style={{ color: 'var(--red)' }}>{metrics.totalErrors}</span>
-            <InfoTooltip label="所选范围内的错误总数" detail="SUM(error events) in range" />
-            <span style={{ color: 'var(--text-dim)' }}>{t('topbar.warn')}</span>
-            <span className="mono" style={{ color: 'var(--amber)' }}>{metrics.totalWarnings}</span>
-            <InfoTooltip label="所选范围内的警告总数" detail="SUM(warning events) in range" alignRight />
-          </div>
-        ) : null}
       </div>
 
       {/* Right: Actions + Toggles + Uptime */}
       <div className="flex items-center gap-2">
+        <button
+          disabled={screenshotting}
+          onClick={async () => {
+            setScreenshotting(true);
+            try {
+              const section = currentPage === 'logs' ? 'logs' : 'dashboard';
+              const params = new URLSearchParams({ section, range: metricsRange ?? 'TWENTY_FOUR_HOUR', theme, lang });
+              const res = await fetch(`/api/screenshot?${params}`);
+              if (!res.ok) throw new Error('Screenshot failed');
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `claw-insights-${section}-${new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-')}.png`;
+              a.click();
+              URL.revokeObjectURL(url);
+            } catch (e) {
+              console.error('[screenshot]', e);
+            } finally {
+              setScreenshotting(false);
+            }
+          }}
+          className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md transition-all"
+          style={{
+            backgroundColor: screenshotting ? 'var(--emerald-bg)' : 'var(--bg-elevated)',
+            color: screenshotting ? 'var(--emerald)' : 'var(--text-secondary)',
+            border: screenshotting ? '1px solid var(--emerald-border)' : '1px solid var(--border)',
+            opacity: screenshotting ? 0.8 : 1,
+          }}
+          title={t('topbar.screenshot')}
+        >
+          {screenshotting ? (
+            <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+          ) : (
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><circle cx="12" cy="13" r="3" /></svg>
+          )}
+          {screenshotting ? t('topbar.screenshotting') : t('topbar.screenshot')}
+        </button>
         <button
           onClick={() => onAction?.('restart')}
           className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md transition-all"

@@ -16,10 +16,10 @@ export function MainLayout({ topBar, sessions, metrics }: Props) {
         {topBar}
       </header>
       <main className="grid grid-cols-12 gap-0 p-4" style={{ height: 'calc(100vh - 45px)' }}>
-        <div className="col-span-5 flex flex-col min-h-0 overflow-y-auto sb pr-3" style={{ borderRight: '1px solid var(--border-subtle)' }}>
+        <div data-section="sessions" className="col-span-5 flex flex-col min-h-0 overflow-y-auto sb pr-3" style={{ borderRight: '1px solid var(--border-subtle)' }}>
           {sessions}
         </div>
-        <div className="col-span-7 flex flex-col gap-2 min-h-0 overflow-y-auto sb pl-3">
+        <div data-section="metrics" className="col-span-7 flex flex-col gap-2 min-h-0 overflow-y-auto sb pl-3">
           {metrics}
         </div>
       </main>

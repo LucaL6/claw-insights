@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw-dashboard/shared",
+  "name": "@claw-insights/shared",
   "private": true,
   "type": "module",
   "main": "src/index.ts",

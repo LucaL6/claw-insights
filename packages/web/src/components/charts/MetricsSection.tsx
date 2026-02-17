@@ -56,9 +56,10 @@ interface MetricsSectionProps {
   range: MetricsRange;
   onRangeChange: (r: MetricsRange) => void;
   navigate?: (hash: string) => void;
+  onReady?: () => void;
 }
 
-export function MetricsSection({ range, onRangeChange, navigate }: MetricsSectionProps) {
+export function MetricsSection({ range, onRangeChange, navigate, onReady }: MetricsSectionProps) {
   const { t } = useI18n();
   const [lastFetchTime, setLastFetchTime] = useState(Date.now());
 
@@ -72,6 +73,10 @@ export function MetricsSection({ range, onRangeChange, navigate }: MetricsSectio
   useEffect(() => {
     if (result.data) setLastFetchTime(Date.now());
   }, [result.data]);
+
+  useEffect(() => {
+    if (result.data && onReady) onReady();
+  }, [result.data, onReady]);
 
   const metrics = result.data?.metrics;
   const [selectedModel, setSelectedModel] = useState<string | null>(null);

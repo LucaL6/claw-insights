@@ -1,4 +1,4 @@
-import type { LogEntry } from '@openclaw-dashboard/shared';
+import type { LogEntry } from '@claw-insights/shared';
 
 export class SpawnTracker {
   private runToParent = new Map<string, string>();

@@ -100,8 +100,8 @@ export class GatewayRPC {
       minProtocol: 3,
       maxProtocol: 3,
       client: {
-        id: 'openclaw-control-ui',
-        displayName: 'OpenClaw Dashboard',
+        id: 'claw-insights',
+        displayName: 'Claw Insights',
         version: '0.1.0',
         platform: process.platform,
         mode: 'ui',

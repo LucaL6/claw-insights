@@ -12,6 +12,10 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function getInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'dark';
+  // URL param override (for screenshot API) — params may be in hash query
+  const hashQs = window.location.hash.split('?')[1] ?? '';
+  const urlTheme = new URLSearchParams(hashQs).get('theme');
+  if (urlTheme === 'dark' || urlTheme === 'light') return urlTheme;
   const stored = localStorage.getItem('theme');
   if (stored === 'dark' || stored === 'light') return stored;
   return 'dark';

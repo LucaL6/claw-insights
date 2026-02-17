@@ -5,14 +5,14 @@ if (typeof Bun === 'undefined') {
   test('NFR-1.1: page loads within 2 seconds', async ({ page }) => {
     const start = Date.now();
     await page.goto('/');
-    await page.waitForSelector('text=OpenClaw');
+    await page.waitForSelector('text=Claw Insights');
     const elapsed = Date.now() - start;
     expect(elapsed).toBeLessThan(2000);
   });
 
   test('F1.1: TopBar shows Gateway version', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=OpenClaw')).toBeVisible();
+    await expect(page.locator('text=Claw Insights')).toBeVisible();
     await expect(page.locator('text=/2026/')).toBeVisible();
   });
 

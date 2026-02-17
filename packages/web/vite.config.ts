@@ -8,6 +8,7 @@ export default defineConfig({
     port: 3200,
     proxy: {
       '/graphql': 'http://127.0.0.1:4000',
+      '/api': 'http://127.0.0.1:4000',
     },
   },
 });

@@ -1,5 +1,5 @@
 import { readFileSync, watch, type FSWatcher } from 'fs';
-import type { CronJob } from '@openclaw-dashboard/shared';
+import type { CronJob } from '@claw-insights/shared';
 
 interface RawJob {
   id: string;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation } from 'urql';
 import { GatewayQuery } from '../../graphql/queries';
 import { ConfirmModal } from './ConfirmModal';
+import { useI18n } from '../../i18n/context';
 
 const RestartMutation = `mutation { restartGateway { success message output duration } }`;
 const UpdateMutation = `mutation { updateGateway { success message output duration } }`;
@@ -60,6 +61,7 @@ function CommandPreview({ lines }: { lines: string[] }) {
 export function RestartModal({ onClose }: { onClose: () => void }) {
   const [, execute] = useMutation(RestartMutation);
   const [loading, setLoading] = useState(false);
+  const { t } = useI18n();
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -71,7 +73,7 @@ export function RestartModal({ onClose }: { onClose: () => void }) {
   return (
     <ConfirmModal
       title=""
-      confirmText="确认重启"
+      confirmText={t('modal.restart.confirm')}
       confirmStyle={{
         backgroundColor: 'var(--orange-bg)',
         color: 'var(--orange)',
@@ -88,11 +90,11 @@ export function RestartModal({ onClose }: { onClose: () => void }) {
           </svg>
         </ModalIcon>
         <div>
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Restart Gateway</h3>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>所有活跃 session 会短暂中断</p>
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t('modal.restart.title')}</h3>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('modal.restart.desc')}</p>
         </div>
       </div>
-      <CommandPreview lines={['$ openclaw gateway restart', '# Active sessions will reconnect']} />
+      <CommandPreview lines={[t('modal.restart.command'), t('modal.restart.commandNote')]} />
     </ConfirmModal>
   );
 }
@@ -100,6 +102,7 @@ export function RestartModal({ onClose }: { onClose: () => void }) {
 export function UpdateModal({ onClose }: { onClose: () => void }) {
   const [, execute] = useMutation(UpdateMutation);
   const [loading, setLoading] = useState(false);
+  const { t } = useI18n();
   const [gw] = useQuery({ query: GatewayQuery });
   const gateway = gw.data?.gateway;
   const current = gateway?.version ?? '...';
@@ -115,7 +118,7 @@ export function UpdateModal({ onClose }: { onClose: () => void }) {
   return (
     <ConfirmModal
       title=""
-      confirmText="确认更新"
+      confirmText={t('modal.update.confirm')}
       confirmStyle={{
         backgroundColor: 'var(--emerald-bg)',
         color: 'var(--emerald)',
@@ -132,11 +135,11 @@ export function UpdateModal({ onClose }: { onClose: () => void }) {
           </svg>
         </ModalIcon>
         <div>
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Update OpenClaw</h3>
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t('modal.update.title')}</h3>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{current} → {latest}</p>
         </div>
       </div>
-      <CommandPreview lines={[`$ pnpm update openclaw@${latest}`, '# Gateway will restart automatically']} />
+      <CommandPreview lines={[t('modal.update.command'), t('modal.update.commandNote')]} />
     </ConfirmModal>
   );
 }
@@ -144,6 +147,7 @@ export function UpdateModal({ onClose }: { onClose: () => void }) {
 export function DoctorModal({ onClose }: { onClose: () => void }) {
   const [, execute] = useMutation(DoctorMutation);
   const [loading, setLoading] = useState(false);
+  const { t } = useI18n();
   const [options, setOptions] = useState({
     channelCheck: true,
     securityAudit: true,
@@ -161,16 +165,16 @@ export function DoctorModal({ onClose }: { onClose: () => void }) {
   };
 
   const labels: Record<string, string> = {
-    channelCheck: 'Channel 连通性检查',
-    securityAudit: 'Security audit',
-    deepProbe: 'Deep probe',
-    autoFix: 'Auto-fix',
+    channelCheck: t('modal.doctor.channelCheck'),
+    securityAudit: t('modal.doctor.securityAudit'),
+    deepProbe: t('modal.doctor.deepProbe'),
+    autoFix: t('modal.doctor.autoFix'),
   };
 
   return (
     <ConfirmModal
       title=""
-      confirmText="运行检查"
+      confirmText={t('modal.doctor.confirm')}
       confirmStyle={{
         backgroundColor: 'var(--sky-bg)',
         color: 'var(--sky)',
@@ -187,8 +191,8 @@ export function DoctorModal({ onClose }: { onClose: () => void }) {
           </svg>
         </ModalIcon>
         <div>
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Run Diagnostics</h3>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>健康检查 + 自动修复</p>
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t('modal.doctor.title')}</h3>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('modal.doctor.desc')}</p>
         </div>
       </div>
       <div className="space-y-2 mb-4">
