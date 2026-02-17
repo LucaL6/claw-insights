@@ -1,5 +1,6 @@
 import { readFileSync, watch, type FSWatcher } from 'fs';
 import type { CronJob } from '@claw-insights/shared';
+import { config } from '../config.js';
 
 interface RawJob {
   id: string;
@@ -14,7 +15,7 @@ interface RawCronFile {
   jobs: RawJob[];
 }
 
-const CRON_PATH = `${process.env.HOME}/.openclaw/cron/jobs.json`;
+const CRON_PATH = config.cronPath;
 
 function formatSchedule(s: RawJob['schedule']): string {
   if (s.kind === 'cron' && s.expr) return s.expr;
@@ -39,6 +40,7 @@ export class CronReader {
   private jobs: CronJob[] = [];
   private watcher: FSWatcher | null = null;
   private listeners: Array<() => void> = [];
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private filePath: string = CRON_PATH) {
     this.reload();
@@ -57,8 +59,11 @@ export class CronReader {
   private startWatching() {
     try {
       this.watcher = watch(this.filePath, () => {
-        this.reload();
-        for (const fn of this.listeners) fn();
+        if (this.debounceTimer) clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(() => {
+          this.reload();
+          for (const fn of this.listeners) fn();
+        }, 300);
       });
     } catch { /* file might not exist */ }
   }
@@ -73,6 +78,7 @@ export class CronReader {
 
   destroy() {
     this.watcher?.close();
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
     this.listeners = [];
   }
 }

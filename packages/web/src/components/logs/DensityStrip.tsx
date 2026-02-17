@@ -37,8 +37,7 @@ export function DensityStrip({ data, activeHour, onHourClick, loading }: Props) 
           {Array.from({ length: 24 }).map((_, i) => (
             <div
               key={i}
-              className="flex-1 rounded-sm animate-pulse"
-              style={{ backgroundColor: 'var(--bg-elevated)' }}
+              className="flex-1 rounded-sm animate-pulse bg-elevated"
             />
           ))}
         </div>
@@ -66,10 +65,10 @@ export function DensityStrip({ data, activeHour, onHourClick, loading }: Props) 
       </div>
       {/* Hour labels */}
       <div className="flex justify-between mt-0.5">
-        <span className="text-[9px] mono" style={{ color: 'var(--text-dim)' }}>
+        <span className="text-[9px] mono text-fg-dim">
           {String(data[0]?.hour ?? 0).padStart(2, '0')}:00
         </span>
-        <span className="text-[9px] mono" style={{ color: 'var(--text-dim)' }}>now</span>
+        <span className="text-[9px] mono text-fg-dim">now</span>
       </div>
     </div>
   );

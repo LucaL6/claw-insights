@@ -11,7 +11,8 @@ const TOKEN_Y_AXIS = {
   },
 };
 import type { EChartsOption } from 'echarts';
-import { TOOLTIPS } from './metricsTooltips';
+import { getTooltips } from './metricsTooltips';
+import { useI18n } from '../../i18n/context';
 
 interface ModelTokens {
   model: string;
@@ -31,6 +32,8 @@ interface Props {
 }
 
 export function TokensChart({ data, selectedModel }: Props) {
+  const { t } = useI18n();
+  const TOOLTIPS = useMemo(() => getTooltips(t), [t]);
   const option = useMemo((): EChartsOption => {
     const labels = data.map((d) => d.label);
 

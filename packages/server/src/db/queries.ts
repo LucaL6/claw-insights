@@ -1,4 +1,15 @@
-import type { Database } from 'bun:sqlite';
+import type { DatabaseSync as Database } from 'node:sqlite';
+import { EVENT_MAP, mapEvent } from '../sources/events-mapper.js';
+
+const stmtCache = new WeakMap<Database, Map<string, ReturnType<Database['prepare']>>>();
+
+function cached(db: Database, sql: string): ReturnType<Database['prepare']> {
+  let map = stmtCache.get(db);
+  if (!map) { map = new Map(); stmtCache.set(db, map); }
+  let stmt = map.get(sql);
+  if (!stmt) { stmt = db.prepare(sql); map.set(sql, stmt); }
+  return stmt;
+}
 
 export interface MetricEvent {
   type: string;
@@ -7,12 +18,13 @@ export interface MetricEvent {
 }
 
 export function insertEvent(db: Database, type: string, value?: number | null, metadata?: Record<string, unknown>) {
-  const stmt = db.prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)');
-  stmt.run(new Date().toISOString(), type, value ?? null, metadata ? JSON.stringify(metadata) : null);
+  const { category, source } = mapEvent(type);
+  const stmt = cached(db, 'INSERT INTO metric_events (timestamp, type, value, metadata, category, source) VALUES (?, ?, ?, ?, ?, ?)');
+  stmt.run(new Date().toISOString(), type, value ?? null, metadata ? JSON.stringify(metadata) : null, category, source);
 }
 
 export function getRecentEvents(db: Database, type: string, limit: number = 50): Array<{ timestamp: string; metadata: string | null }> {
-  const stmt = db.prepare('SELECT timestamp, metadata FROM metric_events WHERE type = ? ORDER BY timestamp DESC LIMIT ?');
+  const stmt = cached(db, 'SELECT timestamp, metadata FROM metric_events WHERE type = ? ORDER BY timestamp DESC LIMIT ?');
   return stmt.all(type, limit) as Array<{ timestamp: string; metadata: string | null }>;
 }
 
@@ -58,7 +70,19 @@ export function getBucketedEventCount(
   db: Database, startTs: string, endTs: string, type: string, bucketMinutes: number,
 ): Array<{ bucket: number; count: number }> {
   const expr = bucketExpr(bucketMinutes);
-  const stmt = db.prepare(`
+  const mapped = EVENT_MAP[type];
+
+  if (mapped) {
+    const stmt = cached(db, `
+      SELECT ${expr} AS bucket, COUNT(*) AS count
+      FROM metric_events
+      WHERE (type = ? OR category = ?) AND timestamp >= ? AND timestamp < ?
+      GROUP BY bucket
+    `);
+    return stmt.all(type, mapped.category, startTs, endTs) as Array<{ bucket: number; count: number }>;
+  }
+
+  const stmt = cached(db, `
     SELECT ${expr} AS bucket, COUNT(*) AS count
     FROM metric_events
     WHERE type = ? AND timestamp >= ? AND timestamp < ?
@@ -68,10 +92,19 @@ export function getBucketedEventCount(
 }
 
 export function getBucketedSampledSessions(
-  db: Database, startTs: string, endTs: string, bucketMinutes: number,
+  db: Database, startTs: string, endTs: string, bucketMinutes: number, useHourly = false,
 ): Array<{ bucket: number; sessions: number }> {
+  if (useHourly) {
+    return db.prepare(`
+      SELECT CAST(strftime('%s', hour) AS INTEGER) / ${bucketMinutes * 60} AS bucket,
+             MAX(active_sessions_max) AS sessions
+      FROM hourly_metric_samples
+      WHERE hour >= ? AND hour < ?
+      GROUP BY bucket
+    `).all(startTs, endTs) as Array<{ bucket: number; sessions: number }>;
+  }
   const expr = bucketExpr(bucketMinutes);
-  const stmt = db.prepare(`
+  const stmt = cached(db, `
     SELECT ${expr} AS bucket, MAX(active_sessions) AS sessions
     FROM metric_samples
     WHERE timestamp >= ? AND timestamp < ?
@@ -81,10 +114,20 @@ export function getBucketedSampledSessions(
 }
 
 export function getBucketedSampledTokens(
-  db: Database, startTs: string, endTs: string, bucketMinutes: number,
+  db: Database, startTs: string, endTs: string, bucketMinutes: number, useHourly = false,
 ): Array<{ bucket: number; tokensK: number }> {
+  if (useHourly) {
+    return db.prepare(`
+      SELECT CAST(strftime('%s', hour) AS INTEGER) / ${bucketMinutes * 60} AS bucket,
+             SUM(token_delta_k) AS tokensK
+      FROM hourly_metric_samples
+      WHERE hour >= ? AND hour < ?
+      GROUP BY bucket
+      HAVING tokensK > 0
+    `).all(startTs, endTs) as Array<{ bucket: number; tokensK: number }>;
+  }
   const expr = bucketExpr(bucketMinutes);
-  const stmt = db.prepare(`
+  const stmt = cached(db, `
     SELECT ${expr} AS bucket,
            MAX(total_tokens_k) - MIN(total_tokens_k) AS tokensK
     FROM metric_samples
@@ -96,10 +139,21 @@ export function getBucketedSampledTokens(
 }
 
 export function getBucketedModelTokens(
-  db: Database, startTs: string, endTs: string, bucketMinutes: number,
+  db: Database, startTs: string, endTs: string, bucketMinutes: number, useHourly = false,
 ): Array<{ bucket: number; model: string; tokensK: number }> {
+  if (useHourly) {
+    return db.prepare(`
+      SELECT CAST(strftime('%s', hour) AS INTEGER) / ${bucketMinutes * 60} AS bucket,
+             model,
+             SUM(token_delta_k) AS tokensK
+      FROM hourly_model_tokens
+      WHERE hour >= ? AND hour < ?
+      GROUP BY bucket, model
+      HAVING tokensK > 0
+    `).all(startTs, endTs) as Array<{ bucket: number; model: string; tokensK: number }>;
+  }
   const expr = bucketExpr(bucketMinutes);
-  const stmt = db.prepare(`
+  const stmt = cached(db, `
     SELECT ${expr} AS bucket,
            model,
            MAX(total_tokens_k) - MIN(total_tokens_k) AS tokensK
@@ -113,9 +167,18 @@ export function getBucketedModelTokens(
 
 /** Range-wide token delta: MAX - MIN of total_tokens_k over entire range */
 export function getRangeTokensK(
-  db: Database, startTs: string, endTs: string,
+  db: Database, startTs: string, endTs: string, useHourly = false,
 ): number {
-  const stmt = db.prepare(`
+  if (useHourly) {
+    const stmt = db.prepare(`
+      SELECT COALESCE(SUM(token_delta_k), 0) AS delta
+      FROM hourly_metric_samples
+      WHERE hour >= ? AND hour < ?
+    `);
+    const row = stmt.get(startTs, endTs) as { delta: number } | undefined;
+    return row?.delta ?? 0;
+  }
+  const stmt = cached(db, `
     SELECT COALESCE(MAX(total_tokens_k) - MIN(total_tokens_k), 0) AS delta
     FROM metric_samples
     WHERE timestamp >= ? AND timestamp < ?
@@ -128,10 +191,19 @@ export function getBucketedGatewayEvents(
   db: Database, startTs: string, endTs: string, bucketMinutes: number,
 ): Array<{ bucket: number; type: string }> {
   const expr = bucketExpr(bucketMinutes);
-  const stmt = db.prepare(`
-    SELECT ${expr} AS bucket, type
+  const stmt = cached(db, `
+    SELECT
+      ${expr} AS bucket,
+      CASE
+        WHEN type = 'gateway_restart' OR category = 'lifecycle.restart' THEN 'gateway_restart'
+        WHEN type = 'gateway_start' OR category = 'lifecycle.start' THEN 'gateway_start'
+        WHEN type = 'gateway_stop' OR category = 'lifecycle.stop' THEN 'gateway_stop'
+      END AS type
     FROM metric_events
-    WHERE type IN ('gateway_start', 'gateway_stop', 'gateway_restart')
+    WHERE (
+      type IN ('gateway_start', 'gateway_stop', 'gateway_restart')
+      OR category IN ('lifecycle.start', 'lifecycle.stop', 'lifecycle.restart')
+    )
       AND timestamp >= ? AND timestamp < ?
   `);
   return stmt.all(startTs, endTs) as Array<{ bucket: number; type: string }>;
@@ -146,7 +218,7 @@ export function insertSample(db: Database, sample: {
   cpu: number;
   memoryMb: number;
 }) {
-  const stmt = db.prepare(
+  const stmt = cached(db, 
     'INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   );
   stmt.run(
@@ -165,7 +237,7 @@ export function insertModelSample(db: Database, sample: {
   model: string;
   totalTokensK: number;
 }) {
-  const stmt = db.prepare(
+  const stmt = cached(db, 
     'INSERT INTO model_token_samples (timestamp, model, total_tokens_k) VALUES (?, ?, ?)'
   );
   stmt.run(new Date().toISOString(), sample.model, sample.totalTokensK);
@@ -192,8 +264,9 @@ export function queryEvents(db: Database, opts: {
   const params: unknown[] = [];
 
   if (types.length > 0) {
-    conditions.push(`type IN (${types.map(() => '?').join(',')})`);
-    params.push(...types);
+    const placeholders = types.map(() => '?').join(',');
+    conditions.push(`(type IN (${placeholders}) OR category IN (${placeholders}))`);
+    params.push(...types, ...types);
   }
   if (from !== undefined) {
     conditions.push(`CAST(strftime('%s', timestamp) AS INTEGER) >= ?`);
@@ -207,8 +280,8 @@ export function queryEvents(db: Database, opts: {
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const rows = db.prepare(
-    `SELECT timestamp, type, metadata FROM metric_events ${where} ORDER BY timestamp DESC LIMIT ?`
-  ).all(...params, limit) as Array<{ timestamp: string; type: string; metadata: string | null }>;
+    `SELECT timestamp, type, category, metadata FROM metric_events ${where} ORDER BY timestamp DESC LIMIT ?`
+  ).all(...params, limit) as Array<{ timestamp: string; type: string; category: string | null; metadata: string | null }>;
 
   const events: EventRow[] = rows.map((r) => {
     const meta = r.metadata ? JSON.parse(r.metadata) : {};
@@ -231,10 +304,10 @@ export function queryEvents(db: Database, opts: {
 
   // Counts derived from displayed events (post-LIMIT), not unbounded query
   const counts = { error: 0, warning: 0, restart: 0 };
-  for (const event of events) {
-    if (event.type === 'error') counts.error++;
-    if (event.type === 'warning') counts.warning++;
-    if (event.type === 'gateway_restart') counts.restart++;
+  for (const row of rows) {
+    if (row.type === 'error' || row.category === 'severity.error') counts.error++;
+    if (row.type === 'warning' || row.category === 'severity.warning') counts.warning++;
+    if (row.type === 'gateway_restart' || row.category === 'lifecycle.restart') counts.restart++;
   }
 
   return { events, total, counts };
@@ -249,12 +322,15 @@ export function getEventDensity(db: Database): Array<{
     SELECT
       CAST(strftime('%s', timestamp) AS INTEGER) / 3600 AS bucket_id,
       COUNT(*) as cnt,
-      SUM(CASE WHEN type = 'error' THEN 1 ELSE 0 END) as err_cnt,
-      SUM(CASE WHEN type = 'warning' THEN 1 ELSE 0 END) as warn_cnt,
-      SUM(CASE WHEN type = 'gateway_restart' THEN 1 ELSE 0 END) as rst_cnt
+      SUM(CASE WHEN type = 'error' OR category = 'severity.error' THEN 1 ELSE 0 END) as err_cnt,
+      SUM(CASE WHEN type = 'warning' OR category = 'severity.warning' THEN 1 ELSE 0 END) as warn_cnt,
+      SUM(CASE WHEN type = 'gateway_restart' OR category = 'lifecycle.restart' THEN 1 ELSE 0 END) as rst_cnt
     FROM metric_events
     WHERE CAST(strftime('%s', timestamp) AS INTEGER) >= ?
-      AND type IN ('error', 'warning', 'gateway_restart')
+      AND (
+        type IN ('error', 'warning', 'gateway_restart')
+        OR category IN ('severity.error', 'severity.warning', 'lifecycle.restart')
+      )
     GROUP BY bucket_id
     ORDER BY bucket_id
   `).all(cutoff) as Array<{ bucket_id: number; cnt: number; err_cnt: number; warn_cnt: number; rst_cnt: number }>;
@@ -277,7 +353,7 @@ export function getEventDensity(db: Database): Array<{
 }
 
 export function getSpawnEvents(db: Database, date: string): Array<{ parentKey: string; childKey: string; timestamp: string }> {
-  const stmt = db.prepare(`
+  const stmt = cached(db, `
     SELECT json_extract(metadata, '$.parentKey') AS parentKey,
            json_extract(metadata, '$.childKey') AS childKey,
            timestamp

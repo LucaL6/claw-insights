@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { MetricsCollector } from '../metrics-collector';
 import { initDatabase } from '../../db/init';
 import { rmSync } from 'fs';
@@ -75,7 +75,7 @@ describe('MetricsCollector', () => {
     cleanup();
   });
 
-  it('should sample slow metrics (cost + system) and carry forward session/token values', () => {
+  it('should sample slow metrics (cost + system) and carry forward session/token values', async () => {
     const { db, cleanup } = setup();
     const mockSessionReader = {
       getSessions: () => [
@@ -95,7 +95,7 @@ describe('MetricsCollector', () => {
     // Fast sample first to establish session/token baseline
     collector.sampleFast();
     // Slow sample should carry forward session/token values
-    collector.sampleSlow();
+    await collector.sampleSlow();
 
     const rows = db.prepare('SELECT * FROM metric_samples ORDER BY id DESC LIMIT 1').all() as any[];
     expect(rows[0].cost_today).toBe(15.50);
@@ -105,6 +105,20 @@ describe('MetricsCollector', () => {
     // Verify it carried forward session/token values (not zeros)
     expect(rows[0].active_sessions).toBe(2);
     expect(rows[0].total_tokens_k).toBe(100);
+    cleanup();
+  });
+
+  it('should NOT have prune methods or timer', () => {
+    const { db, cleanup } = setup();
+    const mockSessionReader = { getSessions: () => [], getTokensByModel: () => new Map(), getTotalTokensK: () => 0 };
+    const collector = new MetricsCollector(
+      db,
+      mockSessionReader as any,
+      () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
+      () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
+    );
+
+    expect((collector as any).pruneTimer).toBeUndefined();
     cleanup();
   });
 

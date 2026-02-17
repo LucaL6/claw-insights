@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'bun:test';
-import { Database } from 'bun:sqlite';
+import { describe, it, expect } from 'vitest';
+import { DatabaseSync as Database } from 'node:sqlite';
 import { getEventDensity } from '../queries.js';
+import { mapEvent } from '../../sources/events-mapper.js';
 
 function setupDb(): Database {
   const db = new Database(':memory:');
@@ -10,18 +11,26 @@ function setupDb(): Database {
       timestamp TEXT NOT NULL,
       type TEXT NOT NULL,
       value REAL,
-      metadata TEXT
+      metadata TEXT,
+      category TEXT,
+      source TEXT
     );
     CREATE INDEX idx_events_type_time ON metric_events(type, timestamp);
+    CREATE INDEX idx_events_category_time ON metric_events(category, timestamp);
   `);
   return db;
+}
+
+function insertEvent(db: Database, type: string, timestamp: string) {
+  const mapped = mapEvent(type);
+  db.prepare('INSERT INTO metric_events (timestamp, type, metadata, category, source) VALUES (?, ?, ?, ?, ?)')
+    .run(timestamp, type, `{"module":"test","message":"test ${type}"}`, mapped.category, mapped.source);
 }
 
 describe('getEventDensity', () => {
   it('should return epochStart for each bucket', () => {
     const db = setupDb();
-    db.prepare('INSERT INTO metric_events (timestamp, type, metadata) VALUES (?, ?, ?)')
-      .run(new Date().toISOString(), 'error', '{"module":"test","message":"test error"}');
+    insertEvent(db, 'error', new Date().toISOString());
 
     const result = getEventDensity(db);
 
@@ -48,11 +57,7 @@ describe('getEventDensity', () => {
 
   it('should return hasWarning=true for buckets with warning events', () => {
     const db = setupDb();
-    const now = new Date();
-    const ts = now.toISOString();
-
-    db.prepare('INSERT INTO metric_events (timestamp, type, metadata) VALUES (?, ?, ?)')
-      .run(ts, 'warning', '{"module":"test","message":"test warning"}');
+    insertEvent(db, 'warning', new Date().toISOString());
 
     const result = getEventDensity(db);
     const currentBucket = result[23]; // most recent hour
@@ -64,11 +69,7 @@ describe('getEventDensity', () => {
 
   it('should return hasWarning=false for buckets without warning events', () => {
     const db = setupDb();
-    const now = new Date();
-    const ts = now.toISOString();
-
-    db.prepare('INSERT INTO metric_events (timestamp, type, metadata) VALUES (?, ?, ?)')
-      .run(ts, 'error', '{"module":"test","message":"test error"}');
+    insertEvent(db, 'error', new Date().toISOString());
 
     const result = getEventDensity(db);
     const currentBucket = result[23];
@@ -82,5 +83,18 @@ describe('getEventDensity', () => {
     for (const bucket of result) {
       expect(bucket.hasWarning).toBe(false);
     }
+  });
+
+  it('should include category-only matches in density counters', () => {
+    const db = setupDb();
+    const ts = new Date().toISOString();
+
+    db.prepare('INSERT INTO metric_events (timestamp, type, metadata, category, source) VALUES (?, ?, ?, ?, ?)')
+      .run(ts, 'custom_error_type', '{"module":"test","message":"category only"}', 'severity.error', 'test');
+
+    const result = getEventDensity(db);
+    const currentBucket = result[23];
+    expect(currentBucket.count).toBe(1);
+    expect(currentBucket.hasError).toBe(true);
   });
 });

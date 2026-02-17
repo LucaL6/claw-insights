@@ -1,4 +1,4 @@
-import type { Database } from 'bun:sqlite';
+import type { DatabaseSync as Database } from 'node:sqlite';
 import { insertEvent } from '../db/queries.js';
 
 export interface ValidationResult {

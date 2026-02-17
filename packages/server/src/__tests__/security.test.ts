@@ -1,6 +1,5 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { redact } from '../sources/log-tailer';
-import { READ_ONLY_METHODS } from '../sources/gateway-rpc';
 
 describe('Security (NFR-3)', () => {
   // NFR-3.3 Sensitive data redaction
@@ -23,30 +22,14 @@ describe('Security (NFR-3)', () => {
     });
   });
 
-  // NFR-3.5 RPC allowlist
-  describe('NFR-3.5: RPC allowlist', () => {
-    it('should only contain read-only methods', () => {
-      for (const m of READ_ONLY_METHODS) {
-        expect(m).not.toContain('restart');
-        expect(m).not.toContain('update');
-        expect(m).not.toContain('delete');
-        expect(m).not.toContain('write');
-        expect(m).not.toContain('apply');
-      }
-    });
-
-    it('should not include dangerous methods', () => {
-      const dangerous = ['config.apply', 'gateway.restart', 'sessions.delete', 'update.run'];
-      for (const d of dangerous) {
-        expect(READ_ONLY_METHODS.has(d)).toBe(false);
-      }
-    });
-  });
-
   // NFR-3.1 Localhost binding
   describe('NFR-3.1: localhost binding', () => {
     it('server index.ts binds to 127.0.0.1', async () => {
-      const src = await Bun.file(import.meta.dir + '/../index.ts').text();
+      const { readFileSync } = await import('fs');
+      const { fileURLToPath } = await import('url');
+      const { dirname, join } = await import('path');
+      const __dir = dirname(fileURLToPath(import.meta.url));
+      const src = readFileSync(join(__dir, '..', 'index.ts'), 'utf-8');
       expect(src).toContain('127.0.0.1');
     });
   });

@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { initDatabase } from '../init';
 import { insertEvent, getRecentEvents, getSpawnEvents, insertSample, getBucketedEventCount, getBucketedSampledSessions, getBucketedSampledTokens, bucketLabel } from '../queries';
 import { rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import type { Database } from 'bun:sqlite';
+import type { DatabaseSync as Database } from 'node:sqlite';
 
 const dbPath = join(tmpdir(), `test-metrics-${Date.now()}.db`);
 let db: Database;
@@ -26,7 +26,7 @@ describe('SQLite DB', () => {
     expect(tables.length).toBe(1);
 
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_events%'").all();
-    expect(indexes.length).toBe(2);
+    expect(indexes.length).toBe(4); // idx_events_type_time, idx_events_time, idx_events_module (migration 2), idx_events_category (migration 3)
   });
 
   it('should insert and query events', () => {
@@ -76,6 +76,20 @@ describe('SQLite DB', () => {
     expect(spawns.length).toBe(1);
     expect(spawns[0].parentKey).toBe('agent:main:parent');
     expect(spawns[0].childKey).toBe('agent:main:child');
+  });
+
+  it('should insert events with category and source', () => {
+    insertEvent(db, 'error', null, { module: 'test', message: 'boom' });
+    const row = db.prepare("SELECT category, source FROM metric_events WHERE type='error' ORDER BY id DESC LIMIT 1").get() as { category: string; source: string };
+    expect(row.category).toBe('severity.error');
+    expect(row.source).toBe('openclaw');
+  });
+
+  it('should insert unknown event type with uncategorized fallback', () => {
+    insertEvent(db, 'custom_thing', null, {});
+    const row = db.prepare("SELECT category, source FROM metric_events WHERE type='custom_thing'").get() as { category: string; source: string };
+    expect(row.category).toBe('uncategorized');
+    expect(row.source).toBe('unknown');
   });
 
 });

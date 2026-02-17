@@ -6,7 +6,7 @@ export function Skeleton({ className = '' }: { className?: string }) {
 
 export function ChartSkeleton() {
   return (
-    <div className="rounded-lg px-3 py-2.5" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+    <div className="rounded-lg px-3 py-2.5 bg-surface border border-edge">
       <div className="flex items-center justify-between mb-2">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-3 w-12" />

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'bun:test';
+import { describe, it, expect, afterEach } from 'vitest';
 import { BrowserPool } from '../browser-pool';
 
 describe('BrowserPool', () => {
@@ -54,6 +54,27 @@ describe('BrowserPool', () => {
     const b2 = await pool.acquire();
     await new Promise((r) => setTimeout(r, 200));
     expect(b2.isConnected()).toBe(true);
+  });
+
+  it('canCapture respects maxConcurrent', async () => {
+    pool = new BrowserPool({ maxConcurrent: 2 });
+    expect(pool.canCapture()).toBe(true);
+    pool.beginCapture();
+    expect(pool.canCapture()).toBe(true);
+    pool.beginCapture();
+    expect(pool.canCapture()).toBe(false);
+    pool.endCapture();
+    expect(pool.canCapture()).toBe(true);
+  });
+
+  it('endCapture does not go below zero', async () => {
+    pool = new BrowserPool({ maxConcurrent: 2 });
+    pool.endCapture();
+    pool.endCapture();
+    expect(pool.canCapture()).toBe(true);
+    pool.beginCapture();
+    pool.beginCapture();
+    expect(pool.canCapture()).toBe(false);
   });
 
   it('concurrent acquire() calls return same browser', async () => {

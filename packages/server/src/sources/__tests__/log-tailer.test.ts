@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { parseLogLine, redact, LogTailer } from '../log-tailer';
 import { writeFileSync, mkdirSync, rmSync, appendFileSync } from 'fs';
 import { join } from 'path';
@@ -62,6 +62,94 @@ describe('LogTailer', () => {
   });
 });
 
+describe('LogTailer safety', () => {
+  function makeLine(msg: string) {
+    return JSON.stringify({
+      '0': `[test] ${msg}`,
+      _meta: { logLevelName: 'INFO', path: {} },
+      time: new Date().toISOString(),
+    }) + '\n';
+  }
+
+  it('should handle file truncation and re-read from start', () => {
+    const dir = join(tmpdir(), `logtail-trunc-${Date.now()}/`);
+    mkdirSync(dir, { recursive: true });
+    const d = new Date();
+    const fname = `openclaw-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.log`;
+    const fpath = join(dir, fname);
+
+    // Write initial content so constructor picks up offset
+    writeFileSync(fpath, makeLine('line1') + makeLine('line2'));
+
+    const tailer = new LogTailer(dir);
+    const received: Array<{ message: string }> = [];
+    tailer.on('log', (e: { message: string }) => received.push(e));
+
+    // Truncate file to something shorter, then write new content
+    writeFileSync(fpath, makeLine('after-truncate'));
+
+    // Manually trigger read (simulating poll)
+    (tailer as any).readIncremental();
+
+    expect(received.some(e => e.message.includes('after-truncate'))).toBe(true);
+    tailer.destroy();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('should not crash when readSync throws (fd leak safety)', () => {
+    const dir = join(tmpdir(), `logtail-fd-${Date.now()}/`);
+    mkdirSync(dir, { recursive: true });
+    const d = new Date();
+    const fname = `openclaw-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.log`;
+    const fpath = join(dir, fname);
+    writeFileSync(fpath, makeLine('initial'));
+
+    const tailer = new LogTailer(dir);
+    // Append content then make file unreadable to trigger error path
+    appendFileSync(fpath, makeLine('more'));
+
+    // Just verify no uncaught exception - the try/finally protects fd
+    expect(() => {
+      // Force a read cycle
+      (tailer as any).readIncremental();
+    }).not.toThrow();
+
+    tailer.destroy();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('ring buffer should cap at ringSize and getRecentEntries works', async () => {
+    const dir = join(tmpdir(), `logtail-ring-${Date.now()}/`);
+    mkdirSync(dir, { recursive: true });
+    const d = new Date();
+    const fname = `openclaw-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.log`;
+    const fpath = join(dir, fname);
+    writeFileSync(fpath, '');
+
+    const tailer = new LogTailer(dir);
+
+    // Write 250 lines
+    let content = '';
+    for (let i = 0; i < 250; i++) {
+      content += makeLine(`msg-${i}`);
+    }
+    appendFileSync(fpath, content);
+    await new Promise(r => setTimeout(r, 3000));
+
+    const recent50 = tailer.getRecentEntries(50);
+    expect(recent50.length).toBe(50);
+    // Should be the last 50 of the ring buffer (which holds last 200)
+    expect(recent50[49].message).toContain('msg-249');
+    expect(recent50[0].message).toContain('msg-200');
+
+    const allRecent = tailer.getRecentEntries(300);
+    expect(allRecent.length).toBe(200); // capped at ringSize
+
+    tailer.destroy();
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
 describe('LogTailer integration', () => {
   it('should emit log events when file is appended', async () => {
     const dir = join(tmpdir(), `logtail-${Date.now()}/`);
@@ -84,7 +172,7 @@ describe('LogTailer integration', () => {
     appendFileSync(fpath, line + '\n');
 
     // Wait for fs.watch to fire
-    await Bun.sleep(500);
+    await new Promise(r => setTimeout(r, 3000));
     expect(received.length).toBeGreaterThanOrEqual(1);
     expect(received[0].message).toContain('exec completed');
 
@@ -105,7 +193,7 @@ describe('LogTailer integration', () => {
     tailer.on('log', (e: unknown) => received.push(e));
 
     appendFileSync(fpath, 'not json at all\n{"broken\n');
-    await Bun.sleep(500);
+    await new Promise(r => setTimeout(r, 3000));
     expect(received.length).toBe(0); // Both lines should be silently skipped
 
     tailer.destroy();

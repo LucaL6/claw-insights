@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from 'bun:test';
+import { describe, it, expect, afterAll } from 'vitest';
 import { BrowserPool } from '../browser-pool';
 import { capture, type CaptureOptions } from '../capture';
 

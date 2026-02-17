@@ -52,7 +52,7 @@ export function PreviewCard({ source, title, timeLabel, events, total, linkHref,
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
         <div className="flex items-center gap-2">
-          <span className="text-[12px] font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</span>
+          <span className="text-[12px] font-semibold text-fg">{title}</span>
           <span className="mono text-[9px] px-2 py-0.5 rounded" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
             {timeLabel}
           </span>
@@ -65,16 +65,16 @@ export function PreviewCard({ source, title, timeLabel, events, total, linkHref,
 
       {/* Event rows */}
       {events.length === 0 ? (
-        <div className="px-3 py-3 text-center text-[11px]" style={{ color: 'var(--text-dim)' }}>{t('logs.noEvents')}</div>
+        <div className="px-3 py-3 text-center text-[11px] text-fg-dim">{t('logs.noEvents')}</div>
       ) : events.map((ev, i) => {
         const tc = TYPE_COLORS[ev.type] ?? TYPE_COLORS.error;
         return (
           <div key={i} className="grid gap-1 px-3 py-1.5 items-center" style={{ gridTemplateColumns: '60px 42px 1fr', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{fmtTime(ev.timestamp)}</span>
+            <span className="mono text-[10px] text-fg-muted">{fmtTime(ev.timestamp)}</span>
             <span className="mono text-[8px] font-semibold px-1.5 py-0.5 rounded text-center" style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
               {TYPE_LABELS[ev.type] ?? ev.type.slice(0, 3).toUpperCase()}
             </span>
-            <span className="mono text-[10px] truncate" style={{ color: 'var(--text-secondary)' }}>{ev.message || ev.module}</span>
+            <span className="mono text-[10px] truncate text-fg-secondary">{ev.message || ev.module}</span>
           </div>
         );
       })}
@@ -88,7 +88,7 @@ export function PreviewCard({ source, title, timeLabel, events, total, linkHref,
         >
           {t('logs.viewAll')} →
         </button>
-        <span className="mono text-[10px]" style={{ color: 'var(--text-dim)' }}>{events.length} of {total}</span>
+        <span className="mono text-[10px] text-fg-dim">{events.length} of {total}</span>
       </div>
     </div>
   );

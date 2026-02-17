@@ -63,3 +63,32 @@ export async function capture(pool: BrowserPool, options: CaptureOptions): Promi
     await ctx.close();
   }
 }
+
+export interface HtmlCaptureOptions {
+  html: string;
+  viewportWidth: number;
+  viewportHeight?: number;
+  fullPage?: boolean;
+  timeoutMs?: number;
+}
+
+export async function captureFromHtml(pool: BrowserPool, options: HtmlCaptureOptions): Promise<Buffer> {
+  const { html, viewportWidth, viewportHeight = 1080, fullPage = true, timeoutMs = 15_000 } = options;
+
+  const browser = await pool.acquire();
+  const ctx = await browser.newContext({
+    viewport: { width: viewportWidth, height: viewportHeight },
+    deviceScaleFactor: 2,
+  });
+  const pg = await ctx.newPage();
+
+  try {
+    await pg.setContent(html, { waitUntil: 'load' });
+    await pg.waitForSelector('[data-ready="true"]', { timeout: timeoutMs });
+    await pg.waitForTimeout(800);
+    const buffer = (await pg.screenshot({ type: 'png', fullPage })) as Buffer;
+    return buffer;
+  } finally {
+    await ctx.close();
+  }
+}

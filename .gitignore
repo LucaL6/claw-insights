@@ -4,3 +4,8 @@ dist/
 *.db
 .vite/
 test-results/
+.worktrees/
+
+# GraphQL codegen output
+packages/shared/src/generated/
+packages/web/src/generated/

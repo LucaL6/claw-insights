@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { dataBus, emitChange, type DataChangeEvent } from '../../events';
 import { MetricsCollector } from '../metrics-collector';
 import { initDatabase } from '../../db/init';

@@ -1,6 +1,8 @@
-import { execSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { config, CLI_ENV } from '../config.js';
 
-const CLI_PATH = process.env.OPENCLAW_CLI ?? './.npm-global/bin/openclaw';
+const execFileAsync = promisify(execFile);
 
 export interface UsageCost {
   totalCost: number;
@@ -31,19 +33,20 @@ export function parseUsageCostOutput(output: string): UsageCost {
 let cache: { data: UsageCost; ts: number } | null = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5min
 
-export function getUsageCost(): UsageCost {
+export async function getUsageCost(): Promise<UsageCost> {
   if (cache && Date.now() - cache.ts < CACHE_TTL) return cache.data;
 
   try {
-    const output = execSync(`${CLI_PATH} gateway usage-cost`, {
+    const { stdout } = await execFileAsync(config.cliPath, ['gateway', 'usage-cost'], {
       timeout: 15000,
       encoding: 'utf-8',
-      env: { ...process.env, PATH: `${process.env.HOME}/.npm-global/bin:${process.env.HOME}/.bun/bin:${process.env.PATH}` },
+      env: CLI_ENV,
     });
-    const data = parseUsageCostOutput(output);
+    const data = parseUsageCostOutput(stdout);
     cache = { data, ts: Date.now() };
     return data;
-  } catch {
+  } catch (err) {
+    console.warn('[usage-cost] CLI call failed:', (err as Error).message);
     return cache?.data ?? { totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: new Date().toISOString() };
   }
 }

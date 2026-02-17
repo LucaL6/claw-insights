@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { groupByPrefix, type GroupedItem } from '../groupByPrefix';
 
 const makeSession = (displayName: string) => ({

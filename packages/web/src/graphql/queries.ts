@@ -1,22 +1,24 @@
-export const GatewayQuery = /* GraphQL */ `
+import { graphql } from '../generated/gql';
+
+export const GatewayQuery = graphql(/* GraphQL */ `
   query Gateway {
     gateway { running pid version updateAvailable uptime startedAt connectLatencyMs latestVersion securityCritical securityWarn }
   }
-`;
+`);
 
-export const ResourcesQuery = /* GraphQL */ `
+export const ResourcesQuery = graphql(/* GraphQL */ `
   query Resources {
     resources { cpu memoryMB diskMB sampledAt }
   }
-`;
+`);
 
-export const ChannelsQuery = /* GraphQL */ `
+export const ChannelsQuery = graphql(/* GraphQL */ `
   query Channels {
     channels { provider name connected latencyMs }
   }
-`;
+`);
 
-export const SessionsQuery = /* GraphQL */ `
+export const SessionsQuery = graphql(/* GraphQL */ `
   query Sessions($filter: SessionFilter) {
     sessions(filter: $filter) {
       key displayName kind model channel
@@ -27,9 +29,9 @@ export const SessionsQuery = /* GraphQL */ `
       }
     }
   }
-`;
+`);
 
-export const MetricsQuery = /* GraphQL */ `
+export const MetricsQuery = graphql(/* GraphQL */ `
   query Metrics($date: String, $range: MetricsRange) {
     metrics(date: $date, range: $range) {
       date
@@ -46,22 +48,22 @@ export const MetricsQuery = /* GraphQL */ `
       warnings
     }
   }
-`;
+`);
 
-export const UsageCostQuery = /* GraphQL */ `
+export const UsageCostQuery = graphql(/* GraphQL */ `
   query UsageCost {
     usageCost { totalCost totalTokensM todayCost todayTokensM fetchedAt }
   }
-`;
+`);
 
-export const CronJobsQuery = /* GraphQL */ `
+export const CronJobsQuery = graphql(/* GraphQL */ `
   query CronJobs {
     cronJobs { id name enabled schedule lastRunAt lastRunSuccess nextRunAt }
   }
-`;
+`);
 
-export const RecentLogsQuery = /* GraphQL */ `
+export const RecentLogsQuery = graphql(/* GraphQL */ `
   query RecentLogs($count: Int) {
     recentLogs(count: $count) { time level module message }
   }
-`;
+`);

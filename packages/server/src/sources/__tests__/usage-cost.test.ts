@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { parseUsageCostOutput } from '../usage-cost';
 
 describe('usage-cost parser', () => {

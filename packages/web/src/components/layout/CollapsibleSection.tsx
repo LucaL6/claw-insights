@@ -21,8 +21,7 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
     <section className="mb-4">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full text-left transition-colors py-1"
-        style={{ color: 'var(--text-muted)' }}
+        className="flex items-center gap-2 w-full text-left transition-colors py-1 text-fg-muted"
       >
         <svg
           className={`w-3 h-3 transition-transform ${open ? 'rotate-90' : ''}`}
@@ -36,7 +35,7 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
           <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>{badge}</span>
         )}
         {updatedAt && (
-          <span className="text-[9px] mono" style={{ color: 'var(--text-dim)' }}>
+          <span className="text-[9px] mono text-fg-dim">
             updated {formatTime(updatedAt)}
           </span>
         )}

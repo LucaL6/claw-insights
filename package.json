@@ -1,13 +1,28 @@
 {
   "name": "claw-insights",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "bin": {
     "claw-insights": "./bin/claw-insights.js"
   },
   "scripts": {
-    "dev": "bun run --filter '*' dev",
-    "dev:server": "bun run --filter @claw-insights/server dev",
-    "dev:web": "bun run --filter @claw-insights/web dev"
+    "codegen": "graphql-codegen --config codegen.ts",
+    "codegen:watch": "graphql-codegen --config codegen.ts --watch",
+    "dev": "npm run codegen && concurrently -n codegen,server,web \"npm run codegen:watch\" \"npm run dev:server\" \"npm run dev:web\"",
+    "dev:server": "npm run -w @claw-insights/server dev",
+    "dev:web": "npm run -w @claw-insights/web dev",
+    "test": "npm run --workspaces test",
+    "build": "npm run --workspaces build"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^6.1.1",
+    "@graphql-codegen/client-preset": "^5.2.2",
+    "@graphql-codegen/typescript": "^5.0.7",
+    "@graphql-codegen/typescript-resolvers": "^5.1.5",
+    "@graphql-typed-document-node/core": "^3.2.0",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0"
   }
 }

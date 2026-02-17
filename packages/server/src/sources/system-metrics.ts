@@ -1,4 +1,8 @@
-import { execSync } from 'child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { config } from '../config.js';
+
+const execFileAsync = promisify(execFile);
 
 interface SystemMetricsData {
   cpu: number;
@@ -13,10 +17,12 @@ export class SystemMetrics {
   private readonly ttlMs = 10_000;
 
   /** Get Gateway PID from launchctl */
-  getPid(): number | null {
+  async getPid(): Promise<number | null> {
     try {
-      const out = execSync('launchctl list 2>/dev/null | grep ai.openclaw.gateway', { encoding: 'utf-8' });
-      const match = out.match(/^(\d+)/);
+      const { stdout } = await execFileAsync('launchctl', ['list'], { encoding: 'utf-8' });
+      const line = stdout.split('\n').find(l => l.includes('ai.openclaw.gateway'));
+      if (!line) return null;
+      const match = line.match(/^(\d+)/);
       return match ? parseInt(match[1], 10) : null;
     } catch {
       return null;
@@ -24,10 +30,10 @@ export class SystemMetrics {
   }
 
   /** Get disk usage of ~/.openclaw/ in MB */
-  private getDiskMB(): number {
+  private async getDiskMB(): Promise<number> {
     try {
-      const out = execSync(`du -sm ${process.env.HOME}/.openclaw/ 2>/dev/null`, { encoding: 'utf-8' });
-      const match = out.match(/^(\d+)/);
+      const { stdout } = await execFileAsync('du', ['-sm', `${config.openclawDir}/`], { encoding: 'utf-8' });
+      const match = stdout.match(/^(\d+)/);
       return match ? parseInt(match[1], 10) : 0;
     } catch {
       return 0;
@@ -35,10 +41,11 @@ export class SystemMetrics {
   }
 
   /** Get CPU% and RSS for a given PID */
-  private getProcessMetrics(pid: number): { cpu: number; memoryMB: number } | null {
+  private async getProcessMetrics(pid: number): Promise<{ cpu: number; memoryMB: number } | null> {
     try {
-      const out = execSync(`ps -o rss=,pcpu= -p ${pid}`, { encoding: 'utf-8' }).trim();
-      const parts = out.split(/\s+/);
+      const { stdout } = await execFileAsync('ps', ['-o', 'rss=,pcpu=', '-p', String(pid)], { encoding: 'utf-8' });
+      const trimmed = stdout.trim();
+      const parts = trimmed.split(/\s+/);
       if (parts.length < 2) return null;
       const rssKB = parseInt(parts[0], 10);
       const cpu = parseFloat(parts[1]);
@@ -48,19 +55,22 @@ export class SystemMetrics {
     }
   }
 
-  getMetrics(): SystemMetricsData {
+  async getMetrics(): Promise<SystemMetricsData> {
     const now = Date.now();
     if (this.cache && now - this.cacheTime < this.ttlMs) {
       return this.cache;
     }
 
-    const pid = this.getPid();
-    const proc = pid ? this.getProcessMetrics(pid) : null;
+    const pid = await this.getPid();
+    const [proc, diskMB] = await Promise.all([
+      pid ? this.getProcessMetrics(pid) : Promise.resolve(null),
+      this.getDiskMB(),
+    ]);
 
     this.cache = {
       cpu: proc?.cpu ?? 0,
       memoryMB: proc?.memoryMB ?? 0,
-      diskMB: this.getDiskMB(),
+      diskMB,
       sampledAt: new Date().toISOString(),
     };
     this.cacheTime = now;

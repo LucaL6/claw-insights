@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'bun:test';
-import { Database } from 'bun:sqlite';
+import { describe, it, expect } from 'vitest';
+import { DatabaseSync as Database } from 'node:sqlite';
 import { queryEvents } from '../queries.js';
+import { mapEvent } from '../../sources/events-mapper.js';
 
 function setupDb(): Database {
   const db = new Database(':memory:');
@@ -10,19 +11,23 @@ function setupDb(): Database {
       timestamp TEXT NOT NULL,
       type TEXT NOT NULL,
       value REAL,
-      metadata TEXT
+      metadata TEXT,
+      category TEXT,
+      source TEXT
     );
     CREATE INDEX idx_events_type_time ON metric_events(type, timestamp);
+    CREATE INDEX idx_events_category_time ON metric_events(category, timestamp);
     CREATE INDEX idx_events_time ON metric_events(timestamp DESC);
   `);
   return db;
 }
 
 function insertMany(db: Database, type: string, count: number, baseTime: number) {
-  const stmt = db.prepare('INSERT INTO metric_events (timestamp, type, metadata) VALUES (?, ?, ?)');
+  const stmt = db.prepare('INSERT INTO metric_events (timestamp, type, metadata, category, source) VALUES (?, ?, ?, ?, ?)');
+  const mapped = mapEvent(type);
   for (let i = 0; i < count; i++) {
     const ts = new Date((baseTime + i) * 1000).toISOString();
-    stmt.run(ts, type, JSON.stringify({ module: 'test', message: `${type} #${i}` }));
+    stmt.run(ts, type, JSON.stringify({ module: 'test', message: `${type} #${i}` }), mapped.category, mapped.source);
   }
 }
 
@@ -80,5 +85,24 @@ describe('queryEvents', () => {
     expect(result.events.length).toBe(200);
     expect(displayedTotal).toBe(200);
     expect(result.total).toBe(250);
+  });
+
+  it('should match category filter values in types option', () => {
+    const db = setupDb();
+    const now = Math.floor(Date.now() / 1000);
+    insertMany(db, 'error', 2, now - 60);
+    insertMany(db, 'warning', 1, now - 40);
+
+    const result = queryEvents(db, {
+      from: now - 120,
+      to: now + 60,
+      types: ['severity.error'],
+      limit: 50,
+    });
+
+    expect(result.events.length).toBe(2);
+    expect(result.total).toBe(2);
+    expect(result.counts.error).toBe(2);
+    expect(result.counts.warning).toBe(0);
   });
 });

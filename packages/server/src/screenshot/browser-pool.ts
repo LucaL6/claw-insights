@@ -2,6 +2,7 @@ import { chromium, type Browser } from 'playwright';
 
 export interface BrowserPoolOptions {
   idleTimeoutMs?: number;
+  maxConcurrent?: number;
 }
 
 export class BrowserPool {
@@ -9,9 +10,24 @@ export class BrowserPool {
   private launching: Promise<Browser> | null = null;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly idleTimeoutMs: number;
+  private activeCaptures = 0;
+  private readonly maxConcurrent: number;
 
   constructor(options: BrowserPoolOptions = {}) {
     this.idleTimeoutMs = options.idleTimeoutMs ?? 5 * 60 * 1000;
+    this.maxConcurrent = options.maxConcurrent ?? 3;
+  }
+
+  canCapture(): boolean {
+    return this.activeCaptures < this.maxConcurrent;
+  }
+
+  beginCapture(): void {
+    this.activeCaptures++;
+  }
+
+  endCapture(): void {
+    this.activeCaptures = Math.max(0, this.activeCaptures - 1);
   }
 
   async acquire(): Promise<Browser> {

@@ -1,6 +1,13 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { spawn, type ChildProcess } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-let proc: ReturnType<typeof Bun.spawn>;
+const __dir = dirname(fileURLToPath(import.meta.url));
+let proc: ChildProcess;
+
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
 const GQL = (query: string, variables?: Record<string, unknown>) =>
   fetch('http://127.0.0.1:4000/graphql', {
     method: 'POST',
@@ -9,17 +16,16 @@ const GQL = (query: string, variables?: Record<string, unknown>) =>
   }).then((r) => r.json());
 
 beforeAll(async () => {
-  proc = Bun.spawn(['bun', 'run', 'src/index.ts'], {
-    cwd: import.meta.dir + '/../..',
-    stdout: 'pipe',
-    stderr: 'pipe',
+  proc = spawn('npx', ['tsx', 'src/index.ts'], {
+    cwd: join(__dir, '../..'),
+    stdio: 'pipe',
   });
   for (let i = 0; i < 30; i++) {
     try {
       await GQL('{ gateway { running } }');
       break;
     } catch {
-      await Bun.sleep(200);
+      await sleep(200);
     }
   }
 });
@@ -84,11 +90,11 @@ describe('GraphQL Resolvers', () => {
   });
 
   // F3 Metrics
-  it('F3: metrics query returns 24 hours', async () => {
+  it('F3: metrics query returns buckets', async () => {
     const d = (await GQL(
-      '{ metrics { date hours { hour sessions tokensK errors warnings gatewayUp restartEvent } totalErrors uptimePercent } }',
-    )) as { data: { metrics: { hours: unknown[]; date: string } } };
-    expect(d.data.metrics.hours.length).toBe(24);
+      '{ metrics { date buckets { bucket label sessions tokensK errors warnings gatewayUp restartEvent } totalErrors uptimePercent } }',
+    )) as { data: { metrics: { buckets: unknown[]; date: string } } };
+    expect(d.data.metrics.buckets.length).toBeGreaterThan(0);
     expect(d.data.metrics.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
@@ -106,25 +112,4 @@ describe('GraphQL Resolvers', () => {
     expect(Array.isArray(d.data.cronJobs)).toBe(true);
   });
 
-  // F5 Mutations
-  it('F5.1: restartGateway mutation returns OperationResult', async () => {
-    const d = (await GQL('mutation { restartGateway { success message } }')) as {
-      data: { restartGateway: { success: boolean } };
-    };
-    expect(typeof d.data.restartGateway.success).toBe('boolean');
-  });
-
-  it('F5.2: runDoctor mutation returns OperationResult', async () => {
-    const d = (await GQL('mutation { runDoctor(options: { channelCheck: true }) { success message } }')) as {
-      data: { runDoctor: { success: boolean } };
-    };
-    expect(typeof d.data.runDoctor.success).toBe('boolean');
-  });
-
-  it('F5.3: updateGateway mutation returns OperationResult', async () => {
-    const d = (await GQL('mutation { updateGateway { success message } }')) as {
-      data: { updateGateway: { success: boolean } };
-    };
-    expect(typeof d.data.updateGateway.success).toBe('boolean');
-  });
 });

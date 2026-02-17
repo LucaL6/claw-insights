@@ -8,8 +8,7 @@ export function InfoTooltip({ label, detail, alignRight = false }: InfoTooltipPr
   return (
     <span className="relative inline-flex items-center group/info ml-1">
       <span
-        className="cursor-help hover:opacity-80 transition-opacity text-[11px] leading-none select-none"
-        style={{ color: 'var(--text-dim)' }}
+        className="cursor-help hover:opacity-80 transition-opacity text-[11px] leading-none select-none text-fg-dim"
       >
         ⓘ
       </span>

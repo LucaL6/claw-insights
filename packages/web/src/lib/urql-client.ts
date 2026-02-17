@@ -5,6 +5,7 @@ const sseClient = createSSEClient({ url: '/graphql' });
 
 export const client = new Client({
   url: '/graphql',
+  preferGetMethod: false,
   exchanges: [
     cacheExchange,
     fetchExchange,

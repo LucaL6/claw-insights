@@ -1,5 +1,9 @@
-import { execSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { emitChange } from '../events.js';
+import { config, CLI_ENV } from '../config.js';
+
+const execFileAsync = promisify(execFile);
 
 interface CachedResult<T> {
   data: T;
@@ -7,7 +11,6 @@ interface CachedResult<T> {
 }
 
 const CACHE_TTL = 10_000; // 10s
-const CLI_PATH = process.env.OPENCLAW_CLI ?? './.npm-global/bin/openclaw';
 
 let statusCache: CachedResult<ParsedStatus> | null = null;
 let versionCache: CachedResult<string> | null = null;
@@ -34,30 +37,31 @@ export interface ParsedStatus {
   sessionDefaults: { model: string; contextTokens: number } | null;
 }
 
-function execCli(args: string): string {
+async function execCli(args: string): Promise<string> {
   try {
-    return execSync(`${CLI_PATH} ${args}`, {
+    const { stdout } = await execFileAsync(config.cliPath, args.split(/\s+/), {
       timeout: 8000,
       encoding: 'utf-8',
-      env: { ...process.env, PATH: `${process.env.HOME}/.npm-global/bin:${process.env.HOME}/.bun/bin:${process.env.PATH}` },
+      env: CLI_ENV,
     });
-  } catch {
+    return stdout;
+  } catch (err) {
+    console.warn('[gateway-cli] CLI call failed:', args, (err as Error).message);
     return '';
   }
 }
 
-function getVersion(): string {
+export async function getVersion(): Promise<string> {
   if (versionCache && Date.now() - versionCache.ts < VERSION_CACHE_TTL) {
     return versionCache.data;
   }
-  const raw = execCli('--version').trim();
+  const raw = (await execCli('--version')).trim();
   const version = raw || 'unknown';
   versionCache = { data: version, ts: Date.now() };
   return version;
 }
 
 function parseChannels(summary: string[]): ChannelInfo[] {
-  // Parse lines like "Telegram: configured", "Slack: configured"
   const channels: ChannelInfo[] = [];
   for (const line of summary) {
     const match = line.match(/^(\w+):\s*(\w+)/);
@@ -73,7 +77,7 @@ function parseChannels(summary: string[]): ChannelInfo[] {
   return channels;
 }
 
-function parseStatus(json: string): ParsedStatus {
+function parseStatus(json: string, version: string): ParsedStatus {
   try {
     const d = JSON.parse(json);
     const gw = d?.gateway ?? {};
@@ -81,13 +85,10 @@ function parseStatus(json: string): ParsedStatus {
     const channelSummary = d?.channelSummary ?? [];
     const update = d?.update ?? {};
 
-    // Extract PID from runtimeShort: "running (pid 97242, state active)"
     const pidMatch = svc?.runtimeShort?.match(/pid\s+(\d+)/);
     const pid = pidMatch ? Number(pidMatch[1]) : null;
     const running = Boolean(gw?.reachable) || svc?.runtimeShort?.includes('running');
 
-    // Version from CLI --version (cached separately)
-    const version = getVersion();
     const latest = update?.latestVersion ?? null;
     const updateAvailable = latest && latest !== version ? latest : null;
 
@@ -118,12 +119,12 @@ function parseStatus(json: string): ParsedStatus {
   }
 }
 
-export function getGatewayStatus(): ParsedStatus {
+export async function getGatewayStatus(): Promise<ParsedStatus> {
   if (statusCache && Date.now() - statusCache.ts < CACHE_TTL) {
     return statusCache.data;
   }
-  const raw = execCli('status --json');
-  const status = parseStatus(raw);
+  const [raw, version] = await Promise.all([execCli('status --json'), getVersion()]);
+  const status = parseStatus(raw, version);
   const prevJson = statusCache ? JSON.stringify(statusCache.data) : '';
   statusCache = { data: status, ts: Date.now() };
   if (JSON.stringify(status) !== prevJson) {

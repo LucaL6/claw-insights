@@ -1,4 +1,6 @@
-export type MetricsRange = 'ONE_HOUR' | 'SIX_HOUR' | 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR';
+import type { MetricsRange } from '@claw-insights/shared';
+
+export type { MetricsRange };
 
 export interface RangeInfo {
   label: string;
@@ -27,8 +29,7 @@ interface Props {
 export function RangePicker({ value, onChange }: Props) {
   return (
     <div
-      className="inline-flex rounded-md p-0.5 gap-px"
-      style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+      className="inline-flex rounded-md p-0.5 gap-px bg-elevated border border-edge"
     >
       {OPTIONS.map((opt) => (
         <button

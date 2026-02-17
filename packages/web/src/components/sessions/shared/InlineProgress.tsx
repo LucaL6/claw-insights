@@ -20,7 +20,7 @@ export function InlineProgress({ percent, width = 40, height = 3 }: InlineProgre
           style={{ width: `${clamped}%`, backgroundColor: color }}
         />
       </span>
-      <span className="mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{clamped.toFixed(0)}%</span>
+      <span className="mono text-[10px] text-fg-muted">{clamped.toFixed(0)}%</span>
     </span>
   );
 }

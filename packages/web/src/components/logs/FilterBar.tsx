@@ -50,14 +50,17 @@ export function FilterBar({ activeTypes, onToggleType, counts, total, displayed,
                 onClick={() => !empty && onToggleType(p.type)}
                 disabled={empty}
                 className="text-[10px] mono font-semibold px-2 py-1 rounded-md flex items-center gap-1.5 transition-all"
-                style={empty
+                style={empty // inline: dynamic pill state
                   ? { backgroundColor: 'var(--bg-elevated)', color: 'var(--text-dim)', border: '1px solid var(--border-subtle)', opacity: 0.3, cursor: 'default' }
                   : active
                     ? { backgroundColor: p.bg, color: p.color, border: `1px solid ${p.border}`, cursor: 'pointer' }
                     : { backgroundColor: 'var(--bg-elevated)', color: 'var(--text-dim)', border: '1px solid var(--border-subtle)', opacity: 0.5, cursor: 'pointer' }
                 }
               >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: empty ? 'var(--text-dim)' : active ? p.color : 'var(--text-dim)' }} />
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-fg-dim"
+                  style={active && !empty ? { backgroundColor: p.color } : undefined} // inline: dynamic runtime color
+                />
                 {p.label}
                 {!empty && <span style={{ opacity: 0.7 }}>{counts[p.countKey]}</span>}
               </button>
@@ -68,7 +71,7 @@ export function FilterBar({ activeTypes, onToggleType, counts, total, displayed,
         {/* Time label chip + Show All button */}
         {timeLabel && (
           <div className="flex items-center gap-2">
-            <span className="mono text-[10px] px-2 py-1 rounded inline-flex items-center gap-1.5" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+            <span className="mono text-[10px] px-2 py-1 rounded inline-flex items-center gap-1.5 bg-elevated text-fg-muted border border-edge-subtle">
               {timeLabel}
               {onClearTimeFilter && (
                 <button
@@ -95,7 +98,7 @@ export function FilterBar({ activeTypes, onToggleType, counts, total, displayed,
 
         {/* Count */}
         <div className="flex items-center gap-1.5">
-          <span className="mono text-[10px]" style={{ color: 'var(--text-dim)' }}>
+          <span className="mono text-[10px] text-fg-dim">
             {filtered}{search ? ` / ${displayed}` : ''} of {total}
           </span>
           {total > displayed && (

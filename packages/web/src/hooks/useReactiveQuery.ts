@@ -11,14 +11,13 @@ interface ReactiveOptions {
   fallbackPollMs?: number;
 }
 
-export function useReactiveQuery<T = unknown>(
-  queryArgs: UseQueryArgs<AnyVariables, T>,
+export function useReactiveQuery<TData = unknown, TVariables extends AnyVariables = AnyVariables>(
+  queryArgs: UseQueryArgs<TVariables, TData>,
   reactive: ReactiveOptions,
-): UseQueryResponse<T> {
+): UseQueryResponse<TData, TVariables> {
   const [result, executeQuery] = useQuery(queryArgs);
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
-  const fallbackTimer = useRef<ReturnType<typeof setInterval>>();
-  const sseConnected = useRef(true);
+  const sseHealthy = useRef(true);
 
   const refetch = useCallback(() => {
     executeQuery({ requestPolicy: 'network-only' });
@@ -28,7 +27,6 @@ export function useReactiveQuery<T = unknown>(
   const handleSubscription = useCallback(
     (_prev: unknown, data: { dataChanged: { source: string; ts: string } }) => {
       if (!data?.dataChanged) return data;
-      sseConnected.current = true;
 
       const { source } = data.dataChanged;
       if (!reactive.sources.includes(source as DataSource)) return data;
@@ -42,33 +40,31 @@ export function useReactiveQuery<T = unknown>(
     [reactive.sources, reactive.debounceMs, refetch],
   );
 
-  useSubscription({ query: DataChangedSubscription }, handleSubscription);
+  // Track SSE by checking subscription result errors
+  const [subResult] = useSubscription({ query: DataChangedSubscription }, handleSubscription);
 
-  // Fallback polling when SSE disconnects
+  useEffect(() => {
+    sseHealthy.current = !subResult.error;
+  }, [subResult.error]);
+
+  // Fallback poll only when SSE has actual errors
   useEffect(() => {
     const pollMs = reactive.fallbackPollMs ?? 30_000;
 
-    // Check SSE health every pollMs — if no signal received, start polling
     const healthCheck = setInterval(() => {
-      if (!sseConnected.current) {
+      if (!sseHealthy.current) {
         refetch();
       }
-      // Reset flag — if subscription is alive it will set it back to true
-      sseConnected.current = false;
     }, pollMs);
 
-    // Refetch on tab visibility change (waking from sleep)
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        refetch();
-      }
+      if (document.visibilityState === 'visible') refetch();
     };
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       clearInterval(healthCheck);
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      if (fallbackTimer.current) clearInterval(fallbackTimer.current);
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [reactive.fallbackPollMs, refetch]);

@@ -27,6 +27,25 @@ export class SpawnTracker {
     }
   }
 
+  prune(maxEntries: number = 500) {
+    if (this.runToParent.size <= maxEntries) return;
+
+    const keys = [...this.runToParent.keys()];
+    for (let i = 0; i < keys.length - maxEntries; i++) {
+      this.runToParent.delete(keys[i]);
+      this.runToChild.delete(keys[i]);
+    }
+    // Rebuild parentToChildren from remaining entries
+    this.parentToChildren.clear();
+    for (const [runId, parent] of this.runToParent) {
+      const child = this.runToChild.get(runId);
+      if (child) {
+        if (!this.parentToChildren.has(parent)) this.parentToChildren.set(parent, new Set());
+        this.parentToChildren.get(parent)!.add(child);
+      }
+    }
+  }
+
   getParentChildMap(): Map<string, string[]> {
     const out = new Map<string, string[]>();
     for (const [p, set] of this.parentToChildren) out.set(p, Array.from(set));

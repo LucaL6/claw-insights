@@ -1,8 +1,10 @@
-import { Database } from 'bun:sqlite';
+import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
+import { config } from '../config.js';
+import { EVENT_MAP } from '../sources/events-mapper.js';
 
-const DEFAULT_DB_PATH = `${process.env.HOME}/.openclaw/dashboard/metrics.db`;
+const DEFAULT_DB_PATH = config.dbPath;
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS metric_events (
@@ -48,11 +50,115 @@ CREATE INDEX IF NOT EXISTS idx_model_samples_model_time
   ON model_token_samples(model, timestamp);
 `;
 
-export function initDatabase(dbPath: string = DEFAULT_DB_PATH): Database {
+interface Migration {
+  version: number;
+  up: string | ((db: DatabaseSync) => void);
+}
+
+const MIGRATIONS: Migration[] = [
+  {
+    version: 1,
+    up: '-- initial schema (retroactive, applied by DDL)',
+  },
+  {
+    version: 2,
+    up: (db) => {
+      // Idempotent: only ADD COLUMN if it doesn't exist
+      if (!hasColumn(db, 'metric_events', 'module')) {
+        db.exec('ALTER TABLE metric_events ADD COLUMN module TEXT');
+      }
+      db.exec('CREATE INDEX IF NOT EXISTS idx_events_module ON metric_events(module)');
+    },
+  },
+  {
+    version: 3,
+    up: (db) => {
+      if (!hasColumn(db, 'metric_events', 'category')) {
+        db.exec('ALTER TABLE metric_events ADD COLUMN category TEXT');
+      }
+      if (!hasColumn(db, 'metric_events', 'source')) {
+        db.exec('ALTER TABLE metric_events ADD COLUMN source TEXT');
+      }
+      db.exec('CREATE INDEX IF NOT EXISTS idx_events_category ON metric_events(category)');
+      backfillEventCategories(db);
+    },
+  },
+  {
+    version: 4,
+    up: `
+      CREATE TABLE IF NOT EXISTS hourly_metric_samples (
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        hour                  TEXT NOT NULL,
+        active_sessions_max   INTEGER NOT NULL DEFAULT 0,
+        active_sessions_avg   REAL NOT NULL DEFAULT 0,
+        token_delta_k         REAL NOT NULL DEFAULT 0,
+        cost_end              REAL NOT NULL DEFAULT 0,
+        cpu_avg               REAL NOT NULL DEFAULT 0,
+        cpu_max               REAL NOT NULL DEFAULT 0,
+        memory_mb_avg         REAL NOT NULL DEFAULT 0,
+        memory_mb_max         INTEGER NOT NULL DEFAULT 0,
+        sample_count          INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_hourly_samples_hour ON hourly_metric_samples(hour);
+
+      CREATE TABLE IF NOT EXISTS hourly_model_tokens (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        hour            TEXT NOT NULL,
+        model           TEXT NOT NULL,
+        token_delta_k   REAL NOT NULL DEFAULT 0
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_hourly_model_hour ON hourly_model_tokens(hour, model);
+    `,
+  },
+];
+
+export function backfillEventCategories(db: DatabaseSync) {
+  const stmt = db.prepare('UPDATE metric_events SET category = ?, source = ? WHERE type = ? AND (category IS NULL OR source IS NULL)');
+  for (const [type, mapping] of Object.entries(EVENT_MAP)) {
+    stmt.run(mapping.category, mapping.source, type);
+  }
+  db.prepare("UPDATE metric_events SET category = 'uncategorized', source = 'unknown' WHERE category IS NULL OR source IS NULL").run();
+}
+
+function hasColumn(db: DatabaseSync, table: string, column: string): boolean {
+  const info = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return info.some(c => c.name === column);
+}
+
+function runMigrations(db: DatabaseSync) {
+  db.exec('CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY)');
+
+  const row = db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number | null } | undefined;
+  const current = row?.v ?? 0;
+
+  for (const m of MIGRATIONS) {
+    if (m.version > current) {
+      db.exec('BEGIN');
+      try {
+        if (typeof m.up === 'function') {
+          m.up(db);
+        } else {
+          db.exec(m.up);
+        }
+        db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(m.version);
+        db.exec('COMMIT');
+        console.log(`[DB] Migrated to version ${m.version}`);
+      } catch (err) {
+        db.exec('ROLLBACK');
+        console.error(`[DB] Migration ${m.version} failed:`, err);
+        throw err;
+      }
+    }
+  }
+}
+
+export function initDatabase(dbPath: string = DEFAULT_DB_PATH): DatabaseSync {
   mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
+  const db = new DatabaseSync(dbPath);
   db.exec('PRAGMA journal_mode=WAL');
   db.exec('PRAGMA synchronous=NORMAL');
+  db.exec('PRAGMA busy_timeout=5000');
   db.exec(DDL);
+  runMigrations(db);
   return db;
 }

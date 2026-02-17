@@ -1,5 +1,62 @@
 /* packages/web/src/styles/theme.css */
 
+/* ── Tailwind @theme tokens ──
+ * Adds semantic color tokens alongside Tailwind defaults.
+ * Semantic naming: fg-* (foreground/text), surface/elevated/base (backgrounds),
+ * edge (borders), accent colors (emerald/red/sky/amber/orange/violet).
+ * Tokens resolve to CSS variables defined in [data-theme] blocks below.
+ * NOT registered: chart-*, card-*, tag-*, toggle-*, session-*, status-*,
+ * subagent-*, tree-*, theme-btn-* (too narrow / component-specific).
+ */
+@theme {
+  /* ── Foreground (text) ── */
+  --color-fg: var(--text-primary);
+  --color-fg-secondary: var(--text-secondary);
+  --color-fg-muted: var(--text-muted);
+  --color-fg-dim: var(--text-dim);
+
+  /* ── Surfaces (backgrounds) ── */
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-surface-solid: var(--bg-surface-solid);
+  --color-elevated: var(--bg-elevated);
+  --color-overlay: var(--bg-overlay);
+  --color-input: var(--bg-input);
+
+  /* ── Borders ── */
+  --color-edge: var(--border);
+  --color-edge-subtle: var(--border-subtle);
+
+  /* ── Accent colors (override TW defaults) ── */
+  --color-emerald: var(--emerald);
+  --color-emerald-bg: var(--emerald-bg);
+  --color-emerald-border: var(--emerald-border);
+
+  --color-red: var(--red);
+  --color-red-bg: var(--red-bg);
+  --color-red-border: var(--red-border);
+
+  --color-sky: var(--sky);
+  --color-sky-bg: var(--sky-bg);
+  --color-sky-border: var(--sky-border);
+
+  --color-amber: var(--amber);
+  --color-amber-bg: var(--amber-bg);
+  --color-amber-border: var(--amber-border);
+
+  --color-orange: var(--orange);
+  --color-orange-bg: var(--orange-bg);
+  --color-orange-border: var(--orange-border);
+
+  --color-violet: var(--violet);
+  --color-violet-bg: var(--violet-bg);
+  --color-violet-border: var(--violet-border);
+
+  /* ── Utility ── */
+  --color-skeleton: var(--skeleton);
+  --color-progress-track: var(--progress-track);
+}
+
 /* ═══════════ Dark Theme (default) ═══════════ */
 [data-theme="dark"] {
   /* Backgrounds */

@@ -1,6 +1,7 @@
-import { readFileSync, statSync, watch, openSync, readSync, closeSync, type FSWatcher } from 'fs';
+import { statSync, watch, openSync, readSync, closeSync, type FSWatcher } from 'fs';
 import { EventEmitter } from 'events';
 import type { LogEntry, LogLevel } from '@claw-insights/shared';
+import { config } from '../config.js';
 
 const SENSITIVE_PATTERN = /(?:token|key|secret|password|authorization)[=:]\s*.+/gi;
 
@@ -62,8 +63,10 @@ export class LogTailer extends EventEmitter {
   private offset: number = 0;
   private watcher: FSWatcher | null = null;
   private dateCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private ringBuffer: LogEntry[] = [];
+  private readonly ringSize = 200;
 
-  constructor(logDir: string = '/tmp/openclaw/') {
+  constructor(logDir: string = config.logDir) {
     super();
     this.logDir = logDir;
     this.switchToCurrentFile();
@@ -95,21 +98,9 @@ export class LogTailer extends EventEmitter {
     this.startWatching();
   }
 
-  /** Read last N lines from current log file and return parsed entries */
-  getRecentEntries(count: number = 50): Array<{ time: string; level: string; module: string; message: string }> {
-    try {
-      const content = readFileSync(this.currentFile, 'utf-8');
-      const lines = content.split('\n').filter(l => l.trim());
-      const recent = lines.slice(-count);
-      const entries: Array<{ time: string; level: string; module: string; message: string }> = [];
-      for (const line of recent) {
-        const entry = parseLogLine(line);
-        if (entry) entries.push(entry);
-      }
-      return entries;
-    } catch {
-      return [];
-    }
+  /** Read last N entries from ring buffer */
+  getRecentEntries(count: number = 50): LogEntry[] {
+    return this.ringBuffer.slice(-count);
   }
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -130,14 +121,22 @@ export class LogTailer extends EventEmitter {
   private readIncremental() {
     try {
       const stat = statSync(this.currentFile);
-      if (stat.size <= this.offset) return;
+      // File truncated or rotated — reset offset
+      if (stat.size < this.offset) {
+        console.warn('[LogTailer] File truncated/rotated, resetting offset');
+        this.offset = 0;
+      }
+      if (stat.size === this.offset) return;
 
       const bytesToRead = stat.size - this.offset;
       const buf = Buffer.alloc(bytesToRead);
       const fd = openSync(this.currentFile, 'r');
-      readSync(fd, buf, 0, bytesToRead, this.offset);
-      closeSync(fd);
-      this.offset = stat.size;
+      try {
+        readSync(fd, buf, 0, bytesToRead, this.offset);
+        this.offset = stat.size;
+      } finally {
+        closeSync(fd);
+      }
 
       const chunk = buf.toString('utf-8');
       const lines = chunk.split('\n').filter((l) => l.trim());
@@ -145,12 +144,13 @@ export class LogTailer extends EventEmitter {
       for (const line of lines) {
         const entry = parseLogLine(line);
         if (entry) {
+          this.ringBuffer.push(entry);
+          if (this.ringBuffer.length > this.ringSize) this.ringBuffer.shift();
           this.emit('log', entry);
         }
       }
     } catch (err) {
-      // File might have been rotated
-      console.error('[LogTailer] read error:', err);
+      console.warn('[LogTailer] read error:', (err as Error).message);
     }
   }
 

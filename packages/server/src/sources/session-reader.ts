@@ -2,6 +2,7 @@ import { readFileSync, watch, statSync, type FSWatcher } from 'fs';
 import { dirname, basename } from 'path';
 import type { Session, SessionStatus } from '@claw-insights/shared';
 import { emitChange } from '../events.js';
+import { config } from '../config.js';
 
 interface RawSession {
   sessionId: string;
@@ -19,7 +20,7 @@ interface RawSession {
   lastChannel?: string;
 }
 
-const SESSIONS_PATH = `${process.env.HOME}/.openclaw/agents/main/sessions/sessions.json`;
+const SESSIONS_PATH = config.sessionsPath;
 
 function inferStatus(raw: RawSession): SessionStatus {
   const age = Date.now() - raw.updatedAt;
@@ -199,7 +200,7 @@ export class SessionReader {
       if (!parent) continue;
       parent.subAgents = childKeys
         .map((ck) => this.sessions.get(ck))
-        .filter((s): s is Session => s !== null);
+        .filter((s): s is Session => s != null);
     }
 
     // Record which keys are attached as children

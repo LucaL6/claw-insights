@@ -22,7 +22,7 @@ export function EventRow({ timestamp, type, module, message, highlighted }: Even
   return (
     <div
       className="grid items-center py-1 px-1"
-      style={{
+      style={{ // inline: dynamic highlight layout
         gridTemplateColumns: '28px 82px 68px 110px 1fr',
         backgroundColor: highlighted ? style.bg : 'transparent',
         borderLeft: highlighted ? `2px solid ${style.color}` : '2px solid transparent',
@@ -33,7 +33,7 @@ export function EventRow({ timestamp, type, module, message, highlighted }: Even
         <div style={{ width: 3, height: 16, borderRadius: 1, backgroundColor: style.gutter }} />
       </div>
       {/* Time */}
-      <span className="mono text-[11px]" style={{ color: highlighted ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+      <span className={`mono text-[11px] ${highlighted ? 'text-fg' : 'text-fg-muted'}`}>
         {fmtTime(timestamp)}
       </span>
       {/* Level badge */}
@@ -52,8 +52,7 @@ export function EventRow({ timestamp, type, module, message, highlighted }: Even
       </span>
       {/* Message */}
       <span
-        className="mono text-[11px] truncate pl-2"
-        style={{ color: highlighted ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+        className={`mono text-[11px] truncate pl-2 ${highlighted ? 'text-fg' : 'text-fg-secondary'}`}
       >
         {message}
       </span>

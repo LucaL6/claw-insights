@@ -4,12 +4,12 @@ export default defineConfig({
   testDir: './e2e',
   webServer: [
     {
-      command: 'cd ../server && bun run dev',
+      command: 'cd ../server && npx tsx src/index.ts',
       port: 4000,
       reuseExistingServer: true,
     },
     {
-      command: 'bunx vite',
+      command: 'npx vite',
       port: 3200,
       reuseExistingServer: true,
     },

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { initDatabase } from '../../db/init';
 import { Aggregator } from '../aggregator';
 import { rmSync } from 'fs';
@@ -31,10 +31,10 @@ describe('Aggregator', () => {
     agg.ingestLog({ time: '10:00:02.000', level: 'INFO', module: 'tools', message: 'tool start exec' });
     agg.ingestLog({ time: '10:00:03.000', level: 'INFO', module: 'agent/embedded', message: 'embedded run tool start' });
 
-    const m = agg.getMetrics() as { totalErrors: number; totalWarnings: number; hours: unknown[] };
+    const m = agg.getMetrics() as { totalErrors: number; totalWarnings: number; buckets: unknown[] };
     expect(m.totalErrors).toBe(1);
     expect(m.totalWarnings).toBe(1);
-    expect(m.hours.length).toBeGreaterThan(0);
+    expect(m.buckets.length).toBeGreaterThan(0);
 
     cleanup();
   });
@@ -43,8 +43,8 @@ describe('Aggregator', () => {
     const { agg, cleanup } = setup();
     agg.ingestLog({ time: '10:00:00', level: 'INFO', module: 'tools', message: 'tool start exec' });
     agg.ingestLog({ time: '10:00:01', level: 'INFO', module: 'tools', message: 'tool start read' });
-    const m = agg.getMetrics() as { hours: Array<{ toolCalls: number }> };
-    const totalToolCalls = m.hours.reduce((s, h) => s + h.toolCalls, 0);
+    const m = agg.getMetrics() as { buckets: Array<{ toolCalls: number }> };
+    const totalToolCalls = m.buckets.reduce((s, b) => s + b.toolCalls, 0);
     expect(totalToolCalls).toBe(2);
     cleanup();
   });
@@ -52,8 +52,8 @@ describe('Aggregator', () => {
   it('should count api_call events (embedded run tool start)', () => {
     const { agg, cleanup } = setup();
     agg.ingestLog({ time: '10:00:00', level: 'INFO', module: 'agent/embedded', message: 'embedded run tool start sessions_list' });
-    const m = agg.getMetrics() as { hours: Array<{ apiCalls: number }> };
-    const totalApiCalls = m.hours.reduce((s, h) => s + h.apiCalls, 0);
+    const m = agg.getMetrics() as { buckets: Array<{ apiCalls: number }> };
+    const totalApiCalls = m.buckets.reduce((s, b) => s + b.apiCalls, 0);
     expect(totalApiCalls).toBe(1);
     cleanup();
   });
@@ -82,8 +82,8 @@ describe('Aggregator', () => {
   it('should detect gateway restart events', () => {
     const { agg, cleanup } = setup();
     agg.ingestLog({ time: '10:00:00', level: 'INFO', module: 'system', message: 'gateway restart completed' });
-    const m = agg.getMetrics() as { hours: Array<{ restartEvent: boolean }> };
-    const hasRestart = m.hours.some((h) => h.restartEvent);
+    const m = agg.getMetrics() as { buckets: Array<{ restartEvent: boolean }> };
+    const hasRestart = m.buckets.some((b) => b.restartEvent);
     expect(hasRestart).toBe(true);
     cleanup();
   });
@@ -117,10 +117,10 @@ describe('Aggregator', () => {
 
   it('should return empty metrics for future date', () => {
     const { agg, cleanup } = setup();
-    const m = agg.getMetrics('2099-01-01') as { totalErrors: number; totalTokensK: number; hours: unknown[] };
+    const m = agg.getMetrics('2099-01-01') as { totalErrors: number; totalTokensK: number; buckets: unknown[] };
     expect(m.totalErrors).toBe(0);
     expect(m.totalTokensK).toBe(0);
-    expect(m.hours.length).toBeGreaterThan(0);
+    expect(m.buckets.length).toBeGreaterThan(0);
     cleanup();
   });
 

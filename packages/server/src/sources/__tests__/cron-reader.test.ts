@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'bun:test';
+import { describe, it, expect, afterEach } from 'vitest';
 import { CronReader } from '../cron-reader';
 import { writeFileSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';

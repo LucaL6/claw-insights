@@ -28,9 +28,9 @@ claw-insights/
 ## Quick Start
 
 ```bash
-# Prerequisites: Bun v1.x, OpenClaw gateway running
-bun install
-bun run dev
+# Prerequisites: Node.js v22+, OpenClaw gateway running
+npm install
+./start.sh
 # Open http://localhost:3200
 ```
 
@@ -45,7 +45,7 @@ The dashboard connects to the local OpenClaw gateway via RPC (auto-detected) and
 ## Plugin (Future)
 
 ```bash
-openclaw plugin install claw-insights
+openclaw plugins install claw-insights
 ```
 
 See `packages/server/src/plugin.ts` for the plugin contract interface.
@@ -53,14 +53,14 @@ See `packages/server/src/plugin.ts` for the plugin contract interface.
 ## Development
 
 ```bash
-bun run dev              # Run all (server + web)
-bun run dev:server       # GraphQL API on :4000
-bun run dev:web          # Vite dev server on :3200
+./start.sh               # Run all (server + web)
+npm run dev:server        # GraphQL API on :4000
+npm run dev:web           # Vite dev server on :3200
 
 # Tests
-cd packages/server && bun test
-cd packages/web && bunx vitest run
-cd packages/web && bunx playwright test  # E2E
+cd packages/server && npx vitest run
+cd packages/web && npx vitest run
+cd packages/web && npx playwright test  # E2E
 ```
 
 ## License

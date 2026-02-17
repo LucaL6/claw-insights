@@ -1,4 +1,4 @@
-import type { Database } from 'bun:sqlite';
+import type { DatabaseSync as Database } from 'node:sqlite';
 import { insertSample, insertModelSample } from '../db/queries.js';
 import { emitChange } from '../events.js';
 
@@ -42,8 +42,8 @@ export class MetricsCollector {
   constructor(
     private db: Database,
     private sessionReader: SessionReaderLike,
-    private getSystemMetrics: () => SystemMetricsResult,
-    private getUsageCost: () => UsageCostResult,
+    private getSystemMetrics: () => SystemMetricsResult | Promise<SystemMetricsResult>,
+    private getUsageCost: () => UsageCostResult | Promise<UsageCostResult>,
     private aggregator?: { clearCache(): void },
     private fastIntervalMs: number = 30_000,
     private slowIntervalMs: number = 120_000,
@@ -85,9 +85,9 @@ export class MetricsCollector {
   }
 
   /** Slow sample: cost + system metrics (every 2min) */
-  sampleSlow() {
-    const cost = this.getUsageCost();
-    const sys = this.getSystemMetrics();
+  async sampleSlow() {
+    const cost = await this.getUsageCost();
+    const sys = await this.getSystemMetrics();
 
     this.lastCostToday = cost.todayCost;
     this.lastTokensTodayM = cost.todayTokensM;
@@ -111,21 +111,13 @@ export class MetricsCollector {
     emitChange('metrics');
   }
 
-  /** Prune old samples older than 48h */
-  private pruneOldSamples() {
-    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-    this.db.prepare('DELETE FROM model_token_samples WHERE timestamp < ?').run(cutoff);
-    this.db.prepare('DELETE FROM metric_samples WHERE timestamp < ?').run(cutoff);
-  }
-
   start() {
     this.sampleFast();
-    this.sampleSlow();
+    this.sampleSlow().catch(err => console.warn('[MetricsCollector] sampleSlow error:', err));
     this.fastTimer = setInterval(() => this.sampleFast(), this.fastIntervalMs);
-    this.slowTimer = setInterval(() => this.sampleSlow(), this.slowIntervalMs);
-    // Prune on startup and every 6 hours
-    this.pruneOldSamples();
-    setInterval(() => this.pruneOldSamples(), 6 * 60 * 60 * 1000);
+    this.slowTimer = setInterval(() => {
+      this.sampleSlow().catch(err => console.warn('[MetricsCollector] sampleSlow error:', err));
+    }, this.slowIntervalMs);
   }
 
   stop() {

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════
-# OpenClaw Dashboard — GraphQL Schema (MVP)
+# Claw Insights — GraphQL Schema
 # ═══════════════════════════════════════════════════
 
 # ── Enums ──
@@ -29,7 +29,7 @@ enum ChannelProvider {
 
 # ── Gateway ──
 
-"""Gateway 进程状态"""
+"""Gateway process status"""
 type GatewayStatus {
   running: Boolean!
   pid: Int
@@ -52,7 +52,7 @@ type UsageCost {
   fetchedAt: String!
 }
 
-"""系统资源使用"""
+"""System resource usage"""
 type SystemResources {
   cpu: Float!
   memoryMB: Int!
@@ -60,7 +60,7 @@ type SystemResources {
   sampledAt: String!
 }
 
-"""Channel 连通性"""
+"""Channel connectivity"""
 type Channel {
   provider: ChannelProvider!
   name: String!
@@ -151,27 +151,12 @@ type MetricsBucket {
   restartEvent: Boolean!
 }
 
-"""Kept for backward compat"""
-type HourlyMetrics {
-  hour: Int!
-  sessions: Int!
-  tokensK: Float!
-  apiCalls: Int!
-  toolCalls: Int!
-  errors: Int!
-  warnings: Int!
-  gatewayUp: Boolean!
-  restartEvent: Boolean!
-}
-
 type MetricsSummary {
   date: String!
   range: MetricsRange!
   bucketMinutes: Int!
   timezone: String!
   buckets: [MetricsBucket!]!
-  """@deprecated use buckets"""
-  hours: [HourlyMetrics!]!
   totalTokensK: Float!
   rangeTokensK: Float!
   totalErrors: Int!
@@ -190,22 +175,6 @@ type CronJob {
   lastRunAt: String
   lastRunSuccess: Boolean
   nextRunAt: String
-}
-
-# ── Operations ──
-
-type OperationResult {
-  success: Boolean!
-  message: String
-  output: String
-  duration: Int
-}
-
-input DoctorOptions {
-  channelCheck: Boolean
-  securityAudit: Boolean
-  deepProbe: Boolean
-  autoFix: Boolean
 }
 
 # ── Events ──
@@ -263,10 +232,4 @@ type Subscription {
   logs(filter: LogFilter): LogBatch!
   """Lightweight signal — client should refetch the relevant query"""
   dataChanged: DataChangeSignal!
-}
-
-type Mutation {
-  restartGateway: OperationResult!
-  runDoctor(options: DoctorOptions!): OperationResult!
-  updateGateway: OperationResult!
 }

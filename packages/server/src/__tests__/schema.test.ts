@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { buildSchema } from 'graphql';
 import { typeDefs } from '../schema/typeDefs';
 
@@ -29,13 +29,9 @@ describe('GraphQL Schema', () => {
     expect(fields).toContain('dataChanged');
   });
 
-  it('should contain mutations', () => {
+  it('should not contain mutations (removed)', () => {
     const schema = buildSchema(typeDefs);
     const mutationType = schema.getMutationType();
-    expect(mutationType).toBeDefined();
-    const fields = Object.keys(mutationType!.getFields());
-    expect(fields).toContain('restartGateway');
-    expect(fields).toContain('runDoctor');
-    expect(fields).toContain('updateGateway');
+    expect(mutationType).toBeUndefined();
   });
 });

@@ -1,22 +1,6 @@
-type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+export type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
-const defaultT: TranslateFn = (key, params) => {
-  const templates: Record<string, string> = {
-    'time.justNow': 'just now',
-    'time.mAgo': '{n}m ago',
-    'time.hAgo': '{n}h ago',
-    'time.dAgo': '{n}d ago',
-  };
-  let text = templates[key] ?? key;
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      text = text.replace(`{${k}}`, String(v));
-    }
-  }
-  return text;
-};
-
-export function relativeTime(epochMs: number, t: TranslateFn = defaultT): string {
+export function relativeTime(epochMs: number, t: TranslateFn): string {
   const diff = Date.now() - epochMs;
   if (diff < 60_000) return t('time.justNow');
   const mins = Math.floor(diff / 60_000);

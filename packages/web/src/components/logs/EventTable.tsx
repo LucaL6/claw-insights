@@ -53,14 +53,14 @@ export function EventTable({ events, highlightFrom, highlightTo, search, loading
         {loading ? (
           <div className="py-8 text-center">
             <div className="inline-block w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--text-muted)' }} />
-            <div className="text-[11px] mt-2" style={{ color: 'var(--text-dim)' }}>Loading events...</div>
+            <div className="text-[11px] mt-2 text-fg-dim">Loading events...</div>
           </div>
         ) : error ? (
-          <div className="py-8 text-center text-[11px]" style={{ color: 'var(--red)' }}>
+          <div className="py-8 text-center text-[11px] text-red">
             Failed to load events
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-8 text-center text-[12px]" style={{ color: 'var(--text-dim)' }}>
+          <div className="py-8 text-center text-[12px] text-fg-dim">
             No events match filters
           </div>
         ) : filtered.map((ev, i) => (

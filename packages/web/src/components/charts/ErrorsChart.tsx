@@ -2,11 +2,14 @@ import { useMemo } from 'react';
 import { BaseChart } from './BaseChart';
 import { CHART_GRID, COLORS, COMPACT_Y_AXIS, bucketLabelInterval } from './echarts-theme';
 import type { EChartsOption } from 'echarts';
-import { TOOLTIPS } from './metricsTooltips';
+import { getTooltips } from './metricsTooltips';
+import { useI18n } from '../../i18n/context';
 
 interface BucketData { bucket: number; label: string; errors: number; warnings: number; restartEvent: boolean }
 
 export function ErrorsChart({ data, onBucketClick }: { data: BucketData[]; onBucketClick?: (index: number) => void }) {
+  const { t } = useI18n();
+  const TOOLTIPS = useMemo(() => getTooltips(t), [t]);
   const option = useMemo((): EChartsOption => {
     const labels = data.map((d) => d.label);
     const restartPoints = data

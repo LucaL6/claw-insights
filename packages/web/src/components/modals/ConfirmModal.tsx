@@ -30,8 +30,8 @@ export function ConfirmModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {title && <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>{title}</h2>}
-        <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{children}</div>
+        {title && <h2 className="text-lg font-semibold mb-4 text-fg">{title}</h2>}
+        <div className="text-sm text-fg-secondary">{children}</div>
         <div className="flex justify-end gap-2 mt-4">
           <button
             onClick={onCancel}
