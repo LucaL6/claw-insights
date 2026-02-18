@@ -36,7 +36,11 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
     if (result.data && onReady) onReady();
   }, [result.data, onReady]);
 
-  const sessions: SessionData[] = result.data?.sessions ?? [];
+  const sessions: SessionData[] = (result.data?.sessions ?? []).map((s) => ({
+    ...s,
+    status: s.status as string,
+    subAgents: s.subAgents.map((sa) => ({ ...sa, status: sa.status as string, subAgents: [] })),
+  }));
   const activeCount = sessions.filter((s) => s.status === 'ACTIVE').length;
 
   const sortOptions: { val: SortBy; label: string }[] = [

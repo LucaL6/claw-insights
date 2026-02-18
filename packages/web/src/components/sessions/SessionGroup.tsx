@@ -25,7 +25,7 @@ function SubAgentGroup({ prefix, items, totalTokens }: { prefix: string; items: 
                 variant="compact"
                 displayName={sa.displayName}
                 model={sa.model}
-                channel={sa.channel}
+                channel={sa.channel ?? null}
                 totalTokens={sa.totalTokens}
                 usagePercent={sa.usagePercent}
                 status={sa.status}
@@ -48,7 +48,14 @@ export function SessionGroup({ session }: { session: SessionData }) {
     <div>
       <div onClick={() => hasChildren && setExpanded(!expanded)}>
         <SessionCard
-          {...session}
+          displayName={session.displayName}
+          kind={session.kind}
+          model={session.model}
+          channel={session.channel ?? null}
+          totalTokens={session.totalTokens}
+          usagePercent={session.usagePercent}
+          status={session.status}
+          updatedAt={session.updatedAt}
           hasChildren={hasChildren}
           expanded={expanded}
           onToggle={() => setExpanded(!expanded)}
@@ -68,7 +75,7 @@ export function SessionGroup({ session }: { session: SessionData }) {
                   variant="compact"
                   displayName={sa.displayName}
                   model={sa.model}
-                  channel={sa.channel}
+                  channel={sa.channel ?? null}
                   totalTokens={sa.totalTokens}
                   usagePercent={sa.usagePercent}
                   status={sa.status}

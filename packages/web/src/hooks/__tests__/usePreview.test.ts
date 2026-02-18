@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-const mockUseQuery = vi.fn(() => [{ data: null, fetching: false, error: null }, vi.fn()]);
+const mockUseQuery = vi.fn((): [{ data: unknown; fetching: boolean; error: unknown }, unknown] => [{ data: null, fetching: false, error: null }, vi.fn()]);
 
 vi.mock('urql', () => ({
-  useQuery: (...args: any[]) => mockUseQuery(...args),
+  useQuery: () => mockUseQuery(),
 }));
 
 vi.mock('../../graphql/events-queries', () => ({
@@ -15,15 +15,19 @@ import { usePreview } from '../usePreview';
 import type { BucketData } from '../useMetricsData';
 
 const makeBuckets = (count: number): BucketData[] =>
-  Array.from({ length: count }, (_, i) => ({
+  Array.from({ length: count }, (_, i): BucketData => ({
+    bucket: i,
     epochStart: 1000 + i * 3600,
     label: `${i}h`,
-    tokens: 0,
-    cost: 0,
     sessions: 0,
+    tokensK: 0,
+    apiCalls: 0,
+    toolCalls: 0,
     errors: 0,
-    uptime: 1,
-  })) as BucketData[];
+    warnings: 0,
+    gatewayUp: true,
+    restartEvent: false,
+  }));
 
 describe('usePreview', () => {
   beforeEach(() => {

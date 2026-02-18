@@ -61,7 +61,7 @@ export async function getVersion(): Promise<string> {
   return version;
 }
 
-function parseChannels(summary: string[]): ChannelInfo[] {
+export function parseChannels(summary: string[]): ChannelInfo[] {
   const channels: ChannelInfo[] = [];
   for (const line of summary) {
     const match = line.match(/^(\w+):\s*(\w+)/);
@@ -77,7 +77,7 @@ function parseChannels(summary: string[]): ChannelInfo[] {
   return channels;
 }
 
-function parseStatus(json: string, version: string): ParsedStatus {
+export function parseStatus(json: string, version: string): ParsedStatus {
   try {
     const d = JSON.parse(json);
     const gw = d?.gateway ?? {};

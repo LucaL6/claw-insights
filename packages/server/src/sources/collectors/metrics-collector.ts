@@ -1,6 +1,6 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
-import { insertSample, insertModelSample } from '../db/metric-queries.js';
-import { emitChange } from '../events.js';
+import { insertSample, insertModelSample } from '../../db/metric-queries.js';
+import { emitChange } from '../../events.js';
 
 interface SessionLike {
   key: string;

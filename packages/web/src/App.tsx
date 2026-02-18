@@ -3,7 +3,7 @@ import { Provider } from 'urql';
 import { client } from './lib/urql-client';
 import { ThemeProvider } from './theme/context';
 import { I18nProvider } from './i18n/context';
-import { useHashRoute, type Page, type Route } from './hooks/useHashRoute';
+import { useHashRoute, type Route } from './hooks/useHashRoute';
 import { MainLayout } from './components/layout/MainLayout';
 import { TopBar } from './components/topbar/TopBar';
 import { SessionPanel } from './components/sessions/SessionPanel';

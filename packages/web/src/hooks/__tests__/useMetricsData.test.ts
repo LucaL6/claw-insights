@@ -18,7 +18,7 @@ describe('useMetricsData', () => {
       data: undefined, fetching: true, error: null,
     }, vi.fn()]);
 
-    const { result } = renderHook(() => useMetricsData('day'));
+    const { result } = renderHook(() => useMetricsData('TWENTY_FOUR_HOUR'));
     expect(result.current.buckets).toEqual([]);
     expect(result.current.allModels).toEqual([]);
     expect(result.current.peakSessions).toBe(0);
@@ -43,7 +43,7 @@ describe('useMetricsData', () => {
       fetching: false, error: null,
     }, vi.fn()]);
 
-    const { result } = renderHook(() => useMetricsData('day'));
+    const { result } = renderHook(() => useMetricsData('TWENTY_FOUR_HOUR'));
     expect(result.current.buckets).toHaveLength(2);
     expect(result.current.peakSessions).toBe(10);
     expect(result.current.totalTokensK).toBe(300);
@@ -60,8 +60,8 @@ describe('useMetricsData', () => {
       data: undefined, fetching: false, error: null,
     }, vi.fn()]);
 
-    renderHook(() => useMetricsData('week'));
+    renderHook(() => useMetricsData('ONE_HOUR'));
     const callArgs = mockUseReactiveQuery.mock.calls[0][0];
-    expect(callArgs.variables).toEqual({ range: 'week' });
+    expect(callArgs.variables).toEqual({ range: 'ONE_HOUR' });
   });
 });

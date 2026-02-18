@@ -47,7 +47,7 @@ describe('SessionGroup', () => {
 
   it('renders without children and no expand chevron', () => {
     const session = makeSession();
-    const { container } = renderWithI18n(<SessionGroup session={session} />);
+    renderWithI18n(<SessionGroup session={session} />);
     // No expand chevron when no children (ChevronDownIcon)
     expect(screen.queryByText('main-session')).toBeDefined();
   });

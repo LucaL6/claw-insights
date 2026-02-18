@@ -8,7 +8,7 @@ vi.mock('../../../db/event-queries', () => ({
   getEventDensity: vi.fn().mockResolvedValue([{ date: '2025-01-01', count: 5 }]),
 }));
 
-vi.mock('../../../sources/usage-cost', () => ({
+vi.mock('../../../sources/system-info', () => ({
   getUsageCost: vi.fn().mockResolvedValue({ totalCostUsd: 1.5, breakdown: [] }),
 }));
 

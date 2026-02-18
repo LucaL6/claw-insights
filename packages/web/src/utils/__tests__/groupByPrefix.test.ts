@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupByPrefix, type GroupedItem } from '../groupByPrefix';
+import { groupByPrefix } from '../groupByPrefix';
 
 const makeSession = (displayName: string) => ({
   key: `agent:main:subagent:${displayName}`,

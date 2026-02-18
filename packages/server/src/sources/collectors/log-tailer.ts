@@ -1,7 +1,7 @@
 import { statSync, watch, openSync, readSync, closeSync, type FSWatcher } from 'fs';
 import { EventEmitter } from 'events';
 import type { LogEntry, LogLevel } from '@claw-insights/shared';
-import { config } from '../config.js';
+import { config } from '../../config.js';
 
 const SENSITIVE_PATTERN = /(?:token|key|secret|password|authorization)[=:]\s*.+/gi;
 

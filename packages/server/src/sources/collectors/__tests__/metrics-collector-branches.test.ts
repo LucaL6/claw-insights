@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { MetricsCollector } from '../metrics-collector.js';
-import { initDatabase } from '../../db/init.js';
+import { initDatabase } from '../../../db/init.js';
 
 describe('MetricsCollector branch coverage', () => {
   it('start() calls sampleSlow and handles rejection', async () => {

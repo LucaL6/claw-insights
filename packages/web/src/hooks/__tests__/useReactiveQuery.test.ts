@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
 const mockExecuteQuery = vi.fn();
-const mockUseQuery = vi.fn(() => [{ data: { test: 1 }, fetching: false, error: null }, mockExecuteQuery]);
-const mockUseSubscription = vi.fn(() => [{ data: null, error: null }]);
+const mockUseQuery = vi.fn((): [{ data: unknown; fetching: boolean; error: unknown }, unknown] => [{ data: { test: 1 }, fetching: false, error: null }, mockExecuteQuery]);
+const mockUseSubscription = vi.fn((): [{ data: unknown; error: unknown }] => [{ data: null, error: null }]);
 
 vi.mock('urql', () => ({
-  useQuery: (...args: any[]) => mockUseQuery(...args),
-  useSubscription: (...args: any[]) => mockUseSubscription(...args),
+  useQuery: () => mockUseQuery(),
+  useSubscription: (...args: unknown[]) => mockUseSubscription(...(args as [])),
 }));
 
 vi.mock('../../graphql/subscriptions', () => ({
@@ -39,8 +39,8 @@ describe('useReactiveQuery', () => {
   it('refetches on subscription data change for matching source', () => {
     // Capture the subscription handler
     let subHandler: Function;
-    mockUseSubscription.mockImplementation((_args: any, handler: any) => {
-      subHandler = handler;
+    mockUseSubscription.mockImplementation((...fnArgs: unknown[]) => {
+      subHandler = fnArgs[1] as Function;
       return [{ data: null, error: null }];
     });
 
@@ -65,8 +65,8 @@ describe('useReactiveQuery', () => {
 
   it('ignores subscription data for non-matching source', () => {
     let subHandler: Function;
-    mockUseSubscription.mockImplementation((_args: any, handler: any) => {
-      subHandler = handler;
+    mockUseSubscription.mockImplementation((...fnArgs: unknown[]) => {
+      subHandler = fnArgs[1] as Function;
       return [{ data: null, error: null }];
     });
 
@@ -84,8 +84,8 @@ describe('useReactiveQuery', () => {
 
   it('handles null dataChanged gracefully', () => {
     let subHandler: Function;
-    mockUseSubscription.mockImplementation((_args: any, handler: any) => {
-      subHandler = handler;
+    mockUseSubscription.mockImplementation((...fnArgs: unknown[]) => {
+      subHandler = fnArgs[1] as Function;
       return [{ data: null, error: null }];
     });
 
@@ -126,8 +126,8 @@ describe('useReactiveQuery', () => {
 
   it('debounces multiple rapid subscription events', () => {
     let subHandler: Function;
-    mockUseSubscription.mockImplementation((_args: any, handler: any) => {
-      subHandler = handler;
+    mockUseSubscription.mockImplementation((...fnArgs: unknown[]) => {
+      subHandler = fnArgs[1] as Function;
       return [{ data: null, error: null }];
     });
 
@@ -169,8 +169,8 @@ describe('useReactiveQuery', () => {
     const removeSpy = vi.spyOn(document, 'removeEventListener');
 
     let subHandler: Function;
-    mockUseSubscription.mockImplementation((_args: any, handler: any) => {
-      subHandler = handler;
+    mockUseSubscription.mockImplementation((...fnArgs: unknown[]) => {
+      subHandler = fnArgs[1] as Function;
       return [{ data: null, error: null }];
     });
 
@@ -209,8 +209,8 @@ describe('useReactiveQuery', () => {
 
   it('uses default debounceMs of 500 when not specified', () => {
     let subHandler: Function;
-    mockUseSubscription.mockImplementation((_args: any, handler: any) => {
-      subHandler = handler;
+    mockUseSubscription.mockImplementation((...fnArgs: unknown[]) => {
+      subHandler = fnArgs[1] as Function;
       return [{ data: null, error: null }];
     });
 

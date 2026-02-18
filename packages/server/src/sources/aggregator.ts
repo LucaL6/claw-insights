@@ -1,7 +1,6 @@
-import type { LogEntry } from '@claw-insights/shared';
 import type { DatabaseSync as Database } from 'node:sqlite';
 import { RANGE_CONFIG, bucketLabel, rangeStart, type MetricsRangeKey } from '../db/query-utils.js';
-import { insertEvent, getBucketedEventCount, getBucketedGatewayEvents } from '../db/event-queries.js';
+import { getBucketedEventCount, getBucketedGatewayEvents } from '../db/event-queries.js';
 import {
   getBucketedSampledSessions,
   getBucketedSampledTokens,
@@ -16,16 +15,6 @@ export class Aggregator {
 
   clearCache() {
     this.cache = null;
-  }
-
-  ingestLog(entry: LogEntry) {
-    const msg = entry.message;
-    if (entry.level === 'ERROR') insertEvent(this.db, 'error', null, { module: entry.module, message: msg });
-    if (entry.level === 'WARN') insertEvent(this.db, 'warning', null, { module: entry.module, message: msg });
-    // Removed: run start, totalTokens patterns — now sampled via MetricsCollector
-    if (msg.includes('tool start')) insertEvent(this.db, 'tool_call', 1, { module: entry.module });
-    if (msg.includes('embedded run tool start')) insertEvent(this.db, 'api_call', 1, { module: entry.module });
-    if (msg.includes('gateway restart')) insertEvent(this.db, 'gateway_restart', null, {});
   }
 
   getMetrics(date?: string, range: MetricsRangeKey = 'TWENTY_FOUR_HOUR') {

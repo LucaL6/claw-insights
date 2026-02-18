@@ -25,23 +25,24 @@ function mockClass(props: Record<string, any>) {
   return class { constructor(..._args: any[]) { Object.assign(this, Object.fromEntries(Object.entries(props).map(([k, v]) => [k, typeof v === 'function' ? vi.fn(v) : v]))); } };
 }
 
-vi.mock('../sources/session-reader.js', () => ({
+vi.mock('../sources/readers/session-reader.js', () => ({
   SessionReader: mockClass({ destroy() {}, getSessions: () => [], attachSubAgents() {} }),
 }));
 
-vi.mock('../sources/cron-reader.js', () => ({
+vi.mock('../sources/readers/cron-reader.js', () => ({
   CronReader: mockClass({ destroy() {} }),
 }));
 
-vi.mock('../sources/system-metrics.js', () => ({
-  SystemMetrics: mockClass({ getMetrics: () => ({ cpu: 10, memoryMB: 512 }) }),
+vi.mock('../sources/system-info.js', () => ({
+  getSystemMetrics: vi.fn(async () => ({ cpu: 10, memoryMB: 512, diskMB: 100, sampledAt: '' })),
+  getUsageCost: vi.fn(async () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' })),
 }));
 
-vi.mock('../sources/log-tailer.js', () => ({
+vi.mock('../sources/collectors/log-tailer.js', () => ({
   LogTailer: mockClass({ on() {}, off() {}, destroy() {} }),
 }));
 
-vi.mock('../sources/spawn-tracker.js', () => ({
+vi.mock('../sources/readers/spawn-tracker.js', () => ({
   SpawnTracker: mockClass({ ingest() {} }),
 }));
 
@@ -49,7 +50,7 @@ vi.mock('../sources/aggregator.js', () => ({
   Aggregator: mockClass({ ingestLog() {}, getMetrics: () => ({ totalTokensK: 100 }) }),
 }));
 
-vi.mock('../sources/metrics-collector.js', () => ({
+vi.mock('../sources/collectors/metrics-collector.js', () => ({
   MetricsCollector: mockClass({ start() {}, stop() {} }),
 }));
 
@@ -61,9 +62,7 @@ vi.mock('../sources/data-retention.js', () => ({
   DataRetention: mockClass({ start() {}, stop() {} }),
 }));
 
-vi.mock('../sources/usage-cost.js', () => ({
-  getUsageCost: vi.fn(async () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' })),
-}));
+// usage-cost mock merged into system-info.js above
 
 describe('context', () => {
   beforeEach(() => {
@@ -77,7 +76,7 @@ describe('context', () => {
     expect(ctx.db).toBeDefined();
     expect(ctx.sessionReader).toBeDefined();
     expect(ctx.cronReader).toBeDefined();
-    expect(ctx.systemMetrics).toBeDefined();
+    // systemMetrics is now a standalone function (getSystemMetrics), not a context property
     expect(ctx.logTailer).toBeDefined();
     expect(ctx.spawnTracker).toBeDefined();
     expect(ctx.aggregator).toBeDefined();

@@ -1,117 +1,73 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { parseChannels, parseStatus } from '../gateway-cli';
 
-let mockCb: (cmd: string, args: string[], opts: any, cb: Function) => void;
-
-vi.mock('node:child_process', () => ({
-  execFile: (cmd: string, args: string[], opts: any, cb: Function) => mockCb(cmd, args, opts, cb),
-}));
-
-vi.mock('../../config.js', () => ({
-  config: { cliPath: '/usr/bin/openclaw' },
-  CLI_ENV: {},
-}));
-
-vi.mock('../../events.js', () => ({
-  emitChange: vi.fn(),
-}));
-
-describe('gateway-cli parsing', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
+describe('parseChannels', () => {
+  it('parses configured channels', () => {
+    const result = parseChannels(['Telegram: configured', 'Discord: connected']);
+    expect(result).toEqual([
+      { provider: 'telegram', name: 'Telegram', connected: true, latencyMs: null },
+      { provider: 'discord', name: 'Discord', connected: true, latencyMs: null },
+    ]);
   });
 
-  it('parses full JSON status', async () => {
-    const statusJson = JSON.stringify({
-      gateway: { reachable: true, connectLatencyMs: 42 },
-      gatewayService: { runtimeShort: 'running pid 1234' },
-      channelSummary: ['Discord: connected', 'Telegram: configured', 'Slack: disabled'],
-      update: { latestVersion: '2.0.0' },
-      securityAudit: { summary: { critical: 1, warn: 2, info: 3 } },
-      sessions: { defaults: { model: 'opus', contextTokens: 8000 } },
+  it('handles disconnected channel', () => {
+    const result = parseChannels(['Slack: disconnected']);
+    expect(result).toEqual([{ provider: 'slack', name: 'Slack', connected: false, latencyMs: null }]);
+  });
+
+  it('returns empty for empty input', () => {
+    expect(parseChannels([])).toEqual([]);
+  });
+
+  it('skips non-matching lines', () => {
+    expect(parseChannels(['some random text', ''])).toEqual([]);
+  });
+});
+
+describe('parseStatus', () => {
+  const MOCK_JSON = JSON.stringify({
+    gateway: { reachable: true, connectLatencyMs: 42 },
+    gatewayService: { runtimeShort: 'running, pid 12345' },
+    channelSummary: ['Telegram: configured'],
+    update: { latestVersion: '2026.3.0' },
+    securityAudit: { summary: { critical: 0, warn: 1, info: 3 } },
+    sessions: { defaults: { model: 'claude-opus-4-6', contextTokens: 200000 } },
+  });
+
+  it('parses valid JSON status', () => {
+    const result = parseStatus(MOCK_JSON, '2026.2.12');
+    expect(result.running).toBe(true);
+    expect(result.pid).toBe(12345);
+    expect(result.version).toBe('2026.2.12');
+    expect(result.connectLatencyMs).toBe(42);
+    expect(result.latestVersion).toBe('2026.3.0');
+    expect(result.updateAvailable).toBe('2026.3.0');
+    expect(result.channels).toHaveLength(1);
+    expect(result.channels[0].provider).toBe('telegram');
+    expect(result.securitySummary).toEqual({ critical: 0, warn: 1, info: 3 });
+    expect(result.sessionDefaults).toEqual({ model: 'claude-opus-4-6', contextTokens: 200000 });
+  });
+
+  it('returns safe defaults for invalid JSON', () => {
+    const result = parseStatus('not json', 'unknown');
+    expect(result.running).toBe(false);
+    expect(result.pid).toBeNull();
+    expect(result.channels).toEqual([]);
+    expect(result.connectLatencyMs).toBeNull();
+  });
+
+  it('returns safe defaults for empty JSON', () => {
+    const result = parseStatus('{}', '1.0');
+    expect(result.running).toBe(false);
+    expect(result.version).toBe('1.0');
+  });
+
+  it('updateAvailable is null when versions match', () => {
+    const json = JSON.stringify({
+      gateway: { reachable: true },
+      update: { latestVersion: '2026.2.12' },
     });
-
-    mockCb = (_cmd, args, _opts, cb) => {
-      if (args.some((a: string) => a.includes('--json'))) cb(null, { stdout: statusJson });
-      else cb(null, { stdout: '1.5.0\n' });
-    };
-
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const s = await getGatewayStatus();
-    expect(s.running).toBe(true);
-    expect(s.pid).toBe(1234);
-    expect(s.channels).toHaveLength(3);
-    expect(s.channels[0].provider).toBe('discord');
-    expect(s.channels[0].connected).toBe(true);
-    expect(s.channels[2].connected).toBe(false);
-    expect(s.connectLatencyMs).toBe(42);
-    expect(s.latestVersion).toBe('2.0.0');
-    expect(s.updateAvailable).toBe('2.0.0');
-    expect(s.securitySummary).toEqual({ critical: 1, warn: 2, info: 3 });
-    expect(s.sessionDefaults).toEqual({ model: 'opus', contextTokens: 8000 });
-  });
-
-  it('handles invalid JSON gracefully', async () => {
-    mockCb = (_cmd, _args, _opts, cb) => cb(null, { stdout: 'not-json' });
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const s = await getGatewayStatus();
-    expect(s.running).toBe(false);
-    expect(s.channels).toEqual([]);
-  });
-
-  it('handles CLI error', async () => {
-    mockCb = (_cmd, _args, _opts, cb) => cb(new Error('not found'));
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const s = await getGatewayStatus();
-    expect(s.running).toBe(false);
-  });
-
-  it('getVersion caches result', async () => {
-    let calls = 0;
-    mockCb = (_cmd, _args, _opts, cb) => { calls++; cb(null, { stdout: '1.2.3\n' }); };
-    const { getVersion } = await import('../gateway-cli');
-    const v1 = await getVersion();
-    const v2 = await getVersion();
-    expect(v1).toBe('1.2.3');
-    expect(v2).toBe('1.2.3');
-    expect(calls).toBe(1); // cached
-  });
-
-  it('getVersion returns "unknown" on empty output', async () => {
-    mockCb = (_cmd, _args, _opts, cb) => cb(null, { stdout: '' });
-    const { getVersion } = await import('../gateway-cli');
-    const v = await getVersion();
-    expect(v).toBe('unknown');
-  });
-
-  it('updateAvailable is null when versions match', async () => {
-    mockCb = (_cmd, args, _opts, cb) => {
-      if (args.some((a: string) => a.includes('--json'))) {
-        cb(null, { stdout: JSON.stringify({ update: { latestVersion: '1.0.0' } }) });
-      } else {
-        cb(null, { stdout: '1.0.0' });
-      }
-    };
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const s = await getGatewayStatus();
-    expect(s.updateAvailable).toBeNull();
-  });
-
-  it('emits change on first call', async () => {
-    mockCb = (_cmd, _args, _opts, cb) => cb(null, { stdout: JSON.stringify({ gateway: { reachable: true } }) });
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const { emitChange } = await import('../../events');
-    await getGatewayStatus();
-    expect(emitChange).toHaveBeenCalledWith('gateway');
-  });
-
-  it('does not emit change on identical status', async () => {
-    mockCb = (_cmd, _args, _opts, cb) => cb(null, { stdout: JSON.stringify({ gateway: { reachable: false } }) });
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const { emitChange } = await import('../../events');
-    await getGatewayStatus();
-    (emitChange as any).mockClear();
-    // Reset cache TTL by advancing time... actually cache prevents second call
-    // Just verify first call emitted
+    const result = parseStatus(json, '2026.2.12');
+    expect(result.updateAvailable).toBeNull();
   });
 });

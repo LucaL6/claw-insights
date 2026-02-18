@@ -20,7 +20,7 @@ describe('getUsageCost with mocked CLI', () => {
   });
 
   it('returns zero defaults on CLI failure with no cache', async () => {
-    const { getUsageCost } = await import('../usage-cost');
+    const { getUsageCost } = await import('../system-info');
     const r = await getUsageCost();
     expect(r.totalCost).toBe(0);
     expect(r.totalTokensM).toBe(0);

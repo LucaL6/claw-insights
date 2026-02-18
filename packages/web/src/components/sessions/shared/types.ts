@@ -3,11 +3,12 @@ export interface SessionData {
   displayName: string;
   kind: string;
   model: string;
-  channel: string | null;
+  channel?: string | null;
   totalTokens: number;
   contextTokens: number;
   usagePercent: number;
   status: string;
   updatedAt: number;
   subAgents: SessionData[];
+  [key: string]: unknown;
 }

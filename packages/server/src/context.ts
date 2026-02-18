@@ -1,14 +1,14 @@
 import { config } from './config.js';
-import { SessionReader } from './sources/session-reader.js';
-import { CronReader } from './sources/cron-reader.js';
-import { SystemMetrics } from './sources/system-metrics.js';
-import { LogTailer } from './sources/log-tailer.js';
-import { SpawnTracker } from './sources/spawn-tracker.js';
+import { SessionReader } from './sources/readers/session-reader.js';
+import { CronReader } from './sources/readers/cron-reader.js';
+import { SpawnTracker } from './sources/readers/spawn-tracker.js';
+import { LogTailer } from './sources/collectors/log-tailer.js';
+import { createLogIngester } from './sources/collectors/log-ingester.js';
+import { MetricsCollector } from './sources/collectors/metrics-collector.js';
 import { Aggregator } from './sources/aggregator.js';
-import { MetricsCollector } from './sources/metrics-collector.js';
 import { DataValidator } from './sources/data-validator.js';
 import { DataRetention } from './sources/data-retention.js';
-import { getUsageCost } from './sources/usage-cost.js';
+import { getSystemMetrics, getUsageCost } from './sources/system-info.js';
 import { initDatabase } from './db/init.js';
 import type { DatabaseSync } from 'node:sqlite';
 
@@ -16,7 +16,6 @@ export interface AppContext {
   db: DatabaseSync;
   sessionReader: SessionReader;
   cronReader: CronReader;
-  systemMetrics: SystemMetrics;
   logTailer: LogTailer;
   spawnTracker: SpawnTracker;
   aggregator: Aggregator;
@@ -29,7 +28,6 @@ export function createContext(): AppContext {
   const db = initDatabase(config.dbPath);
   const sessionReader = new SessionReader(config.sessionsPath);
   const cronReader = new CronReader(config.cronPath);
-  const systemMetrics = new SystemMetrics();
   const logTailer = new LogTailer(config.logDir);
   const spawnTracker = new SpawnTracker();
   const aggregator = new Aggregator(db);
@@ -37,7 +35,7 @@ export function createContext(): AppContext {
   const metricsCollector = new MetricsCollector(
     db,
     sessionReader,
-    () => systemMetrics.getMetrics(),
+    () => getSystemMetrics(),
     () => getUsageCost(),
     aggregator,
   );
@@ -54,9 +52,10 @@ export function createContext(): AppContext {
     aggregateIntervalMs: config.aggregateIntervalMs,
   });
 
-  // Wire log events to aggregator + spawn tracker
+  // Wire log events to ingester + spawn tracker
+  const ingestLog = createLogIngester(db);
   logTailer.on('log', (entry) => {
-    aggregator.ingestLog(entry);
+    ingestLog(entry);
     spawnTracker.ingest(entry);
   });
 
@@ -64,7 +63,6 @@ export function createContext(): AppContext {
     db,
     sessionReader,
     cronReader,
-    systemMetrics,
     logTailer,
     spawnTracker,
     aggregator,

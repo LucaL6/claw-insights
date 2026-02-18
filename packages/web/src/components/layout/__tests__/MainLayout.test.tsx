@@ -4,7 +4,7 @@ import { MainLayout } from '../MainLayout';
 
 describe('MainLayout', () => {
   it('renders children in correct sections', () => {
-    const { getByText, getByRole } = renderWithProviders(
+    const { getByText } = renderWithProviders(
       <MainLayout
         topBar={<div>TopBar</div>}
         sessions={<div>Sessions</div>}

@@ -1,8 +1,8 @@
 import { readFileSync, watch, statSync, type FSWatcher } from 'fs';
 import { dirname, basename } from 'path';
 import type { Session, SessionStatus } from '@claw-insights/shared';
-import { emitChange } from '../events.js';
-import { config } from '../config.js';
+import { emitChange } from '../../events.js';
+import { config } from '../../config.js';
 
 interface RawSession {
   sessionId: string;

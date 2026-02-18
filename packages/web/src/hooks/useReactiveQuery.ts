@@ -16,7 +16,7 @@ export function useReactiveQuery<TData = unknown, TVariables extends AnyVariable
   reactive: ReactiveOptions,
 ): UseQueryResponse<TData, TVariables> {
   const [result, executeQuery] = useQuery(queryArgs);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const sseHealthy = useRef(true);
 
   const refetch = useCallback(() => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 // Polyfill localStorage for happy-dom
@@ -15,7 +15,7 @@ if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localSto
 }
 
 // Mock heavy child components and hooks
-const mockRoute = { route: { page: 'dashboard' as const, params: {} }, navigate: vi.fn() };
+const mockRoute: { route: { page: 'dashboard' | 'logs'; params: Record<string, string> }; navigate: ReturnType<typeof vi.fn> } = { route: { page: 'dashboard', params: {} }, navigate: vi.fn() };
 vi.mock('../hooks/useHashRoute', () => ({
   useHashRoute: () => mockRoute,
 }));

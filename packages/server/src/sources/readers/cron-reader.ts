@@ -1,6 +1,6 @@
 import { readFileSync, watch, type FSWatcher } from 'fs';
 import type { CronJob } from '@claw-insights/shared';
-import { config } from '../config.js';
+import { config } from '../../config.js';
 
 interface RawJob {
   id: string;

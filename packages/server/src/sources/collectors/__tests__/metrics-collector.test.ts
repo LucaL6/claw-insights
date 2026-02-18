@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MetricsCollector } from '../metrics-collector';
-import { initDatabase } from '../../db/init';
+import { initDatabase } from '../../../db/init';
 import { rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';

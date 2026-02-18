@@ -10,5 +10,8 @@ export default defineConfig({
       '/graphql': 'http://127.0.0.1:4000',
       '/api': 'http://127.0.0.1:4000',
     },
+    watch: {
+      ignored: ['**/coverage/**'],
+    },
   },
 });

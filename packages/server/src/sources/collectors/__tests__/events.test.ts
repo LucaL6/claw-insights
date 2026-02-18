@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { dataBus, emitChange, type DataChangeEvent } from '../../events';
+import { dataBus, emitChange, type DataChangeEvent } from '../../../events';
 import { MetricsCollector } from '../metrics-collector';
-import { initDatabase } from '../../db/init';
+import { initDatabase } from '../../../db/init';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { rmSync } from 'fs';

@@ -1,6 +1,6 @@
 import type { AppContext } from '../../context.js';
 import type { Resolvers, QueryResolvers } from '../generated/resolver-types.js';
-import { getUsageCost } from '../../sources/usage-cost.js';
+import { getUsageCost } from '../../sources/system-info.js';
 import { safe } from './utils.js';
 
 export function usageResolvers(ctx: AppContext): Partial<Resolvers> {
