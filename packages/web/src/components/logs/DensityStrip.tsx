@@ -16,7 +16,7 @@ interface Props {
 
 function bucketColor(b: DensityBucket): string {
   if (b.count === 0) return 'var(--bg-elevated)';
-  if (b.hasError)   return 'var(--red)';
+  if (b.hasError) return 'var(--red)';
   if (b.hasRestart) return 'var(--orange)';
   if (b.hasWarning) return 'var(--amber)';
   return 'var(--text-dim)';
@@ -35,10 +35,7 @@ export function DensityStrip({ data, activeHour, onHourClick, loading }: Props) 
       <div className="mb-3">
         <div className="flex gap-[2px] h-6">
           {Array.from({ length: 24 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex-1 rounded-sm animate-pulse bg-elevated"
-            />
+            <div key={i} className="flex-1 rounded-sm animate-pulse bg-elevated" />
           ))}
         </div>
       </div>
@@ -65,9 +62,7 @@ export function DensityStrip({ data, activeHour, onHourClick, loading }: Props) 
       </div>
       {/* Hour labels */}
       <div className="flex justify-between mt-0.5">
-        <span className="text-[9px] mono text-fg-dim">
-          {String(data[0]?.hour ?? 0).padStart(2, '0')}:00
-        </span>
+        <span className="text-[9px] mono text-fg-dim">{String(data[0]?.hour ?? 0).padStart(2, '0')}:00</span>
         <span className="text-[9px] mono text-fg-dim">now</span>
       </div>
     </div>

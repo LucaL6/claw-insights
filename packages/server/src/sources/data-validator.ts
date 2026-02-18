@@ -1,5 +1,5 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
-import { insertEvent } from '../db/queries.js';
+import { insertEvent } from '../db/event-queries.js';
 
 export interface ValidationResult {
   pass: boolean;
@@ -31,7 +31,9 @@ export class DataValidator {
       metric,
       sourceA: a,
       sourceB: b,
-      message: pass ? `Within threshold (${(deviation * 100).toFixed(1)}%)` : `EXCEEDS threshold (${(deviation * 100).toFixed(1)}% > 20%)`,
+      message: pass
+        ? `Within threshold (${(deviation * 100).toFixed(1)}%)`
+        : `EXCEEDS threshold (${(deviation * 100).toFixed(1)}% > 20%)`,
     };
   }
 

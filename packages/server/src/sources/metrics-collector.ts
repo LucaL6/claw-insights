@@ -1,5 +1,5 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
-import { insertSample, insertModelSample } from '../db/queries.js';
+import { insertSample, insertModelSample } from '../db/metric-queries.js';
 import { emitChange } from '../events.js';
 
 interface SessionLike {
@@ -52,7 +52,7 @@ export class MetricsCollector {
   /** Fast sample: sessions + tokens (every 30s) */
   sampleFast() {
     const sessions = this.sessionReader.getSessions();
-    const activeSessions = sessions.filter(s => s.status === 'ACTIVE').length;
+    const activeSessions = sessions.filter((s) => s.status === 'ACTIVE').length;
 
     // Use full token data (bypasses dedup filter)
     const tokensByModel = this.sessionReader.getTokensByModel();
@@ -113,10 +113,10 @@ export class MetricsCollector {
 
   start() {
     this.sampleFast();
-    this.sampleSlow().catch(err => console.warn('[MetricsCollector] sampleSlow error:', err));
+    this.sampleSlow().catch((err) => console.warn('[MetricsCollector] sampleSlow error:', err));
     this.fastTimer = setInterval(() => this.sampleFast(), this.fastIntervalMs);
     this.slowTimer = setInterval(() => {
-      this.sampleSlow().catch(err => console.warn('[MetricsCollector] sampleSlow error:', err));
+      this.sampleSlow().catch((err) => console.warn('[MetricsCollector] sampleSlow error:', err));
     }, this.slowIntervalMs);
   }
 

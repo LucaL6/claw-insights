@@ -18,13 +18,15 @@ afterEach(() => {
 
 describe('CronReader', () => {
   it('should parse cron jobs', () => {
-    writeJobs([{
-      id: 'test-1',
-      name: 'Test Job',
-      enabled: true,
-      schedule: { kind: 'cron', expr: '0 9 * * MON-FRI' },
-      state: { lastRunAtMs: 1700000000000, lastStatus: 'ok' },
-    }]);
+    writeJobs([
+      {
+        id: 'test-1',
+        name: 'Test Job',
+        enabled: true,
+        schedule: { kind: 'cron', expr: '0 9 * * MON-FRI' },
+        state: { lastRunAtMs: 1700000000000, lastStatus: 'ok' },
+      },
+    ]);
     const reader = new CronReader(tmpFile);
     const jobs = reader.getJobs();
     expect(jobs.length).toBe(1);
@@ -55,6 +57,8 @@ describe('CronReader', () => {
       const jobs = reader.getJobs();
       expect(jobs.length).toBeGreaterThanOrEqual(0);
       reader.destroy();
-    } catch { /* skip if not available */ }
+    } catch {
+      /* skip if not available */
+    }
   });
 });

@@ -60,7 +60,18 @@ export function createContext(): AppContext {
     spawnTracker.ingest(entry);
   });
 
-  return { db, sessionReader, cronReader, systemMetrics, logTailer, spawnTracker, aggregator, metricsCollector, dataValidator, dataRetention };
+  return {
+    db,
+    sessionReader,
+    cronReader,
+    systemMetrics,
+    logTailer,
+    spawnTracker,
+    aggregator,
+    metricsCollector,
+    dataValidator,
+    dataRetention,
+  };
 }
 
 export function startContext(ctx: AppContext): void {

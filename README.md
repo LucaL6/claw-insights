@@ -19,11 +19,17 @@ claw-insights/
 ├── packages/
 │   ├── web/        React 19 + Vite + Tailwind + ECharts + urql
 │   ├── server/     Express + GraphQL Yoga + SQLite + Playwright
-│   └── shared/     TypeScript types shared between web & server
+│   └── shared/     TypeScript types (codegen) shared between web & server
+├── codegen.ts      GraphQL codegen config (3 targets: shared/server/web)
 ```
+
+**Server layers:** `routes/` (HTTP entry) → `schema/` (GraphQL) + `services/` (business logic) → `sources/` (data adapters) → `db/` (SQLite)
+
+See [`packages/server/README.md`](packages/server/README.md) for detailed server architecture.
 
 - **Data pipeline:** OpenClaw gateway → log tailing + CLI/RPC → SQLite → GraphQL → urql + WebSocket subscriptions → React
 - **Real-time:** `dataChanged` subscription triggers selective refetch (debounced)
+- **Codegen:** `schema.graphql` → typed resolvers (server) + typed operations (web) + shared types
 
 ## Quick Start
 
@@ -37,6 +43,7 @@ npm install
 ## Configuration
 
 Default ports:
+
 - Dashboard web: `3200`
 - GraphQL API: `4000`
 

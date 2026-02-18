@@ -72,6 +72,8 @@
   "modal.doctor.securityAudit": "Security audit",
   "modal.doctor.deepProbe": "Deep probe",
   "modal.doctor.autoFix": "Auto-fix",
+  "modal.cancel": "Cancel",
+  "modal.running": "Running...",
 
   "tooltip.sections.sessions": "Peak concurrent sessions per bucket",
   "tooltip.sections.tokens": "Token consumption delta per bucket",

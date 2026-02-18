@@ -72,6 +72,8 @@
   "modal.doctor.securityAudit": "安全审计",
   "modal.doctor.deepProbe": "深度探测",
   "modal.doctor.autoFix": "自动修复",
+  "modal.cancel": "取消",
+  "modal.running": "执行中...",
 
   "tooltip.sections.sessions": "各时段的峰值并发会话数",
   "tooltip.sections.tokens": "各时段的 token 消耗增量",

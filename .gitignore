@@ -9,3 +9,6 @@ test-results/
 # GraphQL codegen output
 packages/shared/src/generated/
 packages/web/src/generated/
+
+# Coverage reports
+packages/*/coverage/

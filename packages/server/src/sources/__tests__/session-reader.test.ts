@@ -105,23 +105,32 @@ describe('SessionReader', () => {
   it('should calculate usagePercent correctly at boundaries', () => {
     writeSessions({
       'agent:main:full': {
-        sessionId: 'f1', updatedAt: Date.now(), chatType: 'direct',
-        totalTokens: 200000, contextTokens: 200000,
+        sessionId: 'f1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        totalTokens: 200000,
+        contextTokens: 200000,
       },
       'agent:main:zero': {
-        sessionId: 'z1', updatedAt: Date.now(), chatType: 'direct',
-        totalTokens: 0, contextTokens: 200000,
+        sessionId: 'z1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        totalTokens: 0,
+        contextTokens: 200000,
       },
       'agent:main:nocontext': {
-        sessionId: 'n1', updatedAt: Date.now(), chatType: 'direct',
-        totalTokens: 100, contextTokens: 0,
+        sessionId: 'n1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        totalTokens: 100,
+        contextTokens: 0,
       },
     });
     const reader = new SessionReader(tmpFile);
     const sessions = reader.getSessions({ sortBy: 'NAME' });
-    const full = sessions.find(s => s.key.includes('full'));
-    const zero = sessions.find(s => s.key.includes('zero'));
-    const noCtx = sessions.find(s => s.key.includes('nocontext'));
+    const full = sessions.find((s) => s.key.includes('full'));
+    const zero = sessions.find((s) => s.key.includes('zero'));
+    const noCtx = sessions.find((s) => s.key.includes('nocontext'));
     expect(full!.usagePercent).toBe(100);
     expect(zero!.usagePercent).toBe(0);
     expect(noCtx!.usagePercent).toBe(0); // Division by zero protection
@@ -130,9 +139,27 @@ describe('SessionReader', () => {
 
   it('should attach sub-agents via parentChildMap', () => {
     writeSessions({
-      'agent:main:parent': { sessionId: 'p1', updatedAt: Date.now(), chatType: 'direct', totalTokens: 5000, contextTokens: 200000 },
-      'agent:main:child1': { sessionId: 'c1', updatedAt: Date.now(), chatType: 'direct', totalTokens: 1000, contextTokens: 200000 },
-      'agent:main:child2': { sessionId: 'c2', updatedAt: Date.now(), chatType: 'direct', totalTokens: 2000, contextTokens: 200000 },
+      'agent:main:parent': {
+        sessionId: 'p1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        totalTokens: 5000,
+        contextTokens: 200000,
+      },
+      'agent:main:child1': {
+        sessionId: 'c1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        totalTokens: 1000,
+        contextTokens: 200000,
+      },
+      'agent:main:child2': {
+        sessionId: 'c2',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        totalTokens: 2000,
+        contextTokens: 200000,
+      },
     });
     const reader = new SessionReader(tmpFile);
     const map = new Map([['agent:main:parent', ['agent:main:child1', 'agent:main:child2']]]);

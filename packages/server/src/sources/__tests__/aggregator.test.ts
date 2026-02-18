@@ -29,7 +29,12 @@ describe('Aggregator', () => {
     agg.ingestLog({ time: '10:00:00.000', level: 'ERROR', module: 'tools', message: 'exec failed' });
     agg.ingestLog({ time: '10:00:01.000', level: 'WARN', module: 'agent/embedded', message: 'slow' });
     agg.ingestLog({ time: '10:00:02.000', level: 'INFO', module: 'tools', message: 'tool start exec' });
-    agg.ingestLog({ time: '10:00:03.000', level: 'INFO', module: 'agent/embedded', message: 'embedded run tool start' });
+    agg.ingestLog({
+      time: '10:00:03.000',
+      level: 'INFO',
+      module: 'agent/embedded',
+      message: 'embedded run tool start',
+    });
 
     const m = agg.getMetrics() as { totalErrors: number; totalWarnings: number; buckets: unknown[] };
     expect(m.totalErrors).toBe(1);
@@ -51,7 +56,12 @@ describe('Aggregator', () => {
 
   it('should count api_call events (embedded run tool start)', () => {
     const { agg, cleanup } = setup();
-    agg.ingestLog({ time: '10:00:00', level: 'INFO', module: 'agent/embedded', message: 'embedded run tool start sessions_list' });
+    agg.ingestLog({
+      time: '10:00:00',
+      level: 'INFO',
+      module: 'agent/embedded',
+      message: 'embedded run tool start sessions_list',
+    });
     const m = agg.getMetrics() as { buckets: Array<{ apiCalls: number }> };
     const totalApiCalls = m.buckets.reduce((s, b) => s + b.apiCalls, 0);
     expect(totalApiCalls).toBe(1);
@@ -63,12 +73,12 @@ describe('Aggregator', () => {
     const now = new Date();
     const ts = now.toISOString();
     const ts2 = new Date(now.getTime() - 1000).toISOString(); // 1s earlier, same bucket
-    db.prepare('INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, 0, 0, 0, 0)').run(
-      ts2, 7, 0, 0
-    );
-    db.prepare('INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, 0, 0, 0, 0)').run(
-      ts, 7, 250, 12
-    );
+    db.prepare(
+      'INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, 0, 0, 0, 0)',
+    ).run(ts2, 7, 0, 0);
+    db.prepare(
+      'INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, 0, 0, 0, 0)',
+    ).run(ts, 7, 250, 12);
 
     const m = agg.getMetrics() as { totalTokensK: number; buckets: Array<{ sessions: number; tokensK: number }> };
     const bucketWithData = m.buckets.find((b: any) => b.sessions > 0);

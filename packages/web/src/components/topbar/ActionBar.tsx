@@ -2,7 +2,7 @@ import { useTheme } from '../../theme/context';
 import { useI18n } from '../../i18n/context';
 import { useScreenshot } from '../../hooks/useScreenshot';
 import { RestartIcon, DoctorIcon, DownloadIcon, CameraIcon, SpinnerIcon } from '../ui/icons';
-import type { MetricsRange } from '../charts/GranularityPicker';
+import type { MetricsRange } from '../charts/metrics/GranularityPicker';
 
 interface Props {
   onAction?: (action: 'restart' | 'doctor' | 'update') => void;
@@ -21,19 +21,19 @@ export function ActionBar({ onAction, metricsRange, updateLabel, uptime, current
     <div className="flex items-center gap-2">
       <button
         disabled={screenshotting}
-        onClick={() => takeScreenshot({
-          section: currentPage === 'logs' ? 'logs' : 'dashboard',
-          range: metricsRange ?? 'TWENTY_FOUR_HOUR',
-          theme,
-          lang,
-        })}
-        className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md transition-all"
-        style={{
-          backgroundColor: screenshotting ? 'var(--emerald-bg)' : 'var(--bg-elevated)',
-          color: screenshotting ? 'var(--emerald)' : 'var(--text-secondary)',
-          border: screenshotting ? '1px solid var(--emerald-border)' : '1px solid var(--border)',
-          opacity: screenshotting ? 0.8 : 1,
-        }}
+        onClick={() =>
+          takeScreenshot({
+            section: currentPage === 'logs' ? 'logs' : 'dashboard',
+            range: metricsRange ?? 'TWENTY_FOUR_HOUR',
+            theme,
+            lang,
+          })
+        }
+        className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md transition-all ${
+          screenshotting
+            ? 'bg-emerald-bg text-emerald border border-emerald-border opacity-80'
+            : 'bg-elevated text-fg-secondary border border-edge'
+        }`}
         title={t('topbar.screenshot')}
       >
         {screenshotting ? <SpinnerIcon /> : <CameraIcon />}
@@ -68,8 +68,7 @@ export function ActionBar({ onAction, metricsRange, updateLabel, uptime, current
 
       <button
         onClick={toggleTheme}
-        className="w-7 h-7 flex items-center justify-center text-sm rounded-md transition-colors"
-        style={{ backgroundColor: 'var(--theme-btn-bg)', color: 'var(--theme-btn-text)', border: '1px solid var(--border-subtle)' }}
+        className="w-7 h-7 flex items-center justify-center text-sm rounded-md transition-colors bg-theme-btn-bg text-theme-btn-text border border-edge-subtle"
         title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
       >
         {theme === 'dark' ? '🌙' : '☀️'}

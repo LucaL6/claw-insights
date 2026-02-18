@@ -3,7 +3,18 @@ import { config, CLI_ENV } from '../config.js';
 
 describe('config', () => {
   it('has all required fields', () => {
-    const keys = ['cliPath', 'sessionsPath', 'logDir', 'cronPath', 'dbPath', 'openclawDir', 'serverPort', 'webPort', 'apiToken', 'isDev'] as const;
+    const keys = [
+      'cliPath',
+      'sessionsPath',
+      'logDir',
+      'cronPath',
+      'dbPath',
+      'openclawDir',
+      'serverPort',
+      'webPort',
+      'apiToken',
+      'isDev',
+    ] as const;
     for (const k of keys) {
       expect(config).toHaveProperty(k);
     }

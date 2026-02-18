@@ -24,11 +24,15 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
   const channels: QueryResolvers['channels'] = () =>
     safe(async () => {
       const status = await getGatewayStatus();
-      return status.channels as Array<{ provider: ChannelProvider; name: string; connected: boolean; latencyMs: number | null }>;
+      return status.channels as Array<{
+        provider: ChannelProvider;
+        name: string;
+        connected: boolean;
+        latencyMs: number | null;
+      }>;
     });
 
-  const resources: QueryResolvers['resources'] = () =>
-    safe(async () => ctx.systemMetrics.getMetrics());
+  const resources: QueryResolvers['resources'] = () => safe(async () => ctx.systemMetrics.getMetrics());
 
   return { Query: { gateway, channels, resources } };
 }

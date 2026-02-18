@@ -1,18 +1,30 @@
-@import "tailwindcss";
-@import "./styles/theme.css";
+@import 'tailwindcss';
+@import './styles/theme.css';
 
 /* ── Fonts ── */
 body {
-  font-family: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family:
+    'IBM Plex Sans',
+    'Inter',
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
-.mono, code, .font-mono {
+.mono,
+code,
+.font-mono {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 /* ── Pulse dot (status indicators) ── */
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 .pulse-dot {
   animation: pulse-dot 2s ease-in-out infinite;
@@ -43,6 +55,18 @@ body {
 .sb-h::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: 1px;
+}
+
+/* ── Preview card entrance ── */
+@keyframes preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Grid background ── */

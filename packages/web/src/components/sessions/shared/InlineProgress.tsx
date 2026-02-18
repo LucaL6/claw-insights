@@ -12,8 +12,8 @@ export function InlineProgress({ percent, width = 40, height = 3 }: InlineProgre
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
-        className="rounded-full overflow-hidden"
-        style={{ width: `${width}px`, height: `${height}px`, backgroundColor: 'var(--progress-track)' }}
+        className="rounded-full overflow-hidden bg-progress-track"
+        style={{ width: `${width}px`, height: `${height}px` }}
       >
         <span
           className="block h-full rounded-full transition-all"

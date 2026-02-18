@@ -1,7 +1,5 @@
 export function Skeleton({ className = '' }: { className?: string }) {
-  return (
-    <div className={`rounded animate-pulse ${className}`} style={{ backgroundColor: 'var(--skeleton)' }} />
-  );
+  return <div className={`rounded animate-pulse bg-skeleton ${className}`} />;
 }
 
 export function ChartSkeleton() {
@@ -18,7 +16,9 @@ export function ChartSkeleton() {
 
 export function SessionSkeleton() {
   return (
-    <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--subagent-bg)', border: '1px solid var(--border)' }}>
+    <div
+      className="rounded-xl p-4 bg-subagent border border-edge"
+    >
       <div className="flex items-center justify-between mb-3">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-3 w-16" />

@@ -1,6 +1,6 @@
 import type { AppContext } from '../../context.js';
 import type { Resolvers, QueryResolvers } from '../generated/resolver-types.js';
-import { queryEvents, getEventDensity } from '../../db/queries.js';
+import { queryEvents, getEventDensity } from '../../db/event-queries.js';
 import { safe } from './utils.js';
 
 export function eventsResolvers(ctx: AppContext): Partial<Resolvers> {
@@ -16,8 +16,7 @@ export function eventsResolvers(ctx: AppContext): Partial<Resolvers> {
       }),
     );
 
-  const eventDensity: QueryResolvers['eventDensity'] = () =>
-    safe(async () => getEventDensity(db));
+  const eventDensity: QueryResolvers['eventDensity'] = () => safe(async () => getEventDensity(db));
 
   return { Query: { events, eventDensity } };
 }

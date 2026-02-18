@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+set -e
+
+echo "🧪 Running tests before push..."
+
+npm run -w @claw-insights/server test
+SERVER_EXIT=$?
+
+npm run -w @claw-insights/web test
+WEB_EXIT=$?
+
+if [ "$SERVER_EXIT" -ne 0 ] || [ "$WEB_EXIT" -ne 0 ]; then
+  echo "❌ Tests failed. Push blocked."
+  exit 1
+fi
+echo "✅ All tests passed."

@@ -13,10 +13,19 @@ interface Props {
 export function LogPage({ route, navigate }: Props) {
   const { t } = useI18n();
   const {
-    activeTypes, toggleType, search, setSearch,
-    filteredEvents, density, events, timeLabel,
-    urlFrom, urlTo,
-    eventsLoading, densityLoading, eventsError,
+    activeTypes,
+    toggleType,
+    search,
+    setSearch,
+    filteredEvents,
+    density,
+    events,
+    timeLabel,
+    urlFrom,
+    urlTo,
+    eventsLoading,
+    densityLoading,
+    eventsError,
   } = useLogPageData(route);
 
   return (

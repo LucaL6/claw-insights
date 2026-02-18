@@ -20,13 +20,46 @@ interface Props {
   onClearTimeFilter?: () => void;
 }
 
-const PILLS: Array<{ type: string; label: string; countKey: keyof Counts; color: string; bg: string; border: string }> = [
-  { type: 'error', label: 'error', countKey: 'error', color: 'var(--red)', bg: 'var(--red-bg)', border: 'var(--red-border)' },
-  { type: 'warning', label: 'warn', countKey: 'warning', color: 'var(--amber)', bg: 'var(--amber-bg)', border: 'var(--amber-border)' },
-  { type: 'gateway_restart', label: 'restart', countKey: 'restart', color: 'var(--orange)', bg: 'var(--orange-bg)', border: 'var(--orange-border)' },
-];
+const PILLS: Array<{ type: string; label: string; countKey: keyof Counts; color: string; bg: string; border: string }> =
+  [
+    {
+      type: 'error',
+      label: 'error',
+      countKey: 'error',
+      color: 'var(--red)',
+      bg: 'var(--red-bg)',
+      border: 'var(--red-border)',
+    },
+    {
+      type: 'warning',
+      label: 'warn',
+      countKey: 'warning',
+      color: 'var(--amber)',
+      bg: 'var(--amber-bg)',
+      border: 'var(--amber-border)',
+    },
+    {
+      type: 'gateway_restart',
+      label: 'restart',
+      countKey: 'restart',
+      color: 'var(--orange)',
+      bg: 'var(--orange-bg)',
+      border: 'var(--orange-border)',
+    },
+  ];
 
-export function FilterBar({ activeTypes, onToggleType, counts, total, displayed, filtered, search, onSearchChange, timeLabel, onClearTimeFilter }: Props) {
+export function FilterBar({
+  activeTypes,
+  onToggleType,
+  counts,
+  total,
+  displayed,
+  filtered,
+  search,
+  onSearchChange,
+  timeLabel,
+  onClearTimeFilter,
+}: Props) {
   const { t } = useI18n();
   const [localSearch, setLocalSearch] = useState(search);
 
@@ -41,7 +74,7 @@ export function FilterBar({ activeTypes, onToggleType, counts, total, displayed,
       <div className="flex items-center gap-3 flex-wrap">
         {/* Type pills */}
         <div className="flex gap-1.5">
-          {PILLS.map(p => {
+          {PILLS.map((p) => {
             const active = activeTypes.includes(p.type);
             const empty = counts[p.countKey] === 0;
             return (
@@ -49,12 +82,17 @@ export function FilterBar({ activeTypes, onToggleType, counts, total, displayed,
                 key={p.type}
                 onClick={() => !empty && onToggleType(p.type)}
                 disabled={empty}
-                className="text-[10px] mono font-semibold px-2 py-1 rounded-md flex items-center gap-1.5 transition-all"
-                style={empty // inline: dynamic pill state
-                  ? { backgroundColor: 'var(--bg-elevated)', color: 'var(--text-dim)', border: '1px solid var(--border-subtle)', opacity: 0.3, cursor: 'default' }
-                  : active
-                    ? { backgroundColor: p.bg, color: p.color, border: `1px solid ${p.border}`, cursor: 'pointer' }
-                    : { backgroundColor: 'var(--bg-elevated)', color: 'var(--text-dim)', border: '1px solid var(--border-subtle)', opacity: 0.5, cursor: 'pointer' }
+                className={`text-[10px] mono font-semibold px-2 py-1 rounded-md flex items-center gap-1.5 transition-all ${
+                  empty
+                    ? 'bg-elevated text-fg-dim border border-edge-subtle opacity-30 cursor-default'
+                    : active
+                      ? 'cursor-pointer'
+                      : 'bg-elevated text-fg-dim border border-edge-subtle opacity-50 cursor-pointer'
+                }`}
+                style={
+                  active && !empty
+                    ? { backgroundColor: p.bg, color: p.color, border: `1px solid ${p.border}` }
+                    : undefined
                 }
               >
                 <span
@@ -62,7 +100,7 @@ export function FilterBar({ activeTypes, onToggleType, counts, total, displayed,
                   style={active && !empty ? { backgroundColor: p.color } : undefined} // inline: dynamic runtime color
                 />
                 {p.label}
-                {!empty && <span style={{ opacity: 0.7 }}>{counts[p.countKey]}</span>}
+                {!empty && <span className="opacity-70">{counts[p.countKey]}</span>}
               </button>
             );
           })}
@@ -76,16 +114,16 @@ export function FilterBar({ activeTypes, onToggleType, counts, total, displayed,
               {onClearTimeFilter && (
                 <button
                   onClick={onClearTimeFilter}
-                  className="text-[10px] leading-none cursor-pointer hover:opacity-100 opacity-50 transition-opacity"
-                  style={{ color: 'var(--text-dim)', background: 'none', border: 'none', padding: 0 }}
-                >✕</button>
+                  className="text-[10px] leading-none cursor-pointer hover:opacity-100 opacity-50 transition-opacity text-fg-dim bg-transparent border-none p-0"
+                >
+                  ✕
+                </button>
               )}
             </span>
             {onClearTimeFilter && (
               <button
                 onClick={onClearTimeFilter}
-                className="text-[10px] font-semibold px-2 py-1 rounded-md cursor-pointer transition-colors"
-                style={{ backgroundColor: 'var(--sky-bg, rgba(56,189,248,0.1))', color: 'var(--sky)', border: '1px solid var(--sky-border, rgba(56,189,248,0.2))' }}
+                className="text-[10px] font-semibold px-2 py-1 rounded-md cursor-pointer transition-colors bg-sky-bg text-sky border border-sky-border"
               >
                 Show All 24h
               </button>
@@ -99,10 +137,11 @@ export function FilterBar({ activeTypes, onToggleType, counts, total, displayed,
         {/* Count */}
         <div className="flex items-center gap-1.5">
           <span className="mono text-[10px] text-fg-dim">
-            {filtered}{search ? ` / ${displayed}` : ''} of {total}
+            {filtered}
+            {search ? ` / ${displayed}` : ''} of {total}
           </span>
           {total > displayed && (
-            <span className="text-[9px]" style={{ color: 'var(--amber)', opacity: 0.7 }}>
+            <span className="text-[9px] text-amber opacity-70">
               (latest {displayed})
             </span>
           )}
@@ -115,13 +154,7 @@ export function FilterBar({ activeTypes, onToggleType, counts, total, displayed,
         value={localSearch}
         onChange={(e) => setLocalSearch(e.target.value)}
         placeholder={t('logs.filterPlaceholder')}
-        className="mono text-[11px] px-3 py-1.5 rounded-md w-full"
-        style={{
-          backgroundColor: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
-          color: 'var(--text-primary)',
-          outline: 'none',
-        }}
+        className="mono text-[11px] px-3 py-1.5 rounded-md w-full bg-elevated border border-edge text-fg outline-none"
       />
     </div>
   );

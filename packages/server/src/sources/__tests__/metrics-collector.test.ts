@@ -52,9 +52,7 @@ describe('MetricsCollector', () => {
     const { db, cleanup } = setup();
     let totalTokens = 80000;
     const mockSessionReader = {
-      getSessions: () => [
-        { key: 'a', status: 'ACTIVE', totalTokens },
-      ],
+      getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens }],
       getTokensByModel: () => new Map([['test-model', totalTokens]]),
       getTotalTokensK: () => totalTokens / 1000,
     };
@@ -89,7 +87,7 @@ describe('MetricsCollector', () => {
       db,
       mockSessionReader as any,
       () => ({ cpu: 25.5, memoryMB: 512, diskMB: 100, sampledAt: '' }),
-      () => ({ totalCost: 200, totalTokensM: 100, todayCost: 15.50, todayTokensM: 8.3, fetchedAt: '' }),
+      () => ({ totalCost: 200, totalTokensM: 100, todayCost: 15.5, todayTokensM: 8.3, fetchedAt: '' }),
     );
 
     // Fast sample first to establish session/token baseline
@@ -98,7 +96,7 @@ describe('MetricsCollector', () => {
     await collector.sampleSlow();
 
     const rows = db.prepare('SELECT * FROM metric_samples ORDER BY id DESC LIMIT 1').all() as any[];
-    expect(rows[0].cost_today).toBe(15.50);
+    expect(rows[0].cost_today).toBe(15.5);
     expect(rows[0].tokens_today_m).toBe(8.3);
     expect(rows[0].cpu).toBe(25.5);
     expect(rows[0].memory_mb).toBe(512);

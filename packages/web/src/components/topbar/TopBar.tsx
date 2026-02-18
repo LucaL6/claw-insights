@@ -1,5 +1,5 @@
 import type { Page } from '../../hooks/useHashRoute';
-import type { MetricsRange } from '../charts/GranularityPicker';
+import type { MetricsRange } from '../charts/metrics/GranularityPicker';
 import { useI18n } from '../../i18n/context';
 import { useTopBarData } from '../../hooks/useTopBarData';
 import { StatusPill } from './StatusPill';
@@ -8,7 +8,12 @@ import { NavTabs } from './NavTabs';
 import { ResourcesBar } from './ResourcesBar';
 import { ActionBar } from './ActionBar';
 
-export function TopBar({ currentPage, onNavigate, onAction, metricsRange }: {
+export function TopBar({
+  currentPage,
+  onNavigate,
+  onAction,
+  metricsRange,
+}: {
   currentPage?: Page;
   onNavigate?: (hash: string) => void;
   onAction?: (action: 'restart' | 'doctor' | 'update') => void;
@@ -22,12 +27,13 @@ export function TopBar({ currentPage, onNavigate, onAction, metricsRange }: {
       {/* Left: Logo + Version + Status + Channels */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="" className="w-5 h-5" style={{ filter: 'var(--icon-filter, none)' }} />
+          <img src="/logo.svg" alt="" className="w-5 h-5 [filter:var(--icon-filter,none)]" />
           <span className="text-sm font-semibold tracking-tight text-fg">{t('brand.name')}</span>
-          {fetching.gateway
-            ? <span className="inline-block w-16 h-3 rounded animate-pulse bg-skeleton" />
-            : <span className="text-[10px] mono text-fg-dim">v{version}</span>
-          }
+          {fetching.gateway ? (
+            <span className="inline-block w-16 h-3 rounded animate-pulse bg-skeleton" />
+          ) : (
+            <span className="text-[10px] mono text-fg-dim">v{version}</span>
+          )}
         </div>
         <StatusPill running={gateway?.running} fetching={fetching.gateway} />
         <ChannelPills channels={channels} fetching={fetching.channels} />

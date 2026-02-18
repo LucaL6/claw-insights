@@ -64,11 +64,13 @@ describe('LogTailer', () => {
 
 describe('LogTailer safety', () => {
   function makeLine(msg: string) {
-    return JSON.stringify({
-      '0': `[test] ${msg}`,
-      _meta: { logLevelName: 'INFO', path: {} },
-      time: new Date().toISOString(),
-    }) + '\n';
+    return (
+      JSON.stringify({
+        '0': `[test] ${msg}`,
+        _meta: { logLevelName: 'INFO', path: {} },
+        time: new Date().toISOString(),
+      }) + '\n'
+    );
   }
 
   it('should handle file truncation and re-read from start', () => {
@@ -91,7 +93,7 @@ describe('LogTailer safety', () => {
     // Manually trigger read (simulating poll)
     (tailer as any).readIncremental();
 
-    expect(received.some(e => e.message.includes('after-truncate'))).toBe(true);
+    expect(received.some((e) => e.message.includes('after-truncate'))).toBe(true);
     tailer.destroy();
     rmSync(dir, { recursive: true, force: true });
   });
@@ -134,7 +136,7 @@ describe('LogTailer safety', () => {
       content += makeLine(`msg-${i}`);
     }
     appendFileSync(fpath, content);
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 3000));
 
     const recent50 = tailer.getRecentEntries(50);
     expect(recent50.length).toBe(50);
@@ -172,7 +174,7 @@ describe('LogTailer integration', () => {
     appendFileSync(fpath, line + '\n');
 
     // Wait for fs.watch to fire
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 3000));
     expect(received.length).toBeGreaterThanOrEqual(1);
     expect(received[0].message).toContain('exec completed');
 
@@ -193,7 +195,7 @@ describe('LogTailer integration', () => {
     tailer.on('log', (e: unknown) => received.push(e));
 
     appendFileSync(fpath, 'not json at all\n{"broken\n');
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 3000));
     expect(received.length).toBe(0); // Both lines should be silently skipped
 
     tailer.destroy();

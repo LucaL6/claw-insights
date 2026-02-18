@@ -130,7 +130,11 @@ export class SessionReader {
 
     // Fallback: poll file mtime every 5s in case watcher misses events
     let lastMtime = 0;
-    try { lastMtime = statSync(this.filePath).mtimeMs; } catch { /* ignore */ }
+    try {
+      lastMtime = statSync(this.filePath).mtimeMs;
+    } catch {
+      /* ignore */
+    }
     this.pollTimer = setInterval(() => {
       try {
         const mtime = statSync(this.filePath).mtimeMs;
@@ -138,13 +142,14 @@ export class SessionReader {
           lastMtime = mtime;
           this.scheduleReload();
         }
-      } catch { /* file may not exist */ }
+      } catch {
+        /* file may not exist */
+      }
     }, 5_000);
   }
 
   getSessions(filter?: { activeOnly?: boolean; sortBy?: string }): Session[] {
-    let result = Array.from(this.sessions.values())
-      .filter(s => !this.attachedChildKeys.has(s.key));
+    let result = Array.from(this.sessions.values()).filter((s) => !this.attachedChildKeys.has(s.key));
     if (filter?.activeOnly) {
       result = result.filter((s) => s.status === 'ACTIVE');
     }
@@ -198,15 +203,11 @@ export class SessionReader {
     for (const [parentKey, childKeys] of bySpawn) {
       const parent = this.sessions.get(parentKey);
       if (!parent) continue;
-      parent.subAgents = childKeys
-        .map((ck) => this.sessions.get(ck))
-        .filter((s): s is Session => s != null);
+      parent.subAgents = childKeys.map((ck) => this.sessions.get(ck)).filter((s): s is Session => s != null);
     }
 
     // Record which keys are attached as children
-    this.attachedChildKeys = new Set(
-      [...bySpawn.values()].flat()
-    );
+    this.attachedChildKeys = new Set([...bySpawn.values()].flat());
   }
 
   /** Full token stats by model (bypasses dedup filter) */

@@ -3,18 +3,12 @@ import { useReactiveQuery } from './useReactiveQuery';
 import { formatUptime } from '../utils/format';
 
 export function useTopBarData() {
-  const [gw] = useReactiveQuery(
-    { query: GatewayQuery, requestPolicy: 'cache-and-network' },
-    { sources: ['gateway'] },
-  );
+  const [gw] = useReactiveQuery({ query: GatewayQuery, requestPolicy: 'cache-and-network' }, { sources: ['gateway'] });
   const [res] = useReactiveQuery(
     { query: ResourcesQuery, requestPolicy: 'cache-and-network' },
     { sources: ['gateway', 'metrics'] },
   );
-  const [ch] = useReactiveQuery(
-    { query: ChannelsQuery, requestPolicy: 'cache-and-network' },
-    { sources: ['gateway'] },
-  );
+  const [ch] = useReactiveQuery({ query: ChannelsQuery, requestPolicy: 'cache-and-network' }, { sources: ['gateway'] });
 
   const gateway = gw.data?.gateway;
   const resources = res.data?.resources;
@@ -24,7 +18,9 @@ export function useTopBarData() {
   const version = gateway?.version ?? '...';
   const latestVersion = gateway?.latestVersion as string | null;
   const updateLabel = latestVersion
-    ? (latestVersion.startsWith(version.slice(0, -2)) ? '.' + latestVersion.split('.').pop() : latestVersion)
+    ? latestVersion.startsWith(version.slice(0, -2))
+      ? '.' + latestVersion.split('.').pop()
+      : latestVersion
     : null;
 
   return {

@@ -18,7 +18,11 @@ interface Props {
 
 export function EventTable({ events, highlightFrom, highlightTo, search, loading, error }: Props) {
   const filtered = search
-    ? events.filter(e => e.message.toLowerCase().includes(search.toLowerCase()) || e.module.toLowerCase().includes(search.toLowerCase()))
+    ? events.filter(
+        (e) =>
+          e.message.toLowerCase().includes(search.toLowerCase()) ||
+          e.module.toLowerCase().includes(search.toLowerCase()),
+      )
     : events;
 
   const isHighlighted = (ev: Event): boolean => {
@@ -29,8 +33,7 @@ export function EventTable({ events, highlightFrom, highlightTo, search, loading
 
   return (
     <div
-      className="rounded-lg overflow-hidden"
-      style={{ border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)' }}
+      className="rounded-lg overflow-hidden border border-edge bg-surface"
     >
       {/* Header */}
       <div
@@ -52,27 +55,28 @@ export function EventTable({ events, highlightFrom, highlightTo, search, loading
       <div style={{ maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' }} className="sb">
         {loading ? (
           <div className="py-8 text-center">
-            <div className="inline-block w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--text-muted)' }} />
+            <div
+              className="inline-block w-5 h-5 border-2 rounded-full animate-spin"
+              style={{ borderColor: 'var(--border)', borderTopColor: 'var(--text-muted)' }}
+            />
             <div className="text-[11px] mt-2 text-fg-dim">Loading events...</div>
           </div>
         ) : error ? (
-          <div className="py-8 text-center text-[11px] text-red">
-            Failed to load events
-          </div>
+          <div className="py-8 text-center text-[11px] text-red">Failed to load events</div>
         ) : filtered.length === 0 ? (
-          <div className="py-8 text-center text-[12px] text-fg-dim">
-            No events match filters
-          </div>
-        ) : filtered.map((ev, i) => (
-          <EventRow
-            key={`${ev.timestamp}-${i}`}
-            timestamp={ev.timestamp}
-            type={ev.type}
-            module={ev.module}
-            message={ev.message}
-            highlighted={isHighlighted(ev)}
-          />
-        ))}
+          <div className="py-8 text-center text-[12px] text-fg-dim">No events match filters</div>
+        ) : (
+          filtered.map((ev, i) => (
+            <EventRow
+              key={`${ev.timestamp}-${i}`}
+              timestamp={ev.timestamp}
+              type={ev.type}
+              module={ev.module}
+              message={ev.message}
+              highlighted={isHighlighted(ev)}
+            />
+          ))
+        )}
       </div>
     </div>
   );

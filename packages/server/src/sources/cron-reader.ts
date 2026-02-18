@@ -65,7 +65,9 @@ export class CronReader {
           for (const fn of this.listeners) fn();
         }, 300);
       });
-    } catch { /* file might not exist */ }
+    } catch {
+      /* file might not exist */
+    }
   }
 
   getJobs(): CronJob[] {

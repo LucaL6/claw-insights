@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DatabaseSync as Database } from 'node:sqlite';
-import { getEventDensity } from '../queries.js';
+import { getEventDensity } from '../event-queries.js';
 import { mapEvent } from '../../sources/events-mapper.js';
 
 function setupDb(): Database {
@@ -23,8 +23,13 @@ function setupDb(): Database {
 
 function insertEvent(db: Database, type: string, timestamp: string) {
   const mapped = mapEvent(type);
-  db.prepare('INSERT INTO metric_events (timestamp, type, metadata, category, source) VALUES (?, ?, ?, ?, ?)')
-    .run(timestamp, type, `{"module":"test","message":"test ${type}"}`, mapped.category, mapped.source);
+  db.prepare('INSERT INTO metric_events (timestamp, type, metadata, category, source) VALUES (?, ?, ?, ?, ?)').run(
+    timestamp,
+    type,
+    `{"module":"test","message":"test ${type}"}`,
+    mapped.category,
+    mapped.source,
+  );
 }
 
 describe('getEventDensity', () => {
@@ -89,8 +94,13 @@ describe('getEventDensity', () => {
     const db = setupDb();
     const ts = new Date().toISOString();
 
-    db.prepare('INSERT INTO metric_events (timestamp, type, metadata, category, source) VALUES (?, ?, ?, ?, ?)')
-      .run(ts, 'custom_error_type', '{"module":"test","message":"category only"}', 'severity.error', 'test');
+    db.prepare('INSERT INTO metric_events (timestamp, type, metadata, category, source) VALUES (?, ?, ?, ?, ?)').run(
+      ts,
+      'custom_error_type',
+      '{"module":"test","message":"category only"}',
+      'severity.error',
+      'test',
+    );
 
     const result = getEventDensity(db);
     const currentBucket = result[23];

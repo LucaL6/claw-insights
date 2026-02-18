@@ -7,12 +7,28 @@ interface ToggleButtonProps {
 
 const STYLE_MAP = {
   filter: {
-    active: { backgroundColor: 'var(--toggle-active-bg)', color: 'var(--toggle-active-text)', border: '1px solid var(--toggle-active-border)' },
-    inactive: { backgroundColor: 'var(--toggle-inactive-bg)', color: 'var(--toggle-inactive-text)', border: '1px solid var(--toggle-inactive-border)' },
+    active: {
+      backgroundColor: 'var(--toggle-active-bg)',
+      color: 'var(--toggle-active-text)',
+      border: '1px solid var(--toggle-active-border)',
+    },
+    inactive: {
+      backgroundColor: 'var(--toggle-inactive-bg)',
+      color: 'var(--toggle-inactive-text)',
+      border: '1px solid var(--toggle-inactive-border)',
+    },
   },
   sort: {
-    active: { backgroundColor: 'var(--toggle-sort-bg)', color: 'var(--toggle-sort-text)', border: '1px solid var(--toggle-sort-border)' },
-    inactive: { backgroundColor: 'var(--toggle-inactive-bg)', color: 'var(--toggle-inactive-text)', border: '1px solid var(--toggle-inactive-border)' },
+    active: {
+      backgroundColor: 'var(--toggle-sort-bg)',
+      color: 'var(--toggle-sort-text)',
+      border: '1px solid var(--toggle-sort-border)',
+    },
+    inactive: {
+      backgroundColor: 'var(--toggle-inactive-bg)',
+      color: 'var(--toggle-inactive-text)',
+      border: '1px solid var(--toggle-inactive-border)',
+    },
   },
 } as const;
 

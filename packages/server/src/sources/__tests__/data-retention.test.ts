@@ -181,7 +181,9 @@ describe('DataRetention', () => {
     const { db, retention, cleanup } = setup({ rawRetentionDays: 0, hourlyRetention: '30' });
     const oldHour = daysAgoHour(60);
 
-    db.prepare(`INSERT INTO hourly_metric_samples (hour, active_sessions_max, active_sessions_avg, token_delta_k, cost_end, cpu_avg, cpu_max, memory_mb_avg, memory_mb_max, sample_count) VALUES (?, 5, 3, 100, 10, 5, 10, 256, 512, 10)`).run(oldHour);
+    db.prepare(
+      `INSERT INTO hourly_metric_samples (hour, active_sessions_max, active_sessions_avg, token_delta_k, cost_end, cpu_avg, cpu_max, memory_mb_avg, memory_mb_max, sample_count) VALUES (?, 5, 3, 100, 10, 5, 10, 256, 512, 10)`,
+    ).run(oldHour);
     db.prepare(`INSERT INTO hourly_model_tokens (hour, model, token_delta_k) VALUES (?, 'test', 50)`).run(oldHour);
 
     retention.runOnce();

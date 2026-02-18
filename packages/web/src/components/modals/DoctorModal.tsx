@@ -1,18 +1,13 @@
 import { useState } from 'react';
-import { useMutation } from 'urql';
-import { graphql } from '../../generated/gql';
+import { RunDoctorMutation } from '../../graphql/mutations';
 import { ConfirmModal } from './ConfirmModal';
 import { useI18n } from '../../i18n/context';
 import { DoctorIcon } from '../ui/icons';
 import { ModalIcon } from './ModalIcon';
-
-const DoctorMutation = graphql(/* GraphQL */ `mutation RunDoctor($options: DoctorOptions!) {
-  runDoctor(options: $options) { success message output duration }
-}`);
+import { useOperationMutation } from './useOperationMutation';
 
 export function DoctorModal({ onClose }: { onClose: () => void }) {
-  const [, execute] = useMutation(DoctorMutation);
-  const [loading, setLoading] = useState(false);
+  const { loading, error, run } = useOperationMutation(RunDoctorMutation, onClose);
   const { t } = useI18n();
   const [options, setOptions] = useState({
     channelCheck: true,
@@ -22,13 +17,6 @@ export function DoctorModal({ onClose }: { onClose: () => void }) {
   });
 
   const toggle = (key: keyof typeof options) => setOptions((o) => ({ ...o, [key]: !o[key] }));
-
-  const handleConfirm = async () => {
-    setLoading(true);
-    await execute({ options });
-    setLoading(false);
-    onClose();
-  };
 
   const labels: Record<string, string> = {
     channelCheck: t('modal.doctor.channelCheck'),
@@ -41,13 +29,10 @@ export function DoctorModal({ onClose }: { onClose: () => void }) {
     <ConfirmModal
       title=""
       confirmText={t('modal.doctor.confirm')}
-      confirmStyle={{
-        backgroundColor: 'var(--sky-bg)',
-        color: 'var(--sky)',
-        border: '1px solid var(--sky-border)',
-      }}
+      variant="info"
       loading={loading}
-      onConfirm={handleConfirm}
+      error={error}
+      onConfirm={() => run({ options })}
       onCancel={onClose}
     >
       <div className="flex items-center gap-3 mb-4">
@@ -61,16 +46,8 @@ export function DoctorModal({ onClose }: { onClose: () => void }) {
       </div>
       <div className="space-y-2 mb-4">
         {Object.entries(options).map(([key, val]) => (
-          <label
-            key={key}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer bg-overlay"
-          >
-            <input
-              type="checkbox"
-              checked={val}
-              onChange={() => toggle(key as keyof typeof options)}
-              className="accent-cyan-500"
-            />
+          <label key={key} className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer bg-overlay">
+            <input type="checkbox" checked={val} onChange={() => toggle(key as keyof typeof options)} className="accent-cyan-500" />
             <span className="text-xs text-fg-secondary">{labels[key] ?? key}</span>
           </label>
         ))}

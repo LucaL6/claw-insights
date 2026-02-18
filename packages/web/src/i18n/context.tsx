@@ -42,21 +42,20 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     setLang(lang === 'en' ? 'zh' : 'en');
   }, [lang, setLang]);
 
-  const t = useCallback((key: string, params?: Record<string, string | number>): string => {
-    let text = dictionaries[lang][key] ?? dictionaries['en'][key] ?? key;
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        text = text.replace(`{${k}}`, String(v));
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>): string => {
+      let text = dictionaries[lang][key] ?? dictionaries['en'][key] ?? key;
+      if (params) {
+        for (const [k, v] of Object.entries(params)) {
+          text = text.replace(`{${k}}`, String(v));
+        }
       }
-    }
-    return text;
-  }, [lang]);
-
-  return (
-    <I18nContext value={{ lang, setLang, toggleLang, t }}>
-      {children}
-    </I18nContext>
+      return text;
+    },
+    [lang],
   );
+
+  return <I18nContext value={{ lang, setLang, toggleLang, t }}>{children}</I18nContext>;
 }
 
 export function useI18n(): I18nContextValue {

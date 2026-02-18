@@ -44,7 +44,7 @@ function parseLogLine(line: string): LogEntry | null {
     const msg = raw['0'] ?? '';
     const levelStr = raw._meta?.logLevelName ?? 'INFO';
     const level = (['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(levelStr) ? levelStr : 'INFO') as LogLevel;
-    const time = raw.time ? raw.time.split('T')[1]?.slice(0, 12) ?? '' : '';
+    const time = raw.time ? (raw.time.split('T')[1]?.slice(0, 12) ?? '') : '';
 
     return {
       time,

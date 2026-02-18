@@ -11,7 +11,11 @@ export function NavTabs({ currentPage, onNavigate }: NavTabsProps) {
 
   const tabStyle = (active: boolean) =>
     active
-      ? { backgroundColor: 'var(--bg-surface-solid)', color: 'var(--text-primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' } // inline: dynamic boxShadow
+      ? {
+          backgroundColor: 'var(--bg-surface-solid)',
+          color: 'var(--text-primary)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+        } // inline: dynamic boxShadow
       : { color: 'var(--text-dim)' };
 
   return (

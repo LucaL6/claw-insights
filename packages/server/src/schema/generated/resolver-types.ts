@@ -7,6 +7,7 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: 
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
 export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+export type RequireFields<T, K extends keyof T> = Omit<T, K> & { [P in K]-?: NonNullable<T[P]> };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string; }
@@ -46,6 +47,14 @@ export type CronJob = {
 export type DataChangeSignal = {
   source: Scalars['String']['output'];
   ts: Scalars['String']['output'];
+};
+
+/** Options for the gateway doctor diagnostic */
+export type DoctorOptions = {
+  autoFix?: InputMaybe<Scalars['Boolean']['input']>;
+  channelCheck?: InputMaybe<Scalars['Boolean']['input']>;
+  deepProbe?: InputMaybe<Scalars['Boolean']['input']>;
+  securityAudit?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type EventCounts = {
@@ -158,6 +167,25 @@ export type MetricsSummary = {
 export type ModelTokens = {
   model: Scalars['String']['output'];
   tokensK: Scalars['Float']['output'];
+};
+
+export type Mutation = {
+  restartGateway: OperationResult;
+  runDoctor: OperationResult;
+  updateGateway: OperationResult;
+};
+
+
+export type MutationRunDoctorArgs = {
+  options: DoctorOptions;
+};
+
+/** Result of a gateway operation (restart, update, doctor) */
+export type OperationResult = {
+  duration?: Maybe<Scalars['Int']['output']>;
+  message?: Maybe<Scalars['String']['output']>;
+  output?: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
 };
 
 export type Query = {
@@ -335,6 +363,7 @@ export type ResolversTypes = ResolversObject<{
   ChannelProvider: ChannelProvider;
   CronJob: ResolverTypeWrapper<CronJob>;
   DataChangeSignal: ResolverTypeWrapper<DataChangeSignal>;
+  DoctorOptions: DoctorOptions;
   EventCounts: ResolverTypeWrapper<EventCounts>;
   EventDensityBucket: ResolverTypeWrapper<EventDensityBucket>;
   EventEntry: ResolverTypeWrapper<EventEntry>;
@@ -351,6 +380,8 @@ export type ResolversTypes = ResolversObject<{
   MetricsRange: MetricsRange;
   MetricsSummary: ResolverTypeWrapper<MetricsSummary>;
   ModelTokens: ResolverTypeWrapper<ModelTokens>;
+  Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
+  OperationResult: ResolverTypeWrapper<OperationResult>;
   Query: ResolverTypeWrapper<Record<PropertyKey, never>>;
   Session: ResolverTypeWrapper<Session>;
   SessionFilter: SessionFilter;
@@ -368,6 +399,7 @@ export type ResolversParentTypes = ResolversObject<{
   Channel: Channel;
   CronJob: CronJob;
   DataChangeSignal: DataChangeSignal;
+  DoctorOptions: DoctorOptions;
   EventCounts: EventCounts;
   EventDensityBucket: EventDensityBucket;
   EventEntry: EventEntry;
@@ -382,6 +414,8 @@ export type ResolversParentTypes = ResolversObject<{
   MetricsBucket: MetricsBucket;
   MetricsSummary: MetricsSummary;
   ModelTokens: ModelTokens;
+  Mutation: Record<PropertyKey, never>;
+  OperationResult: OperationResult;
   Query: Record<PropertyKey, never>;
   Session: Session;
   SessionFilter: SessionFilter;
@@ -507,6 +541,19 @@ export type ModelTokensResolvers<ContextType = AppContext, ParentType extends Re
   tokensK?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
 }>;
 
+export type MutationResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = ResolversObject<{
+  restartGateway?: Resolver<ResolversTypes['OperationResult'], ParentType, ContextType>;
+  runDoctor?: Resolver<ResolversTypes['OperationResult'], ParentType, ContextType, RequireFields<MutationRunDoctorArgs, 'options'>>;
+  updateGateway?: Resolver<ResolversTypes['OperationResult'], ParentType, ContextType>;
+}>;
+
+export type OperationResultResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['OperationResult'] = ResolversParentTypes['OperationResult']> = ResolversObject<{
+  duration?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  output?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+}>;
+
 export type QueryResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
   channels?: Resolver<Array<ResolversTypes['Channel']>, ParentType, ContextType>;
   cronJobs?: Resolver<Array<ResolversTypes['CronJob']>, ParentType, ContextType>;
@@ -569,6 +616,8 @@ export type Resolvers<ContextType = AppContext> = ResolversObject<{
   MetricsBucket?: MetricsBucketResolvers<ContextType>;
   MetricsSummary?: MetricsSummaryResolvers<ContextType>;
   ModelTokens?: ModelTokensResolvers<ContextType>;
+  Mutation?: MutationResolvers<ContextType>;
+  OperationResult?: OperationResultResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   Session?: SessionResolvers<ContextType>;
   Subscription?: SubscriptionResolvers<ContextType>;

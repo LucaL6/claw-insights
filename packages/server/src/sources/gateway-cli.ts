@@ -115,7 +115,19 @@ function parseStatus(json: string, version: string): ParsedStatus {
       sessionDefaults,
     };
   } catch {
-    return { running: false, pid: null, version: 'unknown', updateAvailable: null, uptime: 'unknown', startedAt: null, channels: [], connectLatencyMs: null, latestVersion: null, securitySummary: { critical: 0, warn: 0, info: 0 }, sessionDefaults: null };
+    return {
+      running: false,
+      pid: null,
+      version: 'unknown',
+      updateAvailable: null,
+      uptime: 'unknown',
+      startedAt: null,
+      channels: [],
+      connectLatencyMs: null,
+      latestVersion: null,
+      securitySummary: { critical: 0, warn: 0, info: 0 },
+      sessionDefaults: null,
+    };
   }
 }
 

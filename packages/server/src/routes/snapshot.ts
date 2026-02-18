@@ -1,0 +1,27 @@
+import type { Express } from 'express';
+import type { AppContext } from '../context.js';
+import type { BrowserPool } from '../browser/browser-pool.js';
+import { createSnapshotHandler } from './snapshot-handler.js';
+import { getGatewayStatus } from '../sources/gateway-cli.js';
+import { queryEvents } from '../db/event-queries.js';
+import type { DataSources } from '../services/snapshot-types.js';
+import { authMiddleware } from '../middleware/auth.js';
+
+export function registerSnapshot(app: Express, ctx: AppContext, browserPool: BrowserPool): void {
+  const sources: DataSources = {
+    getGateway: async () => {
+      const s = await getGatewayStatus();
+      const sys = await ctx.systemMetrics.getMetrics();
+      return { ...s, cpu: sys.cpu, memoryMB: sys.memoryMB };
+    },
+    getChannels: async () => (await getGatewayStatus()).channels,
+    getSessions: () => {
+      ctx.sessionReader.attachSubAgents(ctx.spawnTracker.getParentChildMap());
+      return ctx.sessionReader.getSessions();
+    },
+    getMetrics: (range: string) => ctx.aggregator.getMetrics(undefined, range as any),
+    getRecentErrors: (limit: number) => queryEvents(ctx.db, { types: ['error', 'warning'], limit }),
+  };
+
+  app.post('/api/snapshot', authMiddleware, createSnapshotHandler(browserPool, sources));
+}

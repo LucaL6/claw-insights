@@ -7,15 +7,17 @@ import { useHashRoute, type Page, type Route } from './hooks/useHashRoute';
 import { MainLayout } from './components/layout/MainLayout';
 import { TopBar } from './components/topbar/TopBar';
 import { SessionPanel } from './components/sessions/SessionPanel';
-import { MetricsSection } from './components/charts/MetricsSection';
+import { MetricsSection } from './components/charts/metrics/MetricsSection';
 import { useOperationModals, RestartModal, UpdateModal, DoctorModal } from './components/modals/OperationModals';
+import { useTopBarData } from './hooks/useTopBarData';
 import { LogPage } from './components/logs/LogPage';
-import type { MetricsRange } from './components/charts/GranularityPicker';
+import type { MetricsRange } from './components/charts/metrics/GranularityPicker';
 
 const VALID_RANGES: MetricsRange[] = ['ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TWENTY_FOUR_HOUR'];
 
 function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: Route }) {
   const { modal, open, close } = useOperationModals();
+  const { version, gateway } = useTopBarData();
   const initialRange = VALID_RANGES.includes(route.params.range as MetricsRange)
     ? (route.params.range as MetricsRange)
     : 'TWENTY_FOUR_HOUR';
@@ -41,7 +43,7 @@ function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: 
         metrics={<MetricsSection range={range} onRangeChange={setRange} navigate={navigate} onReady={onMetricsReady} />}
       />
       {modal === 'restart' && <RestartModal onClose={close} />}
-      {modal === 'update' && <UpdateModal onClose={close} />}
+      {modal === 'update' && <UpdateModal onClose={close} currentVersion={version} latestVersion={gateway?.latestVersion ?? gateway?.updateAvailable ?? '...'} />}
       {modal === 'doctor' && <DoctorModal onClose={close} />}
     </>
   );
@@ -53,20 +55,23 @@ function App() {
     <ThemeProvider>
       <I18nProvider>
         <Provider value={client}>
-          {route.page === 'dashboard'
-            ? <Dashboard navigate={navigate} route={route} />
-            : (
-              <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)' }}>
-                <header
-                  className="backdrop-blur-sm sticky top-0 z-50 px-5 py-2"
-                  style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-surface-solid)', opacity: 0.97 }}
-                >
-                  <TopBar currentPage="logs" onNavigate={navigate} metricsRange="TWENTY_FOUR_HOUR" />
-                </header>
-                <LogPage route={route} navigate={navigate} />
-              </div>
-            )
-          }
+          {route.page === 'dashboard' ? (
+            <Dashboard navigate={navigate} route={route} />
+          ) : (
+            <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+              <header
+                className="backdrop-blur-sm sticky top-0 z-50 px-5 py-2"
+                style={{
+                  borderBottom: '1px solid var(--border)',
+                  backgroundColor: 'var(--bg-surface-solid)',
+                  opacity: 0.97,
+                }}
+              >
+                <TopBar currentPage="logs" onNavigate={navigate} metricsRange="TWENTY_FOUR_HOUR" />
+              </header>
+              <LogPage route={route} navigate={navigate} />
+            </div>
+          )}
         </Provider>
       </I18nProvider>
     </ThemeProvider>

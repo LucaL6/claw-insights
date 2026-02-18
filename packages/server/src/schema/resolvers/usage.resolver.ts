@@ -8,8 +8,7 @@ export function usageResolvers(ctx: AppContext): Partial<Resolvers> {
 
   const usageCost: QueryResolvers['usageCost'] = () => safe(async () => getUsageCost());
 
-  const recentLogs: QueryResolvers['recentLogs'] = (_parent, args) =>
-    logTailer.getRecentEntries(args.count ?? 50);
+  const recentLogs: QueryResolvers['recentLogs'] = (_parent, args) => logTailer.getRecentEntries(args.count ?? 50);
 
   return { Query: { usageCost, recentLogs } };
 }

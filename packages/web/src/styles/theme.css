@@ -5,8 +5,8 @@
  * Semantic naming: fg-* (foreground/text), surface/elevated/base (backgrounds),
  * edge (borders), accent colors (emerald/red/sky/amber/orange/violet).
  * Tokens resolve to CSS variables defined in [data-theme] blocks below.
- * NOT registered: chart-*, card-*, tag-*, toggle-*, session-*, status-*,
- * subagent-*, tree-*, theme-btn-* (too narrow / component-specific).
+ * NOT registered: chart-*, card-*, tag-*, toggle-*, session-*, status-*
+ * (too narrow / component-specific; managed via variant maps).
  */
 @theme {
   /* ── Foreground (text) ── */
@@ -55,10 +55,28 @@
   /* ── Utility ── */
   --color-skeleton: var(--skeleton);
   --color-progress-track: var(--progress-track);
+
+  /* ── Shadows ── */
+  --shadow-card: var(--shadow-card);
+  --shadow-tooltip: var(--shadow-tooltip);
+
+  /* ── Scrollbar ── */
+  --color-scrollbar-thumb: var(--scrollbar-thumb);
+  --color-scrollbar-track: var(--scrollbar-track);
+
+  /* ── Theme button ── */
+  --color-theme-btn-bg: var(--theme-btn-bg);
+  --color-theme-btn-text: var(--theme-btn-text);
+
+  /* ── Tree / SubAgent ── */
+  --color-tree-line: var(--tree-line);
+  --color-subagent: var(--subagent-bg);
+  --color-subagent-border: var(--subagent-border);
+  --color-subagent-hover-border: var(--subagent-hover-border);
 }
 
 /* ═══════════ Dark Theme (default) ═══════════ */
-[data-theme="dark"] {
+[data-theme='dark'] {
   /* Backgrounds */
   --bg-base: #09090b;
   --bg-surface: rgba(24, 24, 27, 0.6);
@@ -197,7 +215,7 @@
 }
 
 /* ═══════════ Light Theme ═══════════ */
-[data-theme="light"] {
+[data-theme='light'] {
   /* Backgrounds */
   --bg-base: #ebebef;
   --bg-surface: #ffffff;
@@ -268,10 +286,10 @@
   --card-accent-tokens: linear-gradient(to right, #38bdf8, #7dd3fc);
   --card-accent-errors: linear-gradient(to right, #f87171, #fca5a5);
   --card-accent-uptime: linear-gradient(to right, #34d399, #5eead4);
-  --card-bg-sessions: linear-gradient(to bottom, rgba(5,150,105,0.04), transparent);
-  --card-bg-tokens: linear-gradient(to bottom, rgba(2,132,199,0.04), transparent);
-  --card-bg-errors: linear-gradient(to bottom, rgba(220,38,38,0.03), transparent);
-  --card-bg-uptime: linear-gradient(to bottom, rgba(5,150,105,0.03), transparent);
+  --card-bg-sessions: linear-gradient(to bottom, rgba(5, 150, 105, 0.04), transparent);
+  --card-bg-tokens: linear-gradient(to bottom, rgba(2, 132, 199, 0.04), transparent);
+  --card-bg-errors: linear-gradient(to bottom, rgba(220, 38, 38, 0.03), transparent);
+  --card-bg-uptime: linear-gradient(to bottom, rgba(5, 150, 105, 0.03), transparent);
 
   /* Progress bar track */
   --progress-track: #e4e4e7;

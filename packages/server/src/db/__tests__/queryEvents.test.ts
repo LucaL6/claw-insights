@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DatabaseSync as Database } from 'node:sqlite';
-import { queryEvents } from '../queries.js';
+import { queryEvents } from '../event-queries.js';
 import { mapEvent } from '../../sources/events-mapper.js';
 
 function setupDb(): Database {
@@ -23,7 +23,9 @@ function setupDb(): Database {
 }
 
 function insertMany(db: Database, type: string, count: number, baseTime: number) {
-  const stmt = db.prepare('INSERT INTO metric_events (timestamp, type, metadata, category, source) VALUES (?, ?, ?, ?, ?)');
+  const stmt = db.prepare(
+    'INSERT INTO metric_events (timestamp, type, metadata, category, source) VALUES (?, ?, ?, ?, ?)',
+  );
   const mapped = mapEvent(type);
   for (let i = 0; i < count; i++) {
     const ts = new Date((baseTime + i) * 1000).toISOString();
@@ -68,8 +70,8 @@ describe('queryEvents', () => {
     insertMany(db, 'warning', 3, now - 50);
 
     const result = queryEvents(db, { from: now - 200, to: now + 100, limit: 200 });
-    const errorCount = result.events.filter(e => e.type === 'error').length;
-    const warnCount = result.events.filter(e => e.type === 'warning').length;
+    const errorCount = result.events.filter((e) => e.type === 'error').length;
+    const warnCount = result.events.filter((e) => e.type === 'warning').length;
     expect(result.counts.error).toBe(errorCount);
     expect(result.counts.warning).toBe(warnCount);
   });

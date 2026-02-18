@@ -6,7 +6,7 @@ import { dirname, join } from 'path';
 const __dir = dirname(fileURLToPath(import.meta.url));
 let proc: ChildProcess;
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const GQL = (query: string, variables?: Record<string, unknown>) =>
   fetch('http://127.0.0.1:4000/graphql', {
@@ -35,14 +35,18 @@ afterAll(() => proc?.kill());
 describe('GraphQL Resolvers', () => {
   // F1.1 Gateway status
   it('F1.1: gateway query returns running status', async () => {
-    const d = (await GQL('{ gateway { running pid version uptime } }')) as { data: { gateway: Record<string, unknown> } };
+    const d = (await GQL('{ gateway { running pid version uptime } }')) as {
+      data: { gateway: Record<string, unknown> };
+    };
     expect(typeof d.data.gateway.running).toBe('boolean');
     expect(typeof d.data.gateway.version).toBe('string');
   });
 
   // F1.3 System resources
   it('F1.3: resources query returns CPU/MEM/DISK', async () => {
-    const d = (await GQL('{ resources { cpu memoryMB diskMB sampledAt } }')) as { data: { resources: Record<string, unknown> } };
+    const d = (await GQL('{ resources { cpu memoryMB diskMB sampledAt } }')) as {
+      data: { resources: Record<string, unknown> };
+    };
     expect(typeof d.data.resources.cpu).toBe('number');
     expect(typeof d.data.resources.memoryMB).toBe('number');
     expect(typeof d.data.resources.diskMB).toBe('number');
@@ -111,5 +115,4 @@ describe('GraphQL Resolvers', () => {
     const d = (await GQL('{ cronJobs { id name enabled schedule } }')) as { data: { cronJobs: unknown[] } };
     expect(Array.isArray(d.data.cronJobs)).toBe(true);
   });
-
 });

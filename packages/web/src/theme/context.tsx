@@ -38,11 +38,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('data-theme', theme);
   }, []);
 
-  return (
-    <ThemeContext value={{ theme, setTheme, toggleTheme }}>
-      {children}
-    </ThemeContext>
-  );
+  return <ThemeContext value={{ theme, setTheme, toggleTheme }}>{children}</ThemeContext>;
 }
 
 export function useTheme(): ThemeContextValue {

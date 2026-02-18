@@ -20,7 +20,11 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
   const activeOnly = viewMode === 'active';
 
   const [result] = useReactiveQuery(
-    { query: SessionsQuery, variables: { filter: { activeOnly, sortBy, grouped: true } }, requestPolicy: 'cache-and-network' },
+    {
+      query: SessionsQuery,
+      variables: { filter: { activeOnly, sortBy, grouped: true } },
+      requestPolicy: 'cache-and-network',
+    },
     { sources: ['sessions'], debounceMs: 500 },
   );
 
@@ -42,17 +46,27 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
   ];
 
   return (
-    <CollapsibleSection title={t('sessions.title')} badge={t('sessions.activeBadge', { active: activeCount, total: sessions.length })} updatedAt={lastFetchTime}>
+    <CollapsibleSection
+      title={t('sessions.title')}
+      badge={t('sessions.activeBadge', { active: activeCount, total: sessions.length })}
+      updatedAt={lastFetchTime}
+    >
       {/* Filter (left) + Sort (right) */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex gap-1">
-          <ToggleButton active={viewMode === 'active'} onClick={() => setViewMode('active')}>{t('sessions.active')}</ToggleButton>
-          <ToggleButton active={viewMode === 'all'} onClick={() => setViewMode('all')}>{t('sessions.all')}</ToggleButton>
+          <ToggleButton active={viewMode === 'active'} onClick={() => setViewMode('active')}>
+            {t('sessions.active')}
+          </ToggleButton>
+          <ToggleButton active={viewMode === 'all'} onClick={() => setViewMode('all')}>
+            {t('sessions.all')}
+          </ToggleButton>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-[9px] mr-0.5 text-fg-dim">{t('sessions.sort')}</span>
           {sortOptions.map(({ val, label }) => (
-            <ToggleButton key={val} active={sortBy === val} variant="sort" onClick={() => setSortBy(val)}>{label}</ToggleButton>
+            <ToggleButton key={val} active={sortBy === val} variant="sort" onClick={() => setSortBy(val)}>
+              {label}
+            </ToggleButton>
           ))}
         </div>
       </div>
@@ -69,9 +83,7 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
             <SessionSkeleton />
           </>
         )}
-        {!result.fetching && sessions.length === 0 && (
-          <p className="text-xs text-fg-dim">{t('sessions.noSessions')}</p>
-        )}
+        {!result.fetching && sessions.length === 0 && <p className="text-xs text-fg-dim">{t('sessions.noSessions')}</p>}
       </div>
     </CollapsibleSection>
   );

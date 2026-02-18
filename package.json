@@ -14,7 +14,23 @@
     "dev:server": "npm run -w @claw-insights/server dev",
     "dev:web": "npm run -w @claw-insights/web dev",
     "test": "npm run --workspaces test",
-    "build": "npm run --workspaces build"
+    "test:server": "npm run -w @claw-insights/server test",
+    "test:web": "npm run -w @claw-insights/web test",
+    "test:coverage": "npm run -w @claw-insights/server test -- --coverage && npm run -w @claw-insights/web test -- --coverage",
+    "test:e2e": "npx playwright test --config packages/web/e2e/playwright.config.ts",
+    "prepare": "husky",
+    "build": "npm run --workspaces build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --no-warn-ignored"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^6.1.1",
@@ -23,6 +39,9 @@
     "@graphql-codegen/typescript-resolvers": "^5.1.5",
     "@graphql-typed-document-node/core": "^3.2.0",
     "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1",
     "tsx": "^4.21.0"
   }
 }

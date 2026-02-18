@@ -48,9 +48,7 @@ export function usePreview(buckets: BucketData[], bucketSeconds: number) {
 
   const [previewResult] = useQuery({
     query: EventsQuery,
-    variables: preview
-      ? { from: preview.fromTs, to: preview.toTs, types: preview.types, limit: 3 }
-      : { limit: 0 },
+    variables: preview ? { from: preview.fromTs, to: preview.toTs, types: preview.types, limit: 3 } : { limit: 0 },
     pause: !preview,
   });
 

@@ -1,12 +1,13 @@
 import type { LogEntry } from '@claw-insights/shared';
 import type { DatabaseSync as Database } from 'node:sqlite';
+import { RANGE_CONFIG, bucketLabel, rangeStart, type MetricsRangeKey } from '../db/query-utils.js';
+import { insertEvent, getBucketedEventCount, getBucketedGatewayEvents } from '../db/event-queries.js';
 import {
-  insertEvent,
-  getBucketedEventCount, getBucketedSampledSessions, getBucketedSampledTokens, getBucketedGatewayEvents,
-  getBucketedModelTokens, getRangeTokensK,
-  bucketLabel, RANGE_CONFIG, rangeStart,
-  type MetricsRangeKey,
-} from '../db/queries.js';
+  getBucketedSampledSessions,
+  getBucketedSampledTokens,
+  getBucketedModelTokens,
+  getRangeTokensK,
+} from '../db/metric-queries.js';
 import { config } from '../config.js';
 
 export class Aggregator {
@@ -50,18 +51,48 @@ export class Aggregator {
     const startBucket = Math.floor(startEpoch / bucketSeconds);
     const endBucket = Math.floor(endEpoch / bucketSeconds);
 
-    const errors = new Map(getBucketedEventCount(this.db, startTs, endTs, 'error', rangeConfig.bucketMinutes).map((r) => [r.bucket, r.count]));
-    const warnings = new Map(getBucketedEventCount(this.db, startTs, endTs, 'warning', rangeConfig.bucketMinutes).map((r) => [r.bucket, r.count]));
-    const sessions = new Map(getBucketedSampledSessions(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly).map((r) => [r.bucket, r.sessions]));
-    const tokens = new Map(getBucketedSampledTokens(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly).map((r) => [r.bucket, r.tokensK]));
+    const errors = new Map(
+      getBucketedEventCount(this.db, startTs, endTs, 'error', rangeConfig.bucketMinutes).map((r) => [
+        r.bucket,
+        r.count,
+      ]),
+    );
+    const warnings = new Map(
+      getBucketedEventCount(this.db, startTs, endTs, 'warning', rangeConfig.bucketMinutes).map((r) => [
+        r.bucket,
+        r.count,
+      ]),
+    );
+    const sessions = new Map(
+      getBucketedSampledSessions(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly).map((r) => [
+        r.bucket,
+        r.sessions,
+      ]),
+    );
+    const tokens = new Map(
+      getBucketedSampledTokens(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly).map((r) => [
+        r.bucket,
+        r.tokensK,
+      ]),
+    );
     const modelTokens = getBucketedModelTokens(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly);
     const modelByBucket = new Map<number, Array<{ model: string; tokensK: number }>>();
     for (const mt of modelTokens) {
       if (!modelByBucket.has(mt.bucket)) modelByBucket.set(mt.bucket, []);
       modelByBucket.get(mt.bucket)!.push({ model: mt.model, tokensK: Number(mt.tokensK) });
     }
-    const apiCalls = new Map(getBucketedEventCount(this.db, startTs, endTs, 'api_call', rangeConfig.bucketMinutes).map((r) => [r.bucket, r.count]));
-    const toolCalls = new Map(getBucketedEventCount(this.db, startTs, endTs, 'tool_call', rangeConfig.bucketMinutes).map((r) => [r.bucket, r.count]));
+    const apiCalls = new Map(
+      getBucketedEventCount(this.db, startTs, endTs, 'api_call', rangeConfig.bucketMinutes).map((r) => [
+        r.bucket,
+        r.count,
+      ]),
+    );
+    const toolCalls = new Map(
+      getBucketedEventCount(this.db, startTs, endTs, 'tool_call', rangeConfig.bucketMinutes).map((r) => [
+        r.bucket,
+        r.count,
+      ]),
+    );
     const gwEvents = getBucketedGatewayEvents(this.db, startTs, endTs, rangeConfig.bucketMinutes);
     const restartBuckets = new Set(gwEvents.filter((e) => e.type === 'gateway_restart').map((e) => e.bucket));
 

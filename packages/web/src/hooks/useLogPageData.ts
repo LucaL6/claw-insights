@@ -31,26 +31,30 @@ export function useLogPageData(route: Route) {
   const density = densityResult.data?.eventDensity ?? [];
 
   // Toggle type filter
-  const toggleType = useCallback((type: string) => {
-    setActiveTypes(prev => {
-      const next = prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type];
-      const params = new URLSearchParams();
-      if (urlFrom) params.set('from', String(urlFrom));
-      if (urlTo) params.set('to', String(urlTo));
-      if (next.length < ALL_TYPES.length) params.set('type', next.join(','));
-      const qs = params.toString();
-      window.history.replaceState(null, '', `#logs${qs ? '?' + qs : ''}`);
-      return next.length > 0 ? next : prev;
-    });
-  }, [urlFrom, urlTo]);
+  const toggleType = useCallback(
+    (type: string) => {
+      setActiveTypes((prev) => {
+        const next = prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type];
+        const params = new URLSearchParams();
+        if (urlFrom) params.set('from', String(urlFrom));
+        if (urlTo) params.set('to', String(urlTo));
+        if (next.length < ALL_TYPES.length) params.set('type', next.join(','));
+        const qs = params.toString();
+        window.history.replaceState(null, '', `#logs${qs ? '?' + qs : ''}`);
+        return next.length > 0 ? next : prev;
+      });
+    },
+    [urlFrom, urlTo],
+  );
 
   // Client-side search filter
   const filteredEvents = useMemo(() => {
     if (!events?.events) return [];
     if (!search) return events.events;
     const q = search.toLowerCase();
-    return events.events.filter((e: { message: string; module: string }) =>
-      e.message.toLowerCase().includes(q) || e.module.toLowerCase().includes(q)
+    return events.events.filter(
+      (e: { message: string; module: string }) =>
+        e.message.toLowerCase().includes(q) || e.module.toLowerCase().includes(q),
     );
   }, [events, search]);
 

@@ -37,14 +37,14 @@ export function useMetricsData(range: MetricsRange) {
   const allModels = useMemo(() => {
     const modelSet = new Set<string>();
     for (const b of buckets) {
-      for (const mt of (b.tokensByModel ?? [])) {
+      for (const mt of b.tokensByModel ?? []) {
         modelSet.add(mt.model);
       }
     }
     return Array.from(modelSet).sort();
   }, [buckets]);
 
-  const peakSessions = buckets.length > 0 ? Math.max(...buckets.map(b => b.sessions)) : 0;
+  const peakSessions = buckets.length > 0 ? Math.max(...buckets.map((b) => b.sessions)) : 0;
   const totalTokensK = buckets.reduce((s, b) => s + Number(b.tokensK ?? 0), 0);
   const totalErrors = metrics?.totalErrors ?? 0;
   const totalWarnings = metrics?.totalWarnings ?? 0;

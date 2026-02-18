@@ -13,7 +13,13 @@ export interface UsageCost {
 }
 
 export function parseUsageCostOutput(output: string): UsageCost {
-  const result: UsageCost = { totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: new Date().toISOString() };
+  const result: UsageCost = {
+    totalCost: 0,
+    totalTokensM: 0,
+    todayCost: 0,
+    todayTokensM: 0,
+    fetchedAt: new Date().toISOString(),
+  };
 
   const totalMatch = output.match(/Total:\s*\$([\d.]+)\s*·\s*([\d.]+)m\s*tokens/i);
   if (totalMatch) {
@@ -47,6 +53,14 @@ export async function getUsageCost(): Promise<UsageCost> {
     return data;
   } catch (err) {
     console.warn('[usage-cost] CLI call failed:', (err as Error).message);
-    return cache?.data ?? { totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: new Date().toISOString() };
+    return (
+      cache?.data ?? {
+        totalCost: 0,
+        totalTokensM: 0,
+        todayCost: 0,
+        todayTokensM: 0,
+        fetchedAt: new Date().toISOString(),
+      }
+    );
   }
 }

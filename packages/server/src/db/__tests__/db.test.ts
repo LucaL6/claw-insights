@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { initDatabase } from '../init';
-import { insertEvent, getRecentEvents, getSpawnEvents, insertSample, getBucketedEventCount, getBucketedSampledSessions, getBucketedSampledTokens, bucketLabel } from '../queries';
+import { insertEvent, getBucketedEventCount } from '../event-queries';
+import { bucketLabel } from '../query-utils';
 import { rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -29,75 +30,66 @@ describe('SQLite DB', () => {
     expect(indexes.length).toBe(4); // idx_events_type_time, idx_events_time, idx_events_module (migration 2), idx_events_category (migration 3)
   });
 
-  it('should insert and query events', () => {
+  it('should insert events', () => {
     insertEvent(db, 'error', null, { module: 'tools', message: 'exec failed' });
     insertEvent(db, 'error', null, { module: 'agent', message: 'timeout' });
     insertEvent(db, 'warning', null, { module: 'tools', message: 'slow' });
 
-    const recent = getRecentEvents(db, 'error', 10);
-    expect(recent.length).toBe(2);
-  });
-
-  it('should query recent events', () => {
-    insertEvent(db, 'error', null, { message: 'first' });
-    insertEvent(db, 'error', null, { message: 'second' });
-    insertEvent(db, 'error', null, { message: 'third' });
-
-    const recent = getRecentEvents(db, 'error', 2);
-    expect(recent.length).toBe(2);
+    const row = db.prepare("SELECT COUNT(*) as cnt FROM metric_events WHERE type='error'").get() as { cnt: number };
+    expect(row.cnt).toBe(2);
   });
 
   it('should create metric_samples table', () => {
-    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='metric_samples'").get() as { name: string } | null;
+    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='metric_samples'").get() as {
+      name: string;
+    } | null;
     expect(row).not.toBeNull();
     expect(row!.name).toBe('metric_samples');
   });
 
   it('should insert and query metric samples', () => {
-    db.prepare(`INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
-      '2026-02-15T10:00:00Z', 5, 120.5, 3.2, 45.50, 62.3, 12.5, 256
-    );
+    db.prepare(
+      `INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('2026-02-15T10:00:00Z', 5, 120.5, 3.2, 45.5, 62.3, 12.5, 256);
     const row = db.prepare('SELECT * FROM metric_samples ORDER BY id DESC LIMIT 1').get() as Record<string, unknown>;
     expect(row.active_sessions).toBe(5);
     expect(row.total_tokens_k).toBe(120.5);
     expect(row.token_delta_k).toBe(3.2);
-    expect(row.cost_today).toBe(45.50);
-  });
-
-  it('should query spawn events', () => {
-    const now = new Date().toISOString();
-    db.prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)').run(
-      now, 'spawn_agent', null,
-      JSON.stringify({ parentKey: 'agent:main:parent', childKey: 'agent:main:child', runId: 'abc123' })
-    );
-
-    const today = new Date().toISOString().split('T')[0];
-    const spawns = getSpawnEvents(db, today);
-    expect(spawns.length).toBe(1);
-    expect(spawns[0].parentKey).toBe('agent:main:parent');
-    expect(spawns[0].childKey).toBe('agent:main:child');
+    expect(row.cost_today).toBe(45.5);
   });
 
   it('should insert events with category and source', () => {
     insertEvent(db, 'error', null, { module: 'test', message: 'boom' });
-    const row = db.prepare("SELECT category, source FROM metric_events WHERE type='error' ORDER BY id DESC LIMIT 1").get() as { category: string; source: string };
+    const row = db
+      .prepare("SELECT category, source FROM metric_events WHERE type='error' ORDER BY id DESC LIMIT 1")
+      .get() as { category: string; source: string };
     expect(row.category).toBe('severity.error');
     expect(row.source).toBe('openclaw');
   });
 
   it('should insert unknown event type with uncategorized fallback', () => {
     insertEvent(db, 'custom_thing', null, {});
-    const row = db.prepare("SELECT category, source FROM metric_events WHERE type='custom_thing'").get() as { category: string; source: string };
+    const row = db.prepare("SELECT category, source FROM metric_events WHERE type='custom_thing'").get() as {
+      category: string;
+      source: string;
+    };
     expect(row.category).toBe('uncategorized');
     expect(row.source).toBe('unknown');
   });
-
 });
 
 function setup() {
   const p = join(tmpdir(), `test-bucket-${Date.now()}-${Math.random()}.db`);
   const d = initDatabase(p);
-  return { db: d, cleanup: () => { d.close(); rmSync(p, { force: true }); rmSync(p + '-wal', { force: true }); rmSync(p + '-shm', { force: true }); } };
+  return {
+    db: d,
+    cleanup: () => {
+      d.close();
+      rmSync(p, { force: true });
+      rmSync(p + '-wal', { force: true });
+      rmSync(p + '-shm', { force: true });
+    },
+  };
 }
 
 describe('Epoch bucket functions', () => {
@@ -132,8 +124,12 @@ describe('Cross-day bucket isolation', () => {
     const { db: testDb, cleanup } = setup();
     const day1 = '2026-02-15T14:30:00.000Z';
     const day2 = '2026-02-16T14:30:00.000Z';
-    testDb.prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)').run(day1, 'error', null, null);
-    testDb.prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)').run(day2, 'error', null, null);
+    testDb
+      .prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)')
+      .run(day1, 'error', null, null);
+    testDb
+      .prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)')
+      .run(day2, 'error', null, null);
 
     const results = getBucketedEventCount(testDb, day1, '2026-02-16T15:00:00.000Z', 'error', 60);
     expect(results.length).toBe(2);
@@ -144,8 +140,12 @@ describe('Cross-day bucket isolation', () => {
 
   it('should produce ascending bucket numbers for cross-midnight data', () => {
     const { db: testDb, cleanup } = setup();
-    testDb.prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)').run('2026-02-15T23:30:00.000Z', 'error', null, null);
-    testDb.prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)').run('2026-02-16T00:30:00.000Z', 'error', null, null);
+    testDb
+      .prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)')
+      .run('2026-02-15T23:30:00.000Z', 'error', null, null);
+    testDb
+      .prepare('INSERT INTO metric_events (timestamp, type, value, metadata) VALUES (?, ?, ?, ?)')
+      .run('2026-02-16T00:30:00.000Z', 'error', null, null);
 
     const results = getBucketedEventCount(testDb, '2026-02-15T23:00:00.000Z', '2026-02-16T01:00:00.000Z', 'error', 60);
     expect(results.length).toBe(2);

@@ -29,9 +29,13 @@ describe('GraphQL Schema', () => {
     expect(fields).toContain('dataChanged');
   });
 
-  it('should not contain mutations (removed)', () => {
+  it('should contain mutations for gateway operations', () => {
     const schema = buildSchema(typeDefs);
     const mutationType = schema.getMutationType();
-    expect(mutationType).toBeUndefined();
+    expect(mutationType).toBeDefined();
+    const fields = Object.keys(mutationType!.getFields());
+    expect(fields).toContain('restartGateway');
+    expect(fields).toContain('updateGateway');
+    expect(fields).toContain('runDoctor');
   });
 });

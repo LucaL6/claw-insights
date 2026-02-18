@@ -1,0 +1,8 @@
+dist/
+node_modules/
+packages/*/dist/
+packages/shared/src/generated/
+packages/server/src/schema/generated/
+packages/web/src/generated/
+package-lock.json
+*.html

@@ -20,7 +20,7 @@ export class SystemMetrics {
   async getPid(): Promise<number | null> {
     try {
       const { stdout } = await execFileAsync('launchctl', ['list'], { encoding: 'utf-8' });
-      const line = stdout.split('\n').find(l => l.includes('ai.openclaw.gateway'));
+      const line = stdout.split('\n').find((l) => l.includes('ai.openclaw.gateway'));
       if (!line) return null;
       const match = line.match(/^(\d+)/);
       return match ? parseInt(match[1], 10) : null;

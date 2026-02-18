@@ -1,12 +1,12 @@
 const HOME = process.env.HOME ?? '/tmp';
 
-function safePort(env: string | undefined, fallback: number): number {
+export function safePort(env: string | undefined, fallback: number): number {
   if (!env) return fallback;
   const n = parseInt(env, 10);
   return Number.isFinite(n) && n > 0 && n < 65536 ? n : fallback;
 }
 
-function safeInt(env: string | undefined, fallback: number): number {
+export function safeInt(env: string | undefined, fallback: number): number {
   if (!env) return fallback;
   const n = parseInt(env, 10);
   return Number.isFinite(n) && n >= 0 ? n : fallback;

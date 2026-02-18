@@ -222,6 +222,28 @@ type Query {
   eventDensity: [EventDensityBucket!]!
 }
 
+"""Result of a gateway operation (restart, update, doctor)"""
+type OperationResult {
+  success: Boolean!
+  message: String
+  output: String
+  duration: Int
+}
+
+"""Options for the gateway doctor diagnostic"""
+input DoctorOptions {
+  channelCheck: Boolean
+  securityAudit: Boolean
+  deepProbe: Boolean
+  autoFix: Boolean
+}
+
+type Mutation {
+  restartGateway: OperationResult!
+  updateGateway: OperationResult!
+  runDoctor(options: DoctorOptions!): OperationResult!
+}
+
 """Lightweight signal emitted when a data source updates"""
 type DataChangeSignal {
   source: String!
