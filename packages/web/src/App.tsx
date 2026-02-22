@@ -12,16 +12,21 @@ import { useOperationModals, RestartModal, UpdateModal, DoctorModal } from './co
 import { useTopBarData } from './hooks/useTopBarData';
 import { LogPage } from './components/logs/LogPage';
 import type { MetricsRange } from './components/charts/metrics/GranularityPicker';
+import { usePreference } from './hooks/usePreference';
 
 const VALID_RANGES: MetricsRange[] = ['ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TWENTY_FOUR_HOUR'];
 
 function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: Route }) {
   const { modal, open, close } = useOperationModals();
   const { version, gateway } = useTopBarData();
-  const initialRange = VALID_RANGES.includes(route.params.range as MetricsRange)
+  const urlRange = VALID_RANGES.includes(route.params.range as MetricsRange)
     ? (route.params.range as MetricsRange)
-    : 'TWENTY_FOUR_HOUR';
-  const [range, setRange] = useState<MetricsRange>(initialRange);
+    : undefined;
+  const [storedRange, setStoredRange] = usePreference<MetricsRange>('metrics-range', 'SIX_HOUR', {
+    validate: (v) => VALID_RANGES.includes(v),
+  });
+  const range = urlRange ?? storedRange;
+  const setRange = setStoredRange;
   const [sessionsReady, setSessionsReady] = useState(false);
   const [metricsReady, setMetricsReady] = useState(false);
 

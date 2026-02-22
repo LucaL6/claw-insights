@@ -3,6 +3,7 @@ import type { AppContext } from '../context.js';
 import type { BrowserPool } from '../browser/browser-pool.js';
 import { createSnapshotHandler } from './snapshot-handler.js';
 import { getGatewayStatus } from '../sources/gateway-cli.js';
+import { getSystemMetrics } from '../sources/system-info.js';
 import { queryEvents } from '../db/event-queries.js';
 import type { DataSources } from '../services/snapshot-types.js';
 import { authMiddleware } from '../middleware/auth.js';
@@ -11,7 +12,7 @@ export function registerSnapshot(app: Express, ctx: AppContext, browserPool: Bro
   const sources: DataSources = {
     getGateway: async () => {
       const s = await getGatewayStatus();
-      const sys = await ctx.systemMetrics.getMetrics();
+      const sys = await getSystemMetrics();
       return { ...s, cpu: sys.cpu, memoryMB: sys.memoryMB };
     },
     getChannels: async () => (await getGatewayStatus()).channels,

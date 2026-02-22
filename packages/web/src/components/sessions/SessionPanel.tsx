@@ -6,6 +6,7 @@ import { SessionSkeleton } from '../layout/Skeleton';
 import { SessionGroup } from './SessionGroup';
 import { ToggleButton } from './shared/ToggleButton';
 import { useI18n } from '../../i18n/context';
+import { usePreference } from '../../hooks/usePreference';
 import type { SessionData } from './shared/types';
 
 type ViewMode = 'active' | 'all';
@@ -14,7 +15,9 @@ type SortBy = 'UPDATED_AT' | 'TOKENS_DESC' | 'NAME';
 export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
   const { t } = useI18n();
   const [viewMode, setViewMode] = useState<ViewMode>('active');
-  const [sortBy, setSortBy] = useState<SortBy>('UPDATED_AT');
+  const [sortBy, setSortBy] = usePreference<SortBy>('session-sort', 'UPDATED_AT', {
+    validate: (v) => ['UPDATED_AT', 'TOKENS_DESC', 'NAME'].includes(v),
+  });
   const [lastFetchTime, setLastFetchTime] = useState(Date.now());
 
   const activeOnly = viewMode === 'active';

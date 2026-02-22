@@ -1,6 +1,7 @@
 import type { AppContext } from '../../context.js';
 import type { Resolvers, QueryResolvers, ChannelProvider } from '../generated/resolver-types.js';
 import { getGatewayStatus } from '../../sources/gateway-cli.js';
+import { getSystemMetrics } from '../../sources/system-info.js';
 import { safe } from './utils.js';
 
 export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
@@ -32,7 +33,7 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
       }>;
     });
 
-  const resources: QueryResolvers['resources'] = () => safe(async () => ctx.systemMetrics.getMetrics());
+  const resources: QueryResolvers['resources'] = () => safe(async () => getSystemMetrics());
 
   return { Query: { gateway, channels, resources } };
 }

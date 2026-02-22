@@ -10,10 +10,12 @@ import { DataValidator } from './sources/data-validator.js';
 import { DataRetention } from './sources/data-retention.js';
 import { getSystemMetrics, getUsageCost } from './sources/system-info.js';
 import { initDatabase } from './db/init.js';
+import { Pipeline } from './pipeline/index.js';
 import type { DatabaseSync } from 'node:sqlite';
 
 export interface AppContext {
   db: DatabaseSync;
+  pipeline: Pipeline;
   sessionReader: SessionReader;
   cronReader: CronReader;
   logTailer: LogTailer;
@@ -52,15 +54,26 @@ export function createContext(): AppContext {
     aggregateIntervalMs: config.aggregateIntervalMs,
   });
 
-  // Wire log events to ingester + spawn tracker
-  const ingestLog = createLogIngester(db);
-  logTailer.on('log', (entry) => {
-    ingestLog(entry);
-    spawnTracker.ingest(entry);
-  });
+  const pipeline = new Pipeline()
+    // Sources — emit events
+    .addSource('logTailer', logTailer)
+    // Managed — lifecycle-only resources (no events, just destroy)
+    .addManaged('sessionReader', sessionReader)
+    .addManaged('cronReader', cronReader)
+    // Processors — handle events
+    .addProcessor('logIngester', createLogIngester(db))
+    .addProcessor('spawnTracker', { handle: (entry: unknown) => spawnTracker.ingest(entry as any) })
+    // Services — background lifecycle
+    .addService('metricsCollector', metricsCollector)
+    .addService('dataValidator', dataValidator)
+    .addService('dataRetention', dataRetention)
+    // Wiring — declarative data flow
+    .wire('logTailer', 'log', ['logIngester', 'spawnTracker'])
+    .build();
 
   return {
     db,
+    pipeline,
     sessionReader,
     cronReader,
     logTailer,
@@ -73,18 +86,11 @@ export function createContext(): AppContext {
 }
 
 export function startContext(ctx: AppContext): void {
-  ctx.metricsCollector.start();
-  ctx.dataValidator.start();
-  ctx.dataRetention.start();
+  ctx.pipeline.start();
 }
 
 export function destroyContext(ctx: AppContext): void {
-  ctx.sessionReader.destroy();
-  ctx.logTailer.destroy();
-  ctx.cronReader.destroy();
-  ctx.metricsCollector.stop();
-  ctx.dataValidator.stop();
-  ctx.dataRetention.stop();
+  ctx.pipeline.destroy();
   if (typeof (ctx.db as any).close === 'function') {
     (ctx.db as any).close();
   }

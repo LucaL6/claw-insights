@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, cleanup } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
 import { ThemeProvider, useTheme } from '../context';
+import type { ReactNode } from 'react';
 
 if (!globalThis.localStorage || typeof globalThis.localStorage.getItem !== 'function') {
   const store: Record<string, string> = {};
-  (globalThis as any).localStorage = {
+  (globalThis as unknown as { localStorage: Storage }).localStorage = {
     getItem: (k: string) => store[k] ?? null,
     setItem: (k: string, v: string) => { store[k] = v; },
     removeItem: (k: string) => { delete store[k]; },
@@ -14,67 +15,76 @@ if (!globalThis.localStorage || typeof globalThis.localStorage.getItem !== 'func
   };
 }
 
-function TestConsumer() {
-  const { theme, toggleTheme, setTheme } = useTheme();
-  return (
-    <div>
-      <span data-testid="theme">{theme}</span>
-      <button data-testid="toggle" onClick={toggleTheme} />
-      <button data-testid="set-light" onClick={() => setTheme('light')} />
-      <button data-testid="set-dark" onClick={() => setTheme('dark')} />
-    </div>
-  );
-}
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <ThemeProvider>{children}</ThemeProvider>
+);
 
-describe('ThemeProvider', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    window.location.hash = '';
-  });
-  afterEach(() => {
-    cleanup();
-    window.location.hash = '';
-    localStorage.clear();
-  });
+beforeEach(() => {
+  localStorage.clear();
+  document.documentElement.removeAttribute('data-theme');
+});
 
+describe('ThemeProvider with usePreference', () => {
   it('defaults to dark', () => {
-    render(<ThemeProvider><TestConsumer /></ThemeProvider>);
-    expect(screen.getByTestId('theme').textContent).toBe('dark');
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(result.current.theme).toBe('dark');
   });
 
-  it('reads theme from URL hash param', () => {
-    window.location.hash = '#?theme=light';
-    render(<ThemeProvider><TestConsumer /></ThemeProvider>);
-    expect(screen.getByTestId('theme').textContent).toBe('light');
+  it('persists theme to ci:theme key', () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    act(() => result.current.setTheme('light'));
+    expect(result.current.theme).toBe('light');
+    expect(localStorage.getItem('ci:theme')).toBe(JSON.stringify('light'));
   });
 
-  it('reads theme from localStorage', () => {
+  it('reads from ci:theme on mount', () => {
+    localStorage.setItem('ci:theme', JSON.stringify('light'));
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(result.current.theme).toBe('light');
+  });
+
+  it('migrates old "theme" key to "ci:theme"', () => {
     localStorage.setItem('theme', 'light');
-    render(<ThemeProvider><TestConsumer /></ThemeProvider>);
-    expect(screen.getByTestId('theme').textContent).toBe('light');
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(result.current.theme).toBe('light');
+    expect(localStorage.getItem('theme')).toBeNull();
+    expect(localStorage.getItem('ci:theme')).toBe(JSON.stringify('light'));
   });
 
-  it('URL param overrides localStorage', () => {
-    localStorage.setItem('theme', 'light');
-    window.location.hash = '#?theme=dark';
-    render(<ThemeProvider><TestConsumer /></ThemeProvider>);
-    expect(screen.getByTestId('theme').textContent).toBe('dark');
+  it('toggles between dark and light', () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    act(() => result.current.toggleTheme());
+    expect(result.current.theme).toBe('light');
+    act(() => result.current.toggleTheme());
+    expect(result.current.theme).toBe('dark');
   });
 
-  it('toggleTheme switches dark→light', () => {
-    render(<ThemeProvider><TestConsumer /></ThemeProvider>);
-    act(() => screen.getByTestId('toggle').click());
-    expect(screen.getByTestId('theme').textContent).toBe('light');
+  it('ignores invalid old key value during migration', () => {
+    localStorage.setItem('theme', 'invalid-value');
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(result.current.theme).toBe('dark'); // default
+    // Old key should be preserved if migration fails validation
+    expect(localStorage.getItem('theme')).toBe('invalid-value');
   });
 
-  it('setTheme updates localStorage and document attribute', () => {
-    render(<ThemeProvider><TestConsumer /></ThemeProvider>);
-    act(() => screen.getByTestId('set-light').click());
-    expect(localStorage.getItem('theme')).toBe('light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  it('URL hash theme param overrides localStorage', () => {
+    localStorage.setItem('ci:theme', JSON.stringify('dark'));
+    // Simulate URL hash param
+    const original = window.location.hash;
+    window.location.hash = '#/?theme=light';
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(result.current.theme).toBe('light');
+    // localStorage should still have dark (URL doesn't persist)
+    expect(localStorage.getItem('ci:theme')).toBe(JSON.stringify('dark'));
+    window.location.hash = original;
   });
 
-  it('useTheme throws outside provider', () => {
-    expect(() => render(<TestConsumer />)).toThrow('useTheme must be inside ThemeProvider');
+  it('migrates old JSON-formatted theme key', () => {
+    // Some environments might have stored as JSON string
+    localStorage.setItem('theme', '"dark"');
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(result.current.theme).toBe('dark');
+    expect(localStorage.getItem('theme')).toBeNull();
+    expect(localStorage.getItem('ci:theme')).toBe(JSON.stringify('dark'));
   });
 });

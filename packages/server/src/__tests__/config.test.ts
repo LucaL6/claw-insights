@@ -46,6 +46,12 @@ describe('config', () => {
     expect(config).toHaveProperty('aggregateIntervalMs');
   });
 
+  it('config has serverOnly field', async () => {
+    const mod = await import('../config.js');
+    expect(mod.config).toHaveProperty('serverOnly');
+    expect(typeof mod.config.serverOnly).toBe('boolean');
+  });
+
   it('CLI_ENV PATH includes npm-global', () => {
     expect(CLI_ENV.PATH).toContain('.npm-global/bin');
   });

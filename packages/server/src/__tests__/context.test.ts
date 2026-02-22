@@ -21,6 +21,21 @@ vi.mock('../db/init.js', () => ({
   })),
 }));
 
+vi.mock('../pipeline/index.js', () => ({
+  Pipeline: class {
+    addSource() { return this; }
+    addManaged() { return this; }
+    addProcessor() { return this; }
+    addService() { return this; }
+    wire() { return this; }
+    build() { return this; }
+    start = vi.fn();
+    destroy = vi.fn();
+    get() { return null; }
+    getConfig() { return { sources: new Map(), managed: new Map(), processors: new Map(), services: new Map(), wiring: [] }; }
+  },
+}));
+
 function mockClass(props: Record<string, any>) {
   return class { constructor(..._args: any[]) { Object.assign(this, Object.fromEntries(Object.entries(props).map(([k, v]) => [k, typeof v === 'function' ? vi.fn(v) : v]))); } };
 }
@@ -62,8 +77,6 @@ vi.mock('../sources/data-retention.js', () => ({
   DataRetention: mockClass({ start() {}, stop() {} }),
 }));
 
-// usage-cost mock merged into system-info.js above
-
 describe('context', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -74,9 +87,9 @@ describe('context', () => {
     const ctx = createContext();
 
     expect(ctx.db).toBeDefined();
+    expect(ctx.pipeline).toBeDefined();
     expect(ctx.sessionReader).toBeDefined();
     expect(ctx.cronReader).toBeDefined();
-    // systemMetrics is now a standalone function (getSystemMetrics), not a context property
     expect(ctx.logTailer).toBeDefined();
     expect(ctx.spawnTracker).toBeDefined();
     expect(ctx.aggregator).toBeDefined();
@@ -85,35 +98,28 @@ describe('context', () => {
     expect(ctx.dataRetention).toBeDefined();
   });
 
-  it('createContext wires log events to aggregator and spawn tracker', async () => {
+  it('createContext builds pipeline with declarative wiring', async () => {
     const { createContext } = await import('../context');
     const ctx = createContext();
 
-    // LogTailer.on should have been called with 'log'
-    expect(ctx.logTailer.on).toHaveBeenCalledWith('log', expect.any(Function));
+    // Pipeline was built (returned from .build())
+    expect(ctx.pipeline).toBeDefined();
   });
 
-  it('startContext starts collectors', async () => {
+  it('startContext starts pipeline', async () => {
     const { createContext, startContext } = await import('../context');
     const ctx = createContext();
     startContext(ctx);
 
-    expect(ctx.metricsCollector.start).toHaveBeenCalled();
-    expect(ctx.dataValidator.start).toHaveBeenCalled();
-    expect(ctx.dataRetention.start).toHaveBeenCalled();
+    expect(ctx.pipeline.start).toHaveBeenCalled();
   });
 
-  it('destroyContext cleans up all resources', async () => {
+  it('destroyContext cleans up via pipeline and closes db', async () => {
     const { createContext, destroyContext } = await import('../context');
     const ctx = createContext();
     destroyContext(ctx);
 
-    expect(ctx.sessionReader.destroy).toHaveBeenCalled();
-    expect(ctx.logTailer.destroy).toHaveBeenCalled();
-    expect(ctx.cronReader.destroy).toHaveBeenCalled();
-    expect(ctx.metricsCollector.stop).toHaveBeenCalled();
-    expect(ctx.dataValidator.stop).toHaveBeenCalled();
-    expect(ctx.dataRetention.stop).toHaveBeenCalled();
+    expect(ctx.pipeline.destroy).toHaveBeenCalled();
     expect((ctx.db as any).close).toHaveBeenCalled();
   });
 

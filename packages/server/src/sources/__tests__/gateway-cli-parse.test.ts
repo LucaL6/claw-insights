@@ -70,4 +70,14 @@ describe('parseStatus', () => {
     const result = parseStatus(json, '2026.2.12');
     expect(result.updateAvailable).toBeNull();
   });
+
+  it('reads latestVersion from update.registry.latestVersion (real CLI format)', () => {
+    const json = JSON.stringify({
+      gateway: { reachable: true },
+      update: { registry: { latestVersion: '2026.3.1' } },
+    });
+    const result = parseStatus(json, '2026.2.12');
+    expect(result.latestVersion).toBe('2026.3.1');
+    expect(result.updateAvailable).toBe('2026.3.1');
+  });
 });

@@ -7,6 +7,7 @@ import { cronResolvers } from './cron.resolver.js';
 import { eventsResolvers } from './events.resolver.js';
 import { usageResolvers } from './usage.resolver.js';
 import { subscriptionResolvers } from './subscriptions.resolver.js';
+import { diagnosticsResolvers } from './diagnostics.resolver.js';
 
 type ResolverFactory = (ctx: AppContext) => Partial<Resolvers>;
 
@@ -18,6 +19,7 @@ const factories: ResolverFactory[] = [
   eventsResolvers,
   usageResolvers,
   subscriptionResolvers,
+  diagnosticsResolvers,
 ];
 
 export function createResolvers(ctx: AppContext): Resolvers {

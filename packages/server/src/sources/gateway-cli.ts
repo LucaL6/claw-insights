@@ -89,11 +89,11 @@ export function parseStatus(json: string, version: string): ParsedStatus {
     const pid = pidMatch ? Number(pidMatch[1]) : null;
     const running = Boolean(gw?.reachable) || svc?.runtimeShort?.includes('running');
 
-    const latest = update?.latestVersion ?? null;
+    const latest = update?.registry?.latestVersion ?? update?.latestVersion ?? null;
     const updateAvailable = latest && latest !== version ? latest : null;
 
     const connectLatencyMs = gw?.connectLatencyMs ?? null;
-    const latestVersion = update?.latestVersion ?? null;
+    const latestVersion = update?.registry?.latestVersion ?? update?.latestVersion ?? null;
     const secAudit = d?.securityAudit?.summary ?? { critical: 0, warn: 0, info: 0 };
     const sessionDefaults = d?.sessions?.defaults ?? null;
 

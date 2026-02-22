@@ -1,10 +1,12 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { usePreference } from '../hooks/usePreference';
 import en from './en.json';
 import zh from './zh.json';
 
 type Lang = 'en' | 'zh';
 
 const dictionaries: Record<Lang, Record<string, string>> = { en, zh };
+const VALID_LANGS: Lang[] = ['en', 'zh'];
 
 interface I18nContextValue {
   lang: Lang;
@@ -15,15 +17,54 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-function getInitialLang(): Lang {
-  if (typeof window === 'undefined') return 'en';
+/** Parse a stored value as Lang — tries JSON first, then legacy plain string */
+function parseOldLang(raw: string): Lang | null {
   try {
-    // URL param override (for screenshot API) — params may be in hash query
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed === 'string' && VALID_LANGS.includes(parsed as Lang)) {
+      return parsed as Lang;
+    }
+  } catch {
+    // Not valid JSON — fall through to legacy plain string
+  }
+  if (VALID_LANGS.includes(raw as Lang)) return raw as Lang;
+  return null;
+}
+
+/** Migrate old 'lang' key → 'ci:lang' (idempotent, one-time) */
+function migrateOldLangKey(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (localStorage.getItem('ci:lang') !== null) return;
+    const raw = localStorage.getItem('lang');
+    if (raw === null) return;
+    const parsed = parseOldLang(raw);
+    if (parsed !== null) {
+      localStorage.setItem('ci:lang', JSON.stringify(parsed));
+      localStorage.removeItem('lang');
+    } else {
+      console.warn(`[i18n] migration skipped: invalid old value "${raw}"`);
+    }
+  } catch {
+    // best effort — preserve old key
+  }
+}
+
+function getUrlLang(): Lang | null {
+  if (typeof window === 'undefined') return null;
+  try {
     const hashQs = window.location.hash.split('?')[1] ?? '';
     const urlLang = new URLSearchParams(hashQs).get('lang');
-    if (urlLang === 'en' || urlLang === 'zh') return urlLang;
-    const stored = localStorage?.getItem?.('lang');
-    if (stored === 'en' || stored === 'zh') return stored;
+    if (VALID_LANGS.includes(urlLang as Lang)) return urlLang as Lang;
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function detectBrowserLang(): Lang {
+  if (typeof window === 'undefined') return 'en';
+  try {
     return navigator.language.startsWith('zh') ? 'zh' : 'en';
   } catch {
     return 'en';
@@ -31,12 +72,23 @@ function getInitialLang(): Lang {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(getInitialLang);
+  // Run migration before usePreference reads the key
+  migrateOldLangKey();
 
-  const setLang = useCallback((l: Lang) => {
-    setLangState(l);
-    localStorage.setItem('lang', l);
-  }, []);
+  const urlLang = getUrlLang();
+
+  const [storedLang, setStoredLang] = usePreference<Lang>('lang', detectBrowserLang(), {
+    validate: (v) => VALID_LANGS.includes(v),
+  });
+
+  const lang = urlLang ?? storedLang;
+
+  const setLang = useCallback(
+    (l: Lang) => {
+      setStoredLang(l);
+    },
+    [setStoredLang],
+  );
 
   const toggleLang = useCallback(() => {
     setLang(lang === 'en' ? 'zh' : 'en');

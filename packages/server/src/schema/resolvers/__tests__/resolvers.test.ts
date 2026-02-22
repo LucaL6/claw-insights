@@ -9,6 +9,7 @@ vi.mock('../../../db/event-queries', () => ({
 }));
 
 vi.mock('../../../sources/system-info', () => ({
+  getSystemMetrics: vi.fn().mockResolvedValue({ cpu: 25, memoryMB: 512 }),
   getUsageCost: vi.fn().mockResolvedValue({ totalCostUsd: 1.5, breakdown: [] }),
 }));
 
@@ -38,9 +39,6 @@ function createMockCtx(): AppContext {
     cronReader: {
       getJobs: vi.fn().mockReturnValue([{ name: 'cleanup', schedule: '0 * * * *' }]),
       destroy: vi.fn(),
-    } as any,
-    systemMetrics: {
-      getMetrics: vi.fn().mockResolvedValue({ cpu: 25, memoryMB: 512 }),
     } as any,
     logTailer: {
       getRecentEntries: vi.fn().mockReturnValue([{ message: 'log1' }]),
@@ -164,9 +162,10 @@ describe('createResolvers', () => {
   });
 
   describe('resources', () => {
-    it('calls systemMetrics.getMetrics', async () => {
+    it('calls getSystemMetrics', async () => {
+      const { getSystemMetrics } = await import('../../../sources/system-info');
       const result = await resolvers.Query.resources({}, {});
-      expect(ctx.systemMetrics.getMetrics).toHaveBeenCalled();
+      expect(getSystemMetrics).toHaveBeenCalled();
       expect(result).toMatchObject({ cpu: 25, memoryMB: 512 });
     });
   });

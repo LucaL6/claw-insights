@@ -4,14 +4,15 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/index.ts",
-    "build": "tsup src/index.ts --format esm --dts",
+    "build": "tsup --config tsup.config.ts && sed -i '' 's/from \"sqlite\"/from \"node:sqlite\"/g' dist/*.js dist/**/*.js 2>/dev/null || true && cp src/schema/schema.graphql dist/schema.graphql",
     "test": "vitest run"
   },
   "dependencies": {
     "express": "^5.0.0",
     "graphql": "^16.9.0",
     "graphql-yoga": "^5.10.0",
-    "playwright": "^1.58.2"
+    "playwright": "^1.58.2",
+    "tokentally": "^0.1.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

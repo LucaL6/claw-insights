@@ -1,11 +1,12 @@
 {
   "name": "claw-insights",
+  "version": "0.1.0",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "bin": {
-    "claw-insights": "./bin/claw-insights.js"
+    "claw-insights": "./bin/claw-insights.mjs"
   },
   "scripts": {
     "codegen": "graphql-codegen --config codegen.ts",

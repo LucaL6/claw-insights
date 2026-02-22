@@ -1,14 +1,37 @@
 import type { AppContext } from '../../context.js';
 import type { Resolvers, QueryResolvers } from '../generated/resolver-types.js';
 import { getUsageCost } from '../../sources/system-info.js';
+import { calculateCosts } from '../../sources/cost-calculator.js';
+import { getCatalogResolver } from '../../sources/pricing-catalog.js';
 import { safe } from './utils.js';
 
 export function usageResolvers(ctx: AppContext): Partial<Resolvers> {
-  const { logTailer } = ctx;
+  const { logTailer, sessionReader } = ctx;
 
   const usageCost: QueryResolvers['usageCost'] = () => safe(async () => getUsageCost());
 
-  const recentLogs: QueryResolvers['recentLogs'] = (_parent, args) => logTailer.getRecentEntries(args.count ?? 50);
+  const costSummary: QueryResolvers['costSummary'] = () =>
+    safe(async () => {
+      const resolver = await getCatalogResolver();
+      if (!resolver) {
+        // Fallback: return CLI-based data shaped as CostSummary
+        const cli = await getUsageCost();
+        return {
+          totalUsd: cli.totalCost,
+          inputUsd: 0,
+          outputUsd: 0,
+          byModel: [],
+          fetchedAt: cli.fetchedAt,
+          source: 'CLI_FALLBACK' as const,
+        };
+      }
 
-  return { Query: { usageCost, recentLogs } };
+      const sessions = sessionReader.getSessionTokenData();
+      return calculateCosts(sessions, resolver);
+    });
+
+  const recentLogs: QueryResolvers['recentLogs'] = (_parent, args) =>
+    logTailer.getRecentEntries(args.count ?? 50);
+
+  return { Query: { usageCost, costSummary, recentLogs } };
 }

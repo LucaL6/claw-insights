@@ -34,6 +34,9 @@ export const config = {
   apiToken: env('API_TOKEN') ?? '',
   isDev: process.env.NODE_ENV !== 'production',
 
+  // Mode
+  serverOnly: env('SERVER_ONLY') === 'true',
+
   // Data retention
   rawRetentionDays: safeInt(env('RAW_RETENTION_DAYS'), 7),
   hourlyRetention: env('HOURLY_RETENTION') ?? 'permanent',
