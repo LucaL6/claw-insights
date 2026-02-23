@@ -14,3 +14,14 @@ packages/web/src/generated/
 packages/*/coverage/
 .DS_Store
 tmp/
+
+# Database journals
+*.db-journal
+*.sqlite
+
+# IDE
+.idea/
+*.code-workspace
+
+# Release artifacts
+*.tgz

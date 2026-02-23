@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "typescript": "^5.7.0"
-  }
+  },
+  "version": "0.1.0",
+  "description": "Claw Insights shared types and GraphQL schema",
+  "author": "Claw Insights Contributors"
 }

@@ -27,5 +27,8 @@
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^4.0.18"
-  }
+  },
+  "version": "0.1.0",
+  "description": "Claw Insights server — GraphQL API, data pipeline, screenshot renderer",
+  "author": "Claw Insights Contributors"
 }

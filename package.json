@@ -21,7 +21,7 @@
     "test:coverage": "npm run -w @claw-insights/server test -- --coverage && npm run -w @claw-insights/web test -- --coverage",
     "test:e2e": "npx playwright test --config packages/web/e2e/playwright.config.ts",
     "prepare": "husky",
-    "build": "npm run --workspaces build",
+    "build": "npm run codegen && npm run --workspaces build",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -48,5 +48,22 @@
   },
   "engines": {
     "node": ">=22.5.0"
-  }
+  },
+  "description": "Real-time monitoring dashboard for OpenClaw gateway",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LucaL6/claw-insights.git"
+  },
+  "homepage": "https://github.com/LucaL6/claw-insights#readme",
+  "bugs": {
+    "url": "https://github.com/LucaL6/claw-insights/issues"
+  },
+  "keywords": [
+    "openclaw",
+    "dashboard",
+    "monitoring",
+    "analytics",
+    "ai-agent"
+  ],
+  "author": "Claw Insights Contributors"
 }

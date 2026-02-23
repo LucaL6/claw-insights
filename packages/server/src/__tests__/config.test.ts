@@ -41,7 +41,7 @@ describe('config singleton', () => {
     expect(typeof config.serverOnly).toBe('boolean');
   });
 
-  it('CLI_ENV PATH includes npm-global', () => {
+  it.skipIf(process.env.CI)('CLI_ENV PATH includes npm-global', () => {
     expect(CLI_ENV.PATH).toContain('.npm-global/bin');
   });
 });

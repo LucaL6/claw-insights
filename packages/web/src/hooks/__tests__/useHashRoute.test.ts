@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { renderHook, act, cleanup } from '@testing-library/react';
 import { useHashRoute } from '../useHashRoute';
 
 describe('useHashRoute', () => {
+  afterEach(() => cleanup());
+
   beforeEach(() => {
     window.location.hash = '';
   });

@@ -56,6 +56,17 @@ cat > "$RELEASE_DIR/package.json" << EOF
   },
   "files": ["bin/", "server/", "web/", "assets/"],
   "engines": { "node": ">=22" },
+  "license": "MIT",
+  "author": "Claw Insights Contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LucaL6/claw-insights.git"
+  },
+  "homepage": "https://github.com/LucaL6/claw-insights#readme",
+  "bugs": {
+    "url": "https://github.com/LucaL6/claw-insights/issues"
+  },
+  "keywords": ["openclaw", "dashboard", "monitoring", "analytics", "ai-agent"],
   "dependencies": $SERVER_DEPS
 }
 EOF

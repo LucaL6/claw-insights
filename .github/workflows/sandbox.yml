@@ -51,7 +51,7 @@ jobs:
           path: dist/
 
       - name: Install from tarball
-        run: npm install -g dist/claw-insights-*.tgz
+        run: npm install -g ./dist/claw-insights-*.tgz
 
       - name: Run sandbox E2E (healthy)
         run: |
@@ -96,8 +96,8 @@ jobs:
         env:
           # Pinned SHA-256 of the installer script.
           # To update: run `curl -fsSL https://openclaw.ai/install.sh | shasum -a 256`
-          # and replace the hash below. Last verified: 2026-02-22.
-          INSTALLER_SHA256: 'ee3324933f42fb018f46e7e7b5e9ce5bab1c86d8465ace57082eeb99bd2dc90e'
+          # and replace the hash below. Last verified: 2026-02-24.
+          INSTALLER_SHA256: '60aaae99297fb5d3d20dda65ef35d00aa238e0f903ee6ad8e615881407c3b715'
         run: |
           # Download installer
           curl -fsSL https://openclaw.ai/install.sh -o /tmp/openclaw-install.sh
@@ -141,7 +141,7 @@ jobs:
         timeout-minutes: 2
 
       - name: Install claw-insights
-        run: npm install -g dist/claw-insights-*.tgz
+        run: npm install -g ./dist/claw-insights-*.tgz
 
       - name: Run sandbox verify (real CLI)
         run: |
