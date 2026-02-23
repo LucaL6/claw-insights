@@ -10,19 +10,15 @@ export function DoctorModal({ onClose }: { onClose: () => void }) {
   const { loading, error, run } = useOperationMutation(RunDoctorMutation, onClose);
   const { t } = useI18n();
   const [options, setOptions] = useState({
-    channelCheck: true,
-    securityAudit: true,
-    deepProbe: false,
-    autoFix: false,
+    deep: false,
+    fix: false,
   });
 
   const toggle = (key: keyof typeof options) => setOptions((o) => ({ ...o, [key]: !o[key] }));
 
   const labels: Record<string, string> = {
-    channelCheck: t('modal.doctor.channelCheck'),
-    securityAudit: t('modal.doctor.securityAudit'),
-    deepProbe: t('modal.doctor.deepProbe'),
-    autoFix: t('modal.doctor.autoFix'),
+    deep: t('modal.doctor.deep'),
+    fix: t('modal.doctor.fix'),
   };
 
   return (

@@ -68,10 +68,8 @@
   "modal.doctor.title": "Run Diagnostics",
   "modal.doctor.desc": "Health check + auto-fix",
   "modal.doctor.confirm": "Run Check",
-  "modal.doctor.channelCheck": "Channel connectivity check",
-  "modal.doctor.securityAudit": "Security audit",
-  "modal.doctor.deepProbe": "Deep probe",
-  "modal.doctor.autoFix": "Auto-fix",
+  "modal.doctor.deep": "Deep scan (extra gateway installs)",
+  "modal.doctor.fix": "Apply recommended repairs",
   "modal.cancel": "Cancel",
   "modal.running": "Running...",
 

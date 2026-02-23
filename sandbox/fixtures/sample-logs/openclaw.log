@@ -1,0 +1,10 @@
+{"0":"Gateway started on port 3000","_meta":{"logLevelName":"INFO","path":{"filePath":"gateway"}},"time":"__ISO_TIME__"}
+{"0":"Connected to database","_meta":{"logLevelName":"INFO","path":{"filePath":"server"}},"time":"__ISO_TIME__"}
+{"0":"Session created","_meta":{"logLevelName":"INFO","path":{"filePath":"session"}},"time":"__ISO_TIME__"}
+{"0":"Rate limit approaching threshold","_meta":{"logLevelName":"WARN","path":{"filePath":"gateway"}},"time":"__ISO_TIME__"}
+{"0":"Failed to reach upstream API","_meta":{"logLevelName":"ERROR","path":{"filePath":"gateway"}},"time":"__ISO_TIME__"}
+{"0":"Retry succeeded after 1 attempt","_meta":{"logLevelName":"INFO","path":{"filePath":"gateway"}},"time":"__ISO_TIME__"}
+{"0":"Unhandled promise rejection in plugin","_meta":{"logLevelName":"ERROR","path":{"filePath":"server"}},"time":"__ISO_TIME__"}
+{"0":"Session context nearing limit","_meta":{"logLevelName":"WARN","path":{"filePath":"session"}},"time":"__ISO_TIME__"}
+{"0":"Health check passed","_meta":{"logLevelName":"INFO","path":{"filePath":"gateway"}},"time":"__ISO_TIME__"}
+{"0":"Graceful shutdown initiated","_meta":{"logLevelName":"INFO","path":{"filePath":"server"}},"time":"__ISO_TIME__"}

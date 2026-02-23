@@ -51,9 +51,9 @@ describe('useOperationMutation', () => {
     const { result } = renderHook(() => useOperationMutation(null as any, onClose));
 
     await act(async () => {
-      await result.current.run({ options: { autoFix: true } } as any);
+      await result.current.run({ options: { fix: true } } as any);
     });
 
-    expect(mockExecute).toHaveBeenCalledWith({ options: { autoFix: true } });
+    expect(mockExecute).toHaveBeenCalledWith({ options: { fix: true } });
   });
 });

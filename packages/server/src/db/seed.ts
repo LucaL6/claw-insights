@@ -8,6 +8,9 @@
  */
 import { initDatabase } from './init.js';
 import { DatabaseSync } from 'node:sqlite';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('db-seed');
 
 // ── Seed ──
 
@@ -129,7 +132,7 @@ export function seedTestData(dbPath: string): DatabaseSync {
     hourlyModelStmt.run(hourTs, models[1], 2 + i * 0.2);
   }
 
-  console.log('[Seed] Test data inserted successfully');
+  log.info('test data inserted');
   return db;
 }
 
@@ -148,5 +151,5 @@ export function cleanTestData(dbPath: string): void {
     db.exec(`DELETE FROM ${t}`);
   }
   db.close();
-  console.log('[Seed] Test data cleaned');
+  log.info('test data cleaned');
 }

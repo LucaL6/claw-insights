@@ -1,0 +1,25 @@
+FROM node:22-slim
+
+RUN apt-get update && apt-get install -y curl jq xxd git && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -s /bin/bash testuser
+USER testuser
+WORKDIR /home/testuser
+
+ENV NPM_CONFIG_PREFIX=/home/testuser/.npm-global
+ENV PATH=/home/testuser/.npm-global/bin:$PATH
+
+# Install real OpenClaw
+RUN npm install -g openclaw --ignore-scripts
+
+# Install claw-insights from tarball
+COPY --chown=testuser dist/claw-insights-*.tgz ./
+RUN npm install -g ./claw-insights-*.tgz
+
+# Copy fixtures + test script
+COPY --chown=testuser sandbox/fixtures/ ./fixtures/
+COPY --chown=testuser sandbox/smoke-test.sh ./
+
+RUN mkdir -p /home/testuser/output
+
+CMD ["bash", "smoke-test.sh"]

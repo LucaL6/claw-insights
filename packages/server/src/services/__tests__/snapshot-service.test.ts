@@ -73,7 +73,8 @@ describe('buildSnapshotData', () => {
       expect(s.subAgentCount).toBe(1);
       expect(s.status).toBe('active');
     }
-    expect(result.recentErrors).toBeUndefined();
+    expect(result.recentErrors).toBeDefined();
+    expect(result.recentErrors!.length).toBeLessThanOrEqual(3);
   });
 
   test('full: has sessions (with subAgents), buckets, recentErrors', async () => {

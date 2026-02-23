@@ -3,6 +3,9 @@ import { dirname, basename } from 'path';
 import type { Session, SessionStatus } from '@claw-insights/shared';
 import { emitChange } from '../../events.js';
 import { config } from '../../config.js';
+import { createChildLogger } from '../../logger.js';
+
+const log = createChildLogger('session-reader');
 
 interface RawSession {
   sessionId: string;
@@ -101,7 +104,7 @@ export class SessionReader {
         this.sessions.set(key, parseSession(key, entry));
       }
     } catch (err) {
-      console.error('[SessionReader] Failed to read sessions:', err instanceof Error ? err.message : err);
+      log.error({ err }, 'failed to read sessions');
     }
   }
 

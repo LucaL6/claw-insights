@@ -1,4 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('db');
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 import { config } from '../config.js';
@@ -145,7 +148,7 @@ const MIGRATIONS: Migration[] = [
         }
       }
 
-      console.log('[DB] v5 sanity check passed — all tables and columns verified');
+      log.info('v5 sanity check passed — all tables and columns verified');
     },
   },
 ];
@@ -186,10 +189,10 @@ function runMigrations(db: DatabaseSync) {
         }
         db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(m.version);
         db.exec('COMMIT');
-        console.log(`[DB] Migrated to version ${m.version}`);
+        log.info({ version: m.version }, 'migration applied');
       } catch (err) {
         db.exec('ROLLBACK');
-        console.error(`[DB] Migration ${m.version} failed:`, err);
+        log.error({ err, version: m.version }, 'migration failed');
         throw err;
       }
     }

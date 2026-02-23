@@ -12,3 +12,5 @@ packages/web/src/generated/
 
 # Coverage reports
 packages/*/coverage/
+.DS_Store
+tmp/

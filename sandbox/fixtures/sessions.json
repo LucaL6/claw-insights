@@ -1,0 +1,40 @@
+{
+  "agent:main:main": {
+    "sessionId": "aaaa1111-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "updatedAt": __TIMESTAMP__,
+    "chatType": "direct",
+    "model": "claude-sonnet-4-20250514",
+    "modelProvider": "anthropic",
+    "totalTokens": 45000,
+    "contextTokens": 200000,
+    "inputTokens": 30000,
+    "outputTokens": 15000,
+    "origin": { "provider": "telegram", "label": "main-chat" },
+    "label": "main"
+  },
+  "agent:main:subagent:bbbb2222-cccc-dddd-eeee-ffffffffffff": {
+    "sessionId": "bbbb2222-cccc-dddd-eeee-ffffffffffff",
+    "updatedAt": __TIMESTAMP__,
+    "chatType": null,
+    "model": "claude-sonnet-4-20250514",
+    "modelProvider": "anthropic",
+    "totalTokens": 12000,
+    "contextTokens": 200000,
+    "inputTokens": 8000,
+    "outputTokens": 4000,
+    "spawnedBy": "agent:main:main",
+    "label": "code-review"
+  },
+  "agent:main:cron:daily-digest": {
+    "sessionId": "cccc3333-dddd-eeee-ffff-aaaaaaaaaaaa",
+    "updatedAt": __TIMESTAMP_MINUS_2H__,
+    "chatType": null,
+    "model": "gpt-4o",
+    "modelProvider": "openai",
+    "totalTokens": 5000,
+    "contextTokens": 128000,
+    "inputTokens": 3000,
+    "outputTokens": 2000,
+    "label": "daily-digest"
+  }
+}

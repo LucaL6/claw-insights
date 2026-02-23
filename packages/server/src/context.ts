@@ -1,3 +1,4 @@
+import type { LogEntry } from '@claw-insights/shared';
 import { config } from './config.js';
 import { SessionReader } from './sources/readers/session-reader.js';
 import { CronReader } from './sources/readers/cron-reader.js';
@@ -62,7 +63,7 @@ export function createContext(): AppContext {
     .addManaged('cronReader', cronReader)
     // Processors — handle events
     .addProcessor('logIngester', createLogIngester(db))
-    .addProcessor('spawnTracker', { handle: (entry: unknown) => spawnTracker.ingest(entry as any) })
+    .addProcessor('spawnTracker', { handle: (entry: unknown) => spawnTracker.ingest(entry as LogEntry) })
     // Services — background lifecycle
     .addService('metricsCollector', metricsCollector)
     .addService('dataValidator', dataValidator)
@@ -91,7 +92,7 @@ export function startContext(ctx: AppContext): void {
 
 export function destroyContext(ctx: AppContext): void {
   ctx.pipeline.destroy();
-  if (typeof (ctx.db as any).close === 'function') {
-    (ctx.db as any).close();
+  if (typeof (ctx.db as unknown as { close?: () => void }).close === 'function') {
+    (ctx.db as unknown as { close(): void }).close();
   }
 }

@@ -7,8 +7,8 @@ export default defineConfig({
   server: {
     port: 3200,
     proxy: {
-      '/graphql': 'http://127.0.0.1:4000',
-      '/api': 'http://127.0.0.1:4000',
+      '/graphql': `http://127.0.0.1:${process.env.CLAW_INSIGHTS_SERVER_PORT ?? '4000'}`,
+      '/api': `http://127.0.0.1:${process.env.CLAW_INSIGHTS_SERVER_PORT ?? '4000'}`,
     },
     watch: {
       ignored: ['**/coverage/**'],

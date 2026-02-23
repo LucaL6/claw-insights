@@ -1,0 +1,115 @@
+{
+  "heartbeat": {
+    "defaultAgentId": "main",
+    "agents": [
+      { "agentId": "main", "enabled": true, "every": "1h", "everyMs": 3600000 }
+    ]
+  },
+  "channelSummary": [
+    "Telegram: configured",
+    "  - default (token:config)",
+    "Discord: configured",
+    "  - default (bot:config)",
+    "Slack: configured",
+    "  - default (bot:config, app:config)",
+    "WhatsApp: configured",
+    "  - default (paired)"
+  ],
+  "queuedSystemEvents": [],
+  "sessions": {
+    "paths": ["/home/testuser/.openclaw/agents/main/sessions/sessions.json"],
+    "count": 200,
+    "defaults": {
+      "model": "claude-sonnet-4-20250514",
+      "contextTokens": 200000
+    },
+    "recent": [
+      {
+        "agentId": "main",
+        "key": "agent:main:telegram",
+        "kind": "channel",
+        "sessionId": "11111111-2222-3333-4444-555555555555",
+        "updatedAt": 1771740000000,
+        "age": 30000,
+        "inputTokens": 200,
+        "outputTokens": 800,
+        "totalTokens": 60000,
+        "remainingTokens": 140000,
+        "percentUsed": 30,
+        "model": "claude-sonnet-4-20250514",
+        "contextTokens": 200000,
+        "flags": []
+      },
+      {
+        "agentId": "main",
+        "key": "agent:main:discord",
+        "kind": "channel",
+        "sessionId": "22222222-3333-4444-5555-666666666666",
+        "updatedAt": 1771739000000,
+        "age": 1060000,
+        "inputTokens": 150,
+        "outputTokens": 600,
+        "totalTokens": 45000,
+        "remainingTokens": 155000,
+        "percentUsed": 22,
+        "model": "gpt-4o",
+        "contextTokens": 200000,
+        "flags": []
+      },
+      {
+        "agentId": "main",
+        "key": "agent:main:slack",
+        "kind": "channel",
+        "sessionId": "33333333-4444-5555-6666-777777777777",
+        "updatedAt": 1771738000000,
+        "age": 2060000,
+        "inputTokens": 300,
+        "outputTokens": 1200,
+        "totalTokens": 80000,
+        "remainingTokens": 120000,
+        "percentUsed": 40,
+        "model": "claude-opus-4-6",
+        "contextTokens": 200000,
+        "flags": []
+      }
+    ]
+  },
+  "os": { "platform": "linux", "arch": "x64", "release": "6.1.0", "label": "linux 6.1 (x64)" },
+  "update": {
+    "root": "/home/testuser/.npm-global/lib/node_modules/openclaw",
+    "installKind": "package",
+    "packageManager": "npm",
+    "deps": { "manager": "npm", "status": "up-to-date" },
+    "registry": { "latestVersion": "2026.2.21-2" }
+  },
+  "updateChannel": "stable",
+  "updateChannelSource": "default",
+  "memory": null,
+  "memoryPlugin": null,
+  "gateway": {
+    "mode": "local",
+    "url": "ws://127.0.0.1:18789",
+    "urlSource": "local loopback",
+    "misconfigured": false,
+    "reachable": true,
+    "connectLatencyMs": 15,
+    "self": {
+      "host": "sandbox-host",
+      "ip": "198.51.100.1",
+      "version": "2026.2.21-2",
+      "platform": "linux 6.1"
+    },
+    "error": null
+  },
+  "gatewayService": {
+    "label": "systemd",
+    "installed": true,
+    "loadedText": "loaded",
+    "runtimeShort": "running (pid 1234, state active)"
+  },
+  "nodeService": null,
+  "agents": [
+    { "id": "main", "workspace": "/home/testuser/openclaw" }
+  ],
+  "securityAudit": { "summary": { "critical": 0, "warn": 1, "info": 3 } }
+}

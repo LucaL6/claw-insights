@@ -1,4 +1,7 @@
 import type { PricingResolver } from 'tokentally';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('pricing-catalog');
 
 let catalogCache: { resolver: PricingResolver; ts: number } | null = null;
 const CATALOG_TTL = 30 * 60 * 1000; // 30 min
@@ -15,7 +18,7 @@ export async function getCatalogResolver(): Promise<PricingResolver | null> {
     catalogCache = { resolver, ts: Date.now() };
     return resolver;
   } catch (err) {
-    console.warn('[cost] Failed to load LiteLLM catalog:', (err as Error).message);
+    log.warn({ err: err as Error }, 'failed to load LiteLLM catalog');
     return null;
   }
 }

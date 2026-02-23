@@ -9,23 +9,13 @@ vi.mock('../../services/snapshot-service.js', () => ({
   buildSnapshotData: vi.fn(async () => ({ gateway: {}, sessions: [] })),
 }));
 
-vi.mock('../../services/snapshot-template/index.js', () => ({
-  renderSnapshot: vi.fn(() => '<html></html>'),
-  VIEWPORT_WIDTH: { compact: 400, standard: 800, full: 1200 },
+vi.mock('../../renderer/satori-renderer.js', () => ({
+  renderSnapshot: vi.fn(async () => Buffer.from('fake-png')),
 }));
 
-vi.mock('../../browser/capture.js', () => ({
-  capture: vi.fn(async () => Buffer.from('png-desktop')),
-  captureFromHtml: vi.fn(async () => Buffer.from('png-mobile')),
-}));
-
-vi.mock('../../config.js', () => ({
-  config: { webPort: 3000, cliPath: '/usr/bin/openclaw' },
-  CLI_ENV: {},
-}));
-
-import { createSnapshotHandler } from '../snapshot-handler';
-import { parseSnapshotRequest } from '../../services/snapshot-types';
+import { createSnapshotHandler } from '../snapshot-handler.js';
+import { parseSnapshotRequest } from '../../services/snapshot-types.js';
+import { renderSnapshot } from '../../renderer/satori-renderer.js';
 
 function mockRes() {
   const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn(), set: vi.fn(), send: vi.fn() };
@@ -33,17 +23,15 @@ function mockRes() {
 }
 
 describe('createSnapshotHandler', () => {
-  const pool: any = { canCapture: vi.fn(() => true), beginCapture: vi.fn(), endCapture: vi.fn() };
   const sources: any = {};
 
   beforeEach(() => {
     vi.clearAllMocks();
-    pool.canCapture.mockReturnValue(true);
   });
 
   it('returns 400 on invalid request', async () => {
     (parseSnapshotRequest as any).mockImplementation(() => { throw new Error('bad input'); });
-    const handler = createSnapshotHandler(pool, sources);
+    const handler = createSnapshotHandler(sources);
     const res = mockRes();
     await handler({ body: {} } as any, res);
     expect(res.status).toHaveBeenCalledWith(400);
@@ -52,48 +40,48 @@ describe('createSnapshotHandler', () => {
 
   it('returns JSON for json format', async () => {
     (parseSnapshotRequest as any).mockReturnValue({ format: 'json', range: '1h', detail: 'standard' });
-    const handler = createSnapshotHandler(pool, sources);
+    const handler = createSnapshotHandler(sources);
     const res = mockRes();
     await handler({ body: {} } as any, res);
     expect(res.json).toHaveBeenCalledWith(expect.any(Object));
+    expect(renderSnapshot).not.toHaveBeenCalled();
   });
 
-  it('returns 503 when pool is full', async () => {
-    pool.canCapture.mockReturnValue(false);
-    (parseSnapshotRequest as any).mockReturnValue({ format: 'png', range: '1h', layout: 'desktop', detail: 'standard', theme: 'dark', lang: 'en', section: 'dashboard' });
-    const handler = createSnapshotHandler(pool, sources);
-    const res = mockRes();
-    await handler({ body: {} } as any, res);
-    expect(res.status).toHaveBeenCalledWith(503);
-  });
-
-  it('captures mobile screenshot via captureFromHtml', async () => {
-    (parseSnapshotRequest as any).mockReturnValue({ format: 'png', range: '1h', layout: 'mobile', detail: 'standard', theme: 'dark', lang: 'en', section: 'dashboard' });
-    const handler = createSnapshotHandler(pool, sources);
+  it('returns PNG with correct headers', async () => {
+    (parseSnapshotRequest as any).mockReturnValue({ format: 'png', range: '1h', detail: 'standard', theme: 'dark', lang: 'en' });
+    const handler = createSnapshotHandler(sources);
     const res = mockRes();
     await handler({ body: {} } as any, res);
     expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/png');
-    expect(res.send).toHaveBeenCalled();
-    expect(pool.endCapture).toHaveBeenCalled();
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-store');
+    expect(res.send).toHaveBeenCalledWith(Buffer.from('fake-png'));
+    expect(renderSnapshot).toHaveBeenCalledWith(
+      expect.any(Object),
+      { detail: 'standard', theme: 'dark', lang: 'en' },
+    );
   });
 
-  it('captures desktop screenshot', async () => {
-    (parseSnapshotRequest as any).mockReturnValue({ format: 'png', range: '1h', layout: 'desktop', detail: 'standard', theme: 'dark', lang: 'en', section: 'dashboard' });
-    const handler = createSnapshotHandler(pool, sources);
+  it('includes detail, range, and theme in Content-Disposition filename', async () => {
+    (parseSnapshotRequest as any).mockReturnValue({ format: 'png', range: '6h', detail: 'standard', theme: 'dark', lang: 'en' });
+    const handler = createSnapshotHandler(sources);
     const res = mockRes();
     await handler({ body: {} } as any, res);
-    expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/png');
-    expect(pool.endCapture).toHaveBeenCalled();
+    const cdCall = (res.set as any).mock.calls.find((c: any) => c[0] === 'Content-Disposition');
+    expect(cdCall).toBeDefined();
+    const filename = cdCall[1];
+    expect(filename).toContain('standard');
+    expect(filename).toContain('6h');
+    expect(filename).toContain('dark');
+    expect(filename).toMatch(/^attachment; filename="claw-insights-standard-6h-dark-.*\.png"$/);
   });
 
-  it('returns 503 on capture error and still calls endCapture', async () => {
-    (parseSnapshotRequest as any).mockReturnValue({ format: 'png', range: '1h', layout: 'desktop', detail: 'standard', theme: 'dark', lang: 'en', section: 'dashboard' });
-    const { capture } = await import('../../browser/capture');
-    (capture as any).mockRejectedValueOnce(new Error('browser crash'));
-    const handler = createSnapshotHandler(pool, sources);
+  it('returns 503 on render error', async () => {
+    (parseSnapshotRequest as any).mockReturnValue({ format: 'png', range: '1h', detail: 'standard', theme: 'dark', lang: 'en' });
+    (renderSnapshot as any).mockRejectedValueOnce(new Error('render crash'));
+    const handler = createSnapshotHandler(sources);
     const res = mockRes();
     await handler({ body: {} } as any, res);
     expect(res.status).toHaveBeenCalledWith(503);
-    expect(pool.endCapture).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({ error: 'Snapshot render failed' });
   });
 });

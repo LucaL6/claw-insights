@@ -1,4 +1,7 @@
 import type { DiagnosticRule, DiagnosticResult, SystemSnapshot } from './types.js';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('diagnostic-engine');
 
 export class DiagnosticEngine {
   constructor(private rules: DiagnosticRule[]) {}
@@ -19,7 +22,7 @@ export class DiagnosticEngine {
           });
         }
       } catch (err) {
-        console.warn(`[diagnostic] Rule "${rule.id}" threw:`, (err as Error).message);
+        log.warn({ err: err as Error, ruleId: rule.id }, 'rule evaluation threw');
         results.push({
           id: `rule-error:${rule.id}`,
           severity: 'warning',

@@ -1,0 +1,4 @@
+793fcc969389bcb0df1b0347d35a41d2cb7d8f0d:docs/plans/2025-02-23-auth-and-env-design.md:generic-api-key:157
+793fcc969389bcb0df1b0347d35a41d2cb7d8f0d:docs/plans/2025-02-23-auth-env-implementation.md:curl-auth-header:1161
+9529b581e34e66effb191c49c5b73cb8e0346cfa:README.md:curl-auth-header:67
+19991954a67a0232261867f883d24bce6a96d575:packages/server/src/__tests__/security.test.ts:generic-api-key:12

@@ -284,10 +284,10 @@ type OperationResult {
 
 """Options for the gateway doctor diagnostic"""
 input DoctorOptions {
-  channelCheck: Boolean
-  securityAudit: Boolean
-  deepProbe: Boolean
-  autoFix: Boolean
+  """Run deep scan for extra gateway installs"""
+  deep: Boolean
+  """Apply recommended repairs automatically"""
+  fix: Boolean
 }
 
 type Mutation {

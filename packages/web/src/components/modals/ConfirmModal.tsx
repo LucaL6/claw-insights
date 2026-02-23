@@ -71,7 +71,7 @@ export function ConfirmModal({
             {t('modal.cancel')}
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => onConfirm()}
             disabled={loading}
             className="px-4 py-2 text-xs rounded-lg font-medium disabled:opacity-50"
             style={buttonStyle}

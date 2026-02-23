@@ -13,9 +13,6 @@ const usage = `
 
   ⚠️  Standalone mode not yet implemented.
   Currently: cd into project && bun run dev
-
-  Plugin mode (future):
-    openclaw plugin install claw-insights
 `;
 
 console.log(usage.trim());

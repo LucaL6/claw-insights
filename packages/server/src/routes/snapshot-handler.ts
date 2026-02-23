@@ -1,15 +1,15 @@
 import type { Request, Response } from 'express';
-import { parseSnapshotRequest, RANGE_MAP, type SnapshotRequest } from '../services/snapshot-types.js';
+import { parseSnapshotRequest, RANGE_MAP } from '../services/snapshot-types.js';
 import { buildSnapshotData } from '../services/snapshot-service.js';
 import type { DataSources } from '../services/snapshot-types.js';
-import { renderSnapshot, VIEWPORT_WIDTH } from '../services/snapshot-template/index.js';
-import { capture as captureDesktop, captureFromHtml } from '../browser/capture.js';
-import type { BrowserPool } from '../browser/browser-pool.js';
-import { config } from '../config.js';
+import { renderSnapshot } from '../renderer/satori-renderer.js';
+import { createChildLogger } from '../logger.js';
 
-export function createSnapshotHandler(pool: BrowserPool, sources: DataSources) {
+const log = createChildLogger('snapshot');
+
+export function createSnapshotHandler(sources: DataSources) {
   return async (req: Request, res: Response) => {
-    let params: SnapshotRequest;
+    let params;
     try {
       params = parseSnapshotRequest(req.body ?? {});
     } catch (err) {
@@ -19,50 +19,34 @@ export function createSnapshotHandler(pool: BrowserPool, sources: DataSources) {
 
     const internalRange = RANGE_MAP[params.range];
 
-    // JSON format — no concurrency limit
     if (params.format === 'json') {
       const data = await buildSnapshotData(sources, { detail: params.detail, range: internalRange });
       res.json(data);
       return;
     }
 
-    // PNG format — concurrency limit
-    if (!pool.canCapture()) {
-      res.status(503).json({ error: 'Too many concurrent screenshot requests. Try again.' });
-      return;
-    }
-
-    pool.beginCapture();
     try {
-      let buffer: Buffer;
+      const data = await buildSnapshotData(sources, { detail: params.detail, range: internalRange });
+      const buffer = await renderSnapshot(data, {
+        detail: params.detail,
+        theme: params.theme,
+        lang: params.lang,
+      });
 
-      if (params.layout === 'mobile') {
-        const data = await buildSnapshotData(sources, { detail: params.detail, range: internalRange });
-        const html = renderSnapshot(data, { detail: params.detail, theme: params.theme, lang: params.lang });
-        buffer = await captureFromHtml(pool, { html, viewportWidth: VIEWPORT_WIDTH[params.detail] });
-      } else {
-        buffer = await captureDesktop(pool, {
-          section: params.section,
-          range: internalRange as 'ONE_HOUR' | 'SIX_HOUR' | 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR',
-          theme: params.theme,
-          lang: params.lang,
-          webPort: config.webPort,
-        });
-      }
-
-      const ts = new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-');
+      // Use local date+time matching what's displayed in the screenshot
+      const now = new Date();
+      const localDate = now.toLocaleDateString('sv-SE'); // YYYY-MM-DD
+      const localTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '-');
+      const ts = `${localDate}-${localTime}`;
+      const filename = `claw-insights-${params.detail}-${params.range}-${params.theme}-${ts}.png`;
       res.set('Content-Type', 'image/png');
-      res.set(
-        'Content-Disposition',
-        `attachment; filename="claw-insights-${params.layout}-${params.detail}-${ts}.png"`,
-      );
+      res.set('Content-Disposition', `attachment; filename="${filename}"`);
+      res.set('X-Filename', filename);
       res.set('Cache-Control', 'no-store');
       res.send(buffer);
     } catch (err) {
-      console.error('[snapshot] capture failed:', err);
-      res.status(503).json({ error: 'Snapshot capture failed' });
-    } finally {
-      pool.endCapture();
+      log.error({ err }, 'snapshot render failed');
+      res.status(503).json({ error: 'Snapshot render failed' });
     }
   };
 }

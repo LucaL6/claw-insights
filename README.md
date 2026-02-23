@@ -1,4 +1,7 @@
-# 🦞 Claw Insights
+# 💡 Claw Insights
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A522.5-green)](https://nodejs.org)
 
 Real-time monitoring dashboard for [OpenClaw](https://github.com/openclaw/openclaw) gateway.
 
@@ -12,64 +15,123 @@ Real-time monitoring dashboard for [OpenClaw](https://github.com/openclaw/opencl
 - **Dark / Light Theme** — CSS variable-based theming with toggle
 - **i18n** — English and Chinese (中文) with runtime switching
 
+## Quick Start
+
+**Prerequisites:** Node.js ≥22.5 (`nvm use` reads `.nvmrc`), OpenClaw gateway running
+
+### Install
+
+```bash
+git clone https://github.com/nicepkg/claw-insights.git
+cd claw-insights
+npm install && npm run build && npm link
+```
+
+> **npm global install** (`npm install -g claw-insights`) will be available after the first npm publish.
+
+### Start
+
+```bash
+claw-insights start
+```
+
+On first launch you'll see:
+
+```
+💡 Claw Insights v0.1.0
+🔑 http://127.0.0.1:4000/?token=abc123...
+```
+
+Open the token URL in your browser. The token is set as a cookie (valid 7 days).
+
+```bash
+claw-insights start --no-auth      # Disable authentication
+claw-insights start --port 8080    # Custom port
+claw-insights start --server-only  # API only, no web UI
+```
+
+### Verify
+
+1. **Health check:**
+   ```bash
+   curl http://localhost:4000/health
+   ```
+   Expected: `{"status":"ok","gateway":"connected","db":"ok",...}`
+
+2. **Dashboard:** Open the token URL — you should see live session data, metrics charts, and event logs.
+
+3. **GraphQL Playground:** Navigate to `http://localhost:4000/graphql` for the interactive API explorer.
+
+### Common Issues
+
+| Problem | Solution |
+|---------|----------|
+| `gateway: disconnected` | Ensure OpenClaw is running: `openclaw gateway start` |
+| `EADDRINUSE` | Port 4000 in use — set `CLAW_INSIGHTS_SERVER_PORT` |
+| Empty dashboard | Check OpenClaw has active sessions: `openclaw status` |
+| Token rejected | Clear cookies and re-open the token URL |
+
 ## Architecture
 
 ```
 claw-insights/
 ├── packages/
 │   ├── web/        React 19 + Vite + Tailwind + ECharts + urql
-│   ├── server/     Express + GraphQL Yoga + SQLite + Playwright
+│   ├── server/     Express + GraphQL Yoga + SQLite + Satori
 │   └── shared/     TypeScript types (codegen) shared between web & server
 ├── codegen.ts      GraphQL codegen config (3 targets: shared/server/web)
 ```
 
-**Server layers:** `routes/` (HTTP entry) → `schema/` (GraphQL) + `services/` (business logic) → `sources/` (data adapters) → `db/` (SQLite)
+**Data pipeline:** OpenClaw gateway → log tailing + CLI/RPC → SQLite → GraphQL → urql + WebSocket subscriptions → React
 
-See [`packages/server/README.md`](packages/server/README.md) for detailed server architecture.
+→ See [Architecture & Development](docs/architecture.md) for full design, dev setup, testing, and codegen.
 
-- **Data pipeline:** OpenClaw gateway → log tailing + CLI/RPC → SQLite → GraphQL → urql + WebSocket subscriptions → React
-- **Real-time:** `dataChanged` subscription triggers selective refetch (debounced)
-- **Codegen:** `schema.graphql` → typed resolvers (server) + typed operations (web) + shared types
+## Authentication
 
-## Quick Start
+Claw Insights uses URL token authentication (similar to Jupyter Notebook).
 
-```bash
-# Prerequisites: Node.js v22+, OpenClaw gateway running
-npm install
-./start.sh
-# Open http://localhost:3200
-```
+1. On startup, a token is generated (or use `CLAW_INSIGHTS_API_TOKEN`)
+2. The token URL is printed: `🔑 http://localhost:4000/?token=xxx`
+3. Open the URL → cookie is set → redirected to dashboard
+4. Cookie lasts 7 days
+
+Auth is disabled by default in development (`NODE_ENV=development`).
 
 ## Configuration
 
-Default ports:
+Priority: Environment variables > `~/.claw-insights/config.json` > NODE_ENV defaults.
 
-- Dashboard web: `3200`
-- GraphQL API: `4000`
+| Variable | Default | Description |
+|---|---|---|
+| `CLAW_INSIGHTS_SERVER_PORT` | `4000` | API server port |
+| `CLAW_INSIGHTS_WEB_PORT` | `3200` | Web UI port (dev only) |
+| `CLAW_INSIGHTS_API_TOKEN` | *(auto)* | Auth token (≥32 chars) |
+| `CLAW_INSIGHTS_NO_AUTH` | `false` | Disable auth |
+| `CLAW_INSIGHTS_DB` | `~/.claw-insights/metrics.db` | Database path |
+| `CLAW_INSIGHTS_RAW_RETENTION_DAYS` | `7` | Raw data retention (days) |
 
-The dashboard connects to the local OpenClaw gateway via RPC (auto-detected) and tails `~/.openclaw/logs/`.
+→ See [Configuration](docs/configuration.md) for all options, config file, and NODE_ENV defaults.
 
-## Plugin (Future)
+## Documentation
 
-```bash
-openclaw plugins install claw-insights
-```
+| Document | Description |
+|----------|-------------|
+| [Configuration](docs/configuration.md) | All env vars, config file, NODE_ENV defaults |
+| [Architecture & Development](docs/architecture.md) | System design + dev setup, testing, codegen |
+| [API Reference](docs/api-reference.md) | GraphQL + REST endpoint signatures |
+| [AGENTS.md](AGENTS.md) | AI agent skill index |
 
-See `packages/server/src/plugin.ts` for the plugin contract interface.
+## Contributing
 
-## Development
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup and workflow
+- Pull request guidelines
+- Code style and commit conventions
 
-```bash
-./start.sh               # Run all (server + web)
-npm run dev:server        # GraphQL API on :4000
-npm run dev:web           # Vite dev server on :3200
+## Security
 
-# Tests
-cd packages/server && npx vitest run
-cd packages/web && npx vitest run
-cd packages/web && npx playwright test  # E2E
-```
+See [SECURITY.md](SECURITY.md) for vulnerability reporting and security model.
 
 ## License
 
-MIT
+[MIT](LICENSE)

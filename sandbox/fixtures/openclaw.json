@@ -1,0 +1,7 @@
+{
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback"
+  }
+}

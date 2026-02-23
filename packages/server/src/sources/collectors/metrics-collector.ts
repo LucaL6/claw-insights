@@ -1,6 +1,9 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
 import { insertSample, insertModelSample } from '../../db/metric-queries.js';
 import { emitChange } from '../../events.js';
+import { createChildLogger } from '../../logger.js';
+
+const log = createChildLogger('metrics-collector');
 
 interface SessionLike {
   key: string;
@@ -113,10 +116,10 @@ export class MetricsCollector {
 
   start() {
     this.sampleFast();
-    this.sampleSlow().catch((err) => console.warn('[MetricsCollector] sampleSlow error:', err));
+    this.sampleSlow().catch((err) => log.warn({ err }, 'sampleSlow error'));
     this.fastTimer = setInterval(() => this.sampleFast(), this.fastIntervalMs);
     this.slowTimer = setInterval(() => {
-      this.sampleSlow().catch((err) => console.warn('[MetricsCollector] sampleSlow error:', err));
+      this.sampleSlow().catch((err) => log.warn({ err }, 'sampleSlow error'));
     }, this.slowIntervalMs);
   }
 

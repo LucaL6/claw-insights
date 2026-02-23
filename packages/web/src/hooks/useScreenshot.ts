@@ -25,9 +25,7 @@ export function useScreenshot() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          layout: 'desktop',
           detail: 'standard',
-          section: opts.section,
           range: rangeValue,
           theme: opts.theme,
           lang: opts.lang,
@@ -37,9 +35,19 @@ export function useScreenshot() {
       if (!res.ok) throw new Error('Snapshot failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
+
+      // Prefer server-provided filename; fallback to local construction
+      let filename = res.headers.get('X-Filename');
+      if (!filename) {
+        const now = new Date();
+        const date = now.toLocaleDateString('sv-SE'); // YYYY-MM-DD
+        const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '-');
+        filename = `claw-insights-standard-${rangeValue}-${opts.theme}-${date}-${time}.png`;
+      }
+
       const a = document.createElement('a');
       a.href = url;
-      a.download = `claw-insights-desktop-standard-${new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-')}.png`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {

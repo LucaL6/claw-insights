@@ -68,10 +68,8 @@
   "modal.doctor.title": "运行诊断",
   "modal.doctor.desc": "健康检查 + 自动修复",
   "modal.doctor.confirm": "运行检查",
-  "modal.doctor.channelCheck": "Channel 连通性检查",
-  "modal.doctor.securityAudit": "安全审计",
-  "modal.doctor.deepProbe": "深度探测",
-  "modal.doctor.autoFix": "自动修复",
+  "modal.doctor.deep": "深度扫描（额外 gateway 安装检测）",
+  "modal.doctor.fix": "自动应用修复建议",
   "modal.cancel": "取消",
   "modal.running": "执行中...",
 

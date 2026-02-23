@@ -85,10 +85,10 @@ export type DiagnosticsResult = {
 
 /** Options for the gateway doctor diagnostic */
 export type DoctorOptions = {
-  autoFix?: InputMaybe<Scalars['Boolean']['input']>;
-  channelCheck?: InputMaybe<Scalars['Boolean']['input']>;
-  deepProbe?: InputMaybe<Scalars['Boolean']['input']>;
-  securityAudit?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Run deep scan for extra gateway installs */
+  deep?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Apply recommended repairs automatically */
+  fix?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type EventCounts = {

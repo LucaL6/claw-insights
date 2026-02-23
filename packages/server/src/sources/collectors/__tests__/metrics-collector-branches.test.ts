@@ -2,6 +2,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { MetricsCollector } from '../metrics-collector.js';
 import { initDatabase } from '../../../db/init.js';
 
+const { mockWarn } = vi.hoisted(() => {
+  const mockWarn = vi.fn();
+  return { mockWarn };
+});
+vi.mock('../../../logger.js', () => ({
+  createChildLogger: () => ({
+    error: vi.fn(),
+    warn: mockWarn,
+    info: vi.fn(),
+  }),
+}));
+
 describe('MetricsCollector branch coverage', () => {
   it('start() calls sampleSlow and handles rejection', async () => {
     const db = initDatabase(':memory:');
@@ -24,21 +36,18 @@ describe('MetricsCollector branch coverage', () => {
       100_000,
     );
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
     // start() calls sampleFast() synchronously and sampleSlow().catch()
     collector.start();
 
     // Wait for sampleSlow rejection to be caught
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[MetricsCollector]'),
-      expect.any(Error),
+    expect(mockWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      'sampleSlow error',
     );
 
     collector.stop();
-    warnSpy.mockRestore();
     db.close();
   });
 

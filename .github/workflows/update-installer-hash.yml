@@ -1,0 +1,67 @@
+name: Update Installer Hash
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-hash:
+    name: Check OpenClaw Installer Hash
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare installer hash
+        id: check
+        run: |
+          CURRENT=$(grep -oP 'INSTALLER_SHA256:\s*"\K[a-f0-9]{64}' .github/workflows/sandbox.yml)
+          echo "Current pinned hash: $CURRENT"
+
+          curl -fsSL https://openclaw.ai/install.sh -o /tmp/install.sh
+          LATEST=$(sha256sum /tmp/install.sh | awk '{print $1}')
+          echo "Latest upstream hash: $LATEST"
+
+          if [ "$CURRENT" = "$LATEST" ]; then
+            echo "Hash unchanged"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Hash changed"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+            echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+            head -30 /tmp/install.sh
+            wc -c /tmp/install.sh
+          fi
+
+      - name: Update hash and create PR
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT: ${{ steps.check.outputs.current }}
+          LATEST: ${{ steps.check.outputs.latest }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+
+          sed -i "s/$CURRENT/$LATEST/" .github/workflows/sandbox.yml
+          sed -i "s/Last verified: [0-9-]*/Last verified: $DATE/" .github/workflows/sandbox.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="ci/update-installer-hash-$DATE"
+          git checkout -b "$BRANCH"
+          git add .github/workflows/sandbox.yml
+          git commit -m "ci: update OpenClaw installer hash ($DATE)"
+
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "ci: update OpenClaw installer SHA-256 hash" \
+            --body "The OpenClaw installer script has changed. Old: $CURRENT New: $LATEST. Please review before merging." \
+            --head "$BRANCH"

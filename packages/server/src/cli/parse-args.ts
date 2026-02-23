@@ -8,6 +8,7 @@ export interface CliArgs {
   port: number;
   webPort: number;
   serverOnly: boolean;
+  noAuth: boolean;
   gateway: string | undefined;
   logDir: string | undefined;
   lines: number | undefined;
@@ -33,6 +34,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       port: { type: 'string', short: 'p' },
       'web-port': { type: 'string' },
       'server-only': { type: 'boolean', default: false },
+      'no-auth': { type: 'boolean', default: false },
       gateway: { type: 'string' },
       'log-dir': { type: 'string' },
       lines: { type: 'string', short: 'n' },
@@ -47,6 +49,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     port: values.port ? parseInt(values.port as string, 10) : 4000,
     webPort: values['web-port'] ? parseInt(values['web-port'] as string, 10) : 3200,
     serverOnly: (values['server-only'] as boolean) ?? false,
+    noAuth: (values['no-auth'] as boolean) ?? false,
     gateway: values.gateway as string | undefined,
     logDir: values['log-dir'] as string | undefined,
     lines: values.lines ? parseInt(values.lines as string, 10) : undefined,

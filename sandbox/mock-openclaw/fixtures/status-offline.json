@@ -1,0 +1,31 @@
+{
+  "heartbeat": { "defaultAgentId": "main", "agents": [] },
+  "channelSummary": [],
+  "queuedSystemEvents": [],
+  "sessions": { "paths": [], "count": 0, "defaults": null, "recent": [] },
+  "os": { "platform": "linux", "arch": "x64", "release": "6.1.0", "label": "linux 6.1 (x64)" },
+  "update": null,
+  "updateChannel": "stable",
+  "updateChannelSource": "default",
+  "memory": null,
+  "memoryPlugin": null,
+  "gateway": {
+    "mode": "local",
+    "url": "ws://127.0.0.1:18789",
+    "urlSource": "local loopback",
+    "misconfigured": false,
+    "reachable": false,
+    "connectLatencyMs": null,
+    "self": null,
+    "error": "ECONNREFUSED"
+  },
+  "gatewayService": {
+    "label": "systemd",
+    "installed": true,
+    "loadedText": "loaded",
+    "runtimeShort": "stopped"
+  },
+  "nodeService": null,
+  "agents": [],
+  "securityAudit": { "summary": { "critical": 0, "warn": 0, "info": 0 } }
+}

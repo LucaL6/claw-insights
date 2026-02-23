@@ -1,4 +1,7 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('data-retention');
 
 export interface RetentionConfig {
   rawRetentionDays: number; // 0 = permanent
@@ -62,10 +65,10 @@ export class DataRetention {
         this.aggregateHour(hour);
       }
       this.db.exec('COMMIT');
-      console.log(`[DataRetention] Aggregated ${hours.length} hour(s)`);
+      log.info({ hours: hours.length }, 'aggregated hours');
     } catch (err) {
       this.db.exec('ROLLBACK');
-      console.error('[DataRetention] Aggregation failed:', err);
+      log.error({ err }, 'aggregation failed');
     }
   }
 

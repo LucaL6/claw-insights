@@ -1,6 +1,9 @@
 import { readFileSync, watch, type FSWatcher } from 'fs';
 import type { CronJob } from '@claw-insights/shared';
 import { config } from '../../config.js';
+import { createChildLogger } from '../../logger.js';
+
+const log = createChildLogger('cron-reader');
 
 interface RawJob {
   id: string;
@@ -52,7 +55,7 @@ export class CronReader {
       const data = JSON.parse(readFileSync(this.filePath, 'utf-8')) as RawCronFile;
       this.jobs = data.jobs.map(parseJob);
     } catch (err) {
-      console.error('[CronReader] Failed to read cron jobs:', err);
+      log.error({ err }, 'failed to read cron jobs');
     }
   }
 

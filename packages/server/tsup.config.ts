@@ -8,5 +8,5 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   splitting: true,
-  external: [...nodeExternals, 'node:sqlite', 'express', 'graphql', 'graphql-yoga', 'playwright'],
+  external: [...nodeExternals, 'node:sqlite', 'express', 'graphql', 'graphql-yoga', '@resvg/resvg-js'],
 });

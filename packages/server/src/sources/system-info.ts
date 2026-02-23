@@ -1,6 +1,9 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { config, CLI_ENV } from '../config.js';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('system-info');
 
 const execFileAsync = promisify(execFile);
 
@@ -136,7 +139,7 @@ export async function getUsageCost(): Promise<UsageCost> {
     costCache = { data, ts: Date.now() };
     return data;
   } catch (err) {
-    console.warn('[usage-cost] CLI call failed:', (err as Error).message);
+    log.warn({ err: err as Error }, 'usage-cost CLI call failed');
     return (
       costCache?.data ?? {
         totalCost: 0,

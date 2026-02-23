@@ -16,7 +16,7 @@ export function buildUptimeOption(data: UptimeBucket[]): EChartsOption {
   return {
     grid: { top: 4, right: 12, bottom: 16, left: 36, containLabel: false },
     xAxis: buildCategoryXAxis(labels, {
-      axisLabel: { interval: undefined as any, fontSize: 8 },
+      axisLabel: { interval: 0, fontSize: 8 },
       axisLine: { show: false },
       axisTick: { show: false },
     }),

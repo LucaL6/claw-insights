@@ -1,14 +1,14 @@
 import type { Express } from 'express';
 import type { AppContext } from '../context.js';
-import type { BrowserPool } from '../browser/browser-pool.js';
 import { createSnapshotHandler } from './snapshot-handler.js';
 import { getGatewayStatus } from '../sources/gateway-cli.js';
 import { getSystemMetrics } from '../sources/system-info.js';
 import { queryEvents } from '../db/event-queries.js';
 import type { DataSources } from '../services/snapshot-types.js';
+import type { MetricsRangeKey } from '../db/query-utils.js';
 import { authMiddleware } from '../middleware/auth.js';
 
-export function registerSnapshot(app: Express, ctx: AppContext, browserPool: BrowserPool): void {
+export function registerSnapshot(app: Express, ctx: AppContext): void {
   const sources: DataSources = {
     getGateway: async () => {
       const s = await getGatewayStatus();
@@ -20,9 +20,13 @@ export function registerSnapshot(app: Express, ctx: AppContext, browserPool: Bro
       ctx.sessionReader.attachSubAgents(ctx.spawnTracker.getParentChildMap());
       return ctx.sessionReader.getSessions();
     },
-    getMetrics: (range: string) => ctx.aggregator.getMetrics(undefined, range as any),
+    getMetrics: (range: string) => {
+      const VALID_RANGES = new Set(['ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TWENTY_FOUR_HOUR']);
+      const validated: MetricsRangeKey = VALID_RANGES.has(range) ? range as MetricsRangeKey : 'TWENTY_FOUR_HOUR';
+      return ctx.aggregator.getMetrics(undefined, validated) as ReturnType<DataSources['getMetrics']>;
+    },
     getRecentErrors: (limit: number) => queryEvents(ctx.db, { types: ['error', 'warning'], limit }),
   };
 
-  app.post('/api/snapshot', authMiddleware, createSnapshotHandler(browserPool, sources));
+  app.post('/api/snapshot', authMiddleware, createSnapshotHandler(sources));
 }

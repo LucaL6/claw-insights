@@ -30,6 +30,7 @@ describe('useScreenshot', () => {
     (globalThis.fetch as any).mockResolvedValue({
       ok: true,
       blob: async () => mockBlob,
+      headers: new Headers({ 'X-Filename': 'claw-insights-standard-1h-dark-2026-02-23-13-15.png' }),
     });
 
     const clickSpy = vi.fn();
@@ -52,7 +53,7 @@ describe('useScreenshot', () => {
   });
 
   it('maps range to short form', async () => {
-    (globalThis.fetch as any).mockResolvedValue({ ok: true, blob: async () => new Blob() });
+    (globalThis.fetch as any).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() });
     const origCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: any, options?: any) => {
       if (String(tagName).toLowerCase() === 'a') return { click: vi.fn(), href: '', download: '' } as any;
@@ -69,7 +70,7 @@ describe('useScreenshot', () => {
   });
 
   it('uses 24h fallback for unknown range', async () => {
-    (globalThis.fetch as any).mockResolvedValue({ ok: true, blob: async () => new Blob() });
+    (globalThis.fetch as any).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() });
     const origCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: any, options?: any) => {
       if (String(tagName).toLowerCase() === 'a') return { click: vi.fn(), href: '', download: '' } as any;

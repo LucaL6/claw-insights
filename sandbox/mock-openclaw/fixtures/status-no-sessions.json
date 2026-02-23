@@ -1,0 +1,62 @@
+{
+  "heartbeat": {
+    "defaultAgentId": "main",
+    "agents": [
+      { "agentId": "main", "enabled": true, "every": "1h", "everyMs": 3600000 }
+    ]
+  },
+  "channelSummary": [
+    "Telegram: configured",
+    "  - default (token:config)",
+    "Slack: configured",
+    "  - default (bot:config, app:config)"
+  ],
+  "queuedSystemEvents": [],
+  "sessions": {
+    "paths": ["/home/testuser/.openclaw/agents/main/sessions/sessions.json"],
+    "count": 0,
+    "defaults": {
+      "model": "claude-sonnet-4-20250514",
+      "contextTokens": 200000
+    },
+    "recent": []
+  },
+  "os": { "platform": "linux", "arch": "x64", "release": "6.1.0", "label": "linux 6.1 (x64)" },
+  "update": {
+    "root": "/home/testuser/.npm-global/lib/node_modules/openclaw",
+    "installKind": "package",
+    "packageManager": "npm",
+    "deps": { "manager": "npm", "status": "up-to-date" },
+    "registry": { "latestVersion": "2026.2.21-2" }
+  },
+  "updateChannel": "stable",
+  "updateChannelSource": "default",
+  "memory": null,
+  "memoryPlugin": null,
+  "gateway": {
+    "mode": "local",
+    "url": "ws://127.0.0.1:18789",
+    "urlSource": "local loopback",
+    "misconfigured": false,
+    "reachable": true,
+    "connectLatencyMs": 8,
+    "self": {
+      "host": "sandbox-host",
+      "ip": "198.51.100.1",
+      "version": "2026.2.21-2",
+      "platform": "linux 6.1"
+    },
+    "error": null
+  },
+  "gatewayService": {
+    "label": "systemd",
+    "installed": true,
+    "loadedText": "loaded",
+    "runtimeShort": "running (pid 1234, state active)"
+  },
+  "nodeService": null,
+  "agents": [
+    { "id": "main", "workspace": "/home/testuser/openclaw" }
+  ],
+  "securityAudit": { "summary": { "critical": 0, "warn": 1, "info": 3 } }
+}

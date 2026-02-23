@@ -30,7 +30,7 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   // Check for existing running instance
   if (pidFile.isAlive()) {
     const pid = pidFile.read();
-    console.error(`🦞 Claw Insights is already running (PID ${pid}). Use 'claw-insights restart' to restart.`);
+    console.error(`💡 Claw Insights is already running (PID ${pid}). Use 'claw-insights restart' to restart.`);
     process.exit(1);
   }
 
@@ -51,6 +51,7 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
         port: args.port,
         webPort: args.webPort,
         serverOnly: args.serverOnly,
+        noAuth: args.noAuth,
         gateway: args.gateway,
         logDir: args.logDir,
       },
@@ -69,6 +70,9 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
 
   if (args.serverOnly) {
     childEnv.CLAW_INSIGHTS_SERVER_ONLY = 'true';
+  }
+  if (args.noAuth) {
+    childEnv.CLAW_INSIGHTS_NO_AUTH = 'true';
   }
   if (args.gateway) {
     childEnv.CLAW_INSIGHTS_GATEWAY = args.gateway;
@@ -95,7 +99,7 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   pidFile.write(child.pid);
 
   const mode = args.serverOnly ? 'server-only' : 'full';
-  console.log(`🦞 Claw Insights started (PID ${child.pid}, mode: ${mode}, port: ${args.port})`);
+  console.log(`💡 Claw Insights started (PID ${child.pid}, mode: ${mode}, port: ${args.port})`);
 }
 
 export function daemonStop(): void {
@@ -104,19 +108,19 @@ export function daemonStop(): void {
   const pid = pidFile.read();
 
   if (pid === null) {
-    console.log('🦞 Claw Insights is not running.');
+    console.log('💡 Claw Insights is not running.');
     return;
   }
 
   if (!pidFile.isAlive()) {
-    console.log('🦞 Stale PID file found. Cleaning up.');
+    console.log('💡 Stale PID file found. Cleaning up.');
     pidFile.remove();
     return;
   }
 
   // Send SIGTERM
   process.kill(pid, 'SIGTERM');
-  console.log(`🦞 Stopping Claw Insights (PID ${pid})...`);
+  console.log(`💡 Stopping Claw Insights (PID ${pid})...`);
 
   // Wait up to 5 seconds for graceful shutdown
   const deadline = Date.now() + 5000;
@@ -124,7 +128,7 @@ export function daemonStop(): void {
     if (!pidFile.isAlive()) {
       clearInterval(poll);
       pidFile.remove();
-      console.log('🦞 Claw Insights stopped.');
+      console.log('💡 Claw Insights stopped.');
       return;
     }
     if (Date.now() > deadline) {
@@ -135,7 +139,7 @@ export function daemonStop(): void {
         // already dead
       }
       pidFile.remove();
-      console.log('🦞 Claw Insights force-killed.');
+      console.log('💡 Claw Insights force-killed.');
     }
   }, 200);
 }
@@ -146,7 +150,7 @@ export async function daemonStatus(): Promise<void> {
   const pid = pidFile.read();
 
   if (pid === null || !pidFile.isAlive()) {
-    console.log('🦞 Claw Insights is not running.');
+    console.log('💡 Claw Insights is not running.');
     if (pid !== null) pidFile.cleanStale();
     return;
   }
@@ -166,7 +170,7 @@ export async function daemonStatus(): Promise<void> {
   try {
     const res = await fetch(`http://127.0.0.1:${port}/health`);
     const health = (await res.json()) as Record<string, unknown>;
-    console.log(`🦞 Claw Insights is running`);
+    console.log(`💡 Claw Insights is running`);
     console.log(`   PID:     ${pid}`);
     console.log(`   Port:    ${port}`);
     console.log(`   Mode:    ${health.mode ?? 'unknown'}`);
@@ -174,7 +178,7 @@ export async function daemonStatus(): Promise<void> {
     console.log(`   Gateway: ${health.gateway ?? 'unknown'}`);
     console.log(`   DB:      ${health.db ?? 'unknown'}`);
   } catch {
-    console.log(`🦞 Claw Insights is running (PID ${pid}), but health check failed on :${port}`);
+    console.log(`💡 Claw Insights is running (PID ${pid}), but health check failed on :${port}`);
   }
 }
 
@@ -236,6 +240,7 @@ export async function daemonRestart(args: CliArgs, serverEntry: string): Promise
       const saved = JSON.parse(readFileSync(paths.daemonJson, 'utf-8'));
       if (!args.port || args.port === 4000) args.port = saved.port ?? 4000;
       if (!args.serverOnly) args.serverOnly = saved.serverOnly ?? false;
+      if (!args.noAuth) args.noAuth = saved.noAuth ?? false;
       if (!args.gateway) args.gateway = saved.gateway;
     } catch {
       /* ignore */

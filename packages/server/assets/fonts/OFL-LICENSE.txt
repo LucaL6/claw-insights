@@ -1,0 +1,6 @@
+This directory contains fonts licensed under the SIL Open Font License (OFL) v1.1.
+
+- IBM Plex Sans: Copyright © 2017 IBM Corp. https://github.com/IBM/plex
+- JetBrains Mono: Copyright © 2020 JetBrains s.r.o. https://github.com/JetBrains/JetBrainsMono
+
+Full OFL text: https://scripts.sil.org/OFL

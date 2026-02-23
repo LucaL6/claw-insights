@@ -2,6 +2,9 @@ import { statSync, watch, openSync, readSync, closeSync, type FSWatcher } from '
 import { EventEmitter } from 'events';
 import type { LogEntry, LogLevel } from '@claw-insights/shared';
 import { config } from '../../config.js';
+import { createChildLogger } from '../../logger.js';
+
+const log = createChildLogger('log-tailer');
 
 const SENSITIVE_PATTERN = /(?:token|key|secret|password|authorization)[=:]\s*.+/gi;
 
@@ -123,7 +126,7 @@ export class LogTailer extends EventEmitter {
       const stat = statSync(this.currentFile);
       // File truncated or rotated — reset offset
       if (stat.size < this.offset) {
-        console.warn('[LogTailer] File truncated/rotated, resetting offset');
+        log.warn('file truncated/rotated, resetting offset');
         this.offset = 0;
       }
       if (stat.size === this.offset) return;
@@ -150,7 +153,7 @@ export class LogTailer extends EventEmitter {
         }
       }
     } catch (err) {
-      console.warn('[LogTailer] read error:', (err as Error).message);
+      log.warn({ err: err as Error }, 'read error');
     }
   }
 

@@ -32,26 +32,24 @@ describe('DoctorModal', () => {
   it('renders checkboxes with correct defaults', () => {
     const { container } = render(<DoctorModal onClose={vi.fn()} />);
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-    expect(checkboxes).toHaveLength(4);
-    expect((checkboxes[0] as HTMLInputElement).checked).toBe(true);
-    expect((checkboxes[1] as HTMLInputElement).checked).toBe(true);
-    expect((checkboxes[2] as HTMLInputElement).checked).toBe(false);
-    expect((checkboxes[3] as HTMLInputElement).checked).toBe(false);
+    expect(checkboxes).toHaveLength(2);
+    expect((checkboxes[0] as HTMLInputElement).checked).toBe(false); // deep
+    expect((checkboxes[1] as HTMLInputElement).checked).toBe(false); // fix
   });
 
-  it('toggles autoFix checkbox', () => {
+  it('toggles fix checkbox', () => {
     const { container } = render(<DoctorModal onClose={vi.fn()} />);
-    const autoFix = container.querySelectorAll('input[type="checkbox"]')[3] as HTMLInputElement;
-    expect(autoFix.checked).toBe(false);
-    fireEvent.click(autoFix);
-    expect(autoFix.checked).toBe(true);
+    const fix = container.querySelectorAll('input[type="checkbox"]')[1] as HTMLInputElement;
+    expect(fix.checked).toBe(false);
+    fireEvent.click(fix);
+    expect(fix.checked).toBe(true);
   });
 
   it('calls run() with options on confirm', () => {
     const { getByText } = render(<DoctorModal onClose={vi.fn()} />);
     fireEvent.click(getByText('modal.doctor.confirm'));
     expect(mockRun).toHaveBeenCalledWith({
-      options: { channelCheck: true, securityAudit: true, deepProbe: false, autoFix: false },
+      options: { deep: false, fix: false },
     });
   });
 });

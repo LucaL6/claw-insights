@@ -84,4 +84,14 @@ describe('parseCliArgs', () => {
     const result = parseCliArgs(['--log-dir', '/tmp/logs']);
     expect(result.logDir).toBe('/tmp/logs');
   });
+
+  it('parses --no-auth flag', () => {
+    const args = parseCliArgs(['start', '--no-auth']);
+    expect(args.noAuth).toBe(true);
+  });
+
+  it('defaults noAuth to false', () => {
+    const args = parseCliArgs(['start']);
+    expect(args.noAuth).toBe(false);
+  });
 });

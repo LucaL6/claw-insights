@@ -124,6 +124,10 @@ export async function buildSnapshotData(
 
   if (detail === 'standard') {
     result.sessions = activeSorted.slice(0, 8).map((s) => buildSession(s, false));
+    const errResult = sources.getRecentErrors(3);
+    result.recentErrors = Array.isArray(errResult)
+      ? errResult
+      : ((errResult as unknown as { events: typeof result.recentErrors }).events ?? []);
   }
 
   if (detail === 'full') {

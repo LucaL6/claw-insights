@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Mock OpenClaw CLI for sandbox testing
+# Responds to `status --json` with fixture data based on MOCK_SCENARIO env var.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FIXTURES_DIR="$SCRIPT_DIR/../fixtures"
+SCENARIO="${MOCK_SCENARIO:-healthy}"
+
+# Parse command
+CMD="${1:-}"
+shift || true
+
+case "$CMD" in
+  status)
+    # Check for --json flag
+    JSON_FLAG=false
+    for arg in "$@"; do
+      [ "$arg" = "--json" ] && JSON_FLAG=true
+    done
+
+    FIXTURE_FILE="$FIXTURES_DIR/status-${SCENARIO}.json"
+    if [ ! -f "$FIXTURE_FILE" ]; then
+      echo "Error: unknown scenario '$SCENARIO' (no fixture at $FIXTURE_FILE)" >&2
+      exit 1
+    fi
+
+    if [ "$JSON_FLAG" = true ]; then
+      cat "$FIXTURE_FILE"
+    else
+      echo "OpenClaw gateway is running (mock: scenario=$SCENARIO)"
+    fi
+    ;;
+
+  gateway)
+    SUB="${1:-}"
+    case "$SUB" in
+      status)
+        if [ "$SCENARIO" = "offline" ]; then
+          echo "Gateway is not running"
+          exit 1
+        else
+          echo "Gateway is running (mock: scenario=$SCENARIO)"
+        fi
+        ;;
+      usage-cost)
+        cat <<'USAGE_EOF'
+Latest day: 2026-02-22  $1.04 · 0.21m tokens
+Total: $42.50 · 8.30m tokens
+USAGE_EOF
+        ;;
+      *)
+        echo "mock-openclaw: gateway $SUB not implemented" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
+  --version|-v)
+    echo "2026.2.21-2 (mock)"
+    ;;
+
+  --help|-h)
+    echo "mock-openclaw — sandbox testing CLI"
+    echo "Scenarios: healthy, offline, no-sessions, multi-channel"
+    echo "Set MOCK_SCENARIO=<name> to switch."
+    ;;
+
+  *)
+    echo "mock-openclaw: command '$CMD' not implemented" >&2
+    exit 1
+    ;;
+esac

@@ -1,7 +1,11 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
+import { readFileSync, readdirSync, readlinkSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { emitChange } from '../events.js';
 import { config, CLI_ENV } from '../config.js';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('gateway-cli');
 
 const execFileAsync = promisify(execFile);
 
@@ -46,7 +50,7 @@ async function execCli(args: string): Promise<string> {
     });
     return stdout;
   } catch (err) {
-    console.warn('[gateway-cli] CLI call failed:', args, (err as Error).message);
+    log.warn({ err: err as Error, args }, 'CLI call failed');
     return '';
   }
 }
@@ -77,6 +81,99 @@ export function parseChannels(summary: string[]): ChannelInfo[] {
   return channels;
 }
 
+export function formatUptime(etimeStr: string): string {
+  // Parse `ps -o etime=` output: [[DD-]HH:]MM:SS
+  const parts = etimeStr.trim().replace(/-/g, ':').split(':').map(Number);
+  let secs = 0;
+  if (parts.length === 4) secs = parts[0] * 86400 + parts[1] * 3600 + parts[2] * 60 + parts[3];
+  else if (parts.length === 3) secs = parts[0] * 3600 + parts[1] * 60 + parts[2];
+  else if (parts.length === 2) secs = parts[0] * 60 + parts[1];
+
+  const d = Math.floor(secs / 86400);
+  const h = Math.floor((secs % 86400) / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+/**
+ * Find PID listening on a given TCP port via /proc/net/tcp + /proc/PID/fd.
+ * Works on Linux without lsof/fuser/ss. Returns null on non-Linux or failure.
+ */
+function findPidByPort(port: number): number | null {
+  try {
+    const hexPort = port.toString(16).toUpperCase().padStart(4, '0');
+    const inodes = new Set<string>();
+    // Scan both IPv4 and IPv6 TCP sockets
+    for (const tcpFile of ['/proc/net/tcp', '/proc/net/tcp6']) {
+      try {
+        const tcp = readFileSync(tcpFile, 'utf-8');
+        for (const line of tcp.split('\n').slice(1)) {
+          const cols = line.trim().split(/\s+/);
+          if (!cols[1]) continue;
+          const localPort = cols[1].split(':').pop();
+          if (localPort === hexPort && cols[3] === '0A') { // 0A = LISTEN
+            inodes.add(cols[9]); // inode
+          }
+        }
+      } catch { /* file not present */ }
+    }
+    if (inodes.size === 0) return null;
+
+    // Scan /proc/*/fd to find which PID owns the socket inode
+    const procs = readdirSync('/proc').filter(d => /^\d+$/.test(d));
+    for (const p of procs) {
+      try {
+        const fds = readdirSync(`/proc/${p}/fd`);
+        for (const fd of fds) {
+          try {
+            const link = readlinkSync(`/proc/${p}/fd/${fd}`);
+            const m = link.match(/socket:\[(\d+)\]/);
+            if (m && inodes.has(m[1])) return parseInt(p, 10);
+          } catch { /* permission denied */ }
+        }
+      } catch { /* process gone or no access */ }
+    }
+  } catch { /* /proc not available */ }
+  return null;
+}
+
+function getUptimeFromPid(pid: number | null): string {
+  if (!pid) return 'unknown';
+
+  // Method 1: ps command (macOS + Linux with procps)
+  try {
+    const raw = execFileSync('ps', ['-o', 'etime=', '-p', String(pid)], {
+      timeout: 2000, encoding: 'utf-8',
+    });
+    return formatUptime(raw);
+  } catch { /* ps not available or failed */ }
+
+  // Method 2: /proc fallback (Linux without procps)
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf-8');
+    // Skip comm field (may contain spaces) by finding closing paren
+    const afterComm = stat.slice(stat.lastIndexOf(') ') + 2);
+    const fields = afterComm.split(' ');
+    const startTicks = Number(fields[19]); // field 22 minus 2 (pid + comm skipped), 0-indexed = 19
+    const uptimeRaw = readFileSync('/proc/uptime', 'utf-8');
+    const bootSeconds = parseFloat(uptimeRaw.split(' ')[0]);
+    const clkTck = 100;
+    const processStartSec = startTicks / clkTck;
+    const elapsedSec = Math.floor(bootSeconds - processStartSec);
+    if (elapsedSec < 0) return 'unknown';
+    const h = Math.floor(elapsedSec / 3600);
+    const m = Math.floor((elapsedSec % 3600) / 60);
+    const s = elapsedSec % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  } catch { /* /proc not available (macOS) */ }
+
+  return 'unknown';
+}
+
 export function parseStatus(json: string, version: string): ParsedStatus {
   try {
     const d = JSON.parse(json);
@@ -86,8 +183,13 @@ export function parseStatus(json: string, version: string): ParsedStatus {
     const update = d?.update ?? {};
 
     const pidMatch = svc?.runtimeShort?.match(/pid\s+(\d+)/);
-    const pid = pidMatch ? Number(pidMatch[1]) : null;
+    let pid = pidMatch ? Number(pidMatch[1]) : null;
     const running = Boolean(gw?.reachable) || svc?.runtimeShort?.includes('running');
+
+    // Fallback: find gateway PID via /proc/net/tcp when systemctl unavailable
+    if (!pid && running) {
+      pid = findPidByPort(gw?.port ?? 18789);
+    }
 
     const latest = update?.registry?.latestVersion ?? update?.latestVersion ?? null;
     const updateAvailable = latest && latest !== version ? latest : null;
@@ -102,7 +204,7 @@ export function parseStatus(json: string, version: string): ParsedStatus {
       pid,
       version: version ?? 'unknown',
       updateAvailable,
-      uptime: 'unknown',
+      uptime: getUptimeFromPid(pid),
       startedAt: null,
       channels: parseChannels(channelSummary),
       connectLatencyMs,
