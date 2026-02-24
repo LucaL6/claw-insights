@@ -87,8 +87,8 @@ describe('Aggregator', () => {
     const bucketWithData = m.buckets.find((b: any) => b.sessions > 0);
     expect(bucketWithData).toBeDefined();
     expect(bucketWithData!.sessions).toBe(7);
-    expect(bucketWithData!.tokensK).toBe(250); // MAX(250) - MIN(0) = 250
-    expect(m.totalTokensK).toBe(250);
+    expect(bucketWithData!.tokensK).toBe(12); // SUM(token_delta_k) = 0 + 12
+    expect(m.totalTokensK).toBe(12);
     cleanup();
   });
 

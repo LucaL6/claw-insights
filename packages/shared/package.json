@@ -15,5 +15,19 @@
   },
   "version": "0.1.0",
   "description": "Claw Insights shared types and GraphQL schema",
-  "author": "Claw Insights Contributors"
+  "author": "Luca Liao",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LucaL6/claw-insights.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LucaL6/claw-insights/issues"
+  },
+  "homepage": "https://github.com/LucaL6/claw-insights#readme",
+  "keywords": [
+    "openclaw",
+    "types",
+    "graphql",
+    "schema"
+  ]
 }

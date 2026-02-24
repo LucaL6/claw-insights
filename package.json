@@ -71,5 +71,13 @@
     "analytics",
     "ai-agent"
   ],
-  "author": "Claw Insights Contributors"
+  "author": "Luca Liao",
+  "files": [
+    "bin/",
+    "packages/server/dist/",
+    "packages/web/dist/",
+    "packages/shared/src/",
+    "LICENSE",
+    "README.md"
+  ]
 }

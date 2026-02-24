@@ -104,3 +104,55 @@ describe('Query routing — hourly fallback', () => {
     expect(results[0].sessions).toBe(3);
   });
 });
+
+describe('Raw table — SUM(token_delta_k) aggregation', () => {
+  function insertRawSample(
+    db: Database,
+    ts: string,
+    totalTokensK: number,
+    tokenDeltaK: number,
+    sessions = 1,
+  ) {
+    db.prepare(
+      `INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb)
+       VALUES (?, ?, ?, ?, 0, 0, 0, 0)`,
+    ).run(ts, sessions, totalTokensK, tokenDeltaK);
+  }
+
+  function insertRawModelSample(db: Database, ts: string, model: string, totalTokensK: number, tokenDeltaK: number) {
+    db.prepare(
+      `INSERT INTO model_token_samples (timestamp, model, total_tokens_k, token_delta_k) VALUES (?, ?, ?, ?)`,
+    ).run(ts, model, totalTokensK, tokenDeltaK);
+  }
+
+  it('getBucketedSampledTokens uses SUM(token_delta_k) for raw data', () => {
+    insertRawSample(db, '2026-02-10T14:01:00Z', 100, 5);
+    insertRawSample(db, '2026-02-10T14:05:00Z', 108, 8);
+    const results = getBucketedSampledTokens(db, '2026-02-10T14:00:00Z', '2026-02-10T14:15:00Z', 15, false);
+    expect(results.length).toBe(1);
+    expect(results[0].tokensK).toBeCloseTo(13); // 5 + 8, not MAX-MIN (108-100=8)
+  });
+
+  it('getBucketedModelTokens uses SUM(token_delta_k) for raw data', () => {
+    insertRawModelSample(db, '2026-02-10T14:01:00Z', 'claude', 80, 3);
+    insertRawModelSample(db, '2026-02-10T14:05:00Z', 'claude', 88, 8);
+    const results = getBucketedModelTokens(db, '2026-02-10T14:00:00Z', '2026-02-10T14:15:00Z', 15, false);
+    expect(results.length).toBe(1);
+    expect(results[0].tokensK).toBeCloseTo(11); // 3 + 8
+  });
+
+  it('getRangeTokensK uses SUM(token_delta_k) for raw data', () => {
+    insertRawSample(db, '2026-02-10T14:01:00Z', 100, 5);
+    insertRawSample(db, '2026-02-10T14:31:00Z', 120, 20);
+    insertRawSample(db, '2026-02-10T15:01:00Z', 130, 10);
+    const total = getRangeTokensK(db, '2026-02-10T14:00:00Z', '2026-02-10T16:00:00Z', false);
+    expect(total).toBeCloseTo(35); // 5 + 20 + 10
+  });
+
+  it('single sample in bucket still reports its delta (not 0)', () => {
+    insertRawSample(db, '2026-02-10T14:05:00Z', 100, 7);
+    const results = getBucketedSampledTokens(db, '2026-02-10T14:00:00Z', '2026-02-10T14:15:00Z', 15, false);
+    expect(results.length).toBe(1);
+    expect(results[0].tokensK).toBeCloseTo(7);
+  });
+});

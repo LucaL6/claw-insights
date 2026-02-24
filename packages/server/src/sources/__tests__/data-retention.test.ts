@@ -50,6 +50,7 @@ function insertSamplesForHour(
   overrides: Partial<{
     active_sessions: number;
     total_tokens_k: number;
+    token_delta_k: number;
     cost_today: number;
     cpu: number;
     memory_mb: number;
@@ -59,7 +60,7 @@ function insertSamplesForHour(
   const step = Math.floor(3_500_000 / Math.max(count, 1)); // stay within the hour
   const insert = db.prepare(`
     INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb)
-    VALUES (?, ?, ?, 0, ?, 0, ?, ?)
+    VALUES (?, ?, ?, ?, ?, 0, ?, ?)
   `);
   for (let i = 0; i < count; i++) {
     const ts = new Date(baseTime + i * step).toISOString();
@@ -67,6 +68,7 @@ function insertSamplesForHour(
       ts,
       overrides.active_sessions ?? 2,
       (overrides.total_tokens_k ?? 100) + i * 10,
+      overrides.token_delta_k ?? 10,
       (overrides.cost_today ?? 5) + i * 0.1,
       overrides.cpu ?? 10,
       overrides.memory_mb ?? 256,
@@ -82,9 +84,10 @@ function insertModelSamples(
 ) {
   const baseTime = new Date(hourISO).getTime() + 1000;
   const step = Math.floor(3_500_000 / Math.max(tokenValues.length, 1));
-  const insert = db.prepare(`INSERT INTO model_token_samples (timestamp, model, total_tokens_k) VALUES (?, ?, ?)`);
+  const insert = db.prepare(`INSERT INTO model_token_samples (timestamp, model, total_tokens_k, token_delta_k) VALUES (?, ?, ?, ?)`);
   for (let i = 0; i < tokenValues.length; i++) {
-    insert.run(new Date(baseTime + i * step).toISOString(), model, tokenValues[i]);
+    const delta = i === 0 ? 0 : tokenValues[i] - tokenValues[i - 1];
+    insert.run(new Date(baseTime + i * step).toISOString(), model, tokenValues[i], delta);
   }
 }
 
@@ -232,17 +235,17 @@ describe('DataRetention', () => {
     cleanup();
   });
 
-  it('computes token_delta_k as max - min of total_tokens_k', () => {
+  it('computes token_delta_k as SUM of token_delta_k', () => {
     const { db, retention, cleanup } = setup();
     const hour = hoursAgo(3);
 
-    // total_tokens_k goes: 100, 110, 120, 130
-    insertSamplesForHour(db, hour, 4, { total_tokens_k: 100 });
+    // 4 samples each with token_delta_k=10 → SUM=40
+    insertSamplesForHour(db, hour, 4, { total_tokens_k: 100, token_delta_k: 10 });
 
     retention.runOnce();
 
     const row = db.prepare('SELECT token_delta_k FROM hourly_metric_samples').get() as any;
-    expect(row.token_delta_k).toBe(30);
+    expect(row.token_delta_k).toBe(40);
     cleanup();
   });
 });

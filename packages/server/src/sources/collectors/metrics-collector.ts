@@ -41,6 +41,8 @@ export class MetricsCollector {
   private lastTokensTodayM = 0;
   private lastCpu = 0;
   private lastMemoryMb = 0;
+  private prevTotalTokensK: number | null = null;
+  private prevModelTokensK = new Map<string, number>();
 
   constructor(
     private db: Database,
@@ -61,14 +63,20 @@ export class MetricsCollector {
     const tokensByModel = this.sessionReader.getTokensByModel();
     const totalTokensK = this.sessionReader.getTotalTokensK();
 
+    // Compute global delta (clamp to 0 on cumulative reset)
+    let tokenDeltaK = 0;
+    if (this.prevTotalTokensK !== null && totalTokensK >= this.prevTotalTokensK) {
+      tokenDeltaK = totalTokensK - this.prevTotalTokensK;
+    }
+    this.prevTotalTokensK = totalTokensK;
+
     this.lastActiveSessions = activeSessions;
     this.lastTotalTokensK = totalTokensK;
 
-    // Write global sample (no delta — computed at query time via MAX-MIN)
     insertSample(this.db, {
       activeSessions,
       totalTokensK,
-      tokenDeltaK: 0,
+      tokenDeltaK,
       costToday: this.lastCostToday,
       tokensTodayM: this.lastTokensTodayM,
       cpu: this.lastCpu,
@@ -77,10 +85,21 @@ export class MetricsCollector {
 
     // Write per-model samples
     for (const [model, tokens] of tokensByModel) {
-      insertModelSample(this.db, {
-        model,
-        totalTokensK: tokens / 1000,
-      });
+      const tokensK = tokens / 1000;
+      const prevK = this.prevModelTokensK.get(model);
+      let modelDeltaK = 0;
+      if (prevK !== undefined && tokensK >= prevK) {
+        modelDeltaK = tokensK - prevK;
+      }
+      this.prevModelTokensK.set(model, tokensK);
+      insertModelSample(this.db, { model, totalTokensK: tokensK, tokenDeltaK: modelDeltaK });
+    }
+
+    // Prune models no longer present to prevent unbounded Map growth
+    for (const key of this.prevModelTokensK.keys()) {
+      if (!tokensByModel.has(key)) {
+        this.prevModelTokensK.delete(key);
+      }
     }
 
     this.aggregator?.clearCache();
@@ -99,7 +118,7 @@ export class MetricsCollector {
 
     // Only write cost + system metrics, carry forward token values.
     // Note: totalTokensK here is the last value from sampleFast (at most 30s stale).
-    // This is acceptable because MAX-MIN delta calculation tolerates minor staleness.
+    // This is acceptable because SUM(delta) calculation tolerates minor staleness.
     insertSample(this.db, {
       activeSessions: this.lastActiveSessions,
       totalTokensK: this.lastTotalTokensK,

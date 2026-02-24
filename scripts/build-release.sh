@@ -57,7 +57,7 @@ cat > "$RELEASE_DIR/package.json" << EOF
   "files": ["bin/", "server/", "web/", "assets/"],
   "engines": { "node": ">=22" },
   "license": "MIT",
-  "author": "Claw Insights Contributors",
+  "author": "Luca Liao",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/LucaL6/claw-insights.git"

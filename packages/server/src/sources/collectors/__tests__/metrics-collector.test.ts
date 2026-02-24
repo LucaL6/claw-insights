@@ -69,7 +69,7 @@ describe('MetricsCollector', () => {
 
     const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as any[];
     expect(rows[0].token_delta_k).toBe(0); // first sample, no delta
-    expect(rows[1].token_delta_k).toBe(0); // delta computed at query time, not write time
+    expect(rows[1].token_delta_k).toBe(15); // delta computed at write time
     cleanup();
   });
 
@@ -117,6 +117,144 @@ describe('MetricsCollector', () => {
     );
 
     expect((collector as any).pruneTimer).toBeUndefined();
+    cleanup();
+  });
+
+  it('should write real token_delta_k (global) on second sample', () => {
+    const { db, cleanup } = setup();
+    let totalTokensK = 80;
+    const mockSessionReader = {
+      getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens: 0 }],
+      getTokensByModel: () => new Map<string, number>(),
+      getTotalTokensK: () => totalTokensK,
+    };
+    const collector = new MetricsCollector(
+      db,
+      mockSessionReader as any,
+      () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
+      () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
+    );
+
+    collector.sampleFast();
+    totalTokensK = 95;
+    collector.sampleFast();
+
+    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as any[];
+    expect(rows[0].token_delta_k).toBe(0);
+    expect(rows[1].token_delta_k).toBe(15);
+    cleanup();
+  });
+
+  it('should write real token_delta_k (per-model) on second sample', () => {
+    const { db, cleanup } = setup();
+    let modelTokens = 50000;
+    const mockSessionReader = {
+      getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens: 0 }],
+      getTokensByModel: () => new Map([['test-model', modelTokens]]),
+      getTotalTokensK: () => modelTokens / 1000,
+    };
+    const collector = new MetricsCollector(
+      db,
+      mockSessionReader as any,
+      () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
+      () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
+    );
+
+    collector.sampleFast();
+    modelTokens = 65000;
+    collector.sampleFast();
+
+    const rows = db.prepare('SELECT token_delta_k FROM model_token_samples ORDER BY id').all() as any[];
+    expect(rows[0].token_delta_k).toBe(0);
+    expect(rows[1].token_delta_k).toBe(15);
+    cleanup();
+  });
+
+  it('should clamp delta to 0 on cumulative reset (restart)', () => {
+    const { db, cleanup } = setup();
+    let totalTokensK = 100;
+    const mockSessionReader = {
+      getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens: 0 }],
+      getTokensByModel: () => new Map<string, number>(),
+      getTotalTokensK: () => totalTokensK,
+    };
+    const collector = new MetricsCollector(
+      db,
+      mockSessionReader as any,
+      () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
+      () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
+    );
+
+    collector.sampleFast();
+    totalTokensK = 5; // reset
+    collector.sampleFast();
+
+    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as any[];
+    expect(rows[1].token_delta_k).toBe(0); // clamped, not -95
+    cleanup();
+  });
+
+  it('sampleSlow should write tokenDeltaK = 0 (no new token info)', async () => {
+    const { db, cleanup } = setup();
+    const mockSessionReader = {
+      getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens: 50000 }],
+      getTokensByModel: () => new Map([['test-model', 50000]]),
+      getTotalTokensK: () => 50,
+    };
+    const collector = new MetricsCollector(
+      db,
+      mockSessionReader as any,
+      () => ({ cpu: 10, memoryMB: 256, diskMB: 50, sampledAt: '' }),
+      () => ({ totalCost: 0, totalTokensM: 0, todayCost: 5, todayTokensM: 2, fetchedAt: '' }),
+    );
+
+    collector.sampleFast();
+    await collector.sampleSlow();
+
+    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as any[];
+    expect(rows[1].token_delta_k).toBe(0); // sampleSlow doesn't compute token deltas
+    cleanup();
+  });
+
+  it('should prune prevModelTokensK when a model disappears', () => {
+    const { db, cleanup } = setup();
+    let models = new Map<string, number>([
+      ['model-a', 50000],
+      ['model-b', 30000],
+    ]);
+    const mockSessionReader = {
+      getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens: 80000 }],
+      getTokensByModel: () => models,
+      getTotalTokensK: () => 80,
+    };
+    const collector = new MetricsCollector(
+      db,
+      mockSessionReader as any,
+      () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
+      () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
+    );
+
+    collector.sampleFast(); // both models present
+
+    // model-b disappears
+    models = new Map<string, number>([['model-a', 60000]]);
+    collector.sampleFast();
+
+    // model-b reappears — should be treated as first sample (delta=0), not carry stale prev
+    models = new Map<string, number>([
+      ['model-a', 70000],
+      ['model-b', 10000],
+    ]);
+    collector.sampleFast();
+
+    const rows = db
+      .prepare("SELECT token_delta_k FROM model_token_samples WHERE model = 'model-b' ORDER BY id")
+      .all() as any[];
+
+    // Row 0: first appearance, delta=0
+    // Row 1: reappearance after prune, delta=0 (not negative or stale)
+    expect(rows[0].token_delta_k).toBe(0);
+    expect(rows[1].token_delta_k).toBe(0);
     cleanup();
   });
 

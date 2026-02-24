@@ -39,13 +39,20 @@ export function seedTestData(dbPath: string): DatabaseSync {
 
   // ── model_token_samples: 48 rows × 2 models ──
   const modelStmt = db.prepare(
-    `INSERT INTO model_token_samples (timestamp, model, total_tokens_k) VALUES (?, ?, ?)`,
+    `INSERT INTO model_token_samples (timestamp, model, total_tokens_k, token_delta_k) VALUES (?, ?, ?, ?)`,
   );
   const models = ['claude-sonnet-4-20250514', 'gpt-4o'];
+  const prevModelK: Record<string, number> = {};
   for (let i = 0; i < 48; i++) {
     const ts = new Date(now - (47 - i) * 30 * 60 * 1000).toISOString();
-    modelStmt.run(ts, models[0], 80 + i * 3.5);
-    modelStmt.run(ts, models[1], 20 + i * 1.7);
+    const m0K = 80 + i * 3.5;
+    const m1K = 20 + i * 1.7;
+    const d0 = i === 0 ? 0 : Math.max(0, m0K - (prevModelK[models[0]] ?? m0K));
+    const d1 = i === 0 ? 0 : Math.max(0, m1K - (prevModelK[models[1]] ?? m1K));
+    modelStmt.run(ts, models[0], m0K, d0);
+    modelStmt.run(ts, models[1], m1K, d1);
+    prevModelK[models[0]] = m0K;
+    prevModelK[models[1]] = m1K;
   }
 
   // ── metric_events: ~100 rows (mixed types over 24h) ──
@@ -101,9 +108,16 @@ export function seedTestData(dbPath: string): DatabaseSync {
   let eventIndex = 0;
   for (const et of eventTypes) {
     for (let i = 0; i < et.count; i++) {
-      const offset = (eventIndex * 14.4 * 60 * 1000); // spread ~evenly over 24h
+      const offset = eventIndex * 14.4 * 60 * 1000; // spread ~evenly over 24h
       const ts = new Date(now - 24 * 60 * 60 * 1000 + offset).toISOString();
-      eventStmt.run(ts, et.type, et.type === 'tool_call' || et.type === 'api_call' ? 1 : null, et.metaFn(i), et.category, et.source);
+      eventStmt.run(
+        ts,
+        et.type,
+        et.type === 'tool_call' || et.type === 'api_call' ? 1 : null,
+        et.metaFn(i),
+        et.category,
+        et.source,
+      );
       eventIndex++;
     }
   }
@@ -117,13 +131,22 @@ export function seedTestData(dbPath: string): DatabaseSync {
     const hour = new Date(now - (23 - i) * 60 * 60 * 1000);
     hour.setMinutes(0, 0, 0);
     const hourTs = hour.toISOString();
-    hourlyStmt.run(hourTs, 2 + (i % 3), 1.5 + (i % 3) * 0.5, 6 + i * 0.5, 0.5 + i * 0.06, 15 + i, 25 + i, 280 + i * 10, 320 + i * 10, 2);
+    hourlyStmt.run(
+      hourTs,
+      2 + (i % 3),
+      1.5 + (i % 3) * 0.5,
+      6 + i * 0.5,
+      0.5 + i * 0.06,
+      15 + i,
+      25 + i,
+      280 + i * 10,
+      320 + i * 10,
+      2,
+    );
   }
 
   // ── hourly_model_tokens: 24 rows × 2 models ──
-  const hourlyModelStmt = db.prepare(
-    `INSERT INTO hourly_model_tokens (hour, model, token_delta_k) VALUES (?, ?, ?)`,
-  );
+  const hourlyModelStmt = db.prepare(`INSERT INTO hourly_model_tokens (hour, model, token_delta_k) VALUES (?, ?, ?)`);
   for (let i = 0; i < 24; i++) {
     const hour = new Date(now - (23 - i) * 60 * 60 * 1000);
     hour.setMinutes(0, 0, 0);

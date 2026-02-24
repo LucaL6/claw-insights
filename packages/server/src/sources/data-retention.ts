@@ -83,7 +83,7 @@ export class DataRetention {
       SELECT
         MAX(active_sessions) AS active_sessions_max,
         AVG(active_sessions) AS active_sessions_avg,
-        COALESCE(MAX(total_tokens_k) - MIN(total_tokens_k), 0) AS token_delta_k,
+        COALESCE(SUM(token_delta_k), 0) AS token_delta_k,
         MAX(cpu) AS cpu_max,
         AVG(cpu) AS cpu_avg,
         AVG(memory_mb) AS memory_mb_avg,
@@ -129,7 +129,7 @@ export class DataRetention {
       .prepare(
         `
       SELECT model,
-             COALESCE(MAX(total_tokens_k) - MIN(total_tokens_k), 0) AS token_delta_k
+             COALESCE(SUM(token_delta_k), 0) AS token_delta_k
       FROM model_token_samples
       WHERE timestamp >= ? AND timestamp < ?
       GROUP BY model

@@ -47,5 +47,19 @@
     "vitest": "^4.0.18"
   },
   "description": "Claw Insights web UI — React dashboard with real-time updates",
-  "author": "Claw Insights Contributors"
+  "author": "Luca Liao",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LucaL6/claw-insights.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LucaL6/claw-insights/issues"
+  },
+  "homepage": "https://github.com/LucaL6/claw-insights#readme",
+  "keywords": [
+    "openclaw",
+    "dashboard",
+    "react",
+    "monitoring"
+  ]
 }

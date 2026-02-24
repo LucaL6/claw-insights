@@ -31,9 +31,12 @@ export function insertSample(
   );
 }
 
-export function insertModelSample(db: Database, sample: { model: string; totalTokensK: number }) {
-  const stmt = cached(db, 'INSERT INTO model_token_samples (timestamp, model, total_tokens_k) VALUES (?, ?, ?)');
-  stmt.run(new Date().toISOString(), sample.model, sample.totalTokensK);
+export function insertModelSample(db: Database, sample: { model: string; totalTokensK: number; tokenDeltaK?: number }) {
+  const stmt = cached(
+    db,
+    'INSERT INTO model_token_samples (timestamp, model, total_tokens_k, token_delta_k) VALUES (?, ?, ?, ?)',
+  );
+  stmt.run(new Date().toISOString(), sample.model, sample.totalTokensK, sample.tokenDeltaK ?? 0);
 }
 
 // ── Bucketed Reads ──
@@ -77,7 +80,7 @@ export function getBucketedSampledTokens(
   const expr = bucketExpr(bucketMinutes);
   const stmt = cached(
     db,
-    `SELECT ${expr} AS bucket, MAX(total_tokens_k) - MIN(total_tokens_k) AS tokensK FROM metric_samples WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket HAVING tokensK > 0`,
+    `SELECT ${expr} AS bucket, SUM(token_delta_k) AS tokensK FROM metric_samples WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket HAVING tokensK > 0`,
   );
   return stmt.all(startTs, endTs) as Array<{ bucket: number; tokensK: number }>;
 }
@@ -99,12 +102,12 @@ export function getBucketedModelTokens(
   const expr = bucketExpr(bucketMinutes);
   const stmt = cached(
     db,
-    `SELECT ${expr} AS bucket, model, MAX(total_tokens_k) - MIN(total_tokens_k) AS tokensK FROM model_token_samples WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket, model HAVING tokensK > 0`,
+    `SELECT ${expr} AS bucket, model, SUM(token_delta_k) AS tokensK FROM model_token_samples WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket, model HAVING tokensK > 0`,
   );
   return stmt.all(startTs, endTs) as Array<{ bucket: number; model: string; tokensK: number }>;
 }
 
-/** Range-wide token delta: MAX - MIN of total_tokens_k over entire range */
+/** Range-wide token delta: SUM of token_delta_k over entire range */
 export function getRangeTokensK(db: Database, startTs: string, endTs: string, useHourly = false): number {
   if (useHourly) {
     const stmt = db.prepare(
@@ -115,7 +118,7 @@ export function getRangeTokensK(db: Database, startTs: string, endTs: string, us
   }
   const stmt = cached(
     db,
-    `SELECT COALESCE(MAX(total_tokens_k) - MIN(total_tokens_k), 0) AS delta FROM metric_samples WHERE timestamp >= ? AND timestamp < ?`,
+    `SELECT COALESCE(SUM(token_delta_k), 0) AS delta FROM metric_samples WHERE timestamp >= ? AND timestamp < ?`,
   );
   const row = stmt.get(startTs, endTs) as { delta: number } | undefined;
   return row?.delta ?? 0;

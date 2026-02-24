@@ -30,5 +30,20 @@
   },
   "version": "0.1.0",
   "description": "Claw Insights server — GraphQL API, data pipeline, screenshot renderer",
-  "author": "Claw Insights Contributors"
+  "author": "Luca Liao",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LucaL6/claw-insights.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LucaL6/claw-insights/issues"
+  },
+  "homepage": "https://github.com/LucaL6/claw-insights#readme",
+  "keywords": [
+    "openclaw",
+    "graphql",
+    "api",
+    "monitoring",
+    "sqlite"
+  ]
 }

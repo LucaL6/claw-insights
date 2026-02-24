@@ -1,9 +1,7 @@
 {
   "heartbeat": {
     "defaultAgentId": "main",
-    "agents": [
-      { "agentId": "main", "enabled": true, "every": "1h", "everyMs": 3600000 }
-    ]
+    "agents": [{ "agentId": "main", "enabled": true, "every": "1h", "everyMs": 3600000 }]
   },
   "channelSummary": [
     "Telegram: configured",
@@ -55,8 +53,6 @@
     "runtimeShort": "running (pid 1234, state active)"
   },
   "nodeService": null,
-  "agents": [
-    { "id": "main", "workspace": "/home/testuser/openclaw" }
-  ],
+  "agents": [{ "id": "main", "workspace": "/home/testuser/openclaw" }],
   "securityAudit": { "summary": { "critical": 0, "warn": 1, "info": 3 } }
 }

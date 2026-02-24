@@ -151,6 +151,15 @@ const MIGRATIONS: Migration[] = [
       log.info('v5 sanity check passed — all tables and columns verified');
     },
   },
+  {
+    version: 6,
+    up: (db) => {
+      if (!hasColumn(db, 'model_token_samples', 'token_delta_k')) {
+        db.exec('ALTER TABLE model_token_samples ADD COLUMN token_delta_k REAL NOT NULL DEFAULT 0');
+      }
+      log.info('v6: added token_delta_k to model_token_samples');
+    },
+  },
 ];
 
 // ── Helpers ──

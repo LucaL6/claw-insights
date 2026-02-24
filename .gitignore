@@ -25,3 +25,5 @@ tmp/
 
 # Release artifacts
 *.tgz
+docs/plans/
+start.sh
