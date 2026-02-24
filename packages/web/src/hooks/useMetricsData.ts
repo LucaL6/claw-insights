@@ -19,7 +19,7 @@ export interface BucketData {
 }
 
 export function useMetricsData(range: MetricsRange) {
-  const [lastFetchTime, setLastFetchTime] = useState(Date.now());
+  const [lastFetchTime, setLastFetchTime] = useState(() => Date.now());
   const variables = useMemo(() => ({ range }), [range]);
 
   const [result] = useReactiveQuery(
@@ -28,11 +28,12 @@ export function useMetricsData(range: MetricsRange) {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (result.data) setLastFetchTime(Date.now());
   }, [result.data]);
 
   const metrics = result.data?.metrics;
-  const buckets: BucketData[] = metrics?.buckets ?? [];
+  const buckets: BucketData[] = useMemo(() => metrics?.buckets ?? [], [metrics?.buckets]);
 
   const allModels = useMemo(() => {
     const modelSet = new Set<string>();

@@ -1,5 +1,5 @@
 import express from 'express';
-import { existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync, chmodSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -139,12 +139,24 @@ const server = app.listen(PORT, '127.0.0.1', () => {
   if (config.noAuth) {
     console.log(`⚠️  Auth disabled. Web UI and API are open.`);
     console.log(`💡 http://127.0.0.1:${PORT}/`);
-  } else if (process.stderr.isTTY) {
-    // Only print token URL to TTY (interactive terminal).
-    // In daemon mode stdout/stderr go to log file — never write token there.
-    process.stderr.write(`🔑 http://127.0.0.1:${PORT}/?token=${config.apiToken}\n`);
   } else {
-    console.log(`🔒 Auth enabled. Use 'claw-insights status' to get the auth URL.`);
+    const tokenUrl = `http://127.0.0.1:${PORT}/?token=${config.apiToken}`;
+    if (process.stderr.isTTY) {
+      // Interactive terminal — print directly
+      process.stderr.write(`🔑 ${tokenUrl}\n`);
+    } else {
+      // Daemon mode — write token to file (user-only readable), print hint
+      try {
+        const dataDir = join(process.env.HOME ?? '/tmp', '.claw-insights');
+        mkdirSync(dataDir, { recursive: true });
+        const tokenFile = join(dataDir, 'auth-token');
+        writeFileSync(tokenFile, config.apiToken, { mode: 0o600 });
+        chmodSync(tokenFile, 0o600);
+      } catch {
+        // best-effort
+      }
+      console.log(`🔒 Auth enabled. Run 'claw-insights status' to get the access URL.`);
+    }
   }
 });
 

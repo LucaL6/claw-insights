@@ -5,6 +5,18 @@
 
 Real-time monitoring dashboard for [OpenClaw](https://github.com/openclaw/openclaw) gateway.
 
+## 🤖 AI Agent Friendly
+
+This project ships with structured resources for AI agents — see **[AGENTS.md](AGENTS.md)** for the full skill index, or jump directly to a skill:
+
+| Skill                                           | Use case                                    |
+| ----------------------------------------------- | ------------------------------------------- |
+| [install](docs/skills/install/SKILL.md)         | Install, configure, and launch              |
+| [api](docs/skills/api/SKILL.md)                 | Query sessions, metrics, events via GraphQL |
+| [screenshot](docs/skills/screenshot/SKILL.md)   | Capture dashboard as PNG                    |
+| [overview](docs/skills/overview/SKILL.md)       | Architecture and data flow                  |
+| [development](docs/skills/development/SKILL.md) | Local dev, tests, PR workflow               |
+
 ## Features
 
 - **Live Sessions** — Active sessions with sub-agent tree, token usage, and context progress
@@ -21,41 +33,55 @@ Real-time monitoring dashboard for [OpenClaw](https://github.com/openclaw/opencl
 
 ### Install
 
+**Recommended (npm):**
+
 ```bash
-git clone https://github.com/nicepkg/claw-insights.git
-cd claw-insights
-npm install && npm run build && npm link
+npm install -g claw-insights
 ```
 
-> **npm global install** (`npm install -g claw-insights`) will be available after the first npm publish.
+**From source (development):**
+
+```bash
+git clone https://github.com/LucaL6/claw-insights.git
+cd claw-insights
+npm install
+npm run build
+npm link
+```
 
 ### Start
 
 ```bash
 claw-insights start
+# or (from source checkout)
+npm start
 ```
 
-On first launch you'll see:
+On first launch you'll see an access URL:
 
-```
-💡 Claw Insights v0.1.0
+```text
+💡 Claw Insights started (PID 12345, mode: full, port: 4000)
 🔑 http://127.0.0.1:4000/?token=abc123...
 ```
 
-Open the token URL in your browser. The token is set as a cookie (valid 7 days).
+Open the URL in your browser. The token is set as a cookie (valid 7 days).
 
 ```bash
 claw-insights start --no-auth      # Disable authentication
 claw-insights start --port 8080    # Custom port
 claw-insights start --server-only  # API only, no web UI
+claw-insights status               # Show current access URL
+claw-insights stop                 # Stop daemon
 ```
 
 ### Verify
 
 1. **Health check:**
+
    ```bash
    curl http://localhost:4000/health
    ```
+
    Expected: `{"status":"ok","gateway":"connected","db":"ok",...}`
 
 2. **Dashboard:** Open the token URL — you should see live session data, metrics charts, and event logs.
@@ -64,12 +90,13 @@ claw-insights start --server-only  # API only, no web UI
 
 ### Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| `gateway: disconnected` | Ensure OpenClaw is running: `openclaw gateway start` |
-| `EADDRINUSE` | Port 4000 in use — set `CLAW_INSIGHTS_SERVER_PORT` |
-| Empty dashboard | Check OpenClaw has active sessions: `openclaw status` |
-| Token rejected | Clear cookies and re-open the token URL |
+| Problem                            | Solution                                                                                                          |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `claw-insights: command not found` | Run `npx claw-insights start` or add npm global bin to `PATH`: `export PATH="$(npm config get prefix)/bin:$PATH"` |
+| `gateway: disconnected`            | Ensure OpenClaw is running: `openclaw gateway start`                                                              |
+| `EADDRINUSE`                       | Port 4000 in use — set `CLAW_INSIGHTS_SERVER_PORT`                                                                |
+| Empty dashboard                    | Check OpenClaw has active sessions: `openclaw status`                                                             |
+| Token rejected                     | Clear cookies and re-open the token URL                                                                           |
 
 ## Architecture
 
@@ -101,29 +128,30 @@ Auth is disabled by default in development (`NODE_ENV=development`).
 
 Priority: Environment variables > `~/.claw-insights/config.json` > NODE_ENV defaults.
 
-| Variable | Default | Description |
-|---|---|---|
-| `CLAW_INSIGHTS_SERVER_PORT` | `4000` | API server port |
-| `CLAW_INSIGHTS_WEB_PORT` | `3200` | Web UI port (dev only) |
-| `CLAW_INSIGHTS_API_TOKEN` | *(auto)* | Auth token (≥32 chars) |
-| `CLAW_INSIGHTS_NO_AUTH` | `false` | Disable auth |
-| `CLAW_INSIGHTS_DB` | `~/.claw-insights/metrics.db` | Database path |
-| `CLAW_INSIGHTS_RAW_RETENTION_DAYS` | `7` | Raw data retention (days) |
+| Variable                           | Default                       | Description               |
+| ---------------------------------- | ----------------------------- | ------------------------- |
+| `CLAW_INSIGHTS_SERVER_PORT`        | `4000`                        | API server port           |
+| `CLAW_INSIGHTS_WEB_PORT`           | `3200`                        | Web UI port (dev only)    |
+| `CLAW_INSIGHTS_API_TOKEN`          | _(auto)_                      | Auth token (≥32 chars)    |
+| `CLAW_INSIGHTS_NO_AUTH`            | `false`                       | Disable auth              |
+| `CLAW_INSIGHTS_DB`                 | `~/.claw-insights/metrics.db` | Database path             |
+| `CLAW_INSIGHTS_RAW_RETENTION_DAYS` | `7`                           | Raw data retention (days) |
 
 → See [Configuration](docs/configuration.md) for all options, config file, and NODE_ENV defaults.
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Configuration](docs/configuration.md) | All env vars, config file, NODE_ENV defaults |
-| [Architecture & Development](docs/architecture.md) | System design + dev setup, testing, codegen |
-| [API Reference](docs/api-reference.md) | GraphQL + REST endpoint signatures |
-| [AGENTS.md](AGENTS.md) | AI agent skill index |
+| Document                                           | Description                                  |
+| -------------------------------------------------- | -------------------------------------------- |
+| [Configuration](docs/configuration.md)             | All env vars, config file, NODE_ENV defaults |
+| [Architecture & Development](docs/architecture.md) | System design + dev setup, testing, codegen  |
+| [API Reference](docs/api-reference.md)             | GraphQL + REST endpoint signatures           |
+| [AGENTS.md](AGENTS.md)                             | AI agent skill index                         |
 
 ## Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+
 - Development setup and workflow
 - Pull request guidelines
 - Code style and commit conventions

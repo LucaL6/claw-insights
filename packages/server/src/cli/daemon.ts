@@ -100,6 +100,29 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
 
   const mode = args.serverOnly ? 'server-only' : 'full';
   console.log(`💡 Claw Insights started (PID ${child.pid}, mode: ${mode}, port: ${args.port})`);
+
+  // Wait for server to be ready, then print access URL
+  const ready = await waitForHealth(args.port, 5000);
+  if (ready) {
+    if (args.noAuth) {
+      console.log(`🌐 http://127.0.0.1:${args.port}`);
+    } else {
+      // Read token from file written by server
+      const tokenFile = join(paths.dataDir, 'auth-token');
+      try {
+        const token = readFileSync(tokenFile, 'utf-8').trim();
+        if (token) {
+          console.log(`🔑 http://127.0.0.1:${args.port}/?token=${token}`);
+        } else {
+          console.log(`🌐 http://127.0.0.1:${args.port} (run 'claw-insights status' for auth URL)`);
+        }
+      } catch {
+        console.log(`🌐 http://127.0.0.1:${args.port} (run 'claw-insights status' for auth URL)`);
+      }
+    }
+  } else {
+    console.log(`🌐 http://127.0.0.1:${args.port} (server still starting...)`);
+  }
 }
 
 export function daemonStop(): void {
@@ -144,6 +167,20 @@ export function daemonStop(): void {
   }, 200);
 }
 
+async function waitForHealth(port: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/health`);
+      if (res.ok) return true;
+    } catch {
+      // not ready yet
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return false;
+}
+
 export async function daemonStatus(): Promise<void> {
   const paths = getDaemonPaths();
   const pidFile = new PidFile(paths.pidFile);
@@ -177,6 +214,22 @@ export async function daemonStatus(): Promise<void> {
     console.log(`   Uptime:  ${health.uptime ?? '?'}s`);
     console.log(`   Gateway: ${health.gateway ?? 'unknown'}`);
     console.log(`   DB:      ${health.db ?? 'unknown'}`);
+
+    // Show access URL
+    const noAuth = config.noAuth === true;
+    if (noAuth) {
+      console.log(`   URL:     http://127.0.0.1:${port}/`);
+    } else {
+      const tokenFile = join(paths.dataDir, 'auth-token');
+      try {
+        const token = readFileSync(tokenFile, 'utf-8').trim();
+        if (token) {
+          console.log(`   🔑 URL:  http://127.0.0.1:${port}/?token=${token}`);
+        }
+      } catch {
+        console.log(`   URL:     http://127.0.0.1:${port}/ (run with --no-auth or check logs for token)`);
+      }
+    }
   } catch {
     console.log(`💡 Claw Insights is running (PID ${pid}), but health check failed on :${port}`);
   }
@@ -218,7 +271,9 @@ export function daemonLogs(lines?: number): void {
           encoding: 'utf-8',
           start: lastSize,
         });
-        stream.on('data', (chunk) => { process.stdout.write(String(chunk)); });
+        stream.on('data', (chunk) => {
+          process.stdout.write(String(chunk));
+        });
         lastSize = currentSize;
       }
     }, 500);

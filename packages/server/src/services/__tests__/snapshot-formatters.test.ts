@@ -3,8 +3,8 @@ import { formatTokens, friendlyModel, normalize, relativeTime, sample, uptimeSta
 
 describe('formatTokens', () => {
   test('formats millions', () => {
-    expect(formatTokens(1_500_000)).toBe('1.5M');
-    expect(formatTokens(1_000_000)).toBe('1.0M');
+    expect(formatTokens(1_500_000)).toBe('1.50M');
+    expect(formatTokens(1_000_000)).toBe('1.00M');
   });
   test('formats thousands', () => {
     expect(formatTokens(1_500)).toBe('1.5k');

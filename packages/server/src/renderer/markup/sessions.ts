@@ -58,12 +58,14 @@ export function renderSessions(data: SnapshotData, detail: Detail, c: ColorSchem
   const sessions = data.sessions;
   if (!sessions || sessions.length === 0) return null;
 
+  const activeCount = sessions.filter(s => s.status === 'active').length;
+
   return div(
     { flexDirection: 'column', gap: 6, padding: '0 16px 12px' },
     [
       div({ justifyContent: 'space-between', marginBottom: 2 }, [
         span({ color: c.textMuted, fontSize: 11, fontWeight: 600 }, 'SESSIONS'),
-        span({ color: c.textDim, fontSize: 11 }, `${data.summary.activeSessions} active · ${data.summary.totalSessions} total`),
+        span({ color: c.textDim, fontSize: 11 }, `${activeCount} active · ${sessions.length} total`),
       ]),
       ...sessions.map(s => renderSessionCard(s, c)),
     ],

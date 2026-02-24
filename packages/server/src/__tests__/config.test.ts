@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 // Non-dynamic tests for existing exports
-import { config, CLI_ENV, safePort, safeInt } from '../config.js';
+import { config, CLI_ENV } from '../config.js';
 
 describe('config singleton', () => {
   it('has all required fields', () => {

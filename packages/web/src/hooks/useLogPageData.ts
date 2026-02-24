@@ -16,7 +16,7 @@ export function useLogPageData(route: Route) {
   const [search, setSearch] = useState('');
 
   // Time range
-  const defaultFrom = Math.floor(Date.now() / 1000) - 86400;
+  const [defaultFrom] = useState(() => Math.floor(Date.now() / 1000) - 86400);
   const fromTs = urlFrom ?? defaultFrom;
   const toTs = urlTo;
 

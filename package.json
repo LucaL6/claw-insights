@@ -22,6 +22,9 @@
     "test:e2e": "npx playwright test --config packages/web/e2e/playwright.config.ts",
     "prepare": "husky",
     "build": "npm run codegen && npm run --workspaces build",
+    "start": "node bin/claw-insights.mjs start",
+    "stop": "node bin/claw-insights.mjs stop",
+    "status": "node bin/claw-insights.mjs status",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

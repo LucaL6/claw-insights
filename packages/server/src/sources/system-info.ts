@@ -76,6 +76,20 @@ export async function getSystemMetrics(): Promise<SystemMetricsData> {
     return metricsCache.data;
   }
 
+  // Demo mode: return fixed values for reproducible screenshots
+  const demoCpu = process.env.CLAW_INSIGHTS_DEMO_CPU;
+  const demoMem = process.env.CLAW_INSIGHTS_DEMO_MEM;
+  if (demoCpu != null && demoMem != null) {
+    const data: SystemMetricsData = {
+      cpu: parseFloat(demoCpu),
+      memoryMB: parseInt(demoMem, 10),
+      diskMB: 0,
+      sampledAt: new Date().toISOString(),
+    };
+    metricsCache = { data, ts: now };
+    return data;
+  }
+
   const pid = await getPid();
   const [proc, diskMB] = await Promise.all([pid ? getProcessMetrics(pid) : Promise.resolve(null), getDiskMB()]);
 

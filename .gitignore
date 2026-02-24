@@ -27,3 +27,4 @@ tmp/
 *.tgz
 docs/plans/
 start.sh
+audit_v3/

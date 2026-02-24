@@ -50,11 +50,13 @@ export function usePreference<T>(
 
   // Keep refs for stable callback
   const serializeRef = useRef(serialize);
-  serializeRef.current = serialize;
   const deserializeRef = useRef(deserialize);
-  deserializeRef.current = deserialize;
   const validateRef = useRef(validate);
-  validateRef.current = validate;
+  useEffect(() => {
+    serializeRef.current = serialize;
+    deserializeRef.current = deserialize;
+    validateRef.current = validate;
+  });
 
   const set = useCallback(
     (updater: T | ((prev: T) => T)) => {

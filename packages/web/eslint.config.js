@@ -21,11 +21,11 @@ export default defineConfig([
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unsafe-function-type': 'warn',
-      'react-refresh/only-export-components': 'warn',
-      'react-hooks/rules-of-hooks': 'warn',
-      'react-hooks/purity': 'warn',
-      'react-hooks/refs': 'warn',
+      '@typescript-eslint/no-unsafe-function-type': 'error',
+      'react-refresh/only-export-components': 'error',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/purity': 'error',
+      'react-hooks/refs': 'error',
     },
   },
 ]);

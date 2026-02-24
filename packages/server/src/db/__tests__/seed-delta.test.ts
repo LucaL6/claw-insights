@@ -18,7 +18,7 @@ describe('seed data includes model token deltas', () => {
     const dbPath = join(tmpdir(), `seed-delta2-${Date.now()}.db`);
     const db = seedTestData(dbPath);
     const sumRow = db.prepare('SELECT SUM(token_delta_k) AS total FROM metric_samples').get() as { total: number };
-    const rangeRow = db.prepare('SELECT MAX(total_tokens_k) - MIN(total_tokens_k) AS delta FROM metric_samples').get() as { delta: number };
+    const _rangeRow = db.prepare('SELECT MAX(total_tokens_k) - MIN(total_tokens_k) AS delta FROM metric_samples').get() as { delta: number };
     expect(sumRow.total).toBeGreaterThan(0);
     db.close();
     rmSync(dbPath, { force: true });

@@ -18,7 +18,7 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
   const [sortBy, setSortBy] = usePreference<SortBy>('session-sort', 'UPDATED_AT', {
     validate: (v) => ['UPDATED_AT', 'TOKENS_DESC', 'NAME'].includes(v),
   });
-  const [lastFetchTime, setLastFetchTime] = useState(Date.now());
+  const [lastFetchTime, setLastFetchTime] = useState(() => Date.now());
 
   const activeOnly = viewMode === 'active';
 
@@ -32,6 +32,7 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (result.data) setLastFetchTime(Date.now());
   }, [result.data]);
 

@@ -3,6 +3,11 @@ import { InfoTooltip } from '../../ui/InfoTooltip';
 import { getTooltips } from './metricsTooltips';
 import { useI18n } from '../../../i18n/context';
 
+function formatTokensDisplay(totalK: number): string {
+  if (totalK >= 1000) return `${(totalK / 1000).toFixed(2)}M`;
+  return `${totalK.toFixed(1)}k`;
+}
+
 interface Props {
   totalTokensK: number;
   totalErrors: number;
@@ -17,7 +22,7 @@ export function MetricsSummaryRow({ totalTokensK, totalErrors, totalWarnings, up
   return (
     <div className="flex gap-5 mb-3 text-[12px]">
       <span className="text-fg-muted">
-        {t('summary.tokens')}: <span className="mono font-semibold text-emerald">{totalTokensK.toFixed(1)}k</span>
+        {t('summary.tokens')}: <span className="mono font-semibold text-emerald">{formatTokensDisplay(totalTokensK)}</span>
         <InfoTooltip {...TOOLTIPS.summary.summaryTokens} />
       </span>
       <span className="text-fg-muted">

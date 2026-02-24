@@ -1,7 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-
 // We test inferDisplayName indirectly through the module's exported behavior.
 // Since inferDisplayName is not exported, we import the file and test via parseSession behavior.
 // For now, replicate the logic here to unit-test the priority chain.

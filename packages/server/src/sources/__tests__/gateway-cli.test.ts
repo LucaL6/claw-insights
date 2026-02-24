@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-let mockCb: (cmd: string, args: string[], opts: any, cb: Function) => void;
+let mockCb: (cmd: string, args: string[], opts: any, cb: (...args: unknown[]) => unknown) => void;
 
 vi.mock('node:child_process', () => ({
-  execFile: (cmd: string, args: string[], opts: any, cb: Function) => mockCb(cmd, args, opts, cb),
+  execFile: (cmd: string, args: string[], opts: any, cb: (...args: unknown[]) => unknown) => mockCb(cmd, args, opts, cb),
 }));
 
 vi.mock('../../config.js', () => ({

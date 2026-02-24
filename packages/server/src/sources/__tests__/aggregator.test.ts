@@ -72,7 +72,7 @@ describe('Aggregator', () => {
   });
 
   it('should read sessions and tokens from metric_samples', () => {
-    const { agg, db, ingestLog, cleanup } = setup();
+    const { agg, db, ingestLog: _ingestLog, cleanup } = setup();
     const now = new Date();
     const ts = now.toISOString();
     const ts2 = new Date(now.getTime() - 1000).toISOString(); // 1s earlier, same bucket
@@ -129,7 +129,7 @@ describe('Aggregator', () => {
   });
 
   it('should return empty metrics for future date', () => {
-    const { agg, ingestLog, cleanup } = setup();
+    const { agg, ingestLog: _ingestLog, cleanup } = setup();
     const m = agg.getMetrics('2099-01-01') as { totalErrors: number; totalTokensK: number; buckets: unknown[] };
     expect(m.totalErrors).toBe(0);
     expect(m.totalTokensK).toBe(0);

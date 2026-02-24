@@ -14,7 +14,7 @@ export const DARK: ColorScheme = {
   bg: '#09090b', cardBg: 'rgba(24,24,27,0.85)', border: 'rgba(63,63,70,0.6)',
   textPrimary: '#f4f4f5', textSecondary: '#a1a1aa', textMuted: '#71717a', textDim: '#52525b',
   emerald: '#34d399', emeraldBg: 'rgba(52,211,153,0.15)',
-  red: '#f87171', redBg: 'rgba(248,113,113,0.15)',
+  red: '#ef4444', redBg: 'rgba(239,68,68,0.15)',
   cyan: '#22d3ee', sky: '#38bdf8', violet: '#a78bfa', amber: '#fbbf24', orange: '#f97316',
   trackBg: '#27272a',
   tagModel: { bg: 'rgba(56,189,248,0.08)', color: 'rgba(56,189,248,0.8)', border: 'rgba(56,189,248,0.12)' },

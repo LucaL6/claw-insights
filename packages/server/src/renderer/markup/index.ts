@@ -1,5 +1,4 @@
 import type { SnapshotData, Detail } from '../../services/snapshot-types.js';
-import type { ColorScheme } from './colors.js';
 import { getColors } from './colors.js';
 import { div } from './helpers.js';
 import { renderHeader } from './header.js';

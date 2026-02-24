@@ -5,7 +5,7 @@ import { getAppVersion } from '../../version.js';
 import { getSystemMetrics } from '../../sources/system-info.js';
 import { safe } from './utils.js';
 
-export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
+export function gatewayResolvers(_ctx: AppContext): Partial<Resolvers> {
   const gateway: QueryResolvers['gateway'] = () =>
     safe(async () => {
       const status = await getGatewayStatus();
