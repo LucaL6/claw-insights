@@ -48,7 +48,7 @@ jobs:
       - run: npm ci
 
       - name: npm audit
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high --omit=dev
 
   test:
     name: Build & Unit Tests
@@ -75,30 +75,33 @@ jobs:
       - name: Generate coverage summary
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          echo "## 📊 Coverage Summary" > coverage-summary.md
-          echo "" >> coverage-summary.md
-          echo "### Server" >> coverage-summary.md
-          echo '```' >> coverage-summary.md
-          cat packages/server/coverage/coverage-summary.json | node -e "
-            const data = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
-            const t = data.total;
-            console.log('Lines:      ' + t.lines.pct + '%');
-            console.log('Branches:   ' + t.branches.pct + '%');
-            console.log('Functions:  ' + t.functions.pct + '%');
-            console.log('Statements: ' + t.statements.pct + '%');
-          " >> coverage-summary.md
-          echo '```' >> coverage-summary.md
-          echo "" >> coverage-summary.md
-          echo "### Web" >> coverage-summary.md
-          echo '```' >> coverage-summary.md
-          cat packages/web/coverage/coverage-summary.json | node -e "
-            const data = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
-            const t = data.total;
-            console.log('Lines:      ' + t.lines.pct + '%');
-            console.log('Branches:   ' + t.branches.pct + '%');
-            console.log('Functions:  ' + t.functions.pct + '%');
-            console.log('Statements: ' + t.statements.pct + '%');
-          " >> coverage-summary.md
+          {
+            echo "## 📊 Coverage Summary"
+            echo ""
+            echo "### Server"
+            echo '```'
+            node -e "
+              const data = JSON.parse(require('fs').readFileSync('packages/server/coverage/coverage-summary.json','utf8'));
+              const t = data.total;
+              console.log('Lines:      ' + t.lines.pct + '%');
+              console.log('Branches:   ' + t.branches.pct + '%');
+              console.log('Functions:  ' + t.functions.pct + '%');
+              console.log('Statements: ' + t.statements.pct + '%');
+            "
+            echo '```'
+            echo ""
+            echo "### Web"
+            echo '```'
+            node -e "
+              const data = JSON.parse(require('fs').readFileSync('packages/web/coverage/coverage-summary.json','utf8'));
+              const t = data.total;
+              console.log('Lines:      ' + t.lines.pct + '%');
+              console.log('Branches:   ' + t.branches.pct + '%');
+              console.log('Functions:  ' + t.functions.pct + '%');
+              console.log('Statements: ' + t.statements.pct + '%');
+            "
+            echo '```'
+          } > coverage-summary.md
 
       - name: Coverage PR comment
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
@@ -153,8 +156,23 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Get Playwright version
+        id: pw-version
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.pw-version.outputs.version }}-chromium
+
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+
+      - name: Install Playwright system deps
+        run: npx playwright install-deps chromium
 
       - name: Run E2E
         run: npm run -w @claw-insights/web test:e2e

@@ -23,8 +23,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
   if (config.cliPath !== 'openclaw' && !existsSync(config.cliPath)) {
     issues.push(
       `⚠️  OpenClaw CLI not found at: ${config.cliPath}\n` +
-      `   Set CLAW_INSIGHTS_CLI or use --cli-path to specify the correct path.\n` +
-      `   Install OpenClaw: https://openclaw.ai`,
+        `   Set CLAW_INSIGHTS_CLI or use --cli-path to specify the correct path.\n` +
+        `   Install OpenClaw: https://openclaw.ai`,
     );
   } else {
     // Verify CLI is actually callable (covers bare 'openclaw' in PATH)
@@ -33,14 +33,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
     } catch {
       issues.push(
         `⚠️  OpenClaw CLI found at: ${config.cliPath} but not responding.\n` +
-        `   Is OpenClaw installed correctly? https://openclaw.ai`,
+          `   Is OpenClaw installed correctly? https://openclaw.ai`,
       );
     }
   }
 
   if (issues.length > 0) {
     console.log('\n🔍 Startup checks:\n');
-    issues.forEach(i => console.log(i));
+    issues.forEach((i) => console.log(i));
     console.log('\n   Dashboard will start but may show incomplete data.\n');
   }
 }
@@ -58,8 +58,6 @@ app.use(express.json());
 
 // Cookie exchange (must be before auth middleware / static files)
 app.use(cookieExchangeMiddleware);
-
-
 
 registerGraphQL(app, ctx);
 registerSnapshot(app, ctx);
@@ -128,6 +126,9 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   shutdown();
 });
+
+// Pre-warm gateway status cache for faster first snapshot
+import('./sources/gateway-cli.js').then((m) => m.warmCache()).catch(() => {});
 
 const PORT = config.serverPort;
 const server = app.listen(PORT, '127.0.0.1', () => {

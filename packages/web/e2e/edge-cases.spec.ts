@@ -13,10 +13,9 @@ test.describe('P1: Edge Cases (T12)', () => {
 
   test('empty logs page shows appropriate state', async ({ page }) => {
     await page.goto('/#logs?from=0&to=1');
-    await page.waitForTimeout(2000);
     // With from=0&to=1 (epoch 0-1), there should be no events
     // Page should not crash
-    await expect(page.getByText(/event log|logs/i).first()).toBeVisible();
+    await expect(page.getByText(/event log|logs/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('invalid hash route falls back to dashboard', async ({ page }) => {

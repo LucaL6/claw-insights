@@ -8,8 +8,7 @@ import { MainLayout } from './components/layout/MainLayout';
 import { TopBar } from './components/topbar/TopBar';
 import { SessionPanel } from './components/sessions/SessionPanel';
 import { MetricsSection } from './components/charts/metrics/MetricsSection';
-import { useOperationModals, RestartModal, UpdateModal, DoctorModal } from './components/modals/OperationModals';
-import { useTopBarData } from './hooks/useTopBarData';
+import { useOperationModals, RestartModal, DoctorModal } from './components/modals/OperationModals';
 import { LogPage } from './components/logs/LogPage';
 import type { MetricsRange } from './components/charts/metrics/GranularityPicker';
 import { usePreference } from './hooks/usePreference';
@@ -18,7 +17,6 @@ const VALID_RANGES: MetricsRange[] = ['ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TW
 
 function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: Route }) {
   const { modal, open, close } = useOperationModals();
-  const { version, gateway } = useTopBarData();
   const urlRange = VALID_RANGES.includes(route.params.range as MetricsRange)
     ? (route.params.range as MetricsRange)
     : undefined;
@@ -48,7 +46,6 @@ function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: 
         metrics={<MetricsSection range={range} onRangeChange={setRange} navigate={navigate} onReady={onMetricsReady} />}
       />
       {modal === 'restart' && <RestartModal onClose={close} />}
-      {modal === 'update' && <UpdateModal onClose={close} currentVersion={version} latestVersion={gateway?.latestVersion ?? gateway?.updateAvailable ?? '...'} />}
       {modal === 'doctor' && <DoctorModal onClose={close} />}
     </>
   );

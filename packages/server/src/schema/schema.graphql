@@ -34,6 +34,7 @@ type GatewayStatus {
   running: Boolean!
   pid: Int
   version: String!
+  appVersion: String!
   updateAvailable: String
   uptime: String!
   startedAt: String

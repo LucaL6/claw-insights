@@ -15,13 +15,7 @@ export function useTopBarData() {
   const channels = ch.data?.channels ?? [];
 
   const uptime = formatUptime(gateway?.startedAt);
-  const version = gateway?.version ?? '...';
-  const latestVersion = gateway?.latestVersion as string | null;
-  const updateLabel = latestVersion
-    ? latestVersion.startsWith(version.slice(0, -2))
-      ? '.' + latestVersion.split('.').pop()
-      : latestVersion
-    : null;
+  const version = gateway?.appVersion ?? '...';
 
   return {
     gateway,
@@ -29,7 +23,6 @@ export function useTopBarData() {
     channels,
     uptime,
     version,
-    updateLabel,
     fetching: {
       gateway: gw.fetching && !gw.data,
       resources: res.fetching && !res.data,

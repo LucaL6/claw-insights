@@ -113,16 +113,19 @@ function findPidByPort(port: number): number | null {
           const cols = line.trim().split(/\s+/);
           if (!cols[1]) continue;
           const localPort = cols[1].split(':').pop();
-          if (localPort === hexPort && cols[3] === '0A') { // 0A = LISTEN
+          if (localPort === hexPort && cols[3] === '0A') {
+            // 0A = LISTEN
             inodes.add(cols[9]); // inode
           }
         }
-      } catch { /* file not present */ }
+      } catch {
+        /* file not present */
+      }
     }
     if (inodes.size === 0) return null;
 
     // Scan /proc/*/fd to find which PID owns the socket inode
-    const procs = readdirSync('/proc').filter(d => /^\d+$/.test(d));
+    const procs = readdirSync('/proc').filter((d) => /^\d+$/.test(d));
     for (const p of procs) {
       try {
         const fds = readdirSync(`/proc/${p}/fd`);
@@ -131,11 +134,17 @@ function findPidByPort(port: number): number | null {
             const link = readlinkSync(`/proc/${p}/fd/${fd}`);
             const m = link.match(/socket:\[(\d+)\]/);
             if (m && inodes.has(m[1])) return parseInt(p, 10);
-          } catch { /* permission denied */ }
+          } catch {
+            /* permission denied */
+          }
         }
-      } catch { /* process gone or no access */ }
+      } catch {
+        /* process gone or no access */
+      }
     }
-  } catch { /* /proc not available */ }
+  } catch {
+    /* /proc not available */
+  }
   return null;
 }
 
@@ -145,10 +154,13 @@ function getUptimeFromPid(pid: number | null): string {
   // Method 1: ps command (macOS + Linux with procps)
   try {
     const raw = execFileSync('ps', ['-o', 'etime=', '-p', String(pid)], {
-      timeout: 2000, encoding: 'utf-8',
+      timeout: 2000,
+      encoding: 'utf-8',
     });
     return formatUptime(raw);
-  } catch { /* ps not available or failed */ }
+  } catch {
+    /* ps not available or failed */
+  }
 
   // Method 2: /proc fallback (Linux without procps)
   try {
@@ -169,7 +181,9 @@ function getUptimeFromPid(pid: number | null): string {
     if (h > 0) return `${h}h ${m}m`;
     if (m > 0) return `${m}m ${s}s`;
     return `${s}s`;
-  } catch { /* /proc not available (macOS) */ }
+  } catch {
+    /* /proc not available (macOS) */
+  }
 
   return 'unknown';
 }
@@ -233,16 +247,36 @@ export function parseStatus(json: string, version: string): ParsedStatus {
   }
 }
 
+export async function warmCache(): Promise<void> {
+  try {
+    await getGatewayStatus();
+  } catch {
+    /* ignore startup failure */
+  }
+}
+
+let statusInFlight: Promise<ParsedStatus> | null = null;
+
 export async function getGatewayStatus(): Promise<ParsedStatus> {
   if (statusCache && Date.now() - statusCache.ts < CACHE_TTL) {
     return statusCache.data;
   }
-  const [raw, version] = await Promise.all([execCli('status --json'), getVersion()]);
-  const status = parseStatus(raw, version);
-  const prevJson = statusCache ? JSON.stringify(statusCache.data) : '';
-  statusCache = { data: status, ts: Date.now() };
-  if (JSON.stringify(status) !== prevJson) {
-    emitChange('gateway');
-  }
-  return status;
+  if (statusInFlight) return statusInFlight;
+
+  statusInFlight = (async () => {
+    try {
+      const [raw, version] = await Promise.all([execCli('status --json'), getVersion()]);
+      const status = parseStatus(raw, version);
+      const prevJson = statusCache ? JSON.stringify(statusCache.data) : '';
+      statusCache = { data: status, ts: Date.now() };
+      if (JSON.stringify(status) !== prevJson) {
+        emitChange('gateway');
+      }
+      return status;
+    } finally {
+      statusInFlight = null;
+    }
+  })();
+
+  return statusInFlight;
 }

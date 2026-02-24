@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-interface ScreenshotOptions {
+interface SnapshotOptions {
   section: 'dashboard' | 'logs';
   range: string;
   theme: string;
@@ -14,11 +14,11 @@ const RANGE_SHORT: Record<string, string> = {
   TWENTY_FOUR_HOUR: '24h',
 };
 
-export function useScreenshot() {
-  const [screenshotting, setScreenshotting] = useState(false);
+export function useSnapshot() {
+  const [snapshotting, setSnapshotting] = useState(false);
 
-  const takeScreenshot = useCallback(async (opts: ScreenshotOptions) => {
-    setScreenshotting(true);
+  const takeSnapshot = useCallback(async (opts: SnapshotOptions) => {
+    setSnapshotting(true);
     try {
       const rangeValue = RANGE_SHORT[opts.range] ?? '24h';
       const res = await fetch('/api/snapshot', {
@@ -41,7 +41,9 @@ export function useScreenshot() {
       if (!filename) {
         const now = new Date();
         const date = now.toLocaleDateString('sv-SE'); // YYYY-MM-DD
-        const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '-');
+        const time = now
+          .toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+          .replace(':', '-');
         filename = `claw-insights-standard-${rangeValue}-${opts.theme}-${date}-${time}.png`;
       }
 
@@ -51,11 +53,11 @@ export function useScreenshot() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      console.error('[screenshot]', e);
+      console.error('[snapshot]', e);
     } finally {
-      setScreenshotting(false);
+      setSnapshotting(false);
     }
   }, []);
 
-  return { screenshotting, takeScreenshot };
+  return { snapshotting, takeSnapshot };
 }

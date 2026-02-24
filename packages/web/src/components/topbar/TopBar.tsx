@@ -16,11 +16,11 @@ export function TopBar({
 }: {
   currentPage?: Page;
   onNavigate?: (hash: string) => void;
-  onAction?: (action: 'restart' | 'doctor' | 'update') => void;
+  onAction?: (action: 'restart' | 'doctor') => void;
   metricsRange?: MetricsRange;
 }) {
   const { t } = useI18n();
-  const { gateway, resources, channels, uptime, version, updateLabel, fetching } = useTopBarData();
+  const { gateway, resources, channels, uptime, version, fetching } = useTopBarData();
 
   return (
     <div className="flex items-center justify-between text-xs">
@@ -45,7 +45,6 @@ export function TopBar({
       <ActionBar
         onAction={onAction}
         metricsRange={metricsRange}
-        updateLabel={updateLabel}
         uptime={uptime}
         currentPage={currentPage}
       />

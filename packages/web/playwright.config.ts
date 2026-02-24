@@ -11,6 +11,7 @@ export default defineConfig({
   globalTeardown: './e2e/global-teardown.ts',
   timeout: 30_000,
   retries: 1,
+  workers: process.env.CI ? 2 : undefined,
   use: {
     baseURL: 'http://localhost:3211',
     trace: 'on-first-retry',
@@ -29,6 +30,9 @@ export default defineConfig({
       command: 'npx vite --port 3211',
       port: 3211,
       reuseExistingServer: true,
+      env: {
+        CLAW_INSIGHTS_SERVER_PORT: '4111',
+      },
     },
   ],
 });

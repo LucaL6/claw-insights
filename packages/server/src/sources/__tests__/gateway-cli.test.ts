@@ -61,4 +61,33 @@ describe('gateway-cli extended fields', () => {
     const status = await getGatewayStatus();
     expect(status.sessionDefaults).toEqual({ model: 'opus', contextTokens: 200000 });
   });
+
+  it('deduplicates concurrent calls (in-flight guard)', async () => {
+    let callCount = 0;
+    mockCb = (_cmd, args, _opts, cb) => {
+      callCount++;
+      // Simulate slow CLI response
+      setTimeout(() => {
+        if (args.some((a: string) => a.includes('--json'))) {
+          cb(null, { stdout: MOCK_STATUS_JSON });
+        } else {
+          cb(null, { stdout: '2.5.0\n' });
+        }
+      }, 50);
+    };
+
+    const { getGatewayStatus } = await import('../gateway-cli');
+    // Fire two concurrent calls
+    const [a, b] = await Promise.all([getGatewayStatus(), getGatewayStatus()]);
+
+    // Both should return identical results
+    expect(a.running).toBe(true);
+    expect(b.running).toBe(true);
+    expect(a).toBe(b); // same object reference (in-flight dedup)
+
+    // CLI should only be called once per command (status + version = 2), not doubled
+    // With dedup: 2 calls (status --json + --version)
+    // Without dedup: 4 calls (2x each)
+    expect(callCount).toBeLessThanOrEqual(2);
+  });
 });

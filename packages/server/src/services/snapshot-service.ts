@@ -1,5 +1,9 @@
 import type { Detail, Range, DataSources, SnapshotData, SnapshotSession } from './snapshot-types.js';
 import { formatTokens, friendlyModel, relativeTime, normalize, sample, uptimeStatus } from './snapshot-formatters.js';
+import { getAppVersion } from '../version.js';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('snapshot-data');
 
 // ─── Constants ───────────────────────────────────────────────────
 
@@ -59,16 +63,18 @@ export async function buildSnapshotData(
 ): Promise<SnapshotData> {
   const { detail, range } = opts;
 
-  // 1. Fetch raw data
-  const gw = await sources.getGateway();
-  const channels = await sources.getChannels();
+  // 1. Fetch raw data (parallel)
+  const t0 = performance.now();
+  const [gw, channels] = await Promise.all([sources.getGateway(), sources.getChannels()]);
+  const t1 = performance.now();
+  log.debug({ fetchMs: Math.round(t1 - t0) }, 'snapshot data fetch');
   const rawSessions = sources.getSessions() as Record<string, unknown>[];
   const metrics = sources.getMetrics(range);
 
   // 2. Gateway
   const gateway: SnapshotData['gateway'] = {
     status: gw.running ? 'up' : 'down',
-    version: gw.version,
+    version: getAppVersion(),
     uptime: gw.uptime,
     cpu: (gw.cpu as number) ?? 0,
     memoryMB: (gw.memoryMB as number) ?? 0,

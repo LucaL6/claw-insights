@@ -121,6 +121,7 @@ export type EventsResult = {
 
 /** Gateway process status */
 export type GatewayStatus = {
+  appVersion: Scalars['String']['output'];
   connectLatencyMs?: Maybe<Scalars['Int']['output']>;
   latestVersion?: Maybe<Scalars['String']['output']>;
   pid?: Maybe<Scalars['Int']['output']>;
@@ -557,6 +558,7 @@ export type EventsResultResolvers<ContextType = AppContext, ParentType extends R
 }>;
 
 export type GatewayStatusResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['GatewayStatus'] = ResolversParentTypes['GatewayStatus']> = ResolversObject<{
+  appVersion?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   connectLatencyMs?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   latestVersion?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   pid?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;

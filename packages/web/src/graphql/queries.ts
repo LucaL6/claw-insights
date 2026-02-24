@@ -6,6 +6,7 @@ export const GatewayQuery = graphql(/* GraphQL */ `
       running
       pid
       version
+      appVersion
       updateAvailable
       uptime
       startedAt

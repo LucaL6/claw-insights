@@ -15,12 +15,18 @@ export const MODEL_COLORS: Record<string, string> = {
   opus: '#38bdf8', // sky-400
   sonnet: '#a78bfa', // violet-400
   haiku: '#34d399', // emerald-400
-  gpt: '#fb923c', // orange-400
+  '5.3-codex': '#f97316', // orange-500 (primary GPT)
+  '5.2-codex': '#fdba74', // orange-300 (secondary GPT)
+  gpt: '#fb923c', // orange-400 (generic GPT fallback)
+  minimax: '#34d399', // emerald-400
 };
+
+/** Pre-sorted entries: longest key first so specific matches win over generic */
+const COLOR_ENTRIES = Object.entries(MODEL_COLORS).sort((a, b) => b[0].length - a[0].length);
 
 export function getModelColor(model: string): string {
   const lower = model.toLowerCase();
-  for (const [key, color] of Object.entries(MODEL_COLORS)) {
+  for (const [key, color] of COLOR_ENTRIES) {
     if (lower.includes(key)) return color;
   }
   return '#71717a'; // zinc-500

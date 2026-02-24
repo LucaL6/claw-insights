@@ -91,7 +91,22 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleLang = useCallback(() => {
-    setLang(lang === 'en' ? 'zh' : 'en');
+    const next = lang === 'en' ? 'zh' : 'en';
+    setLang(next);
+    // Clear URL lang param so it doesn't override the toggled value
+    try {
+      const [base, qs] = window.location.hash.split('?');
+      if (qs) {
+        const params = new URLSearchParams(qs);
+        if (params.has('lang')) {
+          params.delete('lang');
+          const newHash = params.toString() ? `${base}?${params}` : base;
+          window.history.replaceState(null, '', newHash || '#');
+        }
+      }
+    } catch {
+      // best effort
+    }
   }, [lang, setLang]);
 
   const t = useCallback(

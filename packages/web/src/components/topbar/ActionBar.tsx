@@ -1,28 +1,27 @@
 import { useTheme } from '../../theme/context';
 import { useI18n } from '../../i18n/context';
-import { useScreenshot } from '../../hooks/useScreenshot';
-import { RestartIcon, DoctorIcon, DownloadIcon, CameraIcon, SpinnerIcon } from '../ui/icons';
+import { useSnapshot } from '../../hooks/useSnapshot';
+import { RestartIcon, DoctorIcon, CameraIcon, SpinnerIcon } from '../ui/icons';
 import type { MetricsRange } from '../charts/metrics/GranularityPicker';
 
 interface Props {
-  onAction?: (action: 'restart' | 'doctor' | 'update') => void;
+  onAction?: (action: 'restart' | 'doctor') => void;
   metricsRange?: MetricsRange;
-  updateLabel: string | null;
   uptime: string | undefined;
   currentPage?: string;
 }
 
-export function ActionBar({ onAction, metricsRange, updateLabel, uptime, currentPage }: Props) {
+export function ActionBar({ onAction, metricsRange, uptime, currentPage }: Props) {
   const { theme, toggleTheme } = useTheme();
   const { lang, toggleLang, t } = useI18n();
-  const { screenshotting, takeScreenshot } = useScreenshot();
+  const { snapshotting, takeSnapshot } = useSnapshot();
 
   return (
     <div className="flex items-center gap-2">
       <button
-        disabled={screenshotting}
+        disabled={snapshotting}
         onClick={() =>
-          takeScreenshot({
+          takeSnapshot({
             section: currentPage === 'logs' ? 'logs' : 'dashboard',
             range: metricsRange ?? 'TWENTY_FOUR_HOUR',
             theme,
@@ -30,14 +29,14 @@ export function ActionBar({ onAction, metricsRange, updateLabel, uptime, current
           })
         }
         className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md transition-all ${
-          screenshotting
+          snapshotting
             ? 'bg-emerald-bg text-emerald border border-emerald-border opacity-80'
             : 'bg-elevated text-fg-secondary border border-edge'
         }`}
-        title={t('topbar.screenshot')}
+        title={t('topbar.snapshot')}
       >
-        {screenshotting ? <SpinnerIcon /> : <CameraIcon />}
-        {screenshotting ? t('topbar.screenshotting') : t('topbar.screenshot')}
+        {snapshotting ? <SpinnerIcon /> : <CameraIcon />}
+        {snapshotting ? t('topbar.snapshotting') : t('topbar.snapshot')}
       </button>
 
       <button
@@ -55,16 +54,6 @@ export function ActionBar({ onAction, metricsRange, updateLabel, uptime, current
         <DoctorIcon />
         {t('topbar.doctor')}
       </button>
-
-      {updateLabel && (
-        <button
-          onClick={() => onAction?.('update')}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md transition-all bg-orange-bg text-orange border border-orange-border"
-        >
-          <DownloadIcon />
-          {updateLabel}
-        </button>
-      )}
 
       <button
         onClick={toggleTheme}

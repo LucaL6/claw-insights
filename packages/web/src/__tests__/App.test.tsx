@@ -6,39 +6,67 @@ if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localSto
   const store: Record<string, string> = {};
   (globalThis as any).localStorage = {
     getItem: (k: string) => store[k] ?? null,
-    setItem: (k: string, v: string) => { store[k] = v; },
-    removeItem: (k: string) => { delete store[k]; },
-    clear: () => { for (const k in store) delete store[k]; },
-    get length() { return Object.keys(store).length; },
+    setItem: (k: string, v: string) => {
+      store[k] = v;
+    },
+    removeItem: (k: string) => {
+      delete store[k];
+    },
+    clear: () => {
+      for (const k in store) delete store[k];
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
     key: (i: number) => Object.keys(store)[i] ?? null,
   };
 }
 
 // Mock heavy child components and hooks
-const mockRoute: { route: { page: 'dashboard' | 'logs'; params: Record<string, string> }; navigate: ReturnType<typeof vi.fn> } = { route: { page: 'dashboard', params: {} }, navigate: vi.fn() };
+const mockRoute: {
+  route: { page: 'dashboard' | 'logs'; params: Record<string, string> };
+  navigate: ReturnType<typeof vi.fn>;
+} = { route: { page: 'dashboard', params: {} }, navigate: vi.fn() };
 vi.mock('../hooks/useHashRoute', () => ({
   useHashRoute: () => mockRoute,
 }));
 vi.mock('../hooks/useTopBarData', () => ({
-  useTopBarData: () => ({ version: '1.0.0', gateway: { latestVersion: '1.0.1' } }),
+  useTopBarData: () => ({ version: '0.1.0', gateway: {}, fetching: {} }),
 }));
 vi.mock('../components/topbar/TopBar', () => ({
   TopBar: (props: any) => <div data-testid="topbar">{props.currentPage}</div>,
 }));
 vi.mock('../components/sessions/SessionPanel', () => ({
-  SessionPanel: ({ onReady }: any) => { onReady?.(); return <div data-testid="sessions" />; },
+  SessionPanel: ({ onReady }: any) => {
+    onReady?.();
+    return <div data-testid="sessions" />;
+  },
 }));
 vi.mock('../components/charts/metrics/MetricsSection', () => ({
-  MetricsSection: ({ onReady }: any) => { onReady?.(); return <div data-testid="metrics" />; },
+  MetricsSection: ({ onReady }: any) => {
+    onReady?.();
+    return <div data-testid="metrics" />;
+  },
 }));
 let mockModal: string | null = null;
-const mockOpen = vi.fn((m: string) => { mockModal = m; });
-const mockClose = vi.fn(() => { mockModal = null; });
+const mockOpen = vi.fn((m: string) => {
+  mockModal = m;
+});
+const mockClose = vi.fn(() => {
+  mockModal = null;
+});
 vi.mock('../components/modals/OperationModals', () => ({
   useOperationModals: () => ({ modal: mockModal, open: mockOpen, close: mockClose }),
-  RestartModal: ({ onClose }: any) => <div data-testid="restart-modal"><button onClick={onClose}>close</button></div>,
-  UpdateModal: ({ onClose }: any) => <div data-testid="update-modal"><button onClick={onClose}>close</button></div>,
-  DoctorModal: ({ onClose }: any) => <div data-testid="doctor-modal"><button onClick={onClose}>close</button></div>,
+  RestartModal: ({ onClose }: any) => (
+    <div data-testid="restart-modal">
+      <button onClick={onClose}>close</button>
+    </div>
+  ),
+  DoctorModal: ({ onClose }: any) => (
+    <div data-testid="doctor-modal">
+      <button onClick={onClose}>close</button>
+    </div>
+  ),
 }));
 
 vi.mock('../components/logs/LogPage', () => ({
@@ -78,13 +106,6 @@ describe('App', () => {
     mockModal = 'restart';
     render(<App />);
     expect(screen.getByTestId('restart-modal')).toBeTruthy();
-    mockModal = null;
-  });
-
-  it('renders update modal when modal is update', () => {
-    mockModal = 'update';
-    render(<App />);
-    expect(screen.getByTestId('update-modal')).toBeTruthy();
     mockModal = null;
   });
 

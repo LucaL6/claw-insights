@@ -16,23 +16,34 @@ describe('useTopBarData', () => {
   it('returns computed fields from gateway data', () => {
     const startedAt = new Date(Date.now() - 3_600_000 * 2).toISOString(); // 2h ago
     mockUseReactiveQuery
-      .mockReturnValueOnce([{
-        data: { gateway: { version: '1.2.3', latestVersion: '1.2.5', startedAt } },
-        fetching: false, error: null,
-      }, vi.fn()])
-      .mockReturnValueOnce([{
-        data: { resources: { cpu: 10 } },
-        fetching: false, error: null,
-      }, vi.fn()])
-      .mockReturnValueOnce([{
-        data: { channels: [{ provider: 'discord', name: 'Discord', connected: true }] },
-        fetching: false, error: null,
-      }, vi.fn()]);
+      .mockReturnValueOnce([
+        {
+          data: { gateway: { version: '1.2.3', appVersion: '0.1.0', latestVersion: '1.2.5', startedAt } },
+          fetching: false,
+          error: null,
+        },
+        vi.fn(),
+      ])
+      .mockReturnValueOnce([
+        {
+          data: { resources: { cpu: 10 } },
+          fetching: false,
+          error: null,
+        },
+        vi.fn(),
+      ])
+      .mockReturnValueOnce([
+        {
+          data: { channels: [{ provider: 'discord', name: 'Discord', connected: true }] },
+          fetching: false,
+          error: null,
+        },
+        vi.fn(),
+      ]);
 
     const { result } = renderHook(() => useTopBarData());
-    expect(result.current.version).toBe('1.2.3');
+    expect(result.current.version).toBe('0.1.0');
     expect(result.current.uptime).toMatch(/\d+h \d+m/);
-    expect(result.current.updateLabel).toBe('.5');
     expect(result.current.channels).toHaveLength(1);
     expect(result.current.fetching.gateway).toBe(false);
   });
@@ -46,21 +57,24 @@ describe('useTopBarData', () => {
     const { result } = renderHook(() => useTopBarData());
     expect(result.current.version).toBe('...');
     expect(result.current.uptime).toBe('');
-    expect(result.current.updateLabel).toBeNull();
     expect(result.current.fetching.gateway).toBe(true);
     expect(result.current.fetching.resources).toBe(true);
   });
 
-  it('returns null updateLabel when no latestVersion', () => {
+  it('returns version from appVersion field', () => {
     mockUseReactiveQuery
-      .mockReturnValueOnce([{
-        data: { gateway: { version: '1.0.0', latestVersion: null, startedAt: null } },
-        fetching: false, error: null,
-      }, vi.fn()])
+      .mockReturnValueOnce([
+        {
+          data: { gateway: { version: '1.0.0', appVersion: '0.1.0', latestVersion: null, startedAt: null } },
+          fetching: false,
+          error: null,
+        },
+        vi.fn(),
+      ])
       .mockReturnValueOnce([{ data: { resources: null }, fetching: false, error: null }, vi.fn()])
       .mockReturnValueOnce([{ data: { channels: [] }, fetching: false, error: null }, vi.fn()]);
 
     const { result } = renderHook(() => useTopBarData());
-    expect(result.current.updateLabel).toBeNull();
+    expect(result.current.version).toBe('0.1.0');
   });
 });

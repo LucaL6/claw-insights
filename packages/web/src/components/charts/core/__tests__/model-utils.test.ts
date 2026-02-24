@@ -7,6 +7,21 @@ describe('getModelColor', () => {
   it('returns emerald for haiku', () => expect(getModelColor('claude-haiku-3')).toBe(MODEL_COLORS.haiku));
   it('returns orange for gpt', () => expect(getModelColor('gpt-4o')).toBe(MODEL_COLORS.gpt));
   it('returns zinc fallback for unknown', () => expect(getModelColor('llama-70b')).toBe('#71717a'));
+
+  it('returns orange-500 for gpt-5.3-codex', () => {
+    expect(getModelColor('gpt-5.3-codex')).toBe(MODEL_COLORS['5.3-codex']);
+    expect(getModelColor('gpt-5.3-codex')).toBe('#f97316');
+  });
+
+  it('returns orange-300 for gpt-5.2-codex', () => {
+    expect(getModelColor('gpt-5.2-codex')).toBe(MODEL_COLORS['5.2-codex']);
+    expect(getModelColor('gpt-5.2-codex')).toBe('#fdba74');
+  });
+
+  it('returns emerald for minimax', () => {
+    expect(getModelColor('MiniMax-M2.5')).toBe(MODEL_COLORS.minimax);
+    expect(getModelColor('MiniMax-M2.5')).toBe('#34d399');
+  });
 });
 
 describe('shortModelName', () => {

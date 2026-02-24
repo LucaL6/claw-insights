@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-import { useScreenshot } from '../useScreenshot';
+import { useSnapshot } from '../useSnapshot';
 
-describe('useScreenshot', () => {
+describe('useSnapshot', () => {
   let fetchSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -19,13 +19,13 @@ describe('useScreenshot', () => {
     vi.restoreAllMocks();
   });
 
-  it('starts with screenshotting=false', () => {
-    const { result } = renderHook(() => useScreenshot());
-    expect(result.current.screenshotting).toBe(false);
-    expect(typeof result.current.takeScreenshot).toBe('function');
+  it('starts with snapshotting=false', () => {
+    const { result } = renderHook(() => useSnapshot());
+    expect(result.current.snapshotting).toBe(false);
+    expect(typeof result.current.takeSnapshot).toBe('function');
   });
 
-  it('takeScreenshot fetches and triggers download', async () => {
+  it('takeSnapshot fetches and triggers download', async () => {
     const mockBlob = new Blob(['png']);
     (globalThis.fetch as any).mockResolvedValue({
       ok: true,
@@ -42,14 +42,14 @@ describe('useScreenshot', () => {
       return origCreate(tagName as any, options as any);
     }) as any);
 
-    const { result } = renderHook(() => useScreenshot());
+    const { result } = renderHook(() => useSnapshot());
     await act(async () => {
-      await result.current.takeScreenshot({ section: 'dashboard', range: 'ONE_HOUR', theme: 'dark', lang: 'en' });
+      await result.current.takeSnapshot({ section: 'dashboard', range: 'ONE_HOUR', theme: 'dark', lang: 'en' });
     });
 
     expect(globalThis.fetch).toHaveBeenCalledWith('/api/snapshot', expect.objectContaining({ method: 'POST' }));
     expect(clickSpy).toHaveBeenCalled();
-    expect(result.current.screenshotting).toBe(false);
+    expect(result.current.snapshotting).toBe(false);
   });
 
   it('maps range to short form', async () => {
@@ -60,9 +60,9 @@ describe('useScreenshot', () => {
       return origCreate(tagName as any, options as any);
     }) as any);
 
-    const { result } = renderHook(() => useScreenshot());
+    const { result } = renderHook(() => useSnapshot());
     await act(async () => {
-      await result.current.takeScreenshot({ section: 'logs', range: 'SIX_HOUR', theme: 'light', lang: 'zh' });
+      await result.current.takeSnapshot({ section: 'logs', range: 'SIX_HOUR', theme: 'light', lang: 'zh' });
     });
 
     const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
@@ -77,9 +77,9 @@ describe('useScreenshot', () => {
       return origCreate(tagName as any, options as any);
     }) as any);
 
-    const { result } = renderHook(() => useScreenshot());
+    const { result } = renderHook(() => useSnapshot());
     await act(async () => {
-      await result.current.takeScreenshot({ section: 'dashboard', range: 'UNKNOWN', theme: 'dark', lang: 'en' });
+      await result.current.takeSnapshot({ section: 'dashboard', range: 'UNKNOWN', theme: 'dark', lang: 'en' });
     });
 
     const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
@@ -90,12 +90,12 @@ describe('useScreenshot', () => {
     (globalThis.fetch as any).mockResolvedValue({ ok: false });
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const { result } = renderHook(() => useScreenshot());
+    const { result } = renderHook(() => useSnapshot());
     await act(async () => {
-      await result.current.takeScreenshot({ section: 'dashboard', range: 'ONE_HOUR', theme: 'dark', lang: 'en' });
+      await result.current.takeSnapshot({ section: 'dashboard', range: 'ONE_HOUR', theme: 'dark', lang: 'en' });
     });
 
-    expect(result.current.screenshotting).toBe(false);
+    expect(result.current.snapshotting).toBe(false);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
   });

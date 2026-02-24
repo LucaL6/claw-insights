@@ -1,14 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { getAppVersion } from '../../../version.js';
 
-// Reset cached version between tests
-beforeEach(async () => {
-  // Re-import to get fresh module if needed
-});
-
-describe('getVersion', () => {
-  it('should return a real version, not 0.0.0', async () => {
-    const { getVersion } = await import('../footer.js');
-    const version = getVersion();
+describe('getAppVersion', () => {
+  it('should return a real version, not 0.0.0', () => {
+    const version = getAppVersion();
     expect(version).not.toBe('0.0.0');
     expect(version).toMatch(/^\d+\.\d+\.\d+/);
   });

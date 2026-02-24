@@ -3,7 +3,6 @@ import { test, expect } from '@playwright/test';
 test.describe('P0: Navigate to Logs (T4)', () => {
   test('LogPage renders with event data from seeded DB', async ({ page }) => {
     await page.goto('/#logs');
-    await page.waitForTimeout(2000);
     // Filter bar should show error/warn pills
     await expect(page.getByRole('button', { name: /error/i }).first()).toBeVisible({ timeout: 5000 });
   });
@@ -34,11 +33,10 @@ test.describe('P1: Logs Filter & Search (T5)', () => {
 
   test('search box filters displayed events', async ({ page }) => {
     await page.goto('/#logs');
-    await page.waitForTimeout(1500);
+    await expect(page.getByRole('button', { name: /error/i }).first()).toBeVisible({ timeout: 5000 });
     const searchInput = page.getByPlaceholder(/search|filter/i);
     if (await searchInput.isVisible()) {
       await searchInput.fill('timeout');
-      await page.waitForTimeout(500);
       // Search should not cause errors
       await expect(page.getByText(/event log|logs/i).first()).toBeVisible();
     }
@@ -48,12 +46,12 @@ test.describe('P1: Logs Filter & Search (T5)', () => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
     await page.goto('/#logs');
-    await page.waitForTimeout(2000);
+    await expect(page.getByRole('button', { name: /error/i }).first()).toBeVisible({ timeout: 5000 });
     // Click through filters
     const errorPill = page.getByRole('button', { name: /error/i }).first();
     if (await errorPill.isVisible()) {
       await errorPill.click();
-      await page.waitForTimeout(500);
+      await expect(errorPill).toBeVisible();
     }
     expect(errors).toHaveLength(0);
   });

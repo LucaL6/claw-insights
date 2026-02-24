@@ -41,9 +41,11 @@ function inferKind(key: string, raw: RawSession): string {
 
 function inferDisplayName(key: string, raw: RawSession): string {
   // Highest priority: gateway-resolved displayName (e.g. Slack/Telegram user name)
-  if (raw.displayName) return raw.displayName;
+  const displayName = raw.displayName?.trim();
+  if (displayName) return displayName;
   // Use explicit session label if available (sub-agents get this from spawn)
-  if (raw.label) return raw.label;
+  const label = raw.label?.trim();
+  if (label) return label;
   // Parse key: agent:main:NAME or agent:main:subagent:UUID
   const parts = key.split(':');
   const last = parts[parts.length - 1];

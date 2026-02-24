@@ -32,11 +32,11 @@ test.describe('P0/P1: Cross-page Navigation (T4, T8)', () => {
     page.on('pageerror', (err) => errors.push(err.message));
 
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await expect(page.getByText('Claw Insights')).toBeVisible({ timeout: 5000 });
     await page.getByRole('button', { name: /logs/i }).click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByText(/event log|logs/i).first()).toBeVisible({ timeout: 5000 });
     await page.getByRole('button', { name: /dashboard/i }).click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByText('Claw Insights')).toBeVisible({ timeout: 5000 });
 
     expect(errors).toHaveLength(0);
   });

@@ -1,6 +1,7 @@
 import type { AppContext } from '../../context.js';
 import type { Resolvers, QueryResolvers, ChannelProvider } from '../generated/resolver-types.js';
 import { getGatewayStatus } from '../../sources/gateway-cli.js';
+import { getAppVersion } from '../../version.js';
 import { getSystemMetrics } from '../../sources/system-info.js';
 import { safe } from './utils.js';
 
@@ -12,6 +13,7 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
         running: status.running,
         pid: status.pid,
         version: status.version,
+        appVersion: getAppVersion(),
         updateAvailable: status.updateAvailable,
         uptime: status.uptime,
         startedAt: status.startedAt,

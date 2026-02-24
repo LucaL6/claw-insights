@@ -21,7 +21,10 @@ test.describe('P0: Dashboard First Load (T1)', () => {
     // ResourcesBar renders: skeleton while fetching, values if gateway is live, null if unavailable
     // In E2E without live gateway, resources=null → component returns null (expected)
     // When gateway is available: CPU/MEM labels are visible
-    const cpuVisible = await page.getByText(/CPU|cpu/i).isVisible().catch(() => false);
+    const cpuVisible = await page
+      .getByText(/CPU|cpu/i)
+      .isVisible()
+      .catch(() => false);
     // Verify no JS errors occurred during resource loading
     expect(errors).toHaveLength(0);
     // If resources are available, CPU label must be present
@@ -45,8 +48,8 @@ test.describe('P0: Dashboard First Load (T1)', () => {
 
   test('Metrics area renders chart canvases', async ({ page }) => {
     await page.goto('/');
-    // Wait for charts to render (canvas elements)
-    await page.waitForTimeout(2000);
+    // Wait for charts to render (canvas elements created async by Chart.js)
+    await expect(page.locator('canvas').first()).toBeVisible({ timeout: 10_000 });
     const canvases = page.locator('canvas');
     expect(await canvases.count()).toBeGreaterThanOrEqual(1);
   });
@@ -80,9 +83,10 @@ test.describe('P0: Time Range Switch (T2)', () => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
     await page.goto('/');
+    await expect(page.getByRole('button', { name: '1h', exact: true })).toBeVisible({ timeout: 5000 });
     for (const label of ['1h', '6h', '12h', '24h']) {
       await page.getByRole('button', { name: label, exact: true }).click();
-      await page.waitForTimeout(500);
+      await expect(page.locator('canvas').first()).toBeVisible();
     }
     expect(errors).toHaveLength(0);
   });
@@ -144,7 +148,7 @@ test.describe('P0: Navigate to Logs (T4)', () => {
 test.describe('P1: Metrics Model Selector (T6)', () => {
   test('ModelSelector is present when multi-model data exists', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('canvas').first()).toBeVisible({ timeout: 10_000 });
     // The model selector dropdown may or may not appear depending on data
     // Just verify the page doesn't crash
     await expect(page.getByText('Claw Insights')).toBeVisible();

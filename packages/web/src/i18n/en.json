@@ -40,8 +40,8 @@
   "topbar.up": "UP",
   "topbar.down": "DOWN",
   "topbar.connecting": "CONNECTING",
-  "topbar.screenshot": "Screenshot",
-  "topbar.screenshotting": "Capturing...",
+  "topbar.snapshot": "Snapshot",
+  "topbar.snapshotting": "Capturing...",
 
   "time.justNow": "just now",
   "time.mAgo": "{n}m ago",
