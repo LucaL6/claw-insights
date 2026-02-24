@@ -29,6 +29,35 @@ jobs:
       - name: Unit Tests (web)
         run: npm run -w @claw-insights/web test
 
+  integration:
+    name: Integration Tests (Server)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Make mock CLI executable
+        run: chmod +x sandbox/mock-openclaw/bin/openclaw
+
+      - name: Run integration tests (GraphQL resolvers)
+        env:
+          RUN_INTEGRATION: '1'
+          MOCK_SCENARIO: healthy
+          CLAW_INSIGHTS_CLI: ${{ github.workspace }}/sandbox/mock-openclaw/bin/openclaw
+          CLAW_INSIGHTS_SESSIONS_PATH: ${{ github.workspace }}/sandbox/fixtures/sessions.json
+          CLAW_INSIGHTS_SERVER_PORT: '4000'
+        run: npm run -w @claw-insights/server test -- src/__tests__/resolvers.test.ts
+
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest

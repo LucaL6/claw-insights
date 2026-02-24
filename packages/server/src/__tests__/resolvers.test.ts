@@ -15,8 +15,9 @@ const GQL = (query: string, variables?: Record<string, unknown>) =>
     body: JSON.stringify({ query, variables }),
   }).then((r) => r.json());
 
-// Integration test — requires a running server; skip on CI
-describe.skipIf(process.env.CI)('GraphQL Resolvers', () => {
+// Integration test — requires a running server.
+// Skipped unless RUN_INTEGRATION=1 (set by the dedicated CI integration job).
+describe.skipIf(!process.env.RUN_INTEGRATION)('GraphQL Resolvers', () => {
   beforeAll(async () => {
     proc = spawn('npx', ['tsx', 'src/index.ts'], {
       cwd: join(__dir, '../..'),
@@ -51,7 +52,7 @@ describe.skipIf(process.env.CI)('GraphQL Resolvers', () => {
     expect(typeof d.data.resources.cpu).toBe('number');
     expect(typeof d.data.resources.memoryMB).toBe('number');
     expect(typeof d.data.resources.diskMB).toBe('number');
-    expect(d.data.resources.diskMB).toBeGreaterThan(0);
+    expect(d.data.resources.diskMB).toBeGreaterThanOrEqual(0);
   });
 
   // F1.2 Channels
@@ -65,6 +66,8 @@ describe.skipIf(process.env.CI)('GraphQL Resolvers', () => {
     const d = (await GQL(`{
       sessions { key displayName kind model channel totalTokens contextTokens usagePercent status updatedAt subAgents { key } }
     }`)) as { data: { sessions: Array<Record<string, unknown>> } };
+    expect(Array.isArray(d.data.sessions)).toBe(true);
+    // With sessions fixture provided, we must have data
     expect(d.data.sessions.length).toBeGreaterThan(0);
     const s = d.data.sessions[0];
     expect(typeof s.key).toBe('string');

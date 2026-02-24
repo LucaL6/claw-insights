@@ -95,8 +95,11 @@ jobs:
       - name: Install OpenClaw
         env:
           # Pinned SHA-256 of the installer script.
-          # To update: run `curl -fsSL https://openclaw.ai/install.sh | shasum -a 256`
-          # and replace the hash below. Last verified: 2026-02-24.
+          # Automated updates: .github/workflows/update-installer-hash.yml (weekly Monday 09:00 UTC)
+          # Manual update: bash scripts/verify-installer-hash.sh
+          # To update manually: run `curl -fsSL https://openclaw.ai/install.sh | shasum -a 256`
+          # and replace the hash below. Include the reason in the commit message.
+          # Last verified: 2026-02-24 (manual — aligned with v0.1.0 release prep)
           INSTALLER_SHA256: '60aaae99297fb5d3d20dda65ef35d00aa238e0f903ee6ad8e615881407c3b715'
         run: |
           # Download installer

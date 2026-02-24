@@ -9,9 +9,20 @@ import { config, CLI_ENV, safePort, safeInt } from '../config.js';
 describe('config singleton', () => {
   it('has all required fields', () => {
     const keys = [
-      'cliPath', 'sessionsPath', 'logDir', 'cronPath', 'dbPath',
-      'openclawDir', 'serverPort', 'webPort', 'apiToken', 'isDev',
-      'serverOnly', 'rawRetentionDays', 'hourlyRetention', 'aggregateIntervalMs',
+      'cliPath',
+      'sessionsPath',
+      'logDir',
+      'cronPath',
+      'dbPath',
+      'openclawDir',
+      'serverPort',
+      'webPort',
+      'apiToken',
+      'isDev',
+      'serverOnly',
+      'rawRetentionDays',
+      'hourlyRetention',
+      'aggregateIntervalMs',
       'noAuth',
     ] as const;
     for (const k of keys) {
@@ -41,13 +52,16 @@ describe('config singleton', () => {
     expect(typeof config.serverOnly).toBe('boolean');
   });
 
+  // Environment-specific: only valid on dev machines with npm-global installed
   it.skipIf(process.env.CI)('CLI_ENV PATH includes npm-global', () => {
     expect(CLI_ENV.PATH).toContain('.npm-global/bin');
   });
 });
 
 describe('envBool', () => {
-  afterEach(() => { vi.resetModules(); });
+  afterEach(() => {
+    vi.resetModules();
+  });
 
   it('returns true for "true"', async () => {
     const { envBool } = await import('../config.js');

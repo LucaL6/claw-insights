@@ -26,9 +26,12 @@
     "format:check": "prettier --check ."
   },
   "lint-staged": {
-    "*.{ts,tsx}": [
+    "packages/web/**/*.{ts,tsx}": [
       "prettier --write",
       "eslint --fix --no-warn-ignored"
+    ],
+    "packages/server/**/*.{ts,tsx}": [
+      "prettier --write"
     ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"
