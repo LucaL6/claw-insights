@@ -18,6 +18,7 @@ interface RawSession {
   inputTokens?: number;
   outputTokens?: number;
   origin?: { provider?: string; label?: string };
+  displayName?: string;
   label?: string;
   spawnedBy?: string;
   lastChannel?: string;
@@ -39,6 +40,8 @@ function inferKind(key: string, raw: RawSession): string {
 }
 
 function inferDisplayName(key: string, raw: RawSession): string {
+  // Highest priority: gateway-resolved displayName (e.g. Slack/Telegram user name)
+  if (raw.displayName) return raw.displayName;
   // Use explicit session label if available (sub-agents get this from spawn)
   if (raw.label) return raw.label;
   // Parse key: agent:main:NAME or agent:main:subagent:UUID

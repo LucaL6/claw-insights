@@ -1,4 +1,9 @@
 import { defineConfig } from '@playwright/test';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dir = dirname(fileURLToPath(import.meta.url));
+const TEST_DB_PATH = resolve(__dir, '.e2e-test-metrics.db');
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,6 +22,7 @@ export default defineConfig({
       reuseExistingServer: true,
       env: {
         NODE_ENV: 'test',
+        CLAW_INSIGHTS_DB: TEST_DB_PATH,
       },
     },
     {
