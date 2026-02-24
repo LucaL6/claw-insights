@@ -36,8 +36,8 @@ vi.mock('../pipeline/index.js', () => ({
   },
 }));
 
-function mockClass(props: Record<string, any>) {
-  return class { constructor(..._args: any[]) { Object.assign(this, Object.fromEntries(Object.entries(props).map(([k, v]) => [k, typeof v === 'function' ? vi.fn(v) : v]))); } };
+function mockClass(props: Record<string, unknown>) {
+  return class { constructor(..._args: unknown[]) { Object.assign(this, Object.fromEntries(Object.entries(props).map(([k, v]) => [k, typeof v === 'function' ? vi.fn(v) : v]))); } };
 }
 
 vi.mock('../sources/readers/session-reader.js', () => ({
@@ -120,14 +120,14 @@ describe('context', () => {
     destroyContext(ctx);
 
     expect(ctx.pipeline.destroy).toHaveBeenCalled();
-    expect((ctx.db as any).close).toHaveBeenCalled();
+    expect(((ctx.db as unknown as Record<string, unknown>)).close).toHaveBeenCalled();
   });
 
   it('destroyContext handles db without close method', async () => {
     const { createContext, destroyContext } = await import('../context');
     const ctx = createContext();
     // Remove close method to test the typeof check
-    delete (ctx.db as any).close;
+    delete ((ctx.db as unknown as Record<string, unknown>)).close;
     // Should not throw
     destroyContext(ctx);
   });

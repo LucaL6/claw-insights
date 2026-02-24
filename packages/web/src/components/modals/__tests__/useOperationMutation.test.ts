@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import type { DocumentInput } from '@urql/core';
 import { useOperationMutation } from '../useOperationMutation';
 
 const mockExecute = vi.fn();
@@ -14,7 +15,7 @@ describe('useOperationMutation', () => {
 
   it('returns loading false initially', () => {
     const onClose = vi.fn();
-    const { result } = renderHook(() => useOperationMutation(null as any, onClose));
+    const { result } = renderHook(() => useOperationMutation(null as unknown as DocumentInput, onClose));
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
   });
@@ -22,7 +23,7 @@ describe('useOperationMutation', () => {
   it('executes mutation and calls onClose on success', async () => {
     mockExecute.mockResolvedValueOnce({ data: { restartGateway: { success: true } } });
     const onClose = vi.fn();
-    const { result } = renderHook(() => useOperationMutation(null as any, onClose));
+    const { result } = renderHook(() => useOperationMutation(null as unknown as DocumentInput, onClose));
 
     await act(async () => {
       await result.current.run();
@@ -35,7 +36,7 @@ describe('useOperationMutation', () => {
   it('sets error on mutation failure', async () => {
     mockExecute.mockResolvedValueOnce({ error: { message: 'Network error' } });
     const onClose = vi.fn();
-    const { result } = renderHook(() => useOperationMutation(null as any, onClose));
+    const { result } = renderHook(() => useOperationMutation(null as unknown as DocumentInput, onClose));
 
     await act(async () => {
       await result.current.run();
@@ -48,10 +49,10 @@ describe('useOperationMutation', () => {
   it('passes variables to execute', async () => {
     mockExecute.mockResolvedValueOnce({ data: {} });
     const onClose = vi.fn();
-    const { result } = renderHook(() => useOperationMutation(null as any, onClose));
+    const { result } = renderHook(() => useOperationMutation(null as unknown as DocumentInput, onClose));
 
     await act(async () => {
-      await result.current.run({ options: { fix: true } } as any);
+      await result.current.run({ options: { fix: true } } as unknown as Record<string, unknown>);
     });
 
     expect(mockExecute).toHaveBeenCalledWith({ options: { fix: true } });

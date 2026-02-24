@@ -18,7 +18,7 @@ describe('route modules export expected functions', () => {
 
   it('createSnapshotHandler returns a function (request handler)', async () => {
     const { createSnapshotHandler } = await import('../snapshot-handler');
-    const handler = createSnapshotHandler({} as any, {} as any);
+    const handler = createSnapshotHandler({} as unknown as import('../../services/snapshot-types.js').DataSources);
     expect(handler).toBeTypeOf('function');
   });
 });

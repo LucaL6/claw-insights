@@ -100,7 +100,7 @@ describe('DataRetention', () => {
 
     retention.runOnce();
 
-    const rows = db.prepare('SELECT * FROM hourly_metric_samples').all() as any[];
+    const rows = db.prepare('SELECT * FROM hourly_metric_samples').all() as Record<string, unknown>[];
     expect(rows.length).toBe(1);
     expect(rows[0].active_sessions_max).toBe(3);
     expect(rows[0].sample_count).toBe(6);
@@ -119,7 +119,7 @@ describe('DataRetention', () => {
 
     retention.runOnce();
 
-    const models = db.prepare('SELECT * FROM hourly_model_tokens ORDER BY model').all() as any[];
+    const models = db.prepare('SELECT * FROM hourly_model_tokens ORDER BY model').all() as Record<string, unknown>[];
     expect(models.length).toBe(2);
     expect(models[0].model).toBe('claude-3');
     expect(models[0].token_delta_k).toBe(70);
@@ -136,7 +136,7 @@ describe('DataRetention', () => {
 
     retention.runOnce();
 
-    const rows = db.prepare('SELECT * FROM hourly_metric_samples').all() as any[];
+    const rows = db.prepare('SELECT * FROM hourly_metric_samples').all() as Record<string, unknown>[];
     expect(rows.length).toBe(0);
     cleanup();
   });
@@ -147,10 +147,10 @@ describe('DataRetention', () => {
 
     insertSamplesForHour(db, hour, 4);
     retention.runOnce();
-    expect((db.prepare('SELECT * FROM hourly_metric_samples').all() as any[]).length).toBe(1);
+    expect((db.prepare('SELECT * FROM hourly_metric_samples').all() as Record<string, unknown>[]).length).toBe(1);
 
     retention.runOnce();
-    expect((db.prepare('SELECT * FROM hourly_metric_samples').all() as any[]).length).toBe(1);
+    expect((db.prepare('SELECT * FROM hourly_metric_samples').all() as Record<string, unknown>[]).length).toBe(1);
     cleanup();
   });
 
@@ -163,9 +163,9 @@ describe('DataRetention', () => {
 
     retention.runOnce();
 
-    expect((db.prepare('SELECT * FROM hourly_metric_samples').all() as any[]).length).toBe(1);
-    expect((db.prepare('SELECT * FROM metric_samples').all() as any[]).length).toBe(0);
-    expect((db.prepare('SELECT * FROM model_token_samples').all() as any[]).length).toBe(0);
+    expect((db.prepare('SELECT * FROM hourly_metric_samples').all() as Record<string, unknown>[]).length).toBe(1);
+    expect((db.prepare('SELECT * FROM metric_samples').all() as Record<string, unknown>[]).length).toBe(0);
+    expect((db.prepare('SELECT * FROM model_token_samples').all() as Record<string, unknown>[]).length).toBe(0);
     cleanup();
   });
 
@@ -176,7 +176,7 @@ describe('DataRetention', () => {
     insertSamplesForHour(db, hour, 4);
     retention.runOnce();
 
-    expect((db.prepare('SELECT * FROM metric_samples').all() as any[]).length).toBe(4);
+    expect((db.prepare('SELECT * FROM metric_samples').all() as Record<string, unknown>[]).length).toBe(4);
     cleanup();
   });
 
@@ -191,14 +191,14 @@ describe('DataRetention', () => {
 
     retention.runOnce();
 
-    expect((db.prepare('SELECT * FROM hourly_metric_samples').all() as any[]).length).toBe(0);
-    expect((db.prepare('SELECT * FROM hourly_model_tokens').all() as any[]).length).toBe(0);
+    expect((db.prepare('SELECT * FROM hourly_metric_samples').all() as Record<string, unknown>[]).length).toBe(0);
+    expect((db.prepare('SELECT * FROM hourly_model_tokens').all() as Record<string, unknown>[]).length).toBe(0);
     cleanup();
   });
 
   it('guards against concurrent runOnce calls', () => {
     const { retention, cleanup } = setup();
-    const r = retention as any;
+    const r = retention as unknown as Record<string, unknown>;
     r.isRunning = true;
 
     const spy = vi.spyOn(r, 'aggregate');
@@ -211,13 +211,13 @@ describe('DataRetention', () => {
 
   it('start/stop manages the timer', () => {
     const { retention, cleanup } = setup({ aggregateIntervalMs: 100_000 });
-    expect((retention as any).timer).toBeNull();
+    expect(((retention as unknown as Record<string, unknown>)).timer).toBeNull();
 
     retention.start();
-    expect((retention as any).timer).not.toBeNull();
+    expect(((retention as unknown as Record<string, unknown>)).timer).not.toBeNull();
 
     retention.stop();
-    expect((retention as any).timer).toBeNull();
+    expect(((retention as unknown as Record<string, unknown>)).timer).toBeNull();
     cleanup();
   });
 
@@ -230,7 +230,7 @@ describe('DataRetention', () => {
 
     retention.runOnce();
 
-    const row = db.prepare('SELECT cost_end FROM hourly_metric_samples').get() as any;
+    const row = db.prepare('SELECT cost_end FROM hourly_metric_samples').get() as Record<string, unknown>;
     expect(row.cost_end).toBeCloseTo(10.4, 1);
     cleanup();
   });
@@ -244,7 +244,7 @@ describe('DataRetention', () => {
 
     retention.runOnce();
 
-    const row = db.prepare('SELECT token_delta_k FROM hourly_metric_samples').get() as any;
+    const row = db.prepare('SELECT token_delta_k FROM hourly_metric_samples').get() as Record<string, unknown>;
     expect(row.token_delta_k).toBe(40);
     cleanup();
   });

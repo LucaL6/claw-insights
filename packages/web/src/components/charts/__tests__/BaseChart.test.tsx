@@ -18,7 +18,7 @@ Object.defineProperty(globalThis, 'localStorage', {
 
 // Mock echarts-for-react — happy-dom can't render canvas
 vi.mock('echarts-for-react', () => ({
-  default: (props: any) => <div data-mock="echarts" style={props.style} />,
+  default: (props: { style?: React.CSSProperties }) => <div data-mock="echarts" style={props.style} />,
 }));
 
 vi.mock('echarts', () => ({

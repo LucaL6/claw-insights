@@ -35,7 +35,7 @@ describe('parseSnapshotRequest', () => {
   test('silently ignores removed layout/section params', () => {
     const req = parseSnapshotRequest({ layout: 'mobile', section: 'logs', detail: 'full' });
     expect(req.detail).toBe('full');
-    expect((req as any).layout).toBeUndefined();
-    expect((req as any).section).toBeUndefined();
+    expect(((req as unknown as Record<string, unknown>)).layout).toBeUndefined();
+    expect(((req as unknown as Record<string, unknown>)).section).toBeUndefined();
   });
 });

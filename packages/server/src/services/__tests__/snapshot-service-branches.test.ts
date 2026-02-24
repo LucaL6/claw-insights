@@ -96,7 +96,7 @@ describe('buildSnapshotData – branch coverage', () => {
     const events = [{ timestamp: new Date().toISOString(), type: 'error', module: 'gw', message: 'boom' }];
     const result = await buildSnapshotData(
       makeSources({
-        getRecentErrors: (() => ({ events })) as any,
+        getRecentErrors: (() => ({ events })) as unknown as DataSources['getRecentErrors'],
       }),
       { detail: 'full', range: '24h' },
     );
@@ -106,7 +106,7 @@ describe('buildSnapshotData – branch coverage', () => {
   test('full: getRecentErrors returning {events} with no events falls back to empty', async () => {
     const result = await buildSnapshotData(
       makeSources({
-        getRecentErrors: (() => ({})) as any,
+        getRecentErrors: (() => ({})) as unknown as DataSources['getRecentErrors'],
       }),
       { detail: 'full', range: '24h' },
     );

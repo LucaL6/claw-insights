@@ -5,13 +5,13 @@ import { createChildLogger } from '../../logger.js';
 
 const log = createChildLogger('metrics-collector');
 
-interface SessionLike {
+export interface SessionLike {
   key: string;
   status: string;
   totalTokens: number;
 }
 
-interface SessionReaderLike {
+export interface SessionReaderLike {
   getSessions(): SessionLike[];
   getTokensByModel(): Map<string, number>;
   getTotalTokensK(): number;

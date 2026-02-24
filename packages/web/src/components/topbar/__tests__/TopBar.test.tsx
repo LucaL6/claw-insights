@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { screen, cleanup } from '@testing-library/react';
 import { renderWithProviders } from '../../../test/render';
+import type { MetricsRange } from '../../charts/metrics/GranularityPicker';
 
 const mockTopBarData = {
   gateway: { running: true },
@@ -32,7 +33,7 @@ describe('TopBar', () => {
         currentPage="dashboard"
         onNavigate={vi.fn()}
         onAction={vi.fn()}
-        metricsRange={{ range: 'ONE_HOUR', bucket: 300 } as any}
+        metricsRange={{ range: 'ONE_HOUR', bucket: 300 } as unknown as MetricsRange}
       />,
     );
     expect(screen.getByText('v1.2.3')).toBeDefined();

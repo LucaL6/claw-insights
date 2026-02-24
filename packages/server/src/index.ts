@@ -1,7 +1,7 @@
 import express from 'express';
 import { existsSync, readFileSync, writeFileSync, unlinkSync, chmodSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { resolve, dirname, join } from 'node:path';
+import { resolve, dirname, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createContext, startContext, destroyContext } from './context.js';
 import { registerGraphQL } from './routes/graphql.js';
@@ -88,16 +88,31 @@ app.get(
   }),
 );
 
-// Serve web UI static files in production (release package layout)
-const webDistPath = resolve(__dirname, '..', 'web');
+// Serve web UI static files in production
+// Release package: <root>/web/  |  Monorepo build: <root>/packages/web/dist/
+const releaseWebPath = resolve(__dirname, '..', 'web');
+const monorepoWebPath = resolve(__dirname, '..', '..', '..', 'packages', 'web', 'dist');
+const webDistPath = existsSync(releaseWebPath) ? releaseWebPath : monorepoWebPath;
+if (!config.isDev && !config.serverOnly && !existsSync(webDistPath)) {
+  log.warn({ releaseWebPath, monorepoWebPath }, 'web UI dist not found — running API-only');
+}
 if (!config.isDev && !config.serverOnly && existsSync(webDistPath)) {
-  app.use(express.static(webDistPath));
-  // SPA fallback — serve index.html for non-API routes
+  log.info({ webDistPath }, 'serving web UI');
+  app.use(express.static(webDistPath, { index: 'index.html' }));
+  // SPA fallback — serve index.html for non-API, non-file routes
+  const serveIndex = (_req: express.Request, res: express.Response) => {
+    res.type('html').send(readFileSync(resolve(webDistPath, 'index.html'), 'utf-8'));
+  };
+  app.get('/', serveIndex);
   app.get('/{*path}', (req, res, next) => {
-    if (req.path.startsWith('/graphql') || req.path.startsWith('/api')) {
+    if (req.path.startsWith('/graphql') || req.path.startsWith('/api') || req.path.startsWith('/health')) {
       return next();
     }
-    res.type('html').send(readFileSync(resolve(webDistPath, 'index.html'), 'utf-8'));
+    // Don't serve index.html for requests with file extensions (e.g. /foo.js, /bar.css)
+    if (extname(req.path)) {
+      return next();
+    }
+    serveIndex(req, res);
   });
 }
 

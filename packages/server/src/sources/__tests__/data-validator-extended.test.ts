@@ -13,7 +13,7 @@ describe('DataValidator instance methods', () => {
 
   it('runValidation returns results and inserts event on failure', async () => {
     const { insertEvent } = await import('../../db/event-queries');
-    const db = {} as any;
+    const db = {} as unknown as import("node:sqlite").DatabaseSync;
     const v = new DataValidator(db, () => 100, () => 200);
     const results = v.runValidation();
     expect(results).toHaveLength(1);
@@ -24,7 +24,7 @@ describe('DataValidator instance methods', () => {
 
   it('runValidation does not insert event when passing', async () => {
     const { insertEvent } = await import('../../db/event-queries');
-    const db = {} as any;
+    const db = {} as unknown as import("node:sqlite").DatabaseSync;
     const v = new DataValidator(db, () => 100, () => 100);
     const results = v.runValidation();
     expect(results[0].pass).toBe(true);
@@ -33,7 +33,7 @@ describe('DataValidator instance methods', () => {
 
   it('start creates interval and stop clears it', () => {
     vi.useFakeTimers();
-    const db = {} as any;
+    const db = {} as unknown as import("node:sqlite").DatabaseSync;
     const v = new DataValidator(db, () => 0, () => 0);
     v.start(1000);
     vi.advanceTimersByTime(3000);
@@ -42,7 +42,7 @@ describe('DataValidator instance methods', () => {
   });
 
   it('stop does nothing if not started', () => {
-    const db = {} as any;
+    const db = {} as unknown as import("node:sqlite").DatabaseSync;
     const v = new DataValidator(db, () => 0, () => 0);
     // Should not throw
     v.stop();

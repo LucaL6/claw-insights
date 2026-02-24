@@ -25,7 +25,7 @@ describe('snapshot performance', () => {
     };
 
     const start = performance.now();
-    await buildSnapshotData(mockSources as any, { detail: 'standard', range: 'TWENTY_FOUR_HOUR' });
+    await buildSnapshotData(mockSources as unknown as import("../services/snapshot-types.js").DataSources, { detail: 'standard', range: 'TWENTY_FOUR_HOUR' });
     const elapsed = performance.now() - start;
 
     expect(elapsed).toBeLessThan(500);
@@ -54,7 +54,7 @@ describe('snapshot performance', () => {
     };
 
     const start = performance.now();
-    await buildSnapshotData(mockSources as any, { detail: 'compact', range: 'ONE_HOUR' });
+    await buildSnapshotData(mockSources as unknown as import("../services/snapshot-types.js").DataSources, { detail: 'compact', range: 'ONE_HOUR' });
     const elapsed = performance.now() - start;
 
     // If parallel: ~100ms. If sequential: ~200ms. Allow margin.
@@ -84,7 +84,7 @@ describe('snapshot performance', () => {
       getRecentErrors: vi.fn().mockReturnValue([]),
     };
 
-    const result = await buildSnapshotData(mockSources as any, { detail: 'compact', range: 'ONE_HOUR' });
+    const result = await buildSnapshotData(mockSources as unknown as import("../services/snapshot-types.js").DataSources, { detail: 'compact', range: 'ONE_HOUR' });
 
     // Should use Claw-Insights app version, not mocked gateway version
     expect(result.gateway.version).toBe(getAppVersion());

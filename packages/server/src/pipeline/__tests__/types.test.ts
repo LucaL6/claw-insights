@@ -23,7 +23,7 @@ describe('Pipeline types', () => {
   it('Processor accepts an object with handle method', () => {
     const processor: Processor = { handle: vi.fn() };
     if (typeof processor !== 'function') processor.handle('data');
-    expect((processor as any).handle).toHaveBeenCalledWith('data');
+    expect((processor as unknown as Record<string, unknown>).handle).toHaveBeenCalledWith('data');
   });
 
   it('Service interface has start/stop', () => {

@@ -9,7 +9,7 @@ try {
   globalThis.localStorage.getItem('__test__');
 } catch {
   const store: Record<string, string> = {};
-  (globalThis as any).localStorage = {
+  (globalThis as unknown as Record<string, unknown>).localStorage = {
     getItem: (k: string) => store[k] ?? null,
     setItem: (k: string, v: string) => { store[k] = v; },
     removeItem: (k: string) => { delete store[k]; },

@@ -1,13 +1,15 @@
-59c1b930d8a4748ddd1f4dc2653c3415d17087c7:README.md:curl-auth-header:67
-59c1b930d8a4748ddd1f4dc2653c3415d17087c7:docs/plans/2025-02-23-auth-and-env-design.md:generic-api-key:157
-59c1b930d8a4748ddd1f4dc2653c3415d17087c7:docs/plans/2025-02-23-auth-env-implementation.md:curl-auth-header:1161
-5a19fbaa556845dd4c8401c7b0909571bd5cad30:docs/plans/2026-02-23-phase2-documentation.md:curl-auth-header:476
-5a19fbaa556845dd4c8401c7b0909571bd5cad30:docs/plans/2026-02-23-phase2-documentation.md:curl-auth-header:906
-bf37b66c1a1df5ddb7172393a8fd595a56196cb1:docs/configuration.md:curl-auth-header:88
-bf37b66c1a1df5ddb7172393a8fd595a56196cb1:docs/plans/2026-02-23-smoke-test-review-fixes.md:curl-auth-header:231
-bf37b66c1a1df5ddb7172393a8fd595a56196cb1:docs/skills/api/SKILL.md:curl-auth-header:22
-bf37b66c1a1df5ddb7172393a8fd595a56196cb1:docs/skills/api/SKILL.md:curl-auth-header:31
-bf37b66c1a1df5ddb7172393a8fd595a56196cb1:docs/skills/api/SKILL.md:curl-auth-header:40
-bf37b66c1a1df5ddb7172393a8fd595a56196cb1:docs/skills/screenshot/SKILL.md:curl-auth-header:25
-bf37b66c1a1df5ddb7172393a8fd595a56196cb1:sandbox/smoke-test.sh:curl-auth-header:201
+# False positives: placeholder tokens (YOUR_TOKEN) in documentation examples
+# README.md
+bd2b14a154e75e7a2af2cec8ebb0895885ddb524:README.md:curl-auth-header:67
+# docs/configuration.md
+8abe427dd4aa8fe54d5a955a10f6bf5e2b61c28c:docs/configuration.md:curl-auth-header:88
+# docs/skills/api/SKILL.md
+8abe427dd4aa8fe54d5a955a10f6bf5e2b61c28c:docs/skills/api/SKILL.md:curl-auth-header:22
+8abe427dd4aa8fe54d5a955a10f6bf5e2b61c28c:docs/skills/api/SKILL.md:curl-auth-header:31
+8abe427dd4aa8fe54d5a955a10f6bf5e2b61c28c:docs/skills/api/SKILL.md:curl-auth-header:40
+# docs/skills/screenshot/SKILL.md
+8abe427dd4aa8fe54d5a955a10f6bf5e2b61c28c:docs/skills/screenshot/SKILL.md:curl-auth-header:25
+# sandbox/smoke-test.sh
+8abe427dd4aa8fe54d5a955a10f6bf5e2b61c28c:sandbox/smoke-test.sh:curl-auth-header:201
+# packages/server/src/__tests__/security.test.ts
 fe9a27ec1a9a95b172af1d9b593338c8162536bd:packages/server/src/__tests__/security.test.ts:generic-api-key:12

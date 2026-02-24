@@ -89,7 +89,7 @@ describe('usePreview', () => {
   });
 
   it('ignores click on bucket without epochStart', () => {
-    const buckets = [{ label: '0h' } as any];
+    const buckets = [{ label: '0h' } as unknown as BucketData];
     const { result } = renderHook(() => usePreview(buckets, 3600));
     act(() => result.current.handleErrorClick(0));
     expect(result.current.preview).toBeNull();

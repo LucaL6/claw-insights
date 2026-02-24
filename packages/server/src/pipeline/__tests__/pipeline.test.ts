@@ -5,7 +5,7 @@ import { EventEmitter } from 'events';
 
 function mockSource(): Source & EventEmitter {
   const emitter = new EventEmitter();
-  (emitter as any).destroy = vi.fn();
+  (emitter as unknown as Record<string, unknown>).destroy = vi.fn();
   return emitter as Source & EventEmitter;
 }
 

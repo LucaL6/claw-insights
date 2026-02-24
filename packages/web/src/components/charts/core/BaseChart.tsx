@@ -12,7 +12,7 @@ interface Props {
   option: EChartsOption;
   height?: number;
   testId?: string;
-  onEvents?: Record<string, (params: any) => void>;
+  onEvents?: Record<string, (params: unknown) => void>;
 }
 
 export function BaseChart({ option, height = 160, testId, onEvents }: Props) {

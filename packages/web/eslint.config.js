@@ -20,7 +20,7 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unsafe-function-type': 'error',
       'react-refresh/only-export-components': 'error',
       'react-hooks/rules-of-hooks': 'error',

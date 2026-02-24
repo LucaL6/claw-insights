@@ -8,11 +8,11 @@ vi.mock('../config.js', () => ({ config: mockConfig }));
 import { cookieExchangeMiddleware } from '../middleware/cookie-exchange.js';
 
 function mockReq(query: Record<string, string> = {}, path = '/'): Request {
-  return { query, path, url: path + '?' + new URLSearchParams(query).toString() } as any;
+  return { query, path, url: path + '?' + new URLSearchParams(query).toString() } as unknown as Request;
 }
 
 function mockRes() {
-  const res: any = { headers: {} };
+  const res: Record<string, unknown> = { headers: {} };
   res.status = vi.fn().mockReturnValue(res);
   res.cookie = vi.fn().mockReturnValue(res);
   res.set = vi.fn().mockReturnValue(res);

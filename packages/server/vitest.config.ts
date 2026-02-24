@@ -9,10 +9,21 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: 'coverage',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/__tests__/**', 'src/**/generated/**', 'src/index.ts'],
+      exclude: [
+        'src/**/__tests__/**',
+        'src/**/generated/**',
+        'src/index.ts',
+        'src/cli/daemon.ts',              // CLI entry / process mgmt — not unit-testable
+        'src/knowledge/index.ts',          // barrel re-export
+        'src/knowledge/types.ts',          // pure type definitions
+        'src/pipeline/index.ts',           // barrel re-export
+        'src/pipeline/types.ts',           // pure interfaces
+        'src/renderer/markup/icons.ts',    // pure constants
+        'src/schema/resolvers/index.ts',   // barrel re-export
+      ],
       thresholds: {
         lines: 80,
-        branches: 70,
+        branches: 80,
         functions: 80,
         statements: 80,
       },

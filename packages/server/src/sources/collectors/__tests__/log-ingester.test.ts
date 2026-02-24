@@ -10,7 +10,7 @@ import { insertEvent } from '../../../db/event-queries';
 const mockInsert = vi.mocked(insertEvent);
 
 describe('createLogIngester', () => {
-  const fakeDb = {} as any;
+  const fakeDb = {} as unknown as import("node:sqlite").DatabaseSync;
   const ingest = createLogIngester(fakeDb);
 
   beforeEach(() => {

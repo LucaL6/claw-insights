@@ -10,8 +10,8 @@ describe('useSnapshot', () => {
     vi.clearAllMocks();
     fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
-    (URL as any).createObjectURL = vi.fn(() => 'blob:test');
-    (URL as any).revokeObjectURL = vi.fn();
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn(() => 'blob:test');
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
   });
 
   afterEach(() => {
@@ -27,20 +27,20 @@ describe('useSnapshot', () => {
 
   it('takeSnapshot fetches and triggers download', async () => {
     const mockBlob = new Blob(['png']);
-    (globalThis.fetch as any).mockResolvedValue({
+    vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: true,
       blob: async () => mockBlob,
       headers: new Headers({ 'X-Filename': 'claw-insights-standard-1h-dark-2026-02-23-13-15.png' }),
-    });
+    } as unknown as Response);
 
     const clickSpy = vi.fn();
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation(((tagName: any, options?: any) => {
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
       if (String(tagName).toLowerCase() === 'a') {
-        return { click: clickSpy, href: '', download: '' } as any;
+        return { click: clickSpy, href: '', download: '' } as unknown as HTMLAnchorElement;
       }
-      return origCreate(tagName as any, options as any);
-    }) as any);
+      return origCreate(tagName, options);
+    }) as typeof document.createElement);
 
     const { result } = renderHook(() => useSnapshot());
     await act(async () => {
@@ -53,41 +53,41 @@ describe('useSnapshot', () => {
   });
 
   it('maps range to short form', async () => {
-    (globalThis.fetch as any).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() });
+    vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() } as unknown as Response);
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation(((tagName: any, options?: any) => {
-      if (String(tagName).toLowerCase() === 'a') return { click: vi.fn(), href: '', download: '' } as any;
-      return origCreate(tagName as any, options as any);
-    }) as any);
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
+      if (String(tagName).toLowerCase() === 'a') return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;
+      return origCreate(tagName, options);
+    }) as typeof document.createElement);
 
     const { result } = renderHook(() => useSnapshot());
     await act(async () => {
       await result.current.takeSnapshot({ section: 'logs', range: 'SIX_HOUR', theme: 'light', lang: 'zh' });
     });
 
-    const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
+    const body = JSON.parse(vi.mocked(globalThis.fetch).mock.calls[0][1]!.body as string);
     expect(body.range).toBe('6h');
   });
 
   it('uses 24h fallback for unknown range', async () => {
-    (globalThis.fetch as any).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() });
+    vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() } as unknown as Response);
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation(((tagName: any, options?: any) => {
-      if (String(tagName).toLowerCase() === 'a') return { click: vi.fn(), href: '', download: '' } as any;
-      return origCreate(tagName as any, options as any);
-    }) as any);
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
+      if (String(tagName).toLowerCase() === 'a') return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;
+      return origCreate(tagName, options);
+    }) as typeof document.createElement);
 
     const { result } = renderHook(() => useSnapshot());
     await act(async () => {
       await result.current.takeSnapshot({ section: 'dashboard', range: 'UNKNOWN', theme: 'dark', lang: 'en' });
     });
 
-    const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
+    const body = JSON.parse(vi.mocked(globalThis.fetch).mock.calls[0][1]!.body as string);
     expect(body.range).toBe('24h');
   });
 
   it('handles fetch failure', async () => {
-    (globalThis.fetch as any).mockResolvedValue({ ok: false });
+    vi.mocked(globalThis.fetch).mockResolvedValue({ ok: false } as Response);
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const { result } = renderHook(() => useSnapshot());

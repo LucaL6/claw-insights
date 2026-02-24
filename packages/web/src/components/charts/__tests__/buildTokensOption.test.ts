@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { buildTokensOption } from '../builders/buildTokensOption';
+import type { BarSeriesOption, YAXisComponentOption, TooltipComponentOption } from 'echarts';
+
+type TooltipFormatter = Exclude<
+  Exclude<TooltipComponentOption['formatter'], string | undefined>,
+  // narrow to the function form
+  string
+>;
 
 const MOCK_DATA_SIMPLE = [
   { bucket: 0, label: '0h', tokensK: 5.2 },
@@ -30,7 +37,7 @@ const MOCK_DATA_MODELS = [
 describe('buildTokensOption', () => {
   it('returns single bar series when no model data', () => {
     const opt = buildTokensOption(MOCK_DATA_SIMPLE, null, 'footer');
-    const series = opt.series as any[];
+    const series = opt.series as BarSeriesOption[];
     expect(series).toHaveLength(1);
     expect(series[0].type).toBe('bar');
     expect(series[0].data).toEqual([5.2, 12.1]);
@@ -38,28 +45,28 @@ describe('buildTokensOption', () => {
 
   it('returns stacked series per model when model data present', () => {
     const opt = buildTokensOption(MOCK_DATA_MODELS, null, 'footer');
-    const series = opt.series as any[];
+    const series = opt.series as BarSeriesOption[];
     expect(series.length).toBe(2);
-    expect(series.every((s: any) => s.stack === 'tokens')).toBe(true);
+    expect(series.every((s: BarSeriesOption) => s.stack === 'tokens')).toBe(true);
   });
 
   it('filters to selected model', () => {
     const opt = buildTokensOption(MOCK_DATA_MODELS, 'anthropic/claude-sonnet-4', 'footer');
-    const series = opt.series as any[];
+    const series = opt.series as BarSeriesOption[];
     expect(series).toHaveLength(1);
     expect(series[0].name).toContain('Sonnet');
   });
 
   it('handles empty buckets', () => {
     const opt = buildTokensOption([], null, 'footer');
-    const series = opt.series as any[];
+    const series = opt.series as BarSeriesOption[];
     expect(series).toHaveLength(1);
     expect(series[0].data).toEqual([]);
   });
 
   it('yAxis formatter handles 0, small, and large values', () => {
     const opt = buildTokensOption(MOCK_DATA_SIMPLE, null, 'footer');
-    const formatter = (opt.yAxis as any).axisLabel.formatter;
+    const formatter = (opt.yAxis as YAXisComponentOption & { axisLabel: { formatter: (v: number) => string } }).axisLabel.formatter;
     expect(formatter(0)).toBe('0');
     expect(formatter(500)).toBe('500k');
     expect(formatter(1000)).toBe('1.0M');
@@ -68,8 +75,8 @@ describe('buildTokensOption', () => {
 
   it('no-model tooltip formatter renders correctly', () => {
     const opt = buildTokensOption(MOCK_DATA_SIMPLE, null, 'my footer');
-    const formatter = (opt.tooltip as any).formatter;
-    const result = formatter([{ name: '0h', value: 5.2 }]);
+    const formatter = (opt.tooltip as TooltipComponentOption).formatter as TooltipFormatter;
+    const result = (formatter as (params: unknown[]) => string)([{ name: '0h', value: 5.2 }]);
     expect(result).toContain('0h');
     expect(result).toContain('5.2k');
     expect(result).toContain('my footer');
@@ -77,14 +84,14 @@ describe('buildTokensOption', () => {
 
   it('no-model tooltip returns empty for missing param', () => {
     const opt = buildTokensOption(MOCK_DATA_SIMPLE, null, 'footer');
-    const formatter = (opt.tooltip as any).formatter;
-    expect(formatter([])).toBe('');
+    const formatter = (opt.tooltip as TooltipComponentOption).formatter as TooltipFormatter;
+    expect((formatter as (params: unknown[]) => string)([])).toBe('');
   });
 
   it('stacked model tooltip formatter renders rows and total', () => {
     const opt = buildTokensOption(MOCK_DATA_MODELS, null, 'ft');
-    const formatter = (opt.tooltip as any).formatter;
-    const result = formatter([
+    const formatter = (opt.tooltip as TooltipComponentOption).formatter as TooltipFormatter;
+    const result = (formatter as (params: unknown[]) => string)([
       { seriesName: 'Haiku', value: 5, color: '#aaa', name: '0h' },
       { seriesName: 'Sonnet', value: 10, color: '#bbb', name: '0h' },
     ]);
@@ -96,14 +103,14 @@ describe('buildTokensOption', () => {
 
   it('stacked model tooltip returns empty for empty items', () => {
     const opt = buildTokensOption(MOCK_DATA_MODELS, null, 'ft');
-    const formatter = (opt.tooltip as any).formatter;
-    expect(formatter([])).toBe('');
+    const formatter = (opt.tooltip as TooltipComponentOption).formatter as TooltipFormatter;
+    expect((formatter as (params: unknown[]) => string)([])).toBe('');
   });
 
   it('stacked model tooltip filters zero-value rows', () => {
     const opt = buildTokensOption(MOCK_DATA_MODELS, null, 'ft');
-    const formatter = (opt.tooltip as any).formatter;
-    const result = formatter([
+    const formatter = (opt.tooltip as TooltipComponentOption).formatter as TooltipFormatter;
+    const result = (formatter as (params: unknown[]) => string)([
       { seriesName: 'Haiku', value: 0, color: '#aaa', name: '0h' },
       { seriesName: 'Sonnet', value: 10, color: '#bbb', name: '0h' },
     ]);
@@ -113,8 +120,8 @@ describe('buildTokensOption', () => {
 
   it('single visible model tooltip omits Total', () => {
     const opt = buildTokensOption(MOCK_DATA_MODELS, 'anthropic/claude-sonnet-4', 'ft');
-    const formatter = (opt.tooltip as any).formatter;
-    const result = formatter([
+    const formatter = (opt.tooltip as TooltipComponentOption).formatter as TooltipFormatter;
+    const result = (formatter as (params: unknown[]) => string)([
       { seriesName: 'Sonnet', value: 10, color: '#bbb', name: '0h' },
     ]);
     expect(result).not.toContain('Total');
@@ -132,9 +139,9 @@ describe('buildTokensOption', () => {
       },
     ];
     const opt = buildTokensOption(data, null, 'ft');
-    const series = opt.series as any[];
+    const series = opt.series as BarSeriesOption[];
     // Each model should have a 0 for the bucket it's missing from
-    const sonnetSeries = series.find((s: any) => s.name.includes('Sonnet'));
-    expect(sonnetSeries.data).toEqual([10, 0]);
+    const sonnetSeries = series.find((s: BarSeriesOption) => (s.name as string).includes('Sonnet'));
+    expect(sonnetSeries!.data).toEqual([10, 0]);
   });
 });

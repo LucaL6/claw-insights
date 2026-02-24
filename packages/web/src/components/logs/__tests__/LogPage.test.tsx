@@ -5,7 +5,7 @@ import { renderWithProviders } from '../../../test/render';
 // Ensure localStorage works
 if (!globalThis.localStorage || typeof globalThis.localStorage.getItem !== 'function') {
   const store: Record<string, string> = {};
-  (globalThis as any).localStorage = {
+  (globalThis as unknown as Record<string, unknown>).localStorage = {
     getItem: (k: string) => store[k] ?? null,
     setItem: (k: string, v: string) => { store[k] = v; },
     removeItem: (k: string) => { delete store[k]; },
@@ -21,12 +21,13 @@ vi.mock('../../../hooks/useLogPageData', () => ({
 
 import { useLogPageData } from '../../../hooks/useLogPageData';
 import { LogPage } from '../LogPage';
+import type { Route } from '../../../hooks/useHashRoute';
 
 afterEach(cleanup);
 
 const mockedHook = vi.mocked(useLogPageData);
 
-const baseMock = {
+const baseMock: ReturnType<typeof useLogPageData> = {
   activeTypes: ['error', 'warning', 'gateway_restart'],
   toggleType: vi.fn(),
   search: '',
@@ -46,15 +47,15 @@ const baseMock = {
   eventsError: undefined,
 };
 
-const route = { page: 'logs' as const, params: {} };
+const route: Route = { page: 'logs' as const, params: {} };
 
 describe('LogPage', () => {
   beforeEach(() => {
-    mockedHook.mockReturnValue(baseMock as any);
+    mockedHook.mockReturnValue(baseMock);
   });
 
   it('renders title, density strip, filter bar, and event table', () => {
-    renderWithProviders(<LogPage route={route as any} navigate={vi.fn()} />);
+    renderWithProviders(<LogPage route={route} navigate={vi.fn()} />);
     expect(screen.getByRole('heading')).toBeTruthy();
     expect(screen.getByText('error')).toBeTruthy();
     expect(screen.getByText('boom')).toBeTruthy();
@@ -62,8 +63,8 @@ describe('LogPage', () => {
   });
 
   it('shows loading states', () => {
-    mockedHook.mockReturnValue({ ...baseMock, eventsLoading: true, densityLoading: true, filteredEvents: [] } as any);
-    renderWithProviders(<LogPage route={route as any} navigate={vi.fn()} />);
+    mockedHook.mockReturnValue({ ...baseMock, eventsLoading: true, densityLoading: true, filteredEvents: [] });
+    renderWithProviders(<LogPage route={route} navigate={vi.fn()} />);
     expect(screen.getByText('Loading events...')).toBeTruthy();
   });
 
@@ -72,8 +73,8 @@ describe('LogPage', () => {
       ...baseMock,
       eventsError: { message: 'Network error', name: 'Error' },
       filteredEvents: [],
-    } as any);
-    renderWithProviders(<LogPage route={route as any} navigate={vi.fn()} />);
+    });
+    renderWithProviders(<LogPage route={route} navigate={vi.fn()} />);
     expect(screen.getByRole('heading')).toBeTruthy();
   });
 
@@ -82,8 +83,8 @@ describe('LogPage', () => {
       ...baseMock,
       filteredEvents: [],
       events: { counts: { error: 0, warning: 0, restart: 0 }, total: 0, events: [] },
-    } as any);
-    renderWithProviders(<LogPage route={route as any} navigate={vi.fn()} />);
+    });
+    renderWithProviders(<LogPage route={route} navigate={vi.fn()} />);
     expect(screen.getByRole('heading')).toBeTruthy();
   });
 
@@ -93,8 +94,8 @@ describe('LogPage', () => {
       urlFrom: 1700000000,
       urlTo: 1700003600,
       timeLabel: '12:00 - 13:00',
-    } as any);
-    renderWithProviders(<LogPage route={route as any} navigate={vi.fn()} />);
+    });
+    renderWithProviders(<LogPage route={route} navigate={vi.fn()} />);
     expect(screen.getByText('12:00 - 13:00')).toBeTruthy();
   });
 
@@ -102,8 +103,8 @@ describe('LogPage', () => {
     mockedHook.mockReturnValue({
       ...baseMock,
       activeTypes: ['error'],
-    } as any);
-    renderWithProviders(<LogPage route={route as any} navigate={vi.fn()} />);
+    });
+    renderWithProviders(<LogPage route={route} navigate={vi.fn()} />);
     expect(screen.getByRole('heading')).toBeTruthy();
   });
 });

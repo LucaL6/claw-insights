@@ -1,3 +1,4 @@
+import { type SessionReaderLike } from '../metrics-collector';
 import { describe, it, expect } from 'vitest';
 import { MetricsCollector } from '../metrics-collector';
 import { initDatabase } from '../../../db/init';
@@ -34,14 +35,14 @@ describe('MetricsCollector', () => {
     };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 5.2, memoryMB: 128, diskMB: 50, sampledAt: '' }),
       () => ({ totalCost: 100, totalTokensM: 50, todayCost: 10, todayTokensM: 5, fetchedAt: '' }),
     );
 
     collector.sampleFast();
 
-    const rows = db.prepare('SELECT * FROM metric_samples').all() as any[];
+    const rows = db.prepare('SELECT * FROM metric_samples').all() as Record<string, unknown>[];
     expect(rows.length).toBe(1);
     expect(rows[0].active_sessions).toBe(2); // only ACTIVE
     expect(rows[0].total_tokens_k).toBe(100); // (50k+30k+20k) / 1000
@@ -58,7 +59,7 @@ describe('MetricsCollector', () => {
     };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
       () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
     );
@@ -67,7 +68,7 @@ describe('MetricsCollector', () => {
     totalTokens = 95000; // +15k tokens
     collector.sampleFast();
 
-    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as any[];
+    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as Record<string, unknown>[];
     expect(rows[0].token_delta_k).toBe(0); // first sample, no delta
     expect(rows[1].token_delta_k).toBe(15); // delta computed at write time
     cleanup();
@@ -85,7 +86,7 @@ describe('MetricsCollector', () => {
     };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 25.5, memoryMB: 512, diskMB: 100, sampledAt: '' }),
       () => ({ totalCost: 200, totalTokensM: 100, todayCost: 15.5, todayTokensM: 8.3, fetchedAt: '' }),
     );
@@ -95,7 +96,7 @@ describe('MetricsCollector', () => {
     // Slow sample should carry forward session/token values
     await collector.sampleSlow();
 
-    const rows = db.prepare('SELECT * FROM metric_samples ORDER BY id DESC LIMIT 1').all() as any[];
+    const rows = db.prepare('SELECT * FROM metric_samples ORDER BY id DESC LIMIT 1').all() as Record<string, unknown>[];
     expect(rows[0].cost_today).toBe(15.5);
     expect(rows[0].tokens_today_m).toBe(8.3);
     expect(rows[0].cpu).toBe(25.5);
@@ -111,12 +112,12 @@ describe('MetricsCollector', () => {
     const mockSessionReader = { getSessions: () => [], getTokensByModel: () => new Map(), getTotalTokensK: () => 0 };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
       () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
     );
 
-    expect((collector as any).pruneTimer).toBeUndefined();
+    expect((collector as unknown as Record<string, unknown>).pruneTimer).toBeUndefined();
     cleanup();
   });
 
@@ -130,7 +131,7 @@ describe('MetricsCollector', () => {
     };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
       () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
     );
@@ -139,7 +140,7 @@ describe('MetricsCollector', () => {
     totalTokensK = 95;
     collector.sampleFast();
 
-    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as any[];
+    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as Record<string, unknown>[];
     expect(rows[0].token_delta_k).toBe(0);
     expect(rows[1].token_delta_k).toBe(15);
     cleanup();
@@ -155,7 +156,7 @@ describe('MetricsCollector', () => {
     };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
       () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
     );
@@ -164,7 +165,7 @@ describe('MetricsCollector', () => {
     modelTokens = 65000;
     collector.sampleFast();
 
-    const rows = db.prepare('SELECT token_delta_k FROM model_token_samples ORDER BY id').all() as any[];
+    const rows = db.prepare('SELECT token_delta_k FROM model_token_samples ORDER BY id').all() as Record<string, unknown>[];
     expect(rows[0].token_delta_k).toBe(0);
     expect(rows[1].token_delta_k).toBe(15);
     cleanup();
@@ -180,7 +181,7 @@ describe('MetricsCollector', () => {
     };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
       () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
     );
@@ -189,7 +190,7 @@ describe('MetricsCollector', () => {
     totalTokensK = 5; // reset
     collector.sampleFast();
 
-    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as any[];
+    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as Record<string, unknown>[];
     expect(rows[1].token_delta_k).toBe(0); // clamped, not -95
     cleanup();
   });
@@ -203,7 +204,7 @@ describe('MetricsCollector', () => {
     };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 10, memoryMB: 256, diskMB: 50, sampledAt: '' }),
       () => ({ totalCost: 0, totalTokensM: 0, todayCost: 5, todayTokensM: 2, fetchedAt: '' }),
     );
@@ -211,7 +212,7 @@ describe('MetricsCollector', () => {
     collector.sampleFast();
     await collector.sampleSlow();
 
-    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as any[];
+    const rows = db.prepare('SELECT token_delta_k FROM metric_samples ORDER BY id').all() as Record<string, unknown>[];
     expect(rows[1].token_delta_k).toBe(0); // sampleSlow doesn't compute token deltas
     cleanup();
   });
@@ -229,7 +230,7 @@ describe('MetricsCollector', () => {
     };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
       () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
     );
@@ -249,7 +250,7 @@ describe('MetricsCollector', () => {
 
     const rows = db
       .prepare("SELECT token_delta_k FROM model_token_samples WHERE model = 'model-b' ORDER BY id")
-      .all() as any[];
+      .all() as Record<string, unknown>[];
 
     // Row 0: first appearance, delta=0
     // Row 1: reappearance after prune, delta=0 (not negative or stale)
@@ -263,7 +264,7 @@ describe('MetricsCollector', () => {
     const mockSessionReader = { getSessions: () => [], getTokensByModel: () => new Map(), getTotalTokensK: () => 0 };
     const collector = new MetricsCollector(
       db,
-      mockSessionReader as any,
+      mockSessionReader as SessionReaderLike,
       () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: '' }),
       () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
     );

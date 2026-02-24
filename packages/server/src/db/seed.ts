@@ -18,8 +18,6 @@ export function seedTestData(dbPath: string): DatabaseSync {
   const db = initDatabase(dbPath);
 
   const now = Date.now();
-  const _isoNow = new Date(now).toISOString();
-
   // ── metric_samples: 48 rows, every 30 min over 24h ──
   const sampleStmt = db.prepare(
     `INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb)

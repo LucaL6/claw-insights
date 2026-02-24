@@ -14,11 +14,11 @@ function mockReq(opts: {
   return {
     headers: opts.headers ?? {},
     method: opts.method ?? 'GET',
-  } as any;
+  } as unknown as Request;
 }
 
 function mockRes() {
-  const res: any = {};
+  const res: Record<string, unknown> = {};
   res.status = vi.fn().mockReturnValue(res);
   res.json = vi.fn().mockReturnValue(res);
   return res as Response & { status: ReturnType<typeof vi.fn>; json: ReturnType<typeof vi.fn> };

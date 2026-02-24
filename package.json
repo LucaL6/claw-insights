@@ -23,6 +23,7 @@
     "prepare": "husky",
     "build": "npm run codegen && npm run --workspaces build",
     "start": "node bin/claw-insights.mjs start",
+    "local": "node bin/claw-insights.mjs start --no-auth",
     "stop": "node bin/claw-insights.mjs stop",
     "status": "node bin/claw-insights.mjs status",
     "format": "prettier --write .",
@@ -34,7 +35,8 @@
       "eslint --fix --no-warn-ignored"
     ],
     "packages/server/**/*.{ts,tsx}": [
-      "prettier --write"
+      "prettier --write",
+      "eslint --fix --no-warn-ignored"
     ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"

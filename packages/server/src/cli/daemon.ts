@@ -1,5 +1,14 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync, readFileSync, openSync, statSync, createReadStream } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  openSync,
+  statSync,
+  createReadStream,
+  unlinkSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { PidFile } from './pid.js';
@@ -30,12 +39,23 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   // Check for existing running instance
   if (pidFile.isAlive()) {
     const pid = pidFile.read();
-    console.error(`💡 Claw Insights is already running (PID ${pid}). Use 'claw-insights restart' to restart.`);
+    console.log('');
+    console.log('  ⚠️  Claw Insights is already running.');
+    console.log('');
+    console.log(`  PID:  ${pid}`);
+    console.log(`  Port: ${args.port}`);
+    console.log('');
+    console.log('  claw-insights status    Check health & access URL');
+    console.log('  claw-insights restart   Restart the server');
+    console.log('  claw-insights stop      Stop the server');
+    console.log('');
     process.exit(1);
   }
 
   // Clean stale PID
   pidFile.cleanStale();
+
+  const startTime = Date.now();
 
   // Ensure directories
   mkdirSync(paths.logDir, { recursive: true });
@@ -88,41 +108,111 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
     env: childEnv,
   });
 
-  child.unref();
-
+  // Keep ref during startup to detect early crashes, unref after health check
   if (!child.pid) {
     console.error('❌ Failed to start daemon.');
     process.exit(1);
   }
 
   // Write PID file
-  pidFile.write(child.pid);
-
-  const mode = args.serverOnly ? 'server-only' : 'full';
-  console.log(`💡 Claw Insights started (PID ${child.pid}, mode: ${mode}, port: ${args.port})`);
-
-  // Wait for server to be ready, then print access URL
-  const ready = await waitForHealth(args.port, 5000);
-  if (ready) {
-    if (args.noAuth) {
-      console.log(`🌐 http://127.0.0.1:${args.port}`);
-    } else {
-      // Read token from file written by server
-      const tokenFile = join(paths.dataDir, 'auth-token');
-      try {
-        const token = readFileSync(tokenFile, 'utf-8').trim();
-        if (token) {
-          console.log(`🔑 http://127.0.0.1:${args.port}/?token=${token}`);
-        } else {
-          console.log(`🌐 http://127.0.0.1:${args.port} (run 'claw-insights status' for auth URL)`);
-        }
-      } catch {
-        console.log(`🌐 http://127.0.0.1:${args.port} (run 'claw-insights status' for auth URL)`);
-      }
+  try {
+    pidFile.write(child.pid);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`❌ Failed to write PID file: ${msg}`);
+    try {
+      process.kill(child.pid, 'SIGKILL');
+    } catch {
+      /* best effort */
     }
-  } else {
-    console.log(`🌐 http://127.0.0.1:${args.port} (server still starting...)`);
+    process.exit(1);
   }
+
+  // Detach child so parent can exit after startup check
+  child.unref();
+
+  // Wait silently for health check before printing status
+
+  const ready = await waitForHealth(args.port, 5000, () => !pidFile.isAlive());
+
+  // Check if child died during startup (port conflict, crash, etc.)
+  if (!pidFile.isAlive()) {
+    pidFile.remove();
+    console.log('  ❌ Failed to start — server exited immediately.');
+    console.log('');
+    try {
+      const logContent = readFileSync(paths.logFile, 'utf-8');
+      const lines = logContent.split('\n').filter(Boolean).slice(-8);
+      const portConflict = lines.find((l) => l.includes('EADDRINUSE') || l.includes('already in use'));
+      if (portConflict) {
+        console.log(`  Reason: Port ${args.port} is already in use.`);
+        console.log('');
+        console.log('  Try:');
+        console.log(`    claw-insights start --port ${args.port + 1}    # Use a different port`);
+        console.log(`    claw-insights stop                       # Stop existing instance first`);
+      } else {
+        const meaningful = lines.filter((l) => !l.startsWith('{'));
+        if (meaningful.length) {
+          console.log('  Last output:');
+          meaningful.slice(-3).forEach((l) => console.log(`    ${l}`));
+        }
+      }
+    } catch {
+      // can't read logs
+    }
+    console.log('');
+    console.log('  Logs: claw-insights logs --lines 30');
+    console.log('');
+    process.exit(1);
+  }
+
+  if (!ready) {
+    console.log('  ⚠️  Server started but did not respond within 5 seconds.');
+    console.log('');
+    console.log(`  PID:  ${child.pid}`);
+    console.log(`  Port: ${args.port}`);
+    console.log('');
+    console.log('  It may still be initializing. Check:');
+    console.log('    claw-insights status    # Check if server is up');
+    console.log('    claw-insights logs      # View server logs');
+    console.log('');
+    return;
+  }
+
+  // Success — print full status
+  const mode = args.serverOnly ? 'API only' : 'Dashboard + API';
+
+  let url: string;
+  let authLine: string;
+
+  if (args.noAuth) {
+    url = `http://127.0.0.1:${args.port}`;
+    authLine = 'Auth disabled';
+  } else {
+    url = `http://127.0.0.1:${args.port}`;
+    const tokenFile = join(paths.dataDir, 'auth-token');
+    try {
+      const token = readFileSync(tokenFile, 'utf-8').trim();
+      if (token) url += `/?token=${token}`;
+    } catch {
+      // token file not ready
+    }
+    authLine = 'Token cookie (valid 7 days)';
+  }
+
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+  console.log('');
+  console.log(`  ✅ Claw Insights v${process.env.npm_package_version ?? '0.1.0'}    ready in ${elapsed}s`);
+  console.log('');
+  console.log(`  ➜  Open:  ${url}`);
+  console.log(`     Auth:  ${authLine}`);
+  console.log('');
+  console.log(`  PID ${child.pid} · ${mode} · Port ${args.port}`);
+  console.log(`  Running in background — this terminal is free to use.`);
+  console.log('');
+  console.log('  claw-insights status | stop | logs');
+  console.log('');
 }
 
 export function daemonStop(): void {
@@ -151,6 +241,7 @@ export function daemonStop(): void {
     if (!pidFile.isAlive()) {
       clearInterval(poll);
       pidFile.remove();
+      cleanupAuthToken(paths.dataDir);
       console.log('💡 Claw Insights stopped.');
       return;
     }
@@ -162,14 +253,25 @@ export function daemonStop(): void {
         // already dead
       }
       pidFile.remove();
+      cleanupAuthToken(paths.dataDir);
       console.log('💡 Claw Insights force-killed.');
     }
   }, 200);
 }
 
-async function waitForHealth(port: number, timeoutMs: number): Promise<boolean> {
+function cleanupAuthToken(dataDir: string): void {
+  try {
+    const tokenFile = join(dataDir, 'auth-token');
+    if (existsSync(tokenFile)) unlinkSync(tokenFile);
+  } catch {
+    /* best effort */
+  }
+}
+
+async function waitForHealth(port: number, timeoutMs: number, earlyExit?: () => boolean): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    if (earlyExit?.()) return false;
     try {
       const res = await fetch(`http://127.0.0.1:${port}/health`);
       if (res.ok) return true;
@@ -227,7 +329,7 @@ export async function daemonStatus(): Promise<void> {
           console.log(`   🔑 URL:  http://127.0.0.1:${port}/?token=${token}`);
         }
       } catch {
-        console.log(`   URL:     http://127.0.0.1:${port}/ (run with --no-auth or check logs for token)`);
+        console.log(`   URL:     http://127.0.0.1:${port}/ (token file missing — restart to regenerate)`);
       }
     }
   } catch {
@@ -294,6 +396,7 @@ export async function daemonRestart(args: CliArgs, serverEntry: string): Promise
     try {
       const saved = JSON.parse(readFileSync(paths.daemonJson, 'utf-8'));
       if (!args.port || args.port === 4000) args.port = saved.port ?? 4000;
+      if (!args.webPort || args.webPort === 3200) args.webPort = saved.webPort ?? 3200;
       if (!args.serverOnly) args.serverOnly = saved.serverOnly ?? false;
       if (!args.noAuth) args.noAuth = saved.noAuth ?? false;
       if (!args.gateway) args.gateway = saved.gateway;

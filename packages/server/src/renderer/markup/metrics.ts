@@ -10,7 +10,7 @@ interface MetricDef {
   getValueColor: (d: SnapshotData, c: ColorScheme) => string;
 }
 
-function defs(c: ColorScheme, range: string): MetricDef[] {
+function defs(_c: ColorScheme, range: string): MetricDef[] {
   return [
     {
       label: 'Active Sessions',

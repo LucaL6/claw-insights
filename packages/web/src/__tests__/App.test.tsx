@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 // Polyfill localStorage for happy-dom
 if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage.getItem !== 'function') {
   const store: Record<string, string> = {};
-  (globalThis as any).localStorage = {
+  (globalThis as unknown as Record<string, unknown>).localStorage = {
     getItem: (k: string) => store[k] ?? null,
     setItem: (k: string, v: string) => {
       store[k] = v;
@@ -34,16 +34,16 @@ vi.mock('../hooks/useTopBarData', () => ({
   useTopBarData: () => ({ version: '0.1.0', gateway: {}, fetching: {} }),
 }));
 vi.mock('../components/topbar/TopBar', () => ({
-  TopBar: (props: any) => <div data-testid="topbar">{props.currentPage}</div>,
+  TopBar: (props: { currentPage?: string }) => <div data-testid="topbar">{props.currentPage}</div>,
 }));
 vi.mock('../components/sessions/SessionPanel', () => ({
-  SessionPanel: ({ onReady }: any) => {
+  SessionPanel: ({ onReady }: { onReady?: () => void }) => {
     onReady?.();
     return <div data-testid="sessions" />;
   },
 }));
 vi.mock('../components/charts/metrics/MetricsSection', () => ({
-  MetricsSection: ({ onReady }: any) => {
+  MetricsSection: ({ onReady }: { onReady?: () => void }) => {
     onReady?.();
     return <div data-testid="metrics" />;
   },
@@ -57,12 +57,12 @@ const mockClose = vi.fn(() => {
 });
 vi.mock('../components/modals/OperationModals', () => ({
   useOperationModals: () => ({ modal: mockModal, open: mockOpen, close: mockClose }),
-  RestartModal: ({ onClose }: any) => (
+  RestartModal: ({ onClose }: { onClose?: () => void }) => (
     <div data-testid="restart-modal">
       <button onClick={onClose}>close</button>
     </div>
   ),
-  DoctorModal: ({ onClose }: any) => (
+  DoctorModal: ({ onClose }: { onClose?: () => void }) => (
     <div data-testid="doctor-modal">
       <button onClick={onClose}>close</button>
     </div>

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import React from 'react';
-import { Provider } from 'urql';
+import { Provider, type Client } from 'urql';
 import { fromValue, never } from 'wonka';
 
 import { useLogPageData } from '../useLogPageData';
@@ -12,10 +12,10 @@ function createMockClient(data: Record<string, unknown> = {}) {
     executeQuery: () => fromValue({ data, stale: false, hasNext: false }),
     executeMutation: () => never,
     executeSubscription: () => never,
-  } as any;
+  } as unknown as Client;
 }
 
-function wrapper(client: any) {
+function wrapper(client: Client) {
   return ({ children }: { children: React.ReactNode }) =>
     React.createElement(Provider, { value: client }, children);
 }
@@ -175,7 +175,7 @@ describe('useLogPageData', () => {
       executeQuery: () => fromValue({ data: null, error: { message: 'Network error' }, stale: false, hasNext: false }),
       executeMutation: () => never,
       executeSubscription: () => never,
-    } as any;
+    } as unknown as Client;
     const { result } = renderHook(() => useLogPageData(baseRoute), {
       wrapper: wrapper(client),
     });

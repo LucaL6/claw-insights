@@ -6,7 +6,7 @@ import { MetricsSection } from '../MetricsSection';
 // Mock useMetricsData
 const mockUseMetricsData = vi.fn();
 vi.mock('../../../../hooks/useMetricsData', () => ({
-  useMetricsData: (...args: any[]) => mockUseMetricsData(...args),
+  useMetricsData: (...args: unknown[]) => mockUseMetricsData(...args),
 }));
 
 // Mock usePreview

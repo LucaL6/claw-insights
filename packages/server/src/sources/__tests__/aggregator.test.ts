@@ -84,7 +84,7 @@ describe('Aggregator', () => {
     ).run(ts, 7, 250, 12);
 
     const m = agg.getMetrics() as { totalTokensK: number; buckets: Array<{ sessions: number; tokensK: number }> };
-    const bucketWithData = m.buckets.find((b: any) => b.sessions > 0);
+    const bucketWithData = m.buckets.find((b: { sessions: number }) => b.sessions > 0);
     expect(bucketWithData).toBeDefined();
     expect(bucketWithData!.sessions).toBe(7);
     expect(bucketWithData!.tokensK).toBe(12); // SUM(token_delta_k) = 0 + 12

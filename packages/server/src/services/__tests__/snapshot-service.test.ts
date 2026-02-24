@@ -150,7 +150,7 @@ describe('buildSnapshotData', () => {
   test('activeSessions filter is case-insensitive', async () => {
     const sources = makeSources();
     const origGetSessions = sources.getSessions;
-    sources.getSessions = () => (origGetSessions() as any[]).map((s) => ({ ...s, status: s.status.toUpperCase() }));
+    sources.getSessions = () => (origGetSessions() as { status: string }[]).map((s) => ({ ...s, status: s.status.toUpperCase() }));
     const result = await buildSnapshotData(sources, { detail: 'compact', range: '24h' });
     expect(result.summary.activeSessions).toBe(1);
   });

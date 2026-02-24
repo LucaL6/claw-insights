@@ -1,31 +1,32 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { AppContext } from '../../../context';
 import { subscriptionResolvers } from '../subscriptions.resolver';
 
 describe('subscriptionResolvers', () => {
   function makeCtx() {
     return {
       logTailer: { on: vi.fn(), off: vi.fn() },
-    } as any;
+    } as unknown as AppContext;
   }
 
   it('returns Subscription with logs and dataChanged', () => {
     const ctx = makeCtx();
     const resolvers = subscriptionResolvers(ctx);
     expect(resolvers.Subscription).toBeDefined();
-    expect((resolvers.Subscription as any).logs).toBeDefined();
-    expect((resolvers.Subscription as any).dataChanged).toBeDefined();
+    expect(resolvers.Subscription.logs).toBeDefined();
+    expect(resolvers.Subscription.dataChanged).toBeDefined();
   });
 
   it('logs subscribe returns async iterable', () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as any;
+    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
     const repeater = resolvers.Subscription.logs.subscribe(null, {});
     expect(repeater[Symbol.asyncIterator]).toBeDefined();
   });
 
   it('logs subscribe pushes entries via logTailer handler', async () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as any;
+    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
     const repeater = resolvers.Subscription.logs.subscribe(null, {});
     const iter = repeater[Symbol.asyncIterator]();
 
@@ -46,7 +47,7 @@ describe('subscriptionResolvers', () => {
 
   it('logs filters by level', async () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as any;
+    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
     const repeater = resolvers.Subscription.logs.subscribe(null, { filter: { level: 'WARN' } });
     const iter = repeater[Symbol.asyncIterator]();
     const nextPromise = iter.next();
@@ -63,7 +64,7 @@ describe('subscriptionResolvers', () => {
 
   it('logs filters by module', async () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as any;
+    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
     const repeater = resolvers.Subscription.logs.subscribe(null, { filter: { module: 'gateway' } });
     const iter = repeater[Symbol.asyncIterator]();
     const nextPromise = iter.next();
@@ -80,7 +81,7 @@ describe('subscriptionResolvers', () => {
 
   it('dataChanged subscribe returns async iterable', () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as any;
+    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
     const repeater = resolvers.Subscription.dataChanged.subscribe();
     expect(repeater[Symbol.asyncIterator]).toBeDefined();
   });

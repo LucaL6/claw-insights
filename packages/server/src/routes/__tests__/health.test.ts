@@ -11,7 +11,7 @@ describe('health handler', () => {
     });
 
     const json = vi.fn();
-    await handler({} as any, { json } as any);
+    await handler({ } as unknown as import("express").Request, { json } as unknown as import("express").Response);
 
     const body = json.mock.calls[0][0];
     expect(body.status).toBe('ok');
@@ -32,7 +32,7 @@ describe('health handler', () => {
     });
 
     const json = vi.fn();
-    await handler({} as any, { json } as any);
+    await handler({ } as unknown as import("express").Request, { json } as unknown as import("express").Response);
 
     const body = json.mock.calls[0][0];
     expect(body.mode).toBe('server-only');
@@ -49,7 +49,7 @@ describe('health handler', () => {
     });
 
     const json = vi.fn();
-    await handler({} as any, { json } as any);
+    await handler({ } as unknown as import("express").Request, { json } as unknown as import("express").Response);
 
     const body = json.mock.calls[0][0];
     expect(body.db).toBe('error');

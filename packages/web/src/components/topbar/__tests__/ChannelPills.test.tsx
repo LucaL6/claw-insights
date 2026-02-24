@@ -8,7 +8,7 @@ afterEach(cleanup);
 const channels = [
   { name: 'discord', connected: true, latencyMs: 42 },
   { name: 'telegram', connected: false, latencyMs: null },
-] as any[];
+] as { name: string; connected: boolean; latencyMs: number | null }[];
 
 describe('ChannelPills', () => {
   it('renders one pill per channel', () => {

@@ -91,7 +91,7 @@ describe('LogTailer safety', () => {
     writeFileSync(fpath, makeLine('after-truncate'));
 
     // Manually trigger read (simulating poll)
-    (tailer as any).readIncremental();
+    (tailer as unknown as Record<string, (...args: unknown[]) => unknown>).readIncremental();
 
     expect(received.some((e) => e.message.includes('after-truncate'))).toBe(true);
     tailer.destroy();
@@ -113,7 +113,7 @@ describe('LogTailer safety', () => {
     // Just verify no uncaught exception - the try/finally protects fd
     expect(() => {
       // Force a read cycle
-      (tailer as any).readIncremental();
+      (tailer as unknown as Record<string, (...args: unknown[]) => unknown>).readIncremental();
     }).not.toThrow();
 
     tailer.destroy();

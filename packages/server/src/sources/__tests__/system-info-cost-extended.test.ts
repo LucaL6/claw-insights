@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock child_process.execFile with promisify-compatible signature
 vi.mock('node:child_process', () => {
-  const mockFn = vi.fn((_cmd: string, _args: string[], _opts: any, cb: (...args: unknown[]) => unknown) => {
+  const mockFn = vi.fn((_cmd: string, _args: string[], _opts: Record<string, unknown>, cb: (...args: unknown[]) => unknown) => {
     cb(new Error('not found'), null);
   });
   return { execFile: mockFn, __mockExecFile: mockFn };

@@ -1,4 +1,5 @@
-import satori from 'satori';
+import satori, { type SatoriOptions } from 'satori';
+import type { ReactNode } from 'react';
 import { Resvg } from '@resvg/resvg-js';
 import { loadFonts } from './fonts.js';
 import { buildMarkup, VIEWPORT_WIDTH, type MarkupOptions } from './markup/index.js';
@@ -14,7 +15,7 @@ export async function renderSnapshot(
   const fonts = await loadFonts();
   const markup = buildMarkup(data, opts);
 
-  const svg = await satori(markup as any, { width, fonts: fonts as any });
+  const svg = await satori(markup as unknown as ReactNode, { width, fonts: fonts as unknown as SatoriOptions['fonts'] });
   const resvg = new Resvg(svg, {
     fitTo: { mode: 'width', value: width * 2 },
   });

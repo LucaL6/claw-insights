@@ -30,7 +30,7 @@ describe('useReactiveQuery', () => {
 
   it('returns query result and execute function', () => {
     const { result } = renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'] }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'] }),
     );
     expect(result.current[0].data).toEqual({ test: 1 });
     expect(typeof result.current[1]).toBe('function');
@@ -45,7 +45,7 @@ describe('useReactiveQuery', () => {
     });
 
     renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'], debounceMs: 100 }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'], debounceMs: 100 }),
     );
 
     // Simulate subscription event
@@ -71,7 +71,7 @@ describe('useReactiveQuery', () => {
     });
 
     renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['metrics'] }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['metrics'] }),
     );
 
     act(() => {
@@ -90,7 +90,7 @@ describe('useReactiveQuery', () => {
     });
 
     renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'] }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'] }),
     );
 
     act(() => {
@@ -103,7 +103,7 @@ describe('useReactiveQuery', () => {
     mockUseSubscription.mockReturnValue([{ data: null, error: new Error('SSE failed') }]);
 
     renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'], fallbackPollMs: 5000 }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'], fallbackPollMs: 5000 }),
     );
 
     act(() => { vi.advanceTimersByTime(5000); });
@@ -112,7 +112,7 @@ describe('useReactiveQuery', () => {
 
   it('refetches on visibility change to visible', () => {
     renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'] }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'] }),
     );
 
     // Simulate visibility change
@@ -132,7 +132,7 @@ describe('useReactiveQuery', () => {
     });
 
     renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'], debounceMs: 200 }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'], debounceMs: 200 }),
     );
 
     act(() => {
@@ -146,14 +146,14 @@ describe('useReactiveQuery', () => {
 
     // Should only have been called once despite two events
     const networkCalls = mockExecuteQuery.mock.calls.filter(
-      (c: any[]) => c[0]?.requestPolicy === 'network-only',
+      (c: unknown[]) => (c[0] as Record<string, unknown>)?.requestPolicy === 'network-only',
     );
     expect(networkCalls.length).toBe(1);
   });
 
   it('does not refetch on visibility change to hidden', () => {
     renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'] }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'] }),
     );
 
     mockExecuteQuery.mockClear();
@@ -175,7 +175,7 @@ describe('useReactiveQuery', () => {
     });
 
     const { unmount } = renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'], debounceMs: 200 }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'], debounceMs: 200 }),
     );
 
     // Start a debounce timer
@@ -199,7 +199,7 @@ describe('useReactiveQuery', () => {
     mockUseSubscription.mockReturnValue([{ data: null, error: null }]);
 
     renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'], fallbackPollMs: 5000 }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'], fallbackPollMs: 5000 }),
     );
 
     mockExecuteQuery.mockClear();
@@ -215,7 +215,7 @@ describe('useReactiveQuery', () => {
     });
 
     renderHook(() =>
-      useReactiveQuery({ query: 'query { test }' as any }, { sources: ['sessions'] }),
+      useReactiveQuery({ query: 'query { test }' }, { sources: ['sessions'] }),
     );
 
     act(() => {

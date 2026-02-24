@@ -30,30 +30,31 @@ vi.mock('../../../sources/gateway-cli', () => ({
 
 function createMockCtx(): AppContext {
   return {
-    db: {} as any,
+    db: {},
+    pipeline: {},
     sessionReader: {
       attachSubAgents: vi.fn(),
       getSessions: vi.fn().mockReturnValue([{ id: 's1', label: 'test' }]),
       destroy: vi.fn(),
-    } as any,
+    },
     cronReader: {
       getJobs: vi.fn().mockReturnValue([{ name: 'cleanup', schedule: '0 * * * *' }]),
       destroy: vi.fn(),
-    } as any,
+    },
     logTailer: {
       getRecentEntries: vi.fn().mockReturnValue([{ message: 'log1' }]),
       destroy: vi.fn(),
       on: vi.fn(),
-    } as any,
+    },
     spawnTracker: {
       getParentChildMap: vi.fn().mockReturnValue(new Map()),
       ingest: vi.fn(),
-    } as any,
+    },
     aggregator: {
       getMetrics: vi.fn().mockReturnValue({ totalTokensK: 100, totalCostUsd: 2.5 }),
       ingestLog: vi.fn(),
-    } as any,
-    metricsCollector: { start: vi.fn(), stop: vi.fn() } as any,
+    },
+    metricsCollector: { start: vi.fn(), stop: vi.fn() },
     dataValidator: {
       runValidation: vi.fn().mockReturnValue([
         { pass: true, message: 'ok' },
@@ -61,14 +62,14 @@ function createMockCtx(): AppContext {
       ]),
       start: vi.fn(),
       stop: vi.fn(),
-    } as any,
-    dataRetention: { start: vi.fn(), stop: vi.fn() } as any,
-  };
+    },
+    dataRetention: { start: vi.fn(), stop: vi.fn() },
+  } as unknown as AppContext;
 }
 
 describe('createResolvers', () => {
   let ctx: AppContext;
-  let resolvers: any;
+  let resolvers: ReturnType<typeof createResolvers>;
 
   beforeEach(() => {
     vi.clearAllMocks();
