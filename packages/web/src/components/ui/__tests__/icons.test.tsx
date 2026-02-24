@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect,it } from 'vitest';
+
 import { renderWithProviders } from '../../../test/render';
-import { RestartIcon, DoctorIcon, DownloadIcon, CameraIcon, SpinnerIcon, ChevronDownIcon } from '../icons';
+import { CameraIcon, ChevronDownIcon,DoctorIcon, DownloadIcon, RestartIcon, SpinnerIcon } from '../icons';
 
 const icons = [
   ['RestartIcon', RestartIcon],

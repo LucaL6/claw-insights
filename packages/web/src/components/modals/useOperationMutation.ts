@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
-import { useMutation } from 'urql';
+import { useCallback,useState } from 'react';
 import type { AnyVariables, DocumentInput } from 'urql';
+import { useMutation } from 'urql';
 
 export function useOperationMutation<TData, TVars extends AnyVariables>(
   mutation: DocumentInput<TData, TVars>,

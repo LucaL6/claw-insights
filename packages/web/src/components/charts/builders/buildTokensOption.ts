@@ -1,4 +1,5 @@
 import type { EChartsOption } from 'echarts';
+
 import { getModelColor, shortModelName } from '../core/model-utils';
 import { buildCategoryXAxis, CHART_GRID, COMPACT_Y_AXIS, tooltipHtml } from './shared';
 
@@ -31,7 +32,7 @@ export function buildTokensOption(
   // Collect unique models
   const modelSet = new Set<string>();
   for (const d of data) {
-    for (const mt of d.tokensByModel ?? []) modelSet.add(mt.model);
+    for (const mt of d.tokensByModel ?? []) {modelSet.add(mt.model);}
   }
   const models = Array.from(modelSet).sort();
 
@@ -46,7 +47,7 @@ export function buildTokensOption(
         trigger: 'axis',
         formatter: (params: unknown) => {
           const p = (params as Array<{ name: string; value: number }>)[0];
-          if (!p) return '';
+          if (!p) {return '';} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- defensive: params cast from unknown
           return tooltipHtml({
             title: p.name,
             rows: [{ color: '#38bdf8', label: 'tokens', value: `${p.value.toFixed(1)}k` }],
@@ -75,7 +76,7 @@ export function buildTokensOption(
     barMaxWidth: 12,
     data: data.map((d) => {
       const mt = (d.tokensByModel ?? []).find((m) => m.model === model);
-      return mt ? Number(mt.tokensK) : 0;
+      return mt ? mt.tokensK : 0;
     }),
     itemStyle: {
       color: getModelColor(model),
@@ -95,7 +96,7 @@ export function buildTokensOption(
       trigger: 'axis',
       formatter: (params: unknown) => {
         const items = params as Array<{ seriesName: string; value: number; color: string; name: string }>;
-        if (!items?.length) return '';
+        if (!items.length) {return '';}
         const rows = items
           .filter((i) => i.value > 0)
           .map((i) => ({

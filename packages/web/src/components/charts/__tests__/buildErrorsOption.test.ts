@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { buildErrorsOption } from '../builders/buildErrorsOption';
 import type { BarSeriesOption, ScatterSeriesOption, TooltipComponentOption } from 'echarts';
+import { describe, expect,it } from 'vitest';
+
+import { buildErrorsOption } from '../builders/buildErrorsOption';
 
 type ChartSeries = (BarSeriesOption | ScatterSeriesOption)[];
 

@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import type { Source, Managed, Processor, Service, WiringRule } from '../types';
+import { describe, expect, it, vi } from 'vitest';
+
+import type { Managed, Processor, Service, Source, WiringRule } from '../types';
 
 describe('Pipeline types', () => {
   it('Source interface accepts EventEmitter-like objects', () => {
@@ -16,13 +17,13 @@ describe('Pipeline types', () => {
 
   it('Processor accepts a plain function', () => {
     const processor: Processor = vi.fn();
-    if (typeof processor === 'function') processor('data');
+    if (typeof processor === 'function') {processor('data');}
     expect(processor).toHaveBeenCalledWith('data');
   });
 
   it('Processor accepts an object with handle method', () => {
     const processor: Processor = { handle: vi.fn() };
-    if (typeof processor !== 'function') processor.handle('data');
+    if (typeof processor !== 'function') {processor.handle('data');}
     expect((processor as unknown as Record<string, unknown>).handle).toHaveBeenCalledWith('data');
   });
 

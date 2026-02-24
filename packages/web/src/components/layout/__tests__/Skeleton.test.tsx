@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect,it } from 'vitest';
+
 import { renderWithProviders } from '../../../test/render';
-import { Skeleton, ChartSkeleton, SessionSkeleton } from '../Skeleton';
+import { ChartSkeleton, SessionSkeleton,Skeleton } from '../Skeleton';
 
 describe('Skeleton', () => {
   it('renders a pulse element', () => {

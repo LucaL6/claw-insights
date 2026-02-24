@@ -1,8 +1,8 @@
-import { div, span } from './helpers.js';
-import type { SatoriNode } from './helpers.js';
-import type { ColorScheme } from './colors.js';
 import type { SnapshotData } from '../../services/snapshot-types.js';
 import { getAppVersion } from '../../version.js';
+import type { ColorScheme } from './colors.js';
+import type { SatoriNode } from './helpers.js';
+import { div, span } from './helpers.js';
 
 export function renderFooter(data: SnapshotData, c: ColorScheme): SatoriNode {
   return div(

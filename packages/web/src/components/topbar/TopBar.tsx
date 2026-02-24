@@ -1,12 +1,12 @@
 import type { Page } from '../../hooks/useHashRoute';
-import type { MetricsRange } from '../charts/metrics/GranularityPicker';
-import { useI18n } from '../../i18n/context';
 import { useTopBarData } from '../../hooks/useTopBarData';
-import { StatusPill } from './StatusPill';
+import { useI18n } from '../../i18n/context';
+import type { MetricsRange } from '../charts/metrics/GranularityPicker';
+import { ActionBar } from './ActionBar';
 import { ChannelPills } from './ChannelPills';
 import { NavTabs } from './NavTabs';
 import { ResourcesBar } from './ResourcesBar';
-import { ActionBar } from './ActionBar';
+import { StatusPill } from './StatusPill';
 
 export function TopBar({
   currentPage,

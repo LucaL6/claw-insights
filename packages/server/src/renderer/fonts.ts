@@ -1,5 +1,5 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { existsSync,readFileSync } from 'node:fs';
+import { dirname,resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -24,8 +24,8 @@ export function resetFontCache(): void {
   fontCache = null;
 }
 
-export async function loadFonts(): Promise<SatoriFont[]> {
-  if (fontCache) return fontCache;
+export function loadFonts(): SatoriFont[] {
+  if (fontCache) {return fontCache;}
 
   const customDir = process.env.CLAW_INSIGHTS_FONTS_DIR;
   const candidates = [

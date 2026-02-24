@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { BaseChart } from './core/BaseChart';
+
 import { buildUptimeOption } from './builders/buildUptimeOption';
+import { BaseChart } from './core/BaseChart';
 
 interface BucketData {
   bucket: number;
@@ -18,7 +19,7 @@ export function UptimeStrip({ data, onCellClick }: { data: BucketData[]; onCellC
         ? {
             click: (params: { dataIndex: number }) => {
               const d = data[params.dataIndex];
-              if (d && (!d.gatewayUp || d.restartEvent)) onCellClick(params.dataIndex);
+              if (!d.gatewayUp || d.restartEvent) {onCellClick(params.dataIndex);}
             },
           }
         : undefined,

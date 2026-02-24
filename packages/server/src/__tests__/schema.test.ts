@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { buildSchema } from 'graphql';
+import { describe, expect,it } from 'vitest';
+
 import { typeDefs } from '../schema/typeDefs';
 
 describe('GraphQL Schema', () => {

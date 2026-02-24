@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
+
+import { useI18n } from '../../../i18n/context';
 import { InfoTooltip } from '../../ui/InfoTooltip';
 import { getTooltips } from './metricsTooltips';
-import { useI18n } from '../../../i18n/context';
 
 function formatTokensDisplay(totalK: number): string {
-  if (totalK >= 1000) return `${(totalK / 1000).toFixed(2)}M`;
+  if (totalK >= 1000) {return `${(totalK / 1000).toFixed(2)}M`;}
   return `${totalK.toFixed(1)}k`;
 }
 

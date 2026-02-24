@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('getAppVersion error branch', () => {
   it('returns 0.0.0 when package.json read fails', async () => {

@@ -1,5 +1,5 @@
 import type { AppContext } from '../../context.js';
-import type { Resolvers, QueryResolvers, MetricsSummary } from '../generated/resolver-types.js';
+import type { MetricsSummary,QueryResolvers, Resolvers } from '../generated/resolver-types.js';
 
 const VALID_RANGES = new Set(['ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TWENTY_FOUR_HOUR']);
 

@@ -19,8 +19,8 @@ export const TAG_STYLES = {
 export type TagVariant = keyof typeof TAG_STYLES;
 
 export function getProgressColor(percent: number): string {
-  if (percent >= 80) return 'var(--red)';
-  if (percent >= 50) return 'var(--amber)';
+  if (percent >= 80) {return 'var(--red)';}
+  if (percent >= 50) {return 'var(--amber)';}
   return 'var(--emerald)';
 }
 

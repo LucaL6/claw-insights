@@ -1,5 +1,6 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, fireEvent, cleanup } from '@testing-library/react';
+import { cleanup,fireEvent, render } from '@testing-library/react';
+import { afterEach,describe, expect, it } from 'vitest';
+
 import { CollapsibleSection } from '../CollapsibleSection';
 
 afterEach(cleanup);

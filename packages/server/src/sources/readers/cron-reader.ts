@@ -1,5 +1,6 @@
-import { readFileSync, watch, type FSWatcher } from 'fs';
 import type { CronJob } from '@claw-insights/shared';
+import { type FSWatcher,readFileSync, watch } from 'fs';
+
 import { config } from '../../config.js';
 import { createChildLogger } from '../../logger.js';
 
@@ -21,9 +22,9 @@ interface RawCronFile {
 const CRON_PATH = config.cronPath;
 
 function formatSchedule(s: RawJob['schedule']): string {
-  if (s.kind === 'cron' && s.expr) return s.expr;
-  if (s.kind === 'at' && s.at) return `at ${s.at}`;
-  if (s.kind === 'every' && s.everyMs) return `every ${Math.round(s.everyMs / 60000)}m`;
+  if (s.kind === 'cron' && s.expr) {return s.expr;}
+  if (s.kind === 'at' && s.at) {return `at ${s.at}`;}
+  if (s.kind === 'every' && s.everyMs) {return `every ${Math.round(s.everyMs / 60000)}m`;}
   return s.kind;
 }
 
@@ -62,10 +63,10 @@ export class CronReader {
   private startWatching() {
     try {
       this.watcher = watch(this.filePath, () => {
-        if (this.debounceTimer) clearTimeout(this.debounceTimer);
+        if (this.debounceTimer) {clearTimeout(this.debounceTimer);}
         this.debounceTimer = setTimeout(() => {
           this.reload();
-          for (const fn of this.listeners) fn();
+          for (const fn of this.listeners) {fn();}
         }, 300);
       });
     } catch {
@@ -83,7 +84,7 @@ export class CronReader {
 
   destroy() {
     this.watcher?.close();
-    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    if (this.debounceTimer) {clearTimeout(this.debounceTimer);}
     this.listeners = [];
   }
 }

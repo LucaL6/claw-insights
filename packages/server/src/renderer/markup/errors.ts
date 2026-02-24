@@ -1,7 +1,7 @@
-import { div, span } from './helpers.js';
-import type { SatoriNode } from './helpers.js';
-import type { ColorScheme } from './colors.js';
 import type { SnapshotData } from '../../services/snapshot-types.js';
+import type { ColorScheme } from './colors.js';
+import type { SatoriNode } from './helpers.js';
+import { div, span } from './helpers.js';
 
 function errorBadge(type: string, c: ColorScheme): SatoriNode {
   const isError = type === 'error';
@@ -17,7 +17,7 @@ function errorBadge(type: string, c: ColorScheme): SatoriNode {
 
 export function renderErrors(data: SnapshotData, c: ColorScheme): SatoriNode | null {
   const errors = data.recentErrors;
-  if (!errors || errors.length === 0) return null;
+  if (!errors || errors.length === 0) {return null;}
 
   const displayed = errors.slice(0, 5);
 

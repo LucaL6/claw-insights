@@ -2,7 +2,7 @@ const CLAUDE_PATTERN = /^(?:anthropic\/)?claude-(\w+)-(\d+)(?:-(\d+))?(?:-\d{8})
 const GPT_PATTERN = /^(?:openai\/)?gpt-([\d.]+)-?(.*)$/;
 
 export function formatModel(raw: string): string {
-  if (!raw) return '';
+  if (!raw) {return '';}
   const claude = raw.match(CLAUDE_PATTERN);
   if (claude) {
     const family = claude[1].charAt(0).toUpperCase() + claude[1].slice(1);

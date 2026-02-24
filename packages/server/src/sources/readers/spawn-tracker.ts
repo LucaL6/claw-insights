@@ -9,7 +9,7 @@ export class SpawnTracker {
     const msg = entry.message;
     const runIdMatch = msg.match(/runId[=:]\s*([a-zA-Z0-9-]+)/i);
     const sessionMatch = msg.match(/session(?:Key)?[=:]\s*([\w:-]+)/i);
-    if (!runIdMatch) return;
+    if (!runIdMatch) {return;}
     const runId = runIdMatch[1];
 
     if (msg.includes('sessions_spawn') && sessionMatch) {
@@ -22,13 +22,13 @@ export class SpawnTracker {
     const p = this.runToParent.get(runId);
     const c = this.runToChild.get(runId);
     if (p && c) {
-      if (!this.parentToChildren.has(p)) this.parentToChildren.set(p, new Set());
+      if (!this.parentToChildren.has(p)) {this.parentToChildren.set(p, new Set());}
       this.parentToChildren.get(p)!.add(c);
     }
   }
 
   prune(maxEntries: number = 500) {
-    if (this.runToParent.size <= maxEntries) return;
+    if (this.runToParent.size <= maxEntries) {return;}
 
     const keys = [...this.runToParent.keys()];
     for (let i = 0; i < keys.length - maxEntries; i++) {
@@ -40,7 +40,7 @@ export class SpawnTracker {
     for (const [runId, parent] of this.runToParent) {
       const child = this.runToChild.get(runId);
       if (child) {
-        if (!this.parentToChildren.has(parent)) this.parentToChildren.set(parent, new Set());
+        if (!this.parentToChildren.has(parent)) {this.parentToChildren.set(parent, new Set());}
         this.parentToChildren.get(parent)!.add(child);
       }
     }
@@ -48,7 +48,7 @@ export class SpawnTracker {
 
   getParentChildMap(): Map<string, string[]> {
     const out = new Map<string, string[]>();
-    for (const [p, set] of this.parentToChildren) out.set(p, Array.from(set));
+    for (const [p, set] of this.parentToChildren) {out.set(p, Array.from(set));}
     return out;
   }
 }

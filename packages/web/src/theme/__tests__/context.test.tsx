@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { ThemeProvider, useTheme } from '../context';
+import { act,renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { beforeEach,describe, expect, it } from 'vitest';
+
+import { ThemeProvider, useTheme } from '../context';
 
 if (!globalThis.localStorage || typeof globalThis.localStorage.getItem !== 'function') {
   const store: Record<string, string> = {};
@@ -9,7 +10,7 @@ if (!globalThis.localStorage || typeof globalThis.localStorage.getItem !== 'func
     getItem: (k: string) => store[k] ?? null,
     setItem: (k: string, v: string) => { store[k] = v; },
     removeItem: (k: string) => { delete store[k]; },
-    clear: () => { for (const k in store) delete store[k]; },
+    clear: () => { for (const k in store) {delete store[k];} },
     get length() { return Object.keys(store).length; },
     key: (i: number) => Object.keys(store)[i] ?? null,
   };

@@ -1,6 +1,7 @@
 import clsx from 'clsx';
-import { shortModelName, getModelColor } from '../core/echarts-theme';
+
 import { useI18n } from '../../../i18n/context';
+import { getModelColor,shortModelName } from '../core/echarts-theme';
 
 interface ModelSelectorProps {
   models: string[];
@@ -19,12 +20,12 @@ const ACTIVE_STYLE = {
 export function ModelSelector({ models, selected, onChange }: ModelSelectorProps) {
   const { t } = useI18n();
 
-  if (models.length <= 1) return null;
+  if (models.length <= 1) {return null;}
 
   return (
     <div className="flex gap-0.5">
       <button
-        onClick={() => onChange(null)}
+        onClick={() => { onChange(null); }}
         className={clsx(BASE, selected !== null && 'text-fg-dim')}
         style={selected === null ? ACTIVE_STYLE : undefined}
       >
@@ -38,7 +39,7 @@ export function ModelSelector({ models, selected, onChange }: ModelSelectorProps
         return (
           <button
             key={m}
-            onClick={() => onChange(isActive ? null : m)}
+            onClick={() => { onChange(isActive ? null : m); }}
             className={clsx(BASE, 'inline-flex items-center gap-1', !isActive && 'text-fg-dim')}
             style={isActive ? ACTIVE_STYLE : undefined}
           >

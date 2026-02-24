@@ -1,15 +1,17 @@
-import express from 'express';
-import { existsSync, readFileSync, writeFileSync, unlinkSync, chmodSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { resolve, dirname, join, extname } from 'node:path';
+import { chmodSync, existsSync, mkdirSync,readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, extname,join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createContext, startContext, destroyContext } from './context.js';
-import { registerGraphQL } from './routes/graphql.js';
-import { registerSnapshot } from './routes/snapshot.js';
-import { createHealthHandler } from './routes/health.js';
+
+import express from 'express';
+
 import { config, generateToken, setApiToken } from './config.js';
-import { cookieExchangeMiddleware } from './middleware/cookie-exchange.js';
+import { createContext, destroyContext,startContext } from './context.js';
 import { createChildLogger } from './logger.js';
+import { cookieExchangeMiddleware } from './middleware/cookie-exchange.js';
+import { registerGraphQL } from './routes/graphql.js';
+import { createHealthHandler } from './routes/health.js';
+import { registerSnapshot } from './routes/snapshot.js';
 
 const log = createChildLogger('server');
 
@@ -40,7 +42,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
   if (issues.length > 0) {
     console.log('\n🔍 Startup checks:\n');
-    issues.forEach((i) => console.log(i));
+    issues.forEach((i) => { console.log(i); });
     console.log('\n   Dashboard will start but may show incomplete data.\n');
   }
 }
@@ -106,11 +108,11 @@ if (!config.isDev && !config.serverOnly && existsSync(webDistPath)) {
   app.get('/', serveIndex);
   app.get('/{*path}', (req, res, next) => {
     if (req.path.startsWith('/graphql') || req.path.startsWith('/api') || req.path.startsWith('/health')) {
-      return next();
+      next(); return;
     }
     // Don't serve index.html for requests with file extensions (e.g. /foo.js, /bar.css)
     if (extname(req.path)) {
-      return next();
+      next(); return;
     }
     serveIndex(req, res);
   });
@@ -120,7 +122,7 @@ if (!config.isDev && !config.serverOnly && existsSync(webDistPath)) {
 const pidPath = join(process.env.HOME ?? '/tmp', '.claw-insights', 'claw-insights.pid');
 
 // Graceful shutdown
-async function shutdown() {
+function shutdown() {
   destroyContext(ctx);
   // Clean up PID file if we are the daemon process
   try {

@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { DataRetention, type RetentionConfig } from '../data-retention.js';
+import { describe, expect,it } from 'vitest';
+
 import { initDatabase } from '../../db/init.js';
+import { DataRetention, type RetentionConfig } from '../data-retention.js';
 
 describe('DataRetention branch coverage', () => {
   it('prune skips hourly pruning when hourlyRetention is invalid string', () => {

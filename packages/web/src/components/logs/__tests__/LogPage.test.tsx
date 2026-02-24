@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { screen, cleanup } from '@testing-library/react';
+import { cleanup,screen } from '@testing-library/react';
+import { afterEach, beforeEach,describe, expect, it, vi } from 'vitest';
+
 import { renderWithProviders } from '../../../test/render';
 
 // Ensure localStorage works
@@ -9,7 +10,7 @@ if (!globalThis.localStorage || typeof globalThis.localStorage.getItem !== 'func
     getItem: (k: string) => store[k] ?? null,
     setItem: (k: string, v: string) => { store[k] = v; },
     removeItem: (k: string) => { delete store[k]; },
-    clear: () => { for (const k in store) delete store[k]; },
+    clear: () => { for (const k in store) {delete store[k];} },
     get length() { return Object.keys(store).length; },
     key: (i: number) => Object.keys(store)[i] ?? null,
   };
@@ -19,9 +20,9 @@ vi.mock('../../../hooks/useLogPageData', () => ({
   useLogPageData: vi.fn(),
 }));
 
+import type { Route } from '../../../hooks/useHashRoute';
 import { useLogPageData } from '../../../hooks/useLogPageData';
 import { LogPage } from '../LogPage';
-import type { Route } from '../../../hooks/useHashRoute';
 
 afterEach(cleanup);
 
@@ -71,7 +72,7 @@ describe('LogPage', () => {
   it('renders with error state', () => {
     mockedHook.mockReturnValue({
       ...baseMock,
-      eventsError: { message: 'Network error', name: 'Error' },
+      eventsError: 'Network error',
       filteredEvents: [],
     });
     renderWithProviders(<LogPage route={route} navigate={vi.fn()} />);

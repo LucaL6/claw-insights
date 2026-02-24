@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderWithI18n } from './testUtils';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
+
 import type { SessionData } from '../shared/types';
+import { renderWithI18n } from './testUtils';
 
 // Mock useReactiveQuery
 const mockUseReactiveQuery = vi.fn();

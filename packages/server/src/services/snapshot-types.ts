@@ -26,7 +26,7 @@ export const RANGE_MAP: Record<Range, string> = {
 };
 
 function validate<T extends string>(value: unknown, valid: readonly T[], field: string, fallback: T): T {
-  if (value === undefined || value === null) return fallback;
+  if (value === undefined || value === null) {return fallback;}
   if (typeof value !== 'string' || !(valid as readonly string[]).includes(value)) {
     throw new Error(`Invalid ${field}: ${value}. Must be one of: ${valid.join(', ')}`);
   }

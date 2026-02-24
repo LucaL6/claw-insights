@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect,it } from 'vitest';
+
 import { relativeTime } from '../relativeTime';
 
 const t = (key: string, params?: Record<string, string | number>) => {

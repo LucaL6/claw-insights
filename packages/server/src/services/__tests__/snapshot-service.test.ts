@@ -1,4 +1,5 @@
-import { describe, test, expect } from 'vitest';
+import { describe, expect,test } from 'vitest';
+
 import { buildSnapshotData } from '../snapshot-service';
 import type { DataSources } from '../snapshot-types';
 

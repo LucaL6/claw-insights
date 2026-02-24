@@ -1,7 +1,7 @@
-import { div, span } from './helpers.js';
-import type { SatoriNode } from './helpers.js';
+import type { Detail,SnapshotData } from '../../services/snapshot-types.js';
 import type { ColorScheme } from './colors.js';
-import type { SnapshotData, Detail } from '../../services/snapshot-types.js';
+import type { SatoriNode } from './helpers.js';
+import { div, span } from './helpers.js';
 
 interface MetricDef {
   label: string;
@@ -32,7 +32,7 @@ function defs(_c: ColorScheme, range: string): MetricDef[] {
     },
     {
       label: 'Uptime',
-      rangeLabel: `${range}`,
+      rangeLabel: range,
       getValue: (d) => d.summary.uptimePercent.toFixed(1) + '%',
       getValueColor: (_d, cc) => cc.emerald,
     },

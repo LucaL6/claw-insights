@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
+
+import type { BucketData } from '../../../hooks/useMetricsData';
+import { useI18n } from '../../../i18n/context';
+import { InfoTooltip } from '../../ui/InfoTooltip';
 import { ChartCard } from '../core/ChartCard';
 import { UptimeStrip } from '../UptimeStrip';
-import { PreviewCard } from './PreviewCard';
-import { InfoTooltip } from '../../ui/InfoTooltip';
 import { getTooltips } from './metricsTooltips';
-import { useI18n } from '../../../i18n/context';
-import type { BucketData } from '../../../hooks/useMetricsData';
-import type { PreviewState, PreviewEvents } from './types';
+import { PreviewCard } from './PreviewCard';
+import type { PreviewEvents,PreviewState } from './types';
 
 interface Props {
   buckets: BucketData[];

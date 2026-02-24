@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createLogIngester } from '../log-ingester';
 import type { LogEntry } from '@claw-insights/shared';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
+
+import { createLogIngester } from '../log-ingester';
 
 vi.mock('../../../db/event-queries.js', () => ({
   insertEvent: vi.fn(),

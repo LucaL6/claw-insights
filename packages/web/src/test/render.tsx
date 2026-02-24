@@ -1,8 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { render, type RenderOptions } from '@testing-library/react';
-import { ThemeProvider } from '../theme/context';
-import { I18nProvider } from '../i18n/context';
 import type { ReactElement } from 'react';
+
+import { I18nProvider } from '../i18n/context';
+import { ThemeProvider } from '../theme/context';
 
 // Ensure localStorage is functional in happy-dom
 try {
@@ -13,7 +14,7 @@ try {
     getItem: (k: string) => store[k] ?? null,
     setItem: (k: string, v: string) => { store[k] = v; },
     removeItem: (k: string) => { delete store[k]; },
-    clear: () => { for (const k in store) delete store[k]; },
+    clear: () => { for (const k in store) {delete store[k];} },
     get length() { return Object.keys(store).length; },
     key: (i: number) => Object.keys(store)[i] ?? null,
   };

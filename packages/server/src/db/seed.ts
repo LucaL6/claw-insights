@@ -6,9 +6,10 @@
  * Sessions, channels, cron, and gateway status come from live sources
  * (files / CLI) and are NOT seeded here.
  */
-import { initDatabase } from './init.js';
 import { DatabaseSync } from 'node:sqlite';
+
 import { createChildLogger } from '../logger.js';
+import { initDatabase } from './init.js';
 
 const log = createChildLogger('db-seed');
 

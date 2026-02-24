@@ -1,9 +1,10 @@
 import type { Request, Response } from 'express';
-import { parseSnapshotRequest, RANGE_MAP } from '../services/snapshot-types.js';
+
+import { createChildLogger } from '../logger.js';
+import { renderSnapshot } from '../renderer/satori-renderer.js';
 import { buildSnapshotData } from '../services/snapshot-service.js';
 import type { DataSources } from '../services/snapshot-types.js';
-import { renderSnapshot } from '../renderer/satori-renderer.js';
-import { createChildLogger } from '../logger.js';
+import { parseSnapshotRequest, RANGE_MAP } from '../services/snapshot-types.js';
 
 const log = createChildLogger('snapshot');
 

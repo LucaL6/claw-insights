@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { screen, cleanup, fireEvent } from '@testing-library/react';
+import { cleanup, fireEvent,screen } from '@testing-library/react';
+import { afterEach,describe, expect, it, vi } from 'vitest';
+
 import { renderWithProviders } from '../../../test/render';
 import { FilterBar } from '../FilterBar';
 

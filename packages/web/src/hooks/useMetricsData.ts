@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import type { MetricsRange, ModelTokens } from '@claw-insights/shared';
+import { useEffect, useMemo,useState } from 'react';
+
 import { MetricsQuery } from '../graphql/queries';
 import { useReactiveQuery } from './useReactiveQuery';
-import type { MetricsRange, ModelTokens } from '@claw-insights/shared';
 
 export interface BucketData {
   bucket: number;
@@ -29,7 +30,7 @@ export function useMetricsData(range: MetricsRange) {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (result.data) setLastFetchTime(Date.now());
+    if (result.data) {setLastFetchTime(Date.now());}
   }, [result.data]);
 
   const metrics = result.data?.metrics;
@@ -46,7 +47,7 @@ export function useMetricsData(range: MetricsRange) {
   }, [buckets]);
 
   const peakSessions = buckets.length > 0 ? Math.max(...buckets.map((b) => b.sessions)) : 0;
-  const totalTokensK = buckets.reduce((s, b) => s + Number(b.tokensK ?? 0), 0);
+  const totalTokensK = buckets.reduce((s, b) => s + b.tokensK, 0);
   const totalErrors = metrics?.totalErrors ?? 0;
   const totalWarnings = metrics?.totalWarnings ?? 0;
   const uptimePct = metrics?.uptimePercent ?? 0;

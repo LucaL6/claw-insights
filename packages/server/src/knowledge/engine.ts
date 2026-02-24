@@ -1,5 +1,5 @@
-import type { DiagnosticRule, DiagnosticResult, SystemSnapshot } from './types.js';
 import { createChildLogger } from '../logger.js';
+import type { DiagnosticResult, DiagnosticRule, SystemSnapshot } from './types.js';
 
 const log = createChildLogger('diagnostic-engine');
 

@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { BaseChart } from './core/BaseChart';
-import { buildTokensOption } from './builders/buildTokensOption';
-import { getTooltips } from './metrics/metricsTooltips';
+
 import { useI18n } from '../../i18n/context';
+import { buildTokensOption } from './builders/buildTokensOption';
+import { BaseChart } from './core/BaseChart';
+import { getTooltips } from './metrics/metricsTooltips';
 
 interface ModelTokens {
   model: string;

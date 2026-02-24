@@ -1,6 +1,7 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useQuery, useSubscription } from 'urql';
+import { useCallback,useEffect, useRef } from 'react';
 import type { AnyVariables, UseQueryArgs, UseQueryResponse } from 'urql';
+import { useQuery, useSubscription } from 'urql';
+
 import { DataChangedSubscription } from '../graphql/subscriptions';
 
 type DataSource = 'sessions' | 'metrics' | 'gateway';
@@ -26,13 +27,13 @@ export function useReactiveQuery<TData = unknown, TVariables extends AnyVariable
   // Subscription handler — receives DataChanged signals
   const handleSubscription = useCallback(
     (_prev: unknown, data: { dataChanged: { source: string; ts: string } }) => {
-      if (!data?.dataChanged) return data;
+      if (!data.dataChanged) {return data;} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- defensive: subscription data
 
       const { source } = data.dataChanged;
-      if (!reactive.sources.includes(source as DataSource)) return data;
+      if (!reactive.sources.includes(source as DataSource)) {return data;}
 
       // Debounce refetch
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      if (debounceTimer.current) {clearTimeout(debounceTimer.current);}
       debounceTimer.current = setTimeout(refetch, reactive.debounceMs ?? 500);
 
       return data;
@@ -58,13 +59,13 @@ export function useReactiveQuery<TData = unknown, TVariables extends AnyVariable
     }, pollMs);
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') refetch();
+      if (document.visibilityState === 'visible') {refetch();}
     };
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       clearInterval(healthCheck);
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      if (debounceTimer.current) {clearTimeout(debounceTimer.current);}
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [reactive.fallbackPollMs, refetch]);

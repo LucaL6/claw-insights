@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, fireEvent, cleanup } from '@testing-library/react';
+import { cleanup,fireEvent, render } from '@testing-library/react';
+import { afterEach,describe, expect, it, vi } from 'vitest';
+
 import { ConfirmModal } from '../ConfirmModal';
 
 vi.mock('../../../i18n/context', () => ({

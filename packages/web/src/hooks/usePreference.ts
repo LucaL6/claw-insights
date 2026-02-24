@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef,useState } from 'react';
 
 const PREFIX = 'ci:';
 
@@ -8,12 +8,12 @@ interface PreferenceOptions<T> {
   validate?: (value: T) => boolean;
 }
 
-function defaultSerialize<T>(value: T): string {
+function defaultSerialize(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function defaultDeserialize<T>(raw: string): T {
-  return JSON.parse(raw) as T;
+function defaultDeserialize(raw: string): unknown {
+  return JSON.parse(raw) as unknown;
 }
 
 function readStored<T>(
@@ -22,12 +22,12 @@ function readStored<T>(
   deserialize: (s: string) => T,
   validate?: (v: T) => boolean,
 ): T {
-  if (typeof window === 'undefined') return defaultValue;
+  if (typeof window === 'undefined') {return defaultValue;}
   try {
     const raw = localStorage.getItem(fullKey);
-    if (raw === null) return defaultValue;
+    if (raw === null) {return defaultValue;}
     const parsed = deserialize(raw);
-    if (validate && !validate(parsed)) return defaultValue;
+    if (validate && !validate(parsed)) {return defaultValue;}
     return parsed;
   } catch {
     return defaultValue;
@@ -41,7 +41,7 @@ export function usePreference<T>(
 ): [T, (value: T | ((prev: T) => T)) => void] {
   const fullKey = PREFIX + key;
   const serialize = options?.serialize ?? defaultSerialize;
-  const deserialize = options?.deserialize ?? defaultDeserialize;
+  const deserialize = options?.deserialize ?? (defaultDeserialize as (raw: string) => T);
   const validate = options?.validate;
 
   const [value, setValue] = useState<T>(() =>
@@ -78,21 +78,21 @@ export function usePreference<T>(
   // Cross-tab sync
   useEffect(() => {
     const handler = (e: StorageEvent) => {
-      if (e.key !== fullKey || e.storageArea !== localStorage) return;
+      if (e.key !== fullKey || e.storageArea !== localStorage) {return;}
       if (e.newValue === null) {
         setValue(defaultValue);
         return;
       }
       try {
         const parsed = deserializeRef.current(e.newValue);
-        if (validateRef.current && !validateRef.current(parsed)) return;
+        if (validateRef.current && !validateRef.current(parsed)) {return;}
         setValue(parsed);
       } catch {
         // ignore bad data from other tabs
       }
     };
     window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
+    return () => { window.removeEventListener('storage', handler); };
   }, [fullKey, defaultValue]);
 
   return [value, set];

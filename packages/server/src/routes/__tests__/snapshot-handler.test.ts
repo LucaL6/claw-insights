@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../services/snapshot-types.js', () => ({
   parseSnapshotRequest: vi.fn(),
@@ -15,10 +15,11 @@ vi.mock('../../renderer/satori-renderer.js', () => ({
 
 import type { Request, Response } from 'express';
 import type { Mock } from 'vitest';
-import { createSnapshotHandler } from '../snapshot-handler.js';
-import { parseSnapshotRequest } from '../../services/snapshot-types.js';
-import type { DataSources } from '../../services/snapshot-types.js';
+
 import { renderSnapshot } from '../../renderer/satori-renderer.js';
+import type { DataSources } from '../../services/snapshot-types.js';
+import { parseSnapshotRequest } from '../../services/snapshot-types.js';
+import { createSnapshotHandler } from '../snapshot-handler.js';
 
 function mockRes() {
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn(), set: vi.fn(), send: vi.fn() } as unknown as Response & { status: Mock; json: Mock; set: Mock; send: Mock };

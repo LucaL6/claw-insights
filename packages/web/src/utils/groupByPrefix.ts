@@ -9,7 +9,7 @@ export type GroupedItem<T extends SessionLike = SessionLike> =
   | { type: 'single'; item: T };
 
 export function groupByPrefix<T extends SessionLike>(items: T[]): GroupedItem<T>[] {
-  if (items.length === 0) return [];
+  if (items.length === 0) {return [];}
 
   const buckets = new Map<string, T[]>();
   const noPrefix: T[] = [];
@@ -21,8 +21,8 @@ export function groupByPrefix<T extends SessionLike>(items: T[]): GroupedItem<T>
       continue;
     }
     const prefix = item.displayName.slice(0, dashIdx);
-    if (!buckets.has(prefix)) buckets.set(prefix, []);
-    buckets.get(prefix)!.push(item);
+    if (!buckets.has(prefix)) {buckets.set(prefix, []);}
+    buckets.get(prefix)?.push(item);
   }
 
   const result: GroupedItem<T>[] = [];

@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import { BaseChart } from '../core/BaseChart';
+import { describe, expect, it, vi } from 'vitest';
+
 import { ThemeProvider } from '../../../theme/context';
+import { BaseChart } from '../core/BaseChart';
 
 // Mock localStorage for ThemeProvider
 Object.defineProperty(globalThis, 'localStorage', {

@@ -1,4 +1,4 @@
-import type { Source, Managed, Processor, Service, WiringRule, PipelineConfig } from './types.js';
+import type { Managed, PipelineConfig,Processor, Service, Source, WiringRule } from './types.js';
 
 type BoundHandler = { source: Source; event: string; handler: (...args: unknown[]) => void };
 
@@ -42,16 +42,16 @@ export class Pipeline {
 
   wire(source: string, event: string, targets: string[]): this {
     this.guardNotBuilt('wire');
-    if (!this.sources.has(source)) throw new Error(`Unknown source: "${source}"`);
+    if (!this.sources.has(source)) {throw new Error(`Unknown source: "${source}"`);}
     for (const t of targets) {
-      if (!this.processors.has(t)) throw new Error(`Unknown processor: "${t}"`);
+      if (!this.processors.has(t)) {throw new Error(`Unknown processor: "${t}"`);}
     }
     this.wiring.push({ source, event, targets });
     return this;
   }
 
   build(): this {
-    if (this.built) throw new Error('Pipeline already built — cannot build twice');
+    if (this.built) {throw new Error('Pipeline already built — cannot build twice');}
     for (const rule of this.wiring) {
       const src = this.sources.get(rule.source)!;
       const handlers = rule.targets.map((t) => {
@@ -59,7 +59,7 @@ export class Pipeline {
         return typeof proc === 'function' ? proc : proc.handle.bind(proc);
       });
       const handler = (...args: unknown[]) => {
-        for (const h of handlers) h(...args);
+        for (const h of handlers) {h(...args);}
       };
       src.on(rule.event, handler);
       this.boundHandlers.push({ source: src, event: rule.event, handler });
@@ -69,8 +69,8 @@ export class Pipeline {
   }
 
   start(): void {
-    if (!this.built) throw new Error('Pipeline not built — call build() before start()');
-    for (const svc of this.services.values()) svc.start();
+    if (!this.built) {throw new Error('Pipeline not built — call build() before start()');}
+    for (const svc of this.services.values()) {svc.start();}
   }
 
   destroy(): void {
@@ -85,9 +85,9 @@ export class Pipeline {
       svc.destroy?.();
     }
     // Destroy sources
-    for (const src of this.sources.values()) src.destroy?.();
+    for (const src of this.sources.values()) {src.destroy?.();}
     // Destroy managed resources
-    for (const res of this.managed.values()) res.destroy();
+    for (const res of this.managed.values()) {res.destroy();}
   }
 
   get<T = unknown>(name: string): T {
@@ -105,6 +105,6 @@ export class Pipeline {
   }
 
   private guardNotBuilt(method: string): void {
-    if (this.built) throw new Error(`Cannot call ${method}() after build()`);
+    if (this.built) {throw new Error(`Cannot call ${method}() after build()`);}
   }
 }

@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { config, CLI_ENV } from '../config.js';
+
+import { CLI_ENV,config } from '../config.js';
 import { createChildLogger } from '../logger.js';
 
 const log = createChildLogger('system-info');
@@ -23,7 +24,7 @@ const METRICS_CACHE_TTL = 10_000;
 
 export function parseLaunchctlOutput(stdout: string): number | null {
   const line = stdout.split('\n').find((l) => l.includes('ai.openclaw.gateway'));
-  if (!line) return null;
+  if (!line) {return null;}
   const match = line.match(/^(\d+)/);
   return match ? parseInt(match[1], 10) : null;
 }
@@ -31,10 +32,10 @@ export function parseLaunchctlOutput(stdout: string): number | null {
 export function parsePsOutput(stdout: string): { cpu: number; memoryMB: number } | null {
   const trimmed = stdout.trim();
   const parts = trimmed.split(/\s+/);
-  if (parts.length < 2) return null;
+  if (parts.length < 2) {return null;}
   const rssKB = parseInt(parts[0], 10);
   const cpu = parseFloat(parts[1]);
-  if (isNaN(rssKB) || isNaN(cpu)) return null;
+  if (isNaN(rssKB) || isNaN(cpu)) {return null;}
   return { cpu, memoryMB: Math.round(rssKB / 1024) };
 }
 
@@ -141,7 +142,7 @@ export function parseUsageCostOutput(output: string): UsageCost {
 }
 
 export async function getUsageCost(): Promise<UsageCost> {
-  if (costCache && Date.now() - costCache.ts < COST_CACHE_TTL) return costCache.data;
+  if (costCache && Date.now() - costCache.ts < COST_CACHE_TTL) {return costCache.data;}
 
   try {
     const { stdout } = await execFileAsync(config.cliPath, ['gateway', 'usage-cost'], {

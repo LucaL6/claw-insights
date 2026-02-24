@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { formatModel } from '../../utils/formatModel';
+
 import { useI18n } from '../../i18n/context';
-import { StatusDot } from './shared/StatusDot';
-import { TagPill } from './shared/TagPill';
+import { formatModel } from '../../utils/formatModel';
+import { ChevronDownIcon } from '../ui/icons';
+import { BORDER_BY_STATUS } from './shared/constants';
 import { InlineProgress } from './shared/InlineProgress';
 import { relativeTime } from './shared/relativeTime';
-import { BORDER_BY_STATUS } from './shared/constants';
-import { ChevronDownIcon } from '../ui/icons';
+import { StatusDot } from './shared/StatusDot';
+import { TagPill } from './shared/TagPill';
 
 interface Props {
   displayName: string;
@@ -64,18 +65,18 @@ export function SessionCard({
       style={{
         border: `1px solid ${hovered ? borderInfo.hoverBorder : borderInfo.border}`,
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => { setHovered(true); }}
+      onMouseLeave={() => { setHovered(false); }}
     >
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center justify-between gap-3 mb-1.5">
+        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           {hasChildren && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggle?.();
               }}
-              className={`transition-transform text-fg-muted ${expanded ? '' : '-rotate-90'}`}
+              className={`flex-shrink-0 transition-transform text-fg-muted ${expanded ? '' : '-rotate-90'}`}
             >
               <ChevronDownIcon />
             </button>
@@ -150,8 +151,8 @@ function CompactCard({
                 : 'var(--subagent-border)'
         }`,
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => { setHovered(true); }}
+      onMouseLeave={() => { setHovered(false); }}
     >
       {isStarting ? (
         <div className="flex items-center gap-2">
@@ -161,7 +162,7 @@ function CompactCard({
         </div>
       ) : (
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             <StatusDot status={status} size="sm" />
             <span className={`mono text-[13px] font-medium truncate ${isDone ? 'text-fg-muted' : 'text-fg'}`}>
               {displayName}

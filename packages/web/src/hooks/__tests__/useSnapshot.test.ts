@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act,renderHook } from '@testing-library/react';
+import { afterEach,beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useSnapshot } from '../useSnapshot';
 
@@ -56,7 +56,7 @@ describe('useSnapshot', () => {
     vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() } as unknown as Response);
     const origCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
-      if (String(tagName).toLowerCase() === 'a') return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;
+      if (String(tagName).toLowerCase() === 'a') {return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;}
       return origCreate(tagName, options);
     }) as typeof document.createElement);
 
@@ -73,7 +73,7 @@ describe('useSnapshot', () => {
     vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() } as unknown as Response);
     const origCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
-      if (String(tagName).toLowerCase() === 'a') return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;
+      if (String(tagName).toLowerCase() === 'a') {return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;}
       return origCreate(tagName, options);
     }) as typeof document.createElement);
 

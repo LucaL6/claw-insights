@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { afterEach,describe, expect, it, vi } from 'vitest';
+
 import { renderWithProviders } from '../../../../test/render';
 import { MetricsSection } from '../MetricsSection';
 

@@ -1,5 +1,6 @@
 import type { Channel } from '@claw-insights/shared';
-import { formatLatency, channelShortName } from '../../utils/format';
+
+import { channelShortName,formatLatency } from '../../utils/format';
 
 interface ChannelPillsProps {
   channels: Channel[];

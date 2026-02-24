@@ -15,17 +15,17 @@ interface Props {
 }
 
 function bucketColor(b: DensityBucket): string {
-  if (b.count === 0) return 'var(--bg-elevated)';
-  if (b.hasError) return 'var(--red)';
-  if (b.hasRestart) return 'var(--orange)';
-  if (b.hasWarning) return 'var(--amber)';
+  if (b.count === 0) {return 'var(--bg-elevated)';}
+  if (b.hasError) {return 'var(--red)';}
+  if (b.hasRestart) {return 'var(--orange)';}
+  if (b.hasWarning) {return 'var(--amber)';}
   return 'var(--text-dim)';
 }
 
 function bucketOpacity(count: number): number {
-  if (count === 0) return 0.2;
-  if (count <= 5) return 0.4;
-  if (count <= 20) return 0.7;
+  if (count === 0) {return 0.2;}
+  if (count <= 5) {return 0.4;}
+  if (count <= 20) {return 0.7;}
   return 1;
 }
 

@@ -1,4 +1,5 @@
 import type { EChartsOption } from 'echarts';
+
 import { COLORS } from '../core/model-utils';
 import { buildCategoryXAxis, tooltipHtml } from './shared';
 
@@ -26,7 +27,7 @@ export function buildUptimeOption(data: UptimeBucket[]): EChartsOption {
       formatter: (params: unknown) => {
         const p = (params as Array<{ dataIndex: number; name: string }>)[0];
         const d = data[p.dataIndex];
-        if (!d) return '';
+        if (!d) {return '';} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- defensive: array index
         const status = d.gatewayUp ? '<b style="color:#34d399">UP</b>' : '<b style="color:#ef4444">DOWN</b>';
         const extra = d.restartEvent ? '<span style="color:#fbbf24">↻ restart</span>' : undefined;
         return tooltipHtml({ title: `${p.name} ${status}`, rows: [], extra });

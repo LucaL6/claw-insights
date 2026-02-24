@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, cleanup } from '@testing-library/react';
+import { act, cleanup,renderHook } from '@testing-library/react';
+import { afterEach,beforeEach, describe, expect, it } from 'vitest';
+
 import { useHashRoute } from '../useHashRoute';
 
 describe('useHashRoute', () => {

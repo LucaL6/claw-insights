@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { describe, expect,it } from 'vitest';
+
 import { initDatabase } from '../../db/init';
 import { Aggregator } from '../aggregator';
 import { createLogIngester } from '../collectors/log-ingester';
-import { rmSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
 
 function setup() {
   const dbPath = join(tmpdir(), `agg-${Date.now()}-${Math.random()}.db`);

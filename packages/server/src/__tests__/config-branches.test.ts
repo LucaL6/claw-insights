@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { safePort, safeInt } from '../config.js';
+import { describe, expect,it } from 'vitest';
+
+import { safeInt,safePort } from '../config.js';
 
 describe('safePort branch coverage', () => {
   it('returns fallback when env is undefined', () => {

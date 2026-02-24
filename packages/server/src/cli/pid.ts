@@ -1,4 +1,4 @@
-import { writeFileSync, readFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync,readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export class PidFile {
@@ -13,7 +13,7 @@ export class PidFile {
   }
 
   read(): number | null {
-    if (!existsSync(this.path)) return null;
+    if (!existsSync(this.path)) {return null;}
     const content = readFileSync(this.path, 'utf-8').trim();
     const pid = parseInt(content, 10);
     return Number.isFinite(pid) && pid > 0 ? pid : null;
@@ -27,7 +27,7 @@ export class PidFile {
 
   isAlive(): boolean {
     const pid = this.read();
-    if (pid === null) return false;
+    if (pid === null) {return false;}
     try {
       process.kill(pid, 0);
       return true;

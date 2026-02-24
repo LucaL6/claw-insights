@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { parseLaunchctlOutput, parsePsOutput, parseDuOutput, parseUsageCostOutput } from '../system-info';
+import { describe, expect,it } from 'vitest';
+
+import { parseDuOutput, parseLaunchctlOutput, parsePsOutput, parseUsageCostOutput } from '../system-info';
 
 describe('parseLaunchctlOutput', () => {
   it('extracts PID from launchctl list', () => {

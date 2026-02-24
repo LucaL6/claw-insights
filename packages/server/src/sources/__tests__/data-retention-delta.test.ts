@@ -1,7 +1,9 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import type { DatabaseSync as Database } from 'node:sqlite';
+
+import { afterEach,describe, expect, it } from 'vitest';
+
 import { initDatabase } from '../../db/init.js';
 import { DataRetention } from '../data-retention.js';
-import type { DatabaseSync as Database } from 'node:sqlite';
 
 let db: Database;
 afterEach(() => db?.close());

@@ -3,7 +3,7 @@ interface Props {
 }
 
 export function MetricsValidationWarnings({ warnings }: Props) {
-  if (warnings.length === 0) return null;
+  if (warnings.length === 0) {return null;}
   return (
     <div className="mb-2 space-y-1">
       {warnings.map((w, i) => (

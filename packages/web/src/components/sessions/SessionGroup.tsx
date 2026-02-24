@@ -1,7 +1,8 @@
 import { useState } from 'react';
+
+import { groupByPrefix } from '../../utils/groupByPrefix';
 import { SessionCard } from './SessionCard';
 import { TreeConnector } from './shared/TreeConnector';
-import { groupByPrefix } from '../../utils/groupByPrefix';
 import type { SessionData } from './shared/types';
 
 function SubAgentGroup({ prefix, items, totalTokens }: { prefix: string; items: SessionData[]; totalTokens: number }) {
@@ -9,7 +10,7 @@ function SubAgentGroup({ prefix, items, totalTokens }: { prefix: string; items: 
   return (
     <div>
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => { setExpanded(!expanded); }}
         className="flex items-center gap-2 w-full pl-4 py-1 text-left rounded transition-colors text-fg-muted"
       >
         <span className={`text-[10px] transition-transform ${expanded ? '' : '-rotate-90'}`}>▼</span>
@@ -46,7 +47,7 @@ export function SessionGroup({ session }: { session: SessionData }) {
 
   return (
     <div>
-      <div onClick={() => hasChildren && setExpanded(!expanded)}>
+      <div onClick={() => { if (hasChildren) { setExpanded(!expanded); } }}>
         <SessionCard
           displayName={session.displayName}
           kind={session.kind}
@@ -58,7 +59,7 @@ export function SessionGroup({ session }: { session: SessionData }) {
           updatedAt={session.updatedAt}
           hasChildren={hasChildren}
           expanded={expanded}
-          onToggle={() => setExpanded(!expanded)}
+          onToggle={() => { setExpanded(!expanded); }}
           subAgentCount={hasChildren ? session.subAgents.length : undefined}
         />
       </div>

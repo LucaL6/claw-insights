@@ -1,9 +1,9 @@
 import { UpdateGatewayMutation } from '../../graphql/mutations';
-import { ConfirmModal } from './ConfirmModal';
 import { useI18n } from '../../i18n/context';
 import { DownloadIcon } from '../ui/icons';
-import { ModalIcon } from './ModalIcon';
 import { CommandPreview } from './CommandPreview';
+import { ConfirmModal } from './ConfirmModal';
+import { ModalIcon } from './ModalIcon';
 import { useOperationMutation } from './useOperationMutation';
 
 export interface UpdateModalProps {
@@ -23,7 +23,7 @@ export function UpdateModal({ onClose, currentVersion, latestVersion }: UpdateMo
       variant="success"
       loading={loading}
       error={error}
-      onConfirm={run}
+      onConfirm={() => { void run(); }}
       onCancel={onClose}
     >
       <div className="flex items-center gap-3 mb-4">

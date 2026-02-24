@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
 
 // Mock child_process.execFile with promisify-compatible signature
 vi.mock('node:child_process', () => {

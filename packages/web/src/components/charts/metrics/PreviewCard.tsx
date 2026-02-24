@@ -99,7 +99,7 @@ export function PreviewCard({ source, title, timeLabel, events, total, linkHref,
         className="flex items-center justify-between px-3 py-2 border-t border-edge bg-elevated"
       >
         <button
-          onClick={() => onNavigate(linkHref)}
+          onClick={() => { onNavigate(linkHref); }}
           className="text-[11px] font-semibold flex items-center gap-1 cursor-pointer text-sky bg-transparent border-none"
         >
           {t('logs.viewAll')} →

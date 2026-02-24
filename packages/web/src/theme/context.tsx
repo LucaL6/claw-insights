@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, type ReactNode,useCallback, useContext, useEffect } from 'react';
+
 import { usePreference } from '../hooks/usePreference';
 
 type Theme = 'dark' | 'light';
@@ -25,17 +26,17 @@ function parseOldTheme(raw: string): Theme | null {
     // Not valid JSON — fall through to legacy plain string
   }
   // Legacy plain string (e.g. 'dark')
-  if (VALID_THEMES.includes(raw as Theme)) return raw as Theme;
+  if (VALID_THEMES.includes(raw as Theme)) {return raw as Theme;}
   return null;
 }
 
 /** Migrate old 'theme' key → 'ci:theme' (idempotent, one-time) */
 function migrateOldThemeKey(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {return;}
   try {
-    if (localStorage.getItem('ci:theme') !== null) return;
+    if (localStorage.getItem('ci:theme') !== null) {return;}
     const raw = localStorage.getItem('theme');
-    if (raw === null) return;
+    if (raw === null) {return;}
     const parsed = parseOldTheme(raw);
     if (parsed !== null) {
       localStorage.setItem('ci:theme', JSON.stringify(parsed));
@@ -49,11 +50,11 @@ function migrateOldThemeKey(): void {
 }
 
 function getUrlTheme(): Theme | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') {return null;}
   try {
     const hashQs = window.location.hash.split('?')[1] ?? '';
     const urlTheme = new URLSearchParams(hashQs).get('theme');
-    if (VALID_THEMES.includes(urlTheme as Theme)) return urlTheme as Theme;
+    if (VALID_THEMES.includes(urlTheme as Theme)) {return urlTheme as Theme;}
   } catch {
     // ignore
   }
@@ -95,6 +96,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error('useTheme must be inside ThemeProvider');
+  if (!ctx) {throw new Error('useTheme must be inside ThemeProvider');}
   return ctx;
 }

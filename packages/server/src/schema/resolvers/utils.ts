@@ -1,4 +1,5 @@
 import { GraphQLError } from 'graphql';
+
 import { createChildLogger } from '../../logger.js';
 
 const log = createChildLogger('resolvers');

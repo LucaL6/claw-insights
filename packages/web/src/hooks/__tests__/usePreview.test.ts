@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act,renderHook } from '@testing-library/react';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
 
 const mockUseQuery = vi.fn((): [{ data: unknown; fetching: boolean; error: unknown }, unknown] => [{ data: null, fetching: false, error: null }, vi.fn()]);
 
@@ -11,8 +11,8 @@ vi.mock('../../graphql/events-queries', () => ({
   EventsQuery: 'query Events { events { events { timestamp type } } }',
 }));
 
-import { usePreview } from '../usePreview';
 import type { BucketData } from '../useMetricsData';
+import { usePreview } from '../usePreview';
 
 const makeBuckets = (count: number): BucketData[] =>
   Array.from({ length: count }, (_, i): BucketData => ({

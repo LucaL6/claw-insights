@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { renderErrors } from '../errors.js';
-import { StatusBadge, Sparkline } from '../helpers.js';
+import { describe, expect,it } from 'vitest';
+
+import type { SnapshotData } from '../../../services/snapshot-types.js';
 import { renderCharts } from '../charts.js';
 import { DARK } from '../colors.js';
-import type { SnapshotData } from '../../../services/snapshot-types.js';
+import { renderErrors } from '../errors.js';
+import { Sparkline,StatusBadge } from '../helpers.js';
 
 const c = DARK;
 

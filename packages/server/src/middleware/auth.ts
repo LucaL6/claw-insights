@@ -1,7 +1,9 @@
-import type { Request, Response, NextFunction } from 'express';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { config } from '../config.js';
+
 import { parse as parseCookies } from 'cookie';
+import type { NextFunction,Request, Response } from 'express';
+
+import { config } from '../config.js';
 
 const COOKIE_NAME = 'claw_session';
 
@@ -11,25 +13,25 @@ function hashToken(token: string): string {
 
 /** Timing-safe string comparison. Returns false if lengths differ. */
 function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
+  if (a.length !== b.length) {return false;}
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
 function parseCookie(cookieHeader: string | undefined, name: string): string | undefined {
-  if (!cookieHeader) return undefined;
+  if (!cookieHeader) {return undefined;}
   const cookies = parseCookies(cookieHeader);
   return cookies[name];
 }
 
 function csrfCheck(req: Request): boolean {
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return true;
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {return true;}
 
   const host = req.headers.host ?? `127.0.0.1:${config.serverPort}`;
   const origin = req.headers.origin;
   const referer = req.headers.referer;
 
-  if (origin) return origin === `http://${host}`;
-  if (referer) return referer.startsWith(`http://${host}/`);
+  if (origin) {return origin === `http://${host}`;}
+  if (referer) {return referer.startsWith(`http://${host}/`);}
 
   return false;
 }

@@ -1,4 +1,5 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
+
 import { insertEvent } from '../db/event-queries.js';
 
 export interface ValidationResult {
@@ -20,9 +21,9 @@ export class DataValidator {
   ) {}
 
   static compare(a: number, b: number, metric: string): ValidationResult {
-    if (a === 0 && b === 0) return { pass: true, deviation: 0, metric, sourceA: a, sourceB: b, message: 'Both zero' };
+    if (a === 0 && b === 0) {return { pass: true, deviation: 0, metric, sourceA: a, sourceB: b, message: 'Both zero' };}
     const max = Math.max(Math.abs(a), Math.abs(b));
-    if (max === 0) return { pass: true, deviation: 0, metric, sourceA: a, sourceB: b, message: 'Both zero' };
+    if (max === 0) {return { pass: true, deviation: 0, metric, sourceA: a, sourceB: b, message: 'Both zero' };}
     const deviation = Math.abs(a - b) / max;
     const pass = deviation <= 0.2;
     return {
@@ -61,6 +62,6 @@ export class DataValidator {
   }
 
   stop() {
-    if (this.interval) clearInterval(this.interval);
+    if (this.interval) {clearInterval(this.interval);}
   }
 }

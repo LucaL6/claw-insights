@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createResolvers } from '../index';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
+
 import type { AppContext } from '../../../context';
+import { createResolvers } from '../index';
 
 // Mock external modules used by resolvers
 vi.mock('../../../db/event-queries', () => ({

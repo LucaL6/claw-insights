@@ -1,13 +1,14 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
-import { RANGE_CONFIG, bucketLabel, rangeStart, type MetricsRangeKey } from '../db/query-utils.js';
+
+import { config } from '../config.js';
 import { getBucketedEventCount, getBucketedGatewayEvents } from '../db/event-queries.js';
 import {
+  getBucketedModelTokens,
   getBucketedSampledSessions,
   getBucketedSampledTokens,
-  getBucketedModelTokens,
   getRangeTokensK,
 } from '../db/metric-queries.js';
-import { config } from '../config.js';
+import { bucketLabel, type MetricsRangeKey,RANGE_CONFIG, rangeStart } from '../db/query-utils.js';
 
 export class Aggregator {
   private cache: { key: string; data: unknown; ts: number } | null = null;
@@ -67,8 +68,8 @@ export class Aggregator {
     const modelTokens = getBucketedModelTokens(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly);
     const modelByBucket = new Map<number, Array<{ model: string; tokensK: number }>>();
     for (const mt of modelTokens) {
-      if (!modelByBucket.has(mt.bucket)) modelByBucket.set(mt.bucket, []);
-      modelByBucket.get(mt.bucket)!.push({ model: mt.model, tokensK: Number(mt.tokensK) });
+      if (!modelByBucket.has(mt.bucket)) {modelByBucket.set(mt.bucket, []);}
+      modelByBucket.get(mt.bucket)!.push({ model: mt.model, tokensK: mt.tokensK });
     }
     const apiCalls = new Map(
       getBucketedEventCount(this.db, startTs, endTs, 'api_call', rangeConfig.bucketMinutes).map((r) => [
@@ -93,7 +94,7 @@ export class Aggregator {
         label: bucketLabel(b, rangeConfig.bucketMinutes),
         epochStart: b * bucketSeconds,
         sessions: sessions.get(b) ?? 0,
-        tokensK: Number(tokens.get(b) ?? 0),
+        tokensK: tokens.get(b) ?? 0,
         tokensByModel: modelByBucket.get(b) ?? [],
         apiCalls: apiCalls.get(b) ?? 0,
         toolCalls: toolCalls.get(b) ?? 0,

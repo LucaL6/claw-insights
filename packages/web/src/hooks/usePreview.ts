@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from 'urql';
+
 import { EventsQuery } from '../graphql/events-queries';
 import type { BucketData } from './useMetricsData';
 
@@ -16,7 +17,7 @@ export function usePreview(buckets: BucketData[], bucketSeconds: number) {
 
   const handleErrorClick = (idx: number) => {
     const b = buckets[idx];
-    if (!b?.epochStart) return;
+    if (!b?.epochStart) {return;} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- guard invalid index
     if (preview?.bucketIndex === idx && preview.source === 'errors') {
       setPreview(null);
       return;
@@ -32,7 +33,7 @@ export function usePreview(buckets: BucketData[], bucketSeconds: number) {
 
   const handleUptimeClick = (idx: number) => {
     const b = buckets[idx];
-    if (!b?.epochStart) return;
+    if (!b?.epochStart) {return;} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- guard invalid index
     if (preview?.bucketIndex === idx && preview.source === 'uptime') {
       setPreview(null);
       return;
@@ -57,6 +58,6 @@ export function usePreview(buckets: BucketData[], bucketSeconds: number) {
     previewEvents: previewResult.data?.events,
     handleErrorClick,
     handleUptimeClick,
-    closePreview: () => setPreview(null),
+    closePreview: () => { setPreview(null); },
   };
 }

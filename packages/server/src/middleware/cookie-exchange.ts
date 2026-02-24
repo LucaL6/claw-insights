@@ -1,5 +1,7 @@
-import type { Request, Response, NextFunction } from 'express';
 import { createHash, timingSafeEqual } from 'node:crypto';
+
+import type { NextFunction,Request, Response } from 'express';
+
 import { config } from '../config.js';
 
 const COOKIE_NAME = 'claw_session';
@@ -11,7 +13,7 @@ export function hashToken(token: string): string {
 
 /** Timing-safe string comparison. */
 function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
+  if (a.length !== b.length) {return false;}
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 

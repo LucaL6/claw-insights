@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect,it } from 'vitest';
 
 describe('useReactiveQuery', () => {
   it('module exports useReactiveQuery function', async () => {

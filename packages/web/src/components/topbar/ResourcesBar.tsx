@@ -28,7 +28,7 @@ export function ResourcesBar({ resources, fetching }: ResourcesBarProps) {
     );
   }
 
-  if (!resources) return null;
+  if (!resources) {return null;}
 
   return (
     <div className="flex items-center gap-2 text-[10px]">

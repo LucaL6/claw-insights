@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect,it } from 'vitest';
+
 import { initDatabase } from '../init.js';
 
 describe('migration v6 — model_token_samples.token_delta_k', () => {

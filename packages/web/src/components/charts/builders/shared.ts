@@ -1,4 +1,4 @@
-import { CHART_GRID, COMPACT_Y_AXIS, bucketLabelInterval } from '../core/chart-config';
+import { bucketLabelInterval,CHART_GRID, COMPACT_Y_AXIS } from '../core/chart-config';
 
 export { CHART_GRID, COMPACT_Y_AXIS };
 
@@ -28,8 +28,8 @@ export function tooltipHtml(opts: { title: string; rows: TooltipRow[]; footer?: 
     const marker = r.marker ?? '■';
     html += `<br/><span style="color:${r.color}">${marker}</span> ${r.label}: <b>${r.value}</b>`;
   }
-  if (opts.extra) html += `<br/>${opts.extra}`;
-  if (opts.footer) html += `<div style="color:#71717a;font-size:10px;margin-top:4px">${opts.footer}</div>`;
+  if (opts.extra) {html += `<br/>${opts.extra}`;}
+  if (opts.footer) {html += `<div style="color:#71717a;font-size:10px;margin-top:4px">${opts.footer}</div>`;}
   return html;
 }
 

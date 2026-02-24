@@ -27,7 +27,7 @@ const COLOR_ENTRIES = Object.entries(MODEL_COLORS).sort((a, b) => b[0].length - 
 export function getModelColor(model: string): string {
   const lower = model.toLowerCase();
   for (const [key, color] of COLOR_ENTRIES) {
-    if (lower.includes(key)) return color;
+    if (lower.includes(key)) {return color;}
   }
   return '#71717a'; // zinc-500
 }
@@ -40,6 +40,6 @@ export function shortModelName(model: string): string {
     return `${family} ${version}`;
   }
   const gpt = model.match(/^(?:openai\/)?gpt-([\d.]+)/);
-  if (gpt) return `GPT ${gpt[1]}`;
+  if (gpt) {return `GPT ${gpt[1]}`;}
   return model.length > 15 ? model.slice(0, 15) + '…' : model;
 }

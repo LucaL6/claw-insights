@@ -1,8 +1,9 @@
-import { readFileSync, watch, statSync, type FSWatcher } from 'fs';
-import { dirname, basename } from 'path';
 import type { Session, SessionStatus } from '@claw-insights/shared';
-import { emitChange } from '../../events.js';
+import { type FSWatcher,readFileSync, statSync, watch } from 'fs';
+import { basename,dirname } from 'path';
+
 import { config } from '../../config.js';
+import { emitChange } from '../../events.js';
 import { createChildLogger } from '../../logger.js';
 
 const log = createChildLogger('session-reader');
@@ -28,24 +29,24 @@ const SESSIONS_PATH = config.sessionsPath;
 
 function inferStatus(raw: RawSession): SessionStatus {
   const age = Date.now() - raw.updatedAt;
-  if (age < 30 * 60 * 1000) return 'ACTIVE';
-  if (age < 24 * 60 * 60 * 1000) return 'IDLE';
+  if (age < 30 * 60 * 1000) {return 'ACTIVE';}
+  if (age < 24 * 60 * 60 * 1000) {return 'IDLE';}
   return 'DONE';
 }
 
 function inferKind(key: string, raw: RawSession): string {
-  if (key.includes(':cron:')) return 'cron';
-  if (raw.chatType === 'group') return 'group';
+  if (key.includes(':cron:')) {return 'cron';}
+  if (raw.chatType === 'group') {return 'group';}
   return 'direct';
 }
 
 function inferDisplayName(key: string, raw: RawSession): string {
   // Highest priority: gateway-resolved displayName (e.g. Slack/Telegram user name)
   const displayName = raw.displayName?.trim();
-  if (displayName) return displayName;
+  if (displayName) {return displayName;}
   // Use explicit session label if available (sub-agents get this from spawn)
   const label = raw.label?.trim();
-  if (label) return label;
+  if (label) {return label;}
   // Parse key: agent:main:NAME or agent:main:subagent:UUID
   const parts = key.split(':');
   const last = parts[parts.length - 1];
@@ -114,10 +115,10 @@ export class SessionReader {
   }
 
   private scheduleReload() {
-    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    if (this.debounceTimer) {clearTimeout(this.debounceTimer);}
     this.debounceTimer = setTimeout(() => {
       this.reload();
-      for (const fn of this.listeners) fn();
+      for (const fn of this.listeners) {fn();}
       emitChange('sessions');
     }, 300);
   }
@@ -130,7 +131,7 @@ export class SessionReader {
     // fs.watch can silently miss in-place writes to large files)
     try {
       this.watcher = watch(dir, (_event, filename) => {
-        if (filename === targetName) this.scheduleReload();
+        if (filename === targetName) {this.scheduleReload();}
       });
     } catch {
       // Directory might not exist yet
@@ -191,26 +192,26 @@ export class SessionReader {
       const raw = this.rawSessions.get(key);
       if (raw?.spawnedBy) {
         const parent = raw.spawnedBy;
-        if (!bySpawn.has(parent)) bySpawn.set(parent, []);
+        if (!bySpawn.has(parent)) {bySpawn.set(parent, []);}
         bySpawn.get(parent)!.push(key);
       }
     }
 
     // Merge spawnTracker map
     for (const [p, children] of parentChildMap) {
-      if (!bySpawn.has(p)) bySpawn.set(p, []);
+      if (!bySpawn.has(p)) {bySpawn.set(p, []);}
       for (const c of children) {
-        if (!bySpawn.get(p)!.includes(c)) bySpawn.get(p)!.push(c);
+        if (!bySpawn.get(p)!.includes(c)) {bySpawn.get(p)!.push(c);}
       }
     }
 
     // Reset all subAgents first
-    for (const s of this.sessions.values()) s.subAgents = [];
+    for (const s of this.sessions.values()) {s.subAgents = [];}
 
     // Attach
     for (const [parentKey, childKeys] of bySpawn) {
       const parent = this.sessions.get(parentKey);
-      if (!parent) continue;
+      if (!parent) {continue;}
       parent.subAgents = childKeys.map((ck) => this.sessions.get(ck)).filter((s): s is Session => s != null);
     }
 
@@ -265,7 +266,7 @@ export class SessionReader {
 
   destroy() {
     this.watcher?.close();
-    if (this.pollTimer) clearInterval(this.pollTimer);
+    if (this.pollTimer) {clearInterval(this.pollTimer);}
     this.listeners = [];
   }
 }

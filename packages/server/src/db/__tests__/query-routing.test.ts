@@ -1,12 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { DatabaseSync as Database } from 'node:sqlite';
+
+import { afterEach,beforeEach, describe, expect, it } from 'vitest';
+
 import { initDatabase } from '../init.js';
 import {
+  getBucketedModelTokens,
   getBucketedSampledSessions,
   getBucketedSampledTokens,
-  getBucketedModelTokens,
   getRangeTokensK,
 } from '../metric-queries.js';
-import type { DatabaseSync as Database } from 'node:sqlite';
 
 let db: Database;
 

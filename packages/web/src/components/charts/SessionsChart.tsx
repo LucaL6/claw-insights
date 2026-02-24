@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { BaseChart } from './core/BaseChart';
-import { buildSessionsOption } from './builders/buildSessionsOption';
-import { getTooltips } from './metrics/metricsTooltips';
+
 import { useI18n } from '../../i18n/context';
+import { buildSessionsOption } from './builders/buildSessionsOption';
+import { BaseChart } from './core/BaseChart';
+import { getTooltips } from './metrics/metricsTooltips';
 
 interface BucketData {
   bucket: number;

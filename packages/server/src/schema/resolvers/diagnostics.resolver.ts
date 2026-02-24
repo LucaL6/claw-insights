@@ -1,10 +1,10 @@
 import type { AppContext } from '../../context.js';
-import type { Resolvers, QueryResolvers } from '../generated/resolver-types.js';
 import { DiagnosticEngine } from '../../knowledge/engine.js';
 import { diagnosticRules } from '../../knowledge/rules.js';
 import { buildSnapshot } from '../../knowledge/snapshot.js';
-import { getSystemMetrics, getUsageCost } from '../../sources/system-info.js';
 import { getGatewayStatus } from '../../sources/gateway-cli.js';
+import { getSystemMetrics, getUsageCost } from '../../sources/system-info.js';
+import type { QueryResolvers,Resolvers } from '../generated/resolver-types.js';
 import { safe } from './utils.js';
 
 const engine = new DiagnosticEngine(diagnosticRules);

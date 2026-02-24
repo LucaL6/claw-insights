@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { initDatabase } from '../init';
-import { insertEvent, getBucketedEventCount } from '../event-queries';
-import { bucketLabel } from '../query-utils';
-import { rmSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
 import type { DatabaseSync as Database } from 'node:sqlite';
+
+import { rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { afterEach,beforeEach, describe, expect, it } from 'vitest';
+
+import { getBucketedEventCount,insertEvent } from '../event-queries';
+import { initDatabase } from '../init';
+import { bucketLabel } from '../query-utils';
 
 const dbPath = join(tmpdir(), `test-metrics-${Date.now()}.db`);
 let db: Database;

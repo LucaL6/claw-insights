@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
+
+import type { Request, Response } from 'express';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
 
 const mockConfig = vi.hoisted(() => ({ apiToken: '', noAuth: false, serverPort: 4000 }));
 vi.mock('../config.js', () => ({ config: mockConfig }));

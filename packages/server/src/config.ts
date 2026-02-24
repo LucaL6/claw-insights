@@ -1,25 +1,25 @@
+import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
 
 const HOME = process.env.HOME ?? '/tmp';
 
 // --- Helpers (exported for testing) ---
 
 export function safePort(env: string | undefined, fallback: number): number {
-  if (!env) return fallback;
+  if (!env) {return fallback;}
   const n = parseInt(env, 10);
   return Number.isFinite(n) && n > 0 && n < 65536 ? n : fallback;
 }
 
 export function safeInt(env: string | undefined, fallback: number): number {
-  if (!env) return fallback;
+  if (!env) {return fallback;}
   const n = parseInt(env, 10);
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
 export function envBool(val: string | undefined): boolean | undefined {
-  if (val === undefined || val === '') return undefined;
+  if (val === undefined || val === '') {return undefined;}
   return val === 'true' || val === '1';
 }
 
@@ -33,7 +33,7 @@ function env(key: string): string | undefined {
 const MIN_TOKEN_LENGTH = 32;
 
 export function validateToken(token: string): void {
-  if (token === '') return; // empty = will be auto-generated
+  if (token === '') {return;} // empty = will be auto-generated
   if (token.length < MIN_TOKEN_LENGTH) {
     throw new Error(
       `API token too short (got ${token.length} chars, need ≥${MIN_TOKEN_LENGTH}). ` +
@@ -90,7 +90,7 @@ export function getDataDir(): string {
 
 export function loadConfigFile(): Record<string, unknown> {
   const configPath = join(getDataDir(), 'config.json');
-  if (!existsSync(configPath)) return {};
+  if (!existsSync(configPath)) {return {};}
   try {
     const raw = JSON.parse(readFileSync(configPath, 'utf-8'));
     // Warn if apiToken present and permissions too loose (Unix only)
@@ -105,7 +105,7 @@ export function loadConfigFile(): Record<string, unknown> {
         }
       } catch { /* best effort */ }
     }
-    if (typeof raw !== 'object' || raw === null) return {};
+    if (typeof raw !== 'object' || raw === null) {return {};}
     // Warn about unknown keys
     const knownKeys = new Set([
       'serverPort', 'webPort', 'apiToken', 'noAuth', 'dbPath',
@@ -150,12 +150,12 @@ import { execFileSync } from 'node:child_process';
 export function detectCliPath(): string {
   // 1. Explicit env var
   const fromEnv = env('CLI');
-  if (fromEnv) return fromEnv;
+  if (fromEnv) {return fromEnv;}
 
   // 2. `which openclaw` — resolves PATH on Unix-like systems
   try {
     const found = execFileSync('which', ['openclaw'], { encoding: 'utf-8', timeout: 3000 }).trim();
-    if (found) return found;
+    if (found) {return found;}
   } catch { /* not in PATH */ }
 
   // 3. Common install locations
@@ -166,7 +166,7 @@ export function detectCliPath(): string {
     `${HOME}/.bun/bin/openclaw`,
   ];
   for (const p of candidates) {
-    if (existsSync(p)) return p;
+    if (existsSync(p)) {return p;}
   }
 
   // 4. Bare name — let PATH resolve at runtime

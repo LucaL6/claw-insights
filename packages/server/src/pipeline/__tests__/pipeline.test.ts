@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { Pipeline } from '../pipeline';
-import type { Source, Managed, Service } from '../types';
 import { EventEmitter } from 'events';
+import { describe, expect, it, vi } from 'vitest';
+
+import { Pipeline } from '../pipeline';
+import type { Managed, Service,Source } from '../types';
 
 function mockSource(): Source & EventEmitter {
   const emitter = new EventEmitter();

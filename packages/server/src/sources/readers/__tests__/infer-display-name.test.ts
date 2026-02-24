@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect,it } from 'vitest';
 // We test inferDisplayName indirectly through the module's exported behavior.
 // Since inferDisplayName is not exported, we import the file and test via parseSession behavior.
 // For now, replicate the logic here to unit-test the priority chain.
@@ -8,9 +8,9 @@ function inferDisplayName(
   raw: { displayName?: string; label?: string },
 ): string {
   const displayName = raw.displayName?.trim();
-  if (displayName) return displayName;
+  if (displayName) {return displayName;}
   const label = raw.label?.trim();
-  if (label) return label;
+  if (label) {return label;}
   const parts = key.split(':');
   const last = parts[parts.length - 1];
   if (/^[0-9a-f]{8}-[0-9a-f]{4}/.test(last) && parts.length > 1) {

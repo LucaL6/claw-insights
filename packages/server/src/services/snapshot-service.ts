@@ -1,7 +1,15 @@
-import type { Detail, Range, DataSources, SnapshotData, SnapshotSession } from './snapshot-types.js';
-import { formatTokens, friendlyModel, relativeTime, normalize, sample, uptimeStatus } from './snapshot-formatters.js';
-import { getAppVersion } from '../version.js';
 import { createChildLogger } from '../logger.js';
+import { getAppVersion } from '../version.js';
+import {
+  aggregateSample,
+  formatTokens,
+  friendlyModel,
+  type MetricsBucket,
+  normalize,
+  relativeTime,
+  uptimeStatus,
+} from './snapshot-formatters.js';
+import type { DataSources, Detail, Range, SnapshotData, SnapshotSession } from './snapshot-types.js';
 
 const log = createChildLogger('snapshot-data');
 
@@ -93,14 +101,14 @@ export async function buildSnapshotData(
     uptimePercent: metrics.uptimePercent,
   };
 
-  // 4. Sparklines (sample 12 points)
-  const buckets = metrics.buckets;
-  const sampled = sample(buckets, 12);
+  // 4. Sparklines (aggregate into 12 bins — preserves totals)
+  const buckets = metrics.buckets as MetricsBucket[];
+  const sampled = aggregateSample(buckets, 12);
   const sparklines: SnapshotData['sparklines'] = {
-    sessions: normalize(sampled.map((b) => (b.sessions as number) ?? 0)),
-    tokens: normalize(sampled.map((b) => (b.tokensK as number) ?? (b.tokens as number) ?? 0)),
-    errors: normalize(sampled.map((b) => (b.errors as number) ?? 0)),
-    uptime: sampled.map((b) => uptimeStatus((b.uptimePercent as number) ?? 100)),
+    sessions: normalize(sampled.map((b) => b.sessions ?? 0)),
+    tokens: normalize(sampled.map((b) => b.tokensK ?? 0)),
+    errors: normalize(sampled.map((b) => b.errors ?? 0)),
+    uptime: sampled.map((b) => uptimeStatus(b.uptimePercent ?? 100)),
   };
 
   // 5. Base result (compact)

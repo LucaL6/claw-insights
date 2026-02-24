@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback,useState } from 'react';
 
 interface SnapshotOptions {
   section: 'dashboard' | 'logs';
@@ -32,7 +32,7 @@ export function useSnapshot() {
           format: 'png',
         }),
       });
-      if (!res.ok) throw new Error('Snapshot failed');
+      if (!res.ok) {throw new Error('Snapshot failed');}
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
 

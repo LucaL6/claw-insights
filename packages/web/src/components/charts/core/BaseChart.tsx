@@ -1,9 +1,10 @@
-import { useMemo, useEffect } from 'react';
-import ReactECharts from 'echarts-for-react';
-import * as echarts from 'echarts';
-import { buildEChartsTheme, DARK_THEME } from './echarts-theme';
-import { useTheme } from '../../../theme/context';
 import type { EChartsOption } from 'echarts';
+import * as echarts from 'echarts';
+import ReactECharts from 'echarts-for-react';
+import { useEffect,useMemo } from 'react';
+
+import { useTheme } from '../../../theme/context';
+import { buildEChartsTheme, DARK_THEME } from './echarts-theme';
 
 // Register initial theme
 echarts.registerTheme('ocDynamic', DARK_THEME);
@@ -12,7 +13,8 @@ interface Props {
   option: EChartsOption;
   height?: number;
   testId?: string;
-  onEvents?: Record<string, (params: unknown) => void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onEvents?: Record<string, (params: any) => void>;
 }
 
 export function BaseChart({ option, height = 160, testId, onEvents }: Props) {
@@ -23,7 +25,7 @@ export function BaseChart({ option, height = 160, testId, onEvents }: Props) {
     const id = requestAnimationFrame(() => {
       echarts.registerTheme('ocDynamic', buildEChartsTheme());
     });
-    return () => cancelAnimationFrame(id);
+    return () => { cancelAnimationFrame(id); };
   }, [theme]);
 
   const mergedOption = useMemo(

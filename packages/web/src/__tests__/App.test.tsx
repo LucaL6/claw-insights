@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 // Polyfill localStorage for happy-dom
 if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage.getItem !== 'function') {
@@ -13,7 +13,7 @@ if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localSto
       delete store[k];
     },
     clear: () => {
-      for (const k in store) delete store[k];
+      for (const k in store) {delete store[k];}
     },
     get length() {
       return Object.keys(store).length;

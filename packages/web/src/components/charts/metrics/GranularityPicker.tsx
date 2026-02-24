@@ -33,7 +33,7 @@ export function RangePicker({ value, onChange }: Props) {
       {OPTIONS.map((opt) => (
         <button
           key={opt.value}
-          onClick={() => onChange(opt.value)}
+          onClick={() => { onChange(opt.value); }}
           className="mono text-[10px] font-medium px-2.5 py-1 rounded transition-all duration-150"
           style={
             value === opt.value

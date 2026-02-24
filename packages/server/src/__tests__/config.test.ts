@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { mkdirSync, writeFileSync, chmodSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { chmodSync, mkdirSync, rmSync,writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterEach, beforeEach,describe, expect, it, vi } from 'vitest';
 
 // Non-dynamic tests for existing exports
-import { config, CLI_ENV } from '../config.js';
+import { CLI_ENV,config } from '../config.js';
 
 describe('config singleton', () => {
   it('has all required fields', () => {

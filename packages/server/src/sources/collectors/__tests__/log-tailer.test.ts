@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { parseLogLine, redact, LogTailer } from '../log-tailer';
-import { writeFileSync, mkdirSync, rmSync, appendFileSync } from 'fs';
-import { join } from 'path';
+import { appendFileSync,mkdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
+import { join } from 'path';
+import { describe, expect,it } from 'vitest';
+
+import { LogTailer,parseLogLine, redact } from '../log-tailer';
 
 describe('LogTailer', () => {
   describe('parseLogLine', () => {

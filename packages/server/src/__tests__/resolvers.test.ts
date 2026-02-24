@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { spawn, type ChildProcess } from 'child_process';
-import { fileURLToPath } from 'url';
+import { type ChildProcess,spawn } from 'child_process';
 import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+import { afterAll,beforeAll, describe, expect, it } from 'vitest';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 let proc: ChildProcess;

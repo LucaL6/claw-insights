@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode,useState } from 'react';
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -20,7 +20,7 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
   return (
     <section className="mb-4">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => { setOpen(!open); }}
         className="flex items-center gap-2 w-full text-left transition-colors py-1 text-fg-muted"
       >
         <svg
@@ -32,15 +32,11 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
         </svg>
         <span className="text-[13px] font-semibold uppercase tracking-[0.8px]">{title}</span>
         {badge !== undefined && (
-          <span
-            className="text-[10px] px-1.5 py-0.5 rounded bg-elevated text-fg-muted"
-          >
-            {badge}
-          </span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald/15 text-emerald font-medium">{badge}</span>
         )}
         {updatedAt && <span className="text-[9px] mono text-fg-dim">updated {formatTime(updatedAt)}</span>}
         {headerRight && (
-          <span className="ml-auto" onClick={(e) => e.stopPropagation()}>
+          <span className="ml-auto" onClick={(e) => { e.stopPropagation(); }}>
             {headerRight}
           </span>
         )}
@@ -48,7 +44,7 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
       <div
         className={`grid transition-all duration-200 ${open ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0'}`}
       >
-        <div className={`${open ? '' : 'overflow-hidden'}`}>{children}</div>
+        <div className={open ? '' : 'overflow-hidden'}>{children}</div>
       </div>
     </section>
   );

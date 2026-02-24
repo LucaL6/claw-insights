@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
 import { buildSnapshot } from '../snapshot';
 
 function mockDeps(overrides: Record<string, unknown> = {}) {

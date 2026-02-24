@@ -1,9 +1,9 @@
-import { DensityStrip } from './DensityStrip';
-import { FilterBar } from './FilterBar';
-import { EventTable } from './EventTable';
-import { useI18n } from '../../i18n/context';
-import { useLogPageData } from '../../hooks/useLogPageData';
 import type { Route } from '../../hooks/useHashRoute';
+import { useLogPageData } from '../../hooks/useLogPageData';
+import { useI18n } from '../../i18n/context';
+import { DensityStrip } from './DensityStrip';
+import { EventTable } from './EventTable';
+import { FilterBar } from './FilterBar';
 
 interface Props {
   route: Route;
@@ -46,12 +46,12 @@ export function LogPage({ route, navigate }: Props) {
         onToggleType={toggleType}
         counts={events?.counts ?? { error: 0, warning: 0, restart: 0 }}
         total={events?.total ?? 0}
-        displayed={events?.events?.length ?? 0}
+        displayed={events?.events.length ?? 0}
         filtered={filteredEvents.length}
         search={search}
         onSearchChange={setSearch}
         timeLabel={timeLabel}
-        onClearTimeFilter={urlFrom ? () => navigate('#logs') : undefined}
+        onClearTimeFilter={urlFrom ? () => { navigate('#logs'); } : undefined}
       />
 
       <EventTable

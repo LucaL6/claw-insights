@@ -1,12 +1,13 @@
 import type { Express } from 'express';
+
 import type { AppContext } from '../context.js';
-import { createSnapshotHandler } from './snapshot-handler.js';
-import { getGatewayStatus } from '../sources/gateway-cli.js';
-import { getSystemMetrics } from '../sources/system-info.js';
 import { queryEvents } from '../db/event-queries.js';
-import type { DataSources } from '../services/snapshot-types.js';
 import type { MetricsRangeKey } from '../db/query-utils.js';
 import { authMiddleware } from '../middleware/auth.js';
+import type { DataSources } from '../services/snapshot-types.js';
+import { getGatewayStatus } from '../sources/gateway-cli.js';
+import { getSystemMetrics } from '../sources/system-info.js';
+import { createSnapshotHandler } from './snapshot-handler.js';
 
 export function registerSnapshot(app: Express, ctx: AppContext): void {
   const sources: DataSources = {

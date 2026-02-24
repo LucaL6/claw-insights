@@ -1,22 +1,23 @@
-import { useState, useEffect, useMemo } from 'react';
+import type { MetricsRange } from '@claw-insights/shared';
+import { useEffect, useMemo,useState } from 'react';
+
+import { useMetricsData } from '../../../hooks/useMetricsData';
+import { usePreview } from '../../../hooks/usePreview';
+import { useI18n } from '../../../i18n/context';
 import { CollapsibleSection } from '../../layout/CollapsibleSection';
+import { ChartSkeleton, Skeleton } from '../../layout/Skeleton';
+import { InfoTooltip } from '../../ui/InfoTooltip';
 import { ChartCard } from '../core/ChartCard';
 import { SessionsChart } from '../SessionsChart';
 import { TokensChart } from '../TokensChart';
-import { ModelSelector } from './ModelSelector';
-import { MetricsSummaryRow } from './MetricsSummaryRow';
-import { MetricsValidationWarnings } from './MetricsValidationWarnings';
 import { ErrorsChartCard } from './ErrorsChartCard';
-import { UptimeChartCard } from './UptimeChartCard';
-import { InfoTooltip } from '../../ui/InfoTooltip';
+import { RANGE_INFO,RangePicker } from './GranularityPicker';
+import { MetricsSummaryRow } from './MetricsSummaryRow';
 import { getTooltips } from './metricsTooltips';
+import { MetricsValidationWarnings } from './MetricsValidationWarnings';
+import { ModelSelector } from './ModelSelector';
+import { UptimeChartCard } from './UptimeChartCard';
 import { useMetricsValidation } from './useMetricsValidation';
-import { ChartSkeleton, Skeleton } from '../../layout/Skeleton';
-import { RangePicker, RANGE_INFO } from './GranularityPicker';
-import { useI18n } from '../../../i18n/context';
-import { useMetricsData } from '../../../hooks/useMetricsData';
-import { usePreview } from '../../../hooks/usePreview';
-import type { MetricsRange } from '@claw-insights/shared';
 
 interface MetricsSectionProps {
   range: MetricsRange;
@@ -33,7 +34,6 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
     metrics,
     buckets,
     allModels,
-    peakSessions,
     totalTokensK,
     totalErrors,
     totalWarnings,
@@ -45,7 +45,7 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
   } = useMetricsData(range);
 
   useEffect(() => {
-    if (result.data && onReady) onReady();
+    if (result.data && onReady) {onReady();}
   }, [result.data, onReady]);
 
   const { preview, previewEvents, handleErrorClick, handleUptimeClick, closePreview } = usePreview(
@@ -101,10 +101,6 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
             <span className="text-[12px] font-semibold text-fg-muted">
               {t('metrics.sessions')}
               <InfoTooltip {...TOOLTIPS.sections.sessions} />
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="mono text-[15px] font-bold text-emerald">{peakSessions}</span>
-              <InfoTooltip {...TOOLTIPS.summary.peakSessions} alignRight />
             </span>
           </div>
           <SessionsChart data={buckets} />

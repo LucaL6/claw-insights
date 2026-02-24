@@ -1,4 +1,5 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
+
 import { createChildLogger } from '../logger.js';
 
 const log = createChildLogger('data-retention');
@@ -20,17 +21,17 @@ export class DataRetention {
 
   start() {
     this.runOnce();
-    this.timer = setInterval(() => this.runOnce(), this.config.aggregateIntervalMs);
+    this.timer = setInterval(() => { this.runOnce(); }, this.config.aggregateIntervalMs);
   }
 
   stop() {
-    if (this.timer) clearInterval(this.timer);
+    if (this.timer) {clearInterval(this.timer);}
     this.timer = null;
   }
 
   /** Run aggregation + pruning (public for testing). Guarded against reentrant calls. */
   runOnce() {
-    if (this.isRunning) return;
+    if (this.isRunning) {return;}
     this.isRunning = true;
     try {
       this.aggregate();
@@ -57,7 +58,7 @@ export class DataRetention {
       )
       .all(cutoff) as { hour: string }[];
 
-    if (hours.length === 0) return;
+    if (hours.length === 0) {return;}
 
     this.db.exec('BEGIN');
     try {

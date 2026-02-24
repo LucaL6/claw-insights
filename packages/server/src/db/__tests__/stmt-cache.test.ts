@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
+
+import { describe, expect, it, vi } from 'vitest';
+
 import { insertEvent } from '../event-queries';
 
 describe('prepared statement cache', () => {

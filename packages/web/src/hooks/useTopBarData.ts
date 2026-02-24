@@ -1,6 +1,6 @@
-import { GatewayQuery, ResourcesQuery, ChannelsQuery } from '../graphql/queries';
-import { useReactiveQuery } from './useReactiveQuery';
+import { ChannelsQuery,GatewayQuery, ResourcesQuery } from '../graphql/queries';
 import { formatUptime } from '../utils/format';
+import { useReactiveQuery } from './useReactiveQuery';
 
 export function useTopBarData() {
   const [gw] = useReactiveQuery({ query: GatewayQuery, requestPolicy: 'cache-and-network' }, { sources: ['gateway'] });

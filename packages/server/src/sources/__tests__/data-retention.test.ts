@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
-import { DataRetention, type RetentionConfig } from '../data-retention';
-import { initDatabase } from '../../db/init';
 import { rmSync } from 'fs';
-import { join } from 'path';
 import { tmpdir } from 'os';
+import { join } from 'path';
+import { describe, expect, it, vi } from 'vitest';
+
+import { initDatabase } from '../../db/init';
+import { DataRetention, type RetentionConfig } from '../data-retention';
 
 function setup(configOverrides: Partial<RetentionConfig> = {}) {
   const dbPath = join(tmpdir(), `dr-${Date.now()}-${Math.random()}.db`);

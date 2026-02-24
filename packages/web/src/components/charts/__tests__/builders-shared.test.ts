@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { buildCategoryXAxis, tooltipHtml, areaGradient } from '../builders/shared';
+import { describe, expect,it } from 'vitest';
+
+import { areaGradient,buildCategoryXAxis, tooltipHtml } from '../builders/shared';
 
 describe('buildCategoryXAxis', () => {
   it('returns category axis with labels and interval', () => {

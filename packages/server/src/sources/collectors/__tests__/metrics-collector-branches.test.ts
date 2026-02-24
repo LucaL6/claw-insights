@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { MetricsCollector } from '../metrics-collector.js';
+import { describe, expect, it, vi } from 'vitest';
+
 import { initDatabase } from '../../../db/init.js';
+import { MetricsCollector } from '../metrics-collector.js';
 
 const { mockWarn } = vi.hoisted(() => {
   const mockWarn = vi.fn();

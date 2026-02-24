@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
 
 let mockCb: (cmd: string, args: string[], opts: Record<string, unknown>, cb: (...args: unknown[]) => unknown) => void;
 

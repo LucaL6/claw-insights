@@ -1,10 +1,11 @@
-import { type SessionReaderLike } from '../metrics-collector';
-import { describe, it, expect } from 'vitest';
-import { MetricsCollector } from '../metrics-collector';
-import { initDatabase } from '../../../db/init';
 import { rmSync } from 'fs';
-import { join } from 'path';
 import { tmpdir } from 'os';
+import { join } from 'path';
+import { describe, expect,it } from 'vitest';
+
+import { initDatabase } from '../../../db/init';
+import { type SessionReaderLike } from '../metrics-collector';
+import { MetricsCollector } from '../metrics-collector';
 
 function setup() {
   const dbPath = join(tmpdir(), `mc-${Date.now()}-${Math.random()}.db`);

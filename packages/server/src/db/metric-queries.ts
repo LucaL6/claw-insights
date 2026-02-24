@@ -1,5 +1,6 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
-import { cached, bucketExpr } from './query-utils.js';
+
+import { bucketExpr,cached } from './query-utils.js';
 
 // ── Write ──
 

@@ -1,4 +1,5 @@
 import type { PricingResolver } from 'tokentally';
+
 import { createChildLogger } from '../logger.js';
 
 const log = createChildLogger('pricing-catalog');
@@ -13,7 +14,7 @@ export async function getCatalogResolver(): Promise<PricingResolver | null> {
   try {
     const { loadLiteLlmCatalog, resolveLiteLlmPricing } = await import('tokentally/node');
     const { catalog } = await loadLiteLlmCatalog({ env: process.env, fetchImpl: fetch });
-    if (!catalog) return null;
+    if (!catalog) {return null;}
     const resolver: PricingResolver = (model: string) => resolveLiteLlmPricing(catalog, model);
     catalogCache = { resolver, ts: Date.now() };
     return resolver;

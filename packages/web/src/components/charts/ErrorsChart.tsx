@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { BaseChart } from './core/BaseChart';
-import { buildErrorsOption } from './builders/buildErrorsOption';
-import { getTooltips } from './metrics/metricsTooltips';
+
 import { useI18n } from '../../i18n/context';
+import { buildErrorsOption } from './builders/buildErrorsOption';
+import { BaseChart } from './core/BaseChart';
+import { getTooltips } from './metrics/metricsTooltips';
 
 interface BucketData {
   bucket: number;
@@ -22,7 +23,7 @@ export function ErrorsChart({ data, onBucketClick }: { data: BucketData[]; onBuc
       onBucketClick
         ? {
             click: (params: { dataIndex: number; seriesName: string }) => {
-              if (params.seriesName !== 'Restart') onBucketClick(params.dataIndex);
+              if (params.seriesName !== 'Restart') {onBucketClick(params.dataIndex);}
             },
           }
         : undefined,

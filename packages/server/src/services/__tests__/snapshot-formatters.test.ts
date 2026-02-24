@@ -1,4 +1,5 @@
-import { describe, test, expect } from 'vitest';
+import { describe, expect,test } from 'vitest';
+
 import { formatTokens, friendlyModel, normalize, relativeTime, sample, uptimeStatus } from '../snapshot-formatters';
 
 describe('formatTokens', () => {

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect,useState } from 'react';
+
 import { useI18n } from '../../i18n/context';
 
 interface Counts {
@@ -64,8 +65,8 @@ export function FilterBar({
   const [localSearch, setLocalSearch] = useState(search);
 
   useEffect(() => {
-    const timer = setTimeout(() => onSearchChange(localSearch), 200);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => { onSearchChange(localSearch); }, 200);
+    return () => { clearTimeout(timer); };
   }, [localSearch, onSearchChange]);
 
   return (
@@ -80,7 +81,7 @@ export function FilterBar({
             return (
               <button
                 key={p.type}
-                onClick={() => !empty && onToggleType(p.type)}
+                onClick={() => { if (!empty) { onToggleType(p.type); } }}
                 disabled={empty}
                 className={`text-[10px] mono font-semibold px-2 py-1 rounded-md flex items-center gap-1.5 transition-all ${
                   empty
@@ -152,7 +153,7 @@ export function FilterBar({
       <input
         type="text"
         value={localSearch}
-        onChange={(e) => setLocalSearch(e.target.value)}
+        onChange={(e) => { setLocalSearch(e.target.value); }}
         placeholder={t('logs.filterPlaceholder')}
         className="mono text-[11px] px-3 py-1.5 rounded-md w-full bg-elevated border border-edge text-fg outline-none"
       />

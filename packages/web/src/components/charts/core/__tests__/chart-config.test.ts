@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { bucketLabelInterval, hourLabels, futureZoneMarkArea, CHART_GRID, COMPACT_Y_AXIS } from '../chart-config';
+import { describe, expect,it } from 'vitest';
+
+import { bucketLabelInterval, CHART_GRID, COMPACT_Y_AXIS,futureZoneMarkArea, hourLabels } from '../chart-config';
 
 describe('bucketLabelInterval', () => {
   it('returns 0 for ≤6 buckets', () => expect(bucketLabelInterval(6)).toBe(0));

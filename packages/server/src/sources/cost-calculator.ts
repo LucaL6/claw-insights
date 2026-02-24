@@ -1,6 +1,6 @@
-import { normalizeTokenUsage, tallyCosts } from 'tokentally';
 import type { TallyCall, TallyResult } from 'tokentally';
 import type { PricingResolver } from 'tokentally';
+import { normalizeTokenUsage, tallyCosts } from 'tokentally';
 
 // ── Types ───────────────────────────────────────────────────────
 

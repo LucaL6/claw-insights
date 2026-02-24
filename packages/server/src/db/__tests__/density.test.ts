@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
 import { DatabaseSync as Database } from 'node:sqlite';
-import { getEventDensity } from '../event-queries.js';
+
+import { describe, expect,it } from 'vitest';
+
 import { mapEvent } from '../../sources/events-mapper.js';
+import { getEventDensity } from '../event-queries.js';
 
 function setupDb(): Database {
   const db = new Database(':memory:');

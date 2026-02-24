@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { buildSessionsOption } from '../builders/buildSessionsOption';
 import type { LineSeriesOption, XAXisComponentOption } from 'echarts';
+import { describe, expect,it } from 'vitest';
+
+import { buildSessionsOption } from '../builders/buildSessionsOption';
 
 const MOCK_DATA = [
   { bucket: 0, label: '0h', sessions: 3 },
@@ -21,7 +22,7 @@ describe('buildSessionsOption', () => {
   it('sets category xAxis from labels', () => {
     const opt = buildSessionsOption(MOCK_DATA, 'footer');
     expect((opt.xAxis as XAXisComponentOption).type).toBe('category');
-    expect((opt.xAxis as XAXisComponentOption).data).toEqual(['0h', '1h', '2h']);
+    expect((opt.xAxis as XAXisComponentOption & { data?: string[] }).data).toEqual(['0h', '1h', '2h']);
   });
 
   it('uses emerald color for line and area', () => {

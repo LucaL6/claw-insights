@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+
 import { useI18n } from '../../i18n/context';
 
 export type ConfirmVariant = 'danger' | 'warning' | 'success' | 'info';
@@ -54,7 +55,7 @@ export function ConfirmModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[4px]" onClick={onCancel}>
       <div
         className="rounded-2xl w-[420px] p-6 bg-surface-solid border border-edge shadow-[0_25px_50px_rgba(0,0,0,0.4)]"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); }}
       >
         {title && <h2 className="text-lg font-semibold mb-4 text-fg">{title}</h2>}
         <div className="text-sm text-fg-secondary">{children}</div>
@@ -71,7 +72,7 @@ export function ConfirmModal({
             {t('modal.cancel')}
           </button>
           <button
-            onClick={() => onConfirm()}
+            onClick={() => { onConfirm(); }}
             disabled={loading}
             className="px-4 py-2 text-xs rounded-lg font-medium disabled:opacity-50"
             style={buttonStyle}

@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { getModelColor, shortModelName, MODEL_COLORS } from '../model-utils';
+import { describe, expect,it } from 'vitest';
+
+import { getModelColor, MODEL_COLORS,shortModelName } from '../model-utils';
 
 describe('getModelColor', () => {
   it('returns sky for opus', () => expect(getModelColor('claude-opus-4')).toBe(MODEL_COLORS.opus));

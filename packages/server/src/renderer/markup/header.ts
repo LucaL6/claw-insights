@@ -1,7 +1,7 @@
-import { div, span, StatusBadge } from './helpers.js';
-import type { SatoriNode } from './helpers.js';
+import type { Detail,SnapshotData } from '../../services/snapshot-types.js';
 import type { ColorScheme } from './colors.js';
-import type { SnapshotData, Detail } from '../../services/snapshot-types.js';
+import type { SatoriNode } from './helpers.js';
+import { div, span, StatusBadge } from './helpers.js';
 
 export function renderHeader(data: SnapshotData, detail: Detail, c: ColorScheme): SatoriNode {
   const gw = data.gateway;

@@ -1,13 +1,13 @@
-import type { SnapshotData, Detail } from '../../services/snapshot-types.js';
-import { getColors } from './colors.js';
-import { div } from './helpers.js';
-import { renderHeader } from './header.js';
-import { renderMetrics } from './metrics.js';
-import { renderSessions } from './sessions.js';
+import type { Detail,SnapshotData } from '../../services/snapshot-types.js';
 import { renderCharts } from './charts.js';
+import { getColors } from './colors.js';
 import { renderErrors } from './errors.js';
 import { renderFooter } from './footer.js';
+import { renderHeader } from './header.js';
 import type { SatoriNode } from './helpers.js';
+import { div } from './helpers.js';
+import { renderMetrics } from './metrics.js';
+import { renderSessions } from './sessions.js';
 
 export const VIEWPORT_WIDTH: Record<Detail, number> = { compact: 390, standard: 540, full: 540 };
 

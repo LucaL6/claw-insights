@@ -20,15 +20,15 @@ export const COMPACT_Y_AXIS = {
 
 /** Compute appropriate xAxis label interval based on total bucket count */
 export function bucketLabelInterval(bucketCount: number): number {
-  if (bucketCount <= 6) return 0;
-  if (bucketCount <= 12) return 1;
-  if (bucketCount <= 24) return 3;
+  if (bucketCount <= 6) {return 0;}
+  if (bucketCount <= 12) {return 1;}
+  if (bucketCount <= 24) {return 3;}
   return 5;
 }
 
 /** MarkArea for future hours (grey-out) */
 export function futureZoneMarkArea(currentHour: number): EChartsOption['series'] {
-  if (currentHour >= 23) return undefined;
+  if (currentHour >= 23) {return undefined;}
   return [
     {
       silent: true,

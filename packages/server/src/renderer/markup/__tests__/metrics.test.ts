@@ -1,14 +1,15 @@
-import { describe, it, expect } from 'vitest';
-import { renderMetrics } from '../metrics.js';
+import { describe, expect,it } from 'vitest';
+
+import type { SnapshotData } from '../../../services/snapshot-types.js';
 import { DARK } from '../colors.js';
 import type { SatoriNode } from '../helpers.js';
-import type { SnapshotData } from '../../../services/snapshot-types.js';
+import { renderMetrics } from '../metrics.js';
 
 /** Recursively collect all text content from a SatoriNode tree. */
 function collectText(node: SatoriNode | string | unknown): string[] {
-  if (typeof node === 'string') return [node];
-  if (typeof node === 'number') return [String(node)];
-  if (!node || typeof node !== 'object') return [];
+  if (typeof node === 'string') {return [node];}
+  if (typeof node === 'number') {return [String(node)];}
+  if (!node || typeof node !== 'object') {return [];}
   const n = node as SatoriNode;
   const results: string[] = [];
   const children = n.props?.children;

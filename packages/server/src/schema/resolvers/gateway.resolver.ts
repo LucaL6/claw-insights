@@ -1,8 +1,8 @@
 import type { AppContext } from '../../context.js';
-import type { Resolvers, QueryResolvers, ChannelProvider } from '../generated/resolver-types.js';
 import { getGatewayStatus } from '../../sources/gateway-cli.js';
-import { getAppVersion } from '../../version.js';
 import { getSystemMetrics } from '../../sources/system-info.js';
+import { getAppVersion } from '../../version.js';
+import type { ChannelProvider,QueryResolvers, Resolvers } from '../generated/resolver-types.js';
 import { safe } from './utils.js';
 
 export function gatewayResolvers(_ctx: AppContext): Partial<Resolvers> {

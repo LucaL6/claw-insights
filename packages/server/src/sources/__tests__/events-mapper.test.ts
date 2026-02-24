@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { mapEvent, EVENT_MAP } from '../events-mapper.js';
+import { describe, expect,it } from 'vitest';
+
+import { EVENT_MAP,mapEvent } from '../events-mapper.js';
 
 describe('events-mapper', () => {
   it('should map error to severity.error + openclaw', () => {

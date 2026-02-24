@@ -1,4 +1,4 @@
-import { existsSync, statSync, renameSync, writeFileSync, unlinkSync } from 'node:fs';
+import { existsSync, renameSync, statSync, unlinkSync,writeFileSync } from 'node:fs';
 
 interface RotateOptions {
   maxBytes: number; // e.g. 10 * 1024 * 1024 (10MB)
@@ -11,10 +11,10 @@ interface RotateOptions {
  * Returns true if rotation occurred.
  */
 export function rotateIfNeeded(logPath: string, opts: RotateOptions): boolean {
-  if (!existsSync(logPath)) return false;
+  if (!existsSync(logPath)) {return false;}
 
   const size = statSync(logPath).size;
-  if (size < opts.maxBytes) return false;
+  if (size < opts.maxBytes) {return false;}
 
   // Drop the oldest if at capacity
   const oldest = `${logPath}.${opts.maxFiles}`;

@@ -1,9 +1,10 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+
+import { CLI_ENV,config } from '../../config.js';
 import type { AppContext } from '../../context.js';
-import type { Resolvers, MutationResolvers, OperationResult } from '../generated/resolver-types.js';
-import { config, CLI_ENV } from '../../config.js';
 import { createChildLogger } from '../../logger.js';
+import type { MutationResolvers, OperationResult,Resolvers } from '../generated/resolver-types.js';
 
 const log = createChildLogger('mutations');
 const execFileAsync = promisify(execFile);
@@ -50,8 +51,8 @@ export function mutationResolvers(_ctx: AppContext): Partial<Resolvers> {
 
   const runDoctor: MutationResolvers['runDoctor'] = async (_parent, { options }) => {
     const args = ['doctor', '--non-interactive'];
-    if (options.fix) args.push('--fix');
-    if (options.deep) args.push('--deep');
+    if (options.fix) {args.push('--fix');}
+    if (options.deep) {args.push('--deep');}
     log.info({ options }, 'Running doctor via CLI');
     return runCli(args, 30_000);
   };

@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { formatUptime, formatLatency, channelShortName } from '../format';
+import { describe, expect,it } from 'vitest';
+
+import { channelShortName,formatLatency, formatUptime } from '../format';
 
 describe('formatUptime', () => {
   it('returns empty string for null/undefined', () => {

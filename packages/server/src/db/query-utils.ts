@@ -52,6 +52,6 @@ export function bucketLabel(bucket: number, bucketMinutes: number): string {
   const d = new Date(epochMs);
   const h = d.getHours();
   const m = d.getMinutes();
-  if (bucketMinutes >= 60) return `${h}:00`;
+  if (bucketMinutes >= 60) {return `${h}:00`;}
   return `${h}:${m.toString().padStart(2, '0')}`;
 }

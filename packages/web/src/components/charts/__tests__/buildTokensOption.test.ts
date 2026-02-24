@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import type { BarSeriesOption, TooltipComponentOption,YAXisComponentOption } from 'echarts';
+import { describe, expect,it } from 'vitest';
+
 import { buildTokensOption } from '../builders/buildTokensOption';
-import type { BarSeriesOption, YAXisComponentOption, TooltipComponentOption } from 'echarts';
 
 type TooltipFormatter = Exclude<
   Exclude<TooltipComponentOption['formatter'], string | undefined>,

@@ -54,5 +54,5 @@ export function buildEChartsTheme() {
 }
 
 // Re-export from split modules for backward compatibility
-export { CHART_GRID, COMPACT_Y_AXIS, bucketLabelInterval, futureZoneMarkArea, hourLabels } from './chart-config';
-export { COLORS, MODEL_COLORS, getModelColor, shortModelName } from './model-utils';
+export { bucketLabelInterval, CHART_GRID, COMPACT_Y_AXIS, futureZoneMarkArea, hourLabels } from './chart-config';
+export { COLORS, getModelColor, MODEL_COLORS, shortModelName } from './model-utils';

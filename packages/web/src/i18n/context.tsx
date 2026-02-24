@@ -1,4 +1,5 @@
-import { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { createContext, type ReactNode,useCallback, useContext } from 'react';
+
 import { usePreference } from '../hooks/usePreference';
 import en from './en.json';
 import zh from './zh.json';
@@ -27,17 +28,17 @@ function parseOldLang(raw: string): Lang | null {
   } catch {
     // Not valid JSON — fall through to legacy plain string
   }
-  if (VALID_LANGS.includes(raw as Lang)) return raw as Lang;
+  if (VALID_LANGS.includes(raw as Lang)) {return raw as Lang;}
   return null;
 }
 
 /** Migrate old 'lang' key → 'ci:lang' (idempotent, one-time) */
 function migrateOldLangKey(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {return;}
   try {
-    if (localStorage.getItem('ci:lang') !== null) return;
+    if (localStorage.getItem('ci:lang') !== null) {return;}
     const raw = localStorage.getItem('lang');
-    if (raw === null) return;
+    if (raw === null) {return;}
     const parsed = parseOldLang(raw);
     if (parsed !== null) {
       localStorage.setItem('ci:lang', JSON.stringify(parsed));
@@ -51,11 +52,11 @@ function migrateOldLangKey(): void {
 }
 
 function getUrlLang(): Lang | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') {return null;}
   try {
     const hashQs = window.location.hash.split('?')[1] ?? '';
     const urlLang = new URLSearchParams(hashQs).get('lang');
-    if (VALID_LANGS.includes(urlLang as Lang)) return urlLang as Lang;
+    if (VALID_LANGS.includes(urlLang as Lang)) {return urlLang as Lang;}
   } catch {
     // ignore
   }
@@ -63,7 +64,7 @@ function getUrlLang(): Lang | null {
 }
 
 function detectBrowserLang(): Lang {
-  if (typeof window === 'undefined') return 'en';
+  if (typeof window === 'undefined') {return 'en';}
   try {
     return navigator.language.startsWith('zh') ? 'zh' : 'en';
   } catch {
@@ -111,6 +112,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- keys may not exist at runtime
       let text = dictionaries[lang][key] ?? dictionaries['en'][key] ?? key;
       if (params) {
         for (const [k, v] of Object.entries(params)) {
@@ -128,6 +130,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useI18n(): I18nContextValue {
   const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error('useI18n must be inside I18nProvider');
+  if (!ctx) {throw new Error('useI18n must be inside I18nProvider');}
   return ctx;
 }

@@ -1,9 +1,11 @@
 import { DatabaseSync } from 'node:sqlite';
+
 import { createChildLogger } from '../logger.js';
 
 const log = createChildLogger('db');
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
+
 import { config } from '../config.js';
 import { EVENT_MAP } from '../sources/events-mapper.js';
 

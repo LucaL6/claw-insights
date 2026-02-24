@@ -1,6 +1,7 @@
 import type { EChartsOption } from 'echarts';
+
 import { COLORS } from '../core/model-utils';
-import { buildCategoryXAxis, CHART_GRID, COMPACT_Y_AXIS, tooltipHtml, areaGradient } from './shared';
+import { areaGradient,buildCategoryXAxis, CHART_GRID, COMPACT_Y_AXIS, tooltipHtml } from './shared';
 
 interface SessionBucket {
   bucket: number;

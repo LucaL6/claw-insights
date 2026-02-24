@@ -1,18 +1,20 @@
+import type { DatabaseSync } from 'node:sqlite';
+
 import type { LogEntry } from '@claw-insights/shared';
+
 import { config } from './config.js';
-import { SessionReader } from './sources/readers/session-reader.js';
-import { CronReader } from './sources/readers/cron-reader.js';
-import { SpawnTracker } from './sources/readers/spawn-tracker.js';
-import { LogTailer } from './sources/collectors/log-tailer.js';
-import { createLogIngester } from './sources/collectors/log-ingester.js';
-import { MetricsCollector } from './sources/collectors/metrics-collector.js';
-import { Aggregator } from './sources/aggregator.js';
-import { DataValidator } from './sources/data-validator.js';
-import { DataRetention } from './sources/data-retention.js';
-import { getSystemMetrics, getUsageCost } from './sources/system-info.js';
 import { initDatabase } from './db/init.js';
 import { Pipeline } from './pipeline/index.js';
-import type { DatabaseSync } from 'node:sqlite';
+import { Aggregator } from './sources/aggregator.js';
+import { createLogIngester } from './sources/collectors/log-ingester.js';
+import { LogTailer } from './sources/collectors/log-tailer.js';
+import { MetricsCollector } from './sources/collectors/metrics-collector.js';
+import { DataRetention } from './sources/data-retention.js';
+import { DataValidator } from './sources/data-validator.js';
+import { CronReader } from './sources/readers/cron-reader.js';
+import { SessionReader } from './sources/readers/session-reader.js';
+import { SpawnTracker } from './sources/readers/spawn-tracker.js';
+import { getSystemMetrics, getUsageCost } from './sources/system-info.js';
 
 export interface AppContext {
   db: DatabaseSync;
@@ -63,7 +65,7 @@ export function createContext(): AppContext {
     .addManaged('cronReader', cronReader)
     // Processors — handle events
     .addProcessor('logIngester', createLogIngester(db))
-    .addProcessor('spawnTracker', { handle: (entry: unknown) => spawnTracker.ingest(entry as LogEntry) })
+    .addProcessor('spawnTracker', { handle: (entry: unknown) => { spawnTracker.ingest(entry as LogEntry); } })
     // Services — background lifecycle
     .addService('metricsCollector', metricsCollector)
     .addService('dataValidator', dataValidator)

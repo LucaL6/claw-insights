@@ -1,5 +1,6 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
-import { insertSample, insertModelSample } from '../../db/metric-queries.js';
+
+import { insertModelSample,insertSample } from '../../db/metric-queries.js';
 import { emitChange } from '../../events.js';
 import { createChildLogger } from '../../logger.js';
 
@@ -135,16 +136,16 @@ export class MetricsCollector {
 
   start() {
     this.sampleFast();
-    this.sampleSlow().catch((err) => log.warn({ err }, 'sampleSlow error'));
-    this.fastTimer = setInterval(() => this.sampleFast(), this.fastIntervalMs);
+    this.sampleSlow().catch((err) => { log.warn({ err }, 'sampleSlow error'); });
+    this.fastTimer = setInterval(() => { this.sampleFast(); }, this.fastIntervalMs);
     this.slowTimer = setInterval(() => {
-      this.sampleSlow().catch((err) => log.warn({ err }, 'sampleSlow error'));
+      this.sampleSlow().catch((err) => { log.warn({ err }, 'sampleSlow error'); });
     }, this.slowIntervalMs);
   }
 
   stop() {
-    if (this.fastTimer) clearInterval(this.fastTimer);
-    if (this.slowTimer) clearInterval(this.slowTimer);
+    if (this.fastTimer) {clearInterval(this.fastTimer);}
+    if (this.slowTimer) {clearInterval(this.slowTimer);}
     this.fastTimer = null;
     this.slowTimer = null;
   }

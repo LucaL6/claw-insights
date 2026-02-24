@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
+
+import { describe, expect,it } from 'vitest';
 
 describe('migration v6 upgrade path — existing v5 data preserved', () => {
   it('adds token_delta_k=0 to existing model_token_samples rows', () => {

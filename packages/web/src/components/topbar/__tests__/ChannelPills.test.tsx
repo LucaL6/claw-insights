@@ -1,14 +1,15 @@
-import { describe, it, expect, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { afterEach,describe, expect, it } from 'vitest';
+
 import { renderWithProviders } from '../../../test/render';
 import { ChannelPills } from '../ChannelPills';
 
 afterEach(cleanup);
 
 const channels = [
-  { name: 'discord', connected: true, latencyMs: 42 },
-  { name: 'telegram', connected: false, latencyMs: null },
-] as { name: string; connected: boolean; latencyMs: number | null }[];
+  { name: 'discord', provider: 'discord' as const, connected: true, latencyMs: 42 },
+  { name: 'telegram', provider: 'telegram' as const, connected: false, latencyMs: null },
+];
 
 describe('ChannelPills', () => {
   it('renders one pill per channel', () => {

@@ -1,8 +1,9 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { SessionReader } from '../session-reader';
-import { writeFileSync, mkdirSync, rmSync } from 'fs';
-import { join } from 'path';
+import { mkdirSync, rmSync,writeFileSync } from 'fs';
 import { tmpdir } from 'os';
+import { join } from 'path';
+import { afterEach,describe, expect, it } from 'vitest';
+
+import { SessionReader } from '../session-reader';
 
 const tmpDir = join(tmpdir(), 'session-reader-test-' + Date.now());
 const tmpFile = join(tmpDir, 'sessions.json');

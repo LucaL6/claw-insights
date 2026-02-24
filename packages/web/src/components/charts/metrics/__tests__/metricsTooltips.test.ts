@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect,it } from 'vitest';
+
 import { getTooltips } from '../metricsTooltips';
 
 describe('getTooltips', () => {
@@ -8,7 +9,7 @@ describe('getTooltips', () => {
     const tips = getTooltips(t);
     expect(tips.sections.sessions.label).toBe('tooltip.sections.sessions');
     expect(tips.summary.peakSessions.label).toBe('tooltip.summary.peakSessions');
-    expect(tips.chartFooter.sessions).toContain('peak concurrent');
+    expect(tips.chartFooter.sessions).toContain('active sessions');
   });
 
   it('passes translation keys through t()', () => {

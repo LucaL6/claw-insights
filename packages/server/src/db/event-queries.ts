@@ -1,6 +1,7 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
-import { cached, bucketExpr } from './query-utils.js';
+
 import { EVENT_MAP, mapEvent } from '../sources/events-mapper.js';
+import { bucketExpr,cached } from './query-utils.js';
 
 // ── Write ──
 
@@ -68,7 +69,7 @@ export function queryEvents(
       try {
         const inner = JSON.parse(message);
         message = Object.entries(inner)
-          .map(([k, v]) => `${k}: ${v}`)
+          .map(([k, v]) => `${k}: ${String(v)}`)
           .join(', ');
       } catch {
         /* keep original */
@@ -82,9 +83,9 @@ export function queryEvents(
 
   const counts = { error: 0, warning: 0, restart: 0 };
   for (const row of rows) {
-    if (row.type === 'error' || row.category === 'severity.error') counts.error++;
-    if (row.type === 'warning' || row.category === 'severity.warning') counts.warning++;
-    if (row.type === 'gateway_restart' || row.category === 'lifecycle.restart') counts.restart++;
+    if (row.type === 'error' || row.category === 'severity.error') {counts.error++;}
+    if (row.type === 'warning' || row.category === 'severity.warning') {counts.warning++;}
+    if (row.type === 'gateway_restart' || row.category === 'lifecycle.restart') {counts.restart++;}
   }
 
   return { events, total, counts };

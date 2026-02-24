@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import type { BarSeriesOption, TooltipComponentOption,YAXisComponentOption } from 'echarts';
+import { describe, expect,it } from 'vitest';
+
 import { buildUptimeOption } from '../builders/buildUptimeOption';
-import type { BarSeriesOption, YAXisComponentOption, TooltipComponentOption } from 'echarts';
 
 interface UptimeBarItem {
   value: number;

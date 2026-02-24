@@ -1,7 +1,7 @@
-import { div, span, Tag } from './helpers.js';
-import type { SatoriNode } from './helpers.js';
+import type { Detail,SnapshotData, SnapshotSession } from '../../services/snapshot-types.js';
 import type { ColorScheme } from './colors.js';
-import type { SnapshotData, SnapshotSession, Detail } from '../../services/snapshot-types.js';
+import type { SatoriNode } from './helpers.js';
+import { div, span, Tag } from './helpers.js';
 
 function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
   const active = sess.status === 'active';
@@ -53,10 +53,10 @@ function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
 }
 
 export function renderSessions(data: SnapshotData, detail: Detail, c: ColorScheme): SatoriNode | null {
-  if (detail === 'compact') return null;
+  if (detail === 'compact') {return null;}
 
   const sessions = data.sessions;
-  if (!sessions || sessions.length === 0) return null;
+  if (!sessions || sessions.length === 0) {return null;}
 
   const activeCount = sessions.filter(s => s.status === 'active').length;
 

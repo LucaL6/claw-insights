@@ -1,5 +1,5 @@
 import type { AppContext } from '../../context.js';
-import type { Resolvers, QueryResolvers } from '../generated/resolver-types.js';
+import type { QueryResolvers,Resolvers } from '../generated/resolver-types.js';
 
 export function sessionsResolvers(ctx: AppContext): Partial<Resolvers> {
   const { sessionReader, spawnTracker } = ctx;

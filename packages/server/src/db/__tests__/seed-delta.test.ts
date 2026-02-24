@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { seedTestData } from '../seed.js';
+import { rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { rmSync } from 'fs';
+import { describe, expect,it } from 'vitest';
+
+import { seedTestData } from '../seed.js';
 
 describe('seed data includes model token deltas', () => {
   it('model_token_samples should have non-zero token_delta_k values', () => {

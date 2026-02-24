@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { afterEach,describe, expect, it, vi } from 'vitest';
+
 import { loadFonts, resetFontCache } from '../fonts.js';
 
 describe('loadFonts', () => {
@@ -32,7 +33,7 @@ describe('loadFonts', () => {
     mkdirSync(tmpDir, { recursive: true });
     vi.stubEnv('CLAW_INSIGHTS_FONTS_DIR', tmpDir);
     try {
-      await expect(loadFonts()).rejects.toThrow();
+      expect(() => loadFonts()).toThrow();
     } finally {
       vi.unstubAllEnvs();
       rmSync(tmpDir, { recursive: true, force: true });

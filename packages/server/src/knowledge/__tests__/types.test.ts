@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import type { DiagnosticRule, SystemSnapshot, DiagnosticResult } from '../types';
+import { describe, expect,it } from 'vitest';
+
+import type { DiagnosticResult,DiagnosticRule, SystemSnapshot } from '../types';
 
 describe('Diagnostic types', () => {
   it('DiagnosticRule check receives SystemSnapshot and returns boolean', () => {

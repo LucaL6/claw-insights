@@ -26,7 +26,7 @@ export function EventTable({ events, highlightFrom, highlightTo, search, loading
     : events;
 
   const isHighlighted = (ev: Event): boolean => {
-    if (highlightFrom === undefined || highlightTo === undefined) return false;
+    if (highlightFrom === undefined || highlightTo === undefined) {return false;}
     const epoch = Math.floor(new Date(ev.timestamp).getTime() / 1000);
     return epoch >= highlightFrom && epoch < highlightTo;
   };

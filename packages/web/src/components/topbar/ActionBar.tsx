@@ -1,8 +1,8 @@
-import { useTheme } from '../../theme/context';
-import { useI18n } from '../../i18n/context';
 import { useSnapshot } from '../../hooks/useSnapshot';
-import { RestartIcon, DoctorIcon, CameraIcon, SpinnerIcon } from '../ui/icons';
+import { useI18n } from '../../i18n/context';
+import { useTheme } from '../../theme/context';
 import type { MetricsRange } from '../charts/metrics/GranularityPicker';
+import { CameraIcon, DoctorIcon, RestartIcon, SpinnerIcon } from '../ui/icons';
 
 interface Props {
   onAction?: (action: 'restart' | 'doctor') => void;
@@ -20,14 +20,14 @@ export function ActionBar({ onAction, metricsRange, uptime, currentPage }: Props
     <div className="flex items-center gap-2">
       <button
         disabled={snapshotting}
-        onClick={() =>
-          takeSnapshot({
+        onClick={() => {
+          void takeSnapshot({
             section: currentPage === 'logs' ? 'logs' : 'dashboard',
             range: metricsRange ?? 'TWENTY_FOUR_HOUR',
             theme,
             lang,
-          })
-        }
+          });
+        }}
         className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md transition-all ${
           snapshotting
             ? 'bg-emerald-bg text-emerald border border-emerald-border opacity-80'

@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { dataBus, emitChange, type DataChangeEvent } from '../../../events';
-import { MetricsCollector } from '../metrics-collector';
-import { initDatabase } from '../../../db/init';
-import { join } from 'path';
-import { tmpdir } from 'os';
 import { rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { describe, expect,it } from 'vitest';
+
+import { initDatabase } from '../../../db/init';
+import { dataBus, type DataChangeEvent,emitChange } from '../../../events';
+import { MetricsCollector } from '../metrics-collector';
 
 describe('dataBus', () => {
   it('should emit change events with source and ts', () => {

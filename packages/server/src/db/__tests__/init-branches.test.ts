@@ -1,11 +1,13 @@
-import { describe, it, expect } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { initDatabase } from '../init.js';
-import { DataRetention } from '../../sources/data-retention.js';
-import type { RetentionConfig } from '../../sources/data-retention.js';
+
+import { mkdirSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { mkdirSync, unlinkSync } from 'fs';
+import { describe, expect,it } from 'vitest';
+
+import type { RetentionConfig } from '../../sources/data-retention.js';
+import { DataRetention } from '../../sources/data-retention.js';
+import { initDatabase } from '../init.js';
 
 function tmpDbPath() {
   const dir = join(tmpdir(), 'claw-test-' + Date.now());

@@ -12,7 +12,7 @@ export function useOperationModals() {
     setResult(null);
     setModal({ type });
   };
-  const close = () => setModal({ type: null });
+  const close = () => { setModal({ type: null }); };
 
   return { modal: modal.type, open, close, result, setResult };
 }

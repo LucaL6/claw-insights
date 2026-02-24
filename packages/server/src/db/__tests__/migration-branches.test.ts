@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
+
+import { describe, expect,it } from 'vitest';
 
 describe('DB migration error paths', () => {
   it('migration 5 sanity check fails when a table is missing', () => {

@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useCallback,useMemo, useState } from 'react';
 import { useQuery } from 'urql';
-import { EventsQuery, EventDensityQuery } from '../graphql/events-queries';
+
+import { EventDensityQuery,EventsQuery } from '../graphql/events-queries';
 import type { Route } from './useHashRoute';
 
 const ALL_TYPES = ['error', 'warning', 'gateway_restart'];
@@ -36,9 +37,9 @@ export function useLogPageData(route: Route) {
       setActiveTypes((prev) => {
         const next = prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type];
         const params = new URLSearchParams();
-        if (urlFrom) params.set('from', String(urlFrom));
-        if (urlTo) params.set('to', String(urlTo));
-        if (next.length < ALL_TYPES.length) params.set('type', next.join(','));
+        if (urlFrom) {params.set('from', String(urlFrom));}
+        if (urlTo) {params.set('to', String(urlTo));}
+        if (next.length < ALL_TYPES.length) {params.set('type', next.join(','));}
         const qs = params.toString();
         window.history.replaceState(null, '', `#logs${qs ? '?' + qs : ''}`);
         return next.length > 0 ? next : prev;
@@ -49,8 +50,8 @@ export function useLogPageData(route: Route) {
 
   // Client-side search filter
   const filteredEvents = useMemo(() => {
-    if (!events?.events) return [];
-    if (!search) return events.events;
+    if (!events?.events) {return [];}
+    if (!search) {return events.events;}
     const q = search.toLowerCase();
     return events.events.filter(
       (e: { message: string; module: string }) =>
@@ -60,7 +61,7 @@ export function useLogPageData(route: Route) {
 
   // Time label
   const timeLabel = useMemo(() => {
-    if (!urlFrom || !urlTo) return undefined;
+    if (!urlFrom || !urlTo) {return undefined;}
     const f = new Date(urlFrom * 1000);
     const t = new Date(urlTo * 1000);
     const fmt = (d: Date) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
