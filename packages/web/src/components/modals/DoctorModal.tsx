@@ -15,7 +15,9 @@ export function DoctorModal({ onClose }: { onClose: () => void }) {
     fix: false,
   });
 
-  const toggle = (key: keyof typeof options) => { setOptions((o) => ({ ...o, [key]: !o[key] })); };
+  const toggle = (key: keyof typeof options) => {
+    setOptions((o) => ({ ...o, [key]: !o[key] }));
+  };
 
   const labels: Record<string, string> = {
     deep: t('modal.doctor.deep'),
@@ -26,14 +28,16 @@ export function DoctorModal({ onClose }: { onClose: () => void }) {
     <ConfirmModal
       title=""
       confirmText={t('modal.doctor.confirm')}
-      variant="info"
+      variant="doctor"
       loading={loading}
       error={error}
-      onConfirm={() => { void run({ options }); }}
+      onConfirm={() => {
+        void run({ options });
+      }}
       onCancel={onClose}
     >
       <div className="flex items-center gap-3 mb-4">
-        <ModalIcon color="var(--sky)">
+        <ModalIcon color="var(--doctor-accent, var(--sky))">
           <DoctorIcon className="w-5 h-5" />
         </ModalIcon>
         <div>
@@ -44,7 +48,14 @@ export function DoctorModal({ onClose }: { onClose: () => void }) {
       <div className="space-y-2 mb-4">
         {Object.entries(options).map(([key, val]) => (
           <label key={key} className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer bg-overlay">
-            <input type="checkbox" checked={val} onChange={() => { toggle(key as keyof typeof options); }} className="accent-cyan-500" />
+            <input
+              type="checkbox"
+              checked={val}
+              onChange={() => {
+                toggle(key as keyof typeof options);
+              }}
+              className="accent-cyan-500"
+            />
             <span className="text-xs text-fg-secondary">{labels[key] ?? key}</span>
           </label>
         ))}

@@ -1,6 +1,8 @@
 import type { GatewayStatus } from '../../hooks/useGatewayData';
 import { useGatewayData } from '../../hooks/useGatewayData';
 import { useI18n } from '../../i18n/context';
+import { DoctorIcon } from '../ui/icons';
+import { Tooltip } from '../ui/Tooltip';
 import { channelShortName, formatLatency } from '../../utils/format';
 
 function BannerStatusPill({ status }: { status: GatewayStatus }) {
@@ -115,24 +117,26 @@ export function GatewayBanner({ onAction }: { onAction?: (action: 'restart' | 'd
           <div className="h-4 w-px bg-edge-subtle" />
 
           {/* Actions */}
-          <button
-            onClick={() => onAction?.('restart')}
-            disabled={isConnecting}
-            className={`flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md border transition-colors ${
-              isDown
-                ? 'bg-red-bg text-red border-red-border hover:bg-red-bg/80'
-                : 'bg-elevated/30 text-fg-muted border-edge-subtle hover:border-edge'
-            } ${isConnecting ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            ↻ {t('topbar.restart')}
-          </button>
-          <button
-            onClick={() => onAction?.('doctor')}
-            disabled={isConnecting}
-            className={`flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md bg-elevated/30 text-fg-muted border border-edge-subtle hover:border-edge transition-colors ${isConnecting ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            ⚡ {t('topbar.doctor')}
-          </button>
+          <Tooltip text={t('topbar.restart.tooltip')} detail={t('topbar.restart.tooltipDetail')} align="right">
+            <button
+              onClick={() => onAction?.('restart')}
+              disabled={isConnecting}
+              className={`flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md border transition-colors ${
+                isDown ? 'bg-red-bg text-red border-red-border hover:bg-red-bg/80' : 'btn-restart'
+              } ${isConnecting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              ↻ {t('topbar.restart')}
+            </button>
+          </Tooltip>
+          <Tooltip text={t('topbar.doctor.tooltip')} detail={t('topbar.doctor.tooltipDetail')} align="right">
+            <button
+              onClick={() => onAction?.('doctor')}
+              disabled={isConnecting}
+              className={`btn-doctor flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md border transition-colors ${isConnecting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <DoctorIcon className="w-3 h-3" /> {t('topbar.doctor')}
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>

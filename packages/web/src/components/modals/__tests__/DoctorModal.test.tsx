@@ -1,5 +1,5 @@
-import { cleanup,fireEvent, render } from '@testing-library/react';
-import { afterEach,describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DoctorModal } from '../DoctorModal';
 
@@ -24,10 +24,10 @@ describe('DoctorModal', () => {
     expect(getByText('modal.doctor.desc')).toBeDefined();
   });
 
-  it('renders with info variant (sky confirm button)', () => {
+  it('renders with doctor variant (themed confirm button)', () => {
     const { getByText } = render(<DoctorModal onClose={vi.fn()} />);
     const btn = getByText('modal.doctor.confirm');
-    expect(btn.style.backgroundColor).toContain('--sky');
+    expect(btn.style.backgroundColor).toContain('--doctor-accent');
   });
 
   it('renders checkboxes with correct defaults', () => {

@@ -18,6 +18,45 @@ import { PidFile } from './pid.js';
 
 const HOME = process.env.HOME ?? '/tmp';
 
+/* ── CLI Spinner ── */
+const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+const IS_INTERACTIVE = process.stdout.isTTY === true && !process.env.CI;
+
+function createSpinner(message: string) {
+  let stopped = false;
+  if (!IS_INTERACTIVE) {
+    // Non-TTY / CI: plain log, no animation
+    console.log(`  ${message}`);
+    return {
+      update(_msg: string) {
+        /* no-op in non-TTY */
+      },
+      stop(finalMessage: string) {
+        if (!stopped) {
+          stopped = true;
+          console.log(`  ${finalMessage}`);
+        }
+      },
+    };
+  }
+  let i = 0;
+  const timer = setInterval(() => {
+    process.stdout.write(`\x1b[2K\r  ${SPINNER_FRAMES[i++ % SPINNER_FRAMES.length]} ${message}`);
+  }, 80);
+  timer.unref();
+  return {
+    update(msg: string) {
+      message = msg;
+    },
+    stop(finalMessage: string) {
+      if (stopped) return;
+      stopped = true;
+      clearInterval(timer);
+      process.stdout.write(`\x1b[2K\r  ${finalMessage}\n`);
+    },
+  };
+}
+
 export function getDataDir(): string {
   return join(HOME, '.claw-insights');
 }
@@ -234,7 +273,7 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   console.log('');
 }
 
-export function daemonStop(): void {
+export async function daemonStop(): Promise<void> {
   const paths = getDaemonPaths();
   const pidFile = new PidFile(paths.pidFile);
   const pid = pidFile.read();
@@ -252,30 +291,34 @@ export function daemonStop(): void {
 
   // Send SIGTERM
   process.kill(pid, 'SIGTERM');
-  console.log(`💡 Stopping Claw Insights (PID ${pid})...`);
+  const spinner = createSpinner(`Stopping Claw Insights (PID ${pid})...`);
 
-  // Wait up to 5 seconds for graceful shutdown
-  const deadline = Date.now() + 5000;
-  const poll = setInterval(() => {
-    if (!pidFile.isAlive()) {
-      clearInterval(poll);
-      pidFile.remove();
-      cleanupAuthToken(paths.dataDir);
-      console.log('💡 Claw Insights stopped.');
-      return;
-    }
-    if (Date.now() > deadline) {
-      clearInterval(poll);
-      try {
-        process.kill(pid, 'SIGKILL');
-      } catch {
-        // already dead
+  try {
+    // Wait up to 5 seconds for graceful shutdown
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      if (!pidFile.isAlive()) {
+        pidFile.remove();
+        cleanupAuthToken(paths.dataDir);
+        spinner.stop('💡 Claw Insights stopped.');
+        return;
       }
-      pidFile.remove();
-      cleanupAuthToken(paths.dataDir);
-      console.log('💡 Claw Insights force-killed.');
+      await new Promise((r) => setTimeout(r, 100));
     }
-  }, 200);
+
+    // Force kill
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      // already dead
+    }
+    pidFile.remove();
+    cleanupAuthToken(paths.dataDir);
+    spinner.stop('💡 Claw Insights force-killed.');
+  } catch (err) {
+    spinner.stop(`❌ Stop failed: ${err instanceof Error ? err.message : String(err)}`);
+    throw err;
+  }
 }
 
 function cleanupAuthToken(dataDir: string): void {
@@ -290,22 +333,33 @@ function cleanupAuthToken(dataDir: string): void {
 }
 
 async function waitForHealth(port: number, timeoutMs: number, earlyExit?: () => boolean): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (earlyExit?.()) {
-      return false;
-    }
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/health`);
-      if (res.ok) {
-        return true;
+  const spinner = createSpinner('Starting server...');
+  const startTime = Date.now();
+  const deadline = startTime + timeoutMs;
+  try {
+    while (Date.now() < deadline) {
+      if (earlyExit?.()) {
+        spinner.stop('❌ Server exited unexpectedly.');
+        return false;
       }
-    } catch {
-      // not ready yet
+      spinner.update(`Waiting for server to be ready... (${((Date.now() - startTime) / 1000).toFixed(1)}s)`);
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/health`);
+        if (res.ok) {
+          spinner.stop('✅ Server is ready.');
+          return true;
+        }
+      } catch {
+        // not ready yet
+      }
+      await new Promise((r) => setTimeout(r, 200));
     }
-    await new Promise((r) => setTimeout(r, 300));
+    spinner.stop('⚠️  Health check timed out.');
+    return false;
+  } catch (err) {
+    spinner.stop(`❌ Health check failed: ${err instanceof Error ? err.message : String(err)}`);
+    throw err;
   }
-  return false;
 }
 
 export async function daemonStatus(): Promise<void> {
@@ -449,9 +503,7 @@ export async function daemonRestart(args: CliArgs, serverEntry: string): Promise
 
   // Stop if running
   if (pidFile.isAlive()) {
-    daemonStop();
-    // Wait for process to fully exit
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await daemonStop();
   }
 
   await daemonStart(args, serverEntry);

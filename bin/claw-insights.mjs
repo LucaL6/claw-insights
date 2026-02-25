@@ -51,7 +51,7 @@ async function main() {
       await daemonStart(args, serverEntry);
       break;
     case 'stop':
-      daemonStop();
+      await daemonStop();
       break;
     case 'status':
       await daemonStatus();

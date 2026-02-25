@@ -1,5 +1,5 @@
-import { cleanup,fireEvent, render } from '@testing-library/react';
-import { afterEach,describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfirmModal } from '../ConfirmModal';
 
@@ -25,7 +25,9 @@ describe('ConfirmModal', () => {
   it('calls onCancel when backdrop clicked', () => {
     const onCancel = vi.fn();
     const { container } = render(
-      <ConfirmModal {...defaults} onCancel={onCancel}>Body</ConfirmModal>
+      <ConfirmModal {...defaults} onCancel={onCancel}>
+        Body
+      </ConfirmModal>,
     );
     fireEvent.click(container.querySelector('.fixed.inset-0')!);
     expect(onCancel).toHaveBeenCalled();
@@ -34,7 +36,9 @@ describe('ConfirmModal', () => {
   it('does NOT close when modal body clicked', () => {
     const onCancel = vi.fn();
     const { getByText } = render(
-      <ConfirmModal {...defaults} onCancel={onCancel}>Body</ConfirmModal>
+      <ConfirmModal {...defaults} onCancel={onCancel}>
+        Body
+      </ConfirmModal>,
     );
     fireEvent.click(getByText('Body'));
     expect(onCancel).not.toHaveBeenCalled();
@@ -43,7 +47,9 @@ describe('ConfirmModal', () => {
   it('calls onConfirm when confirm button clicked', () => {
     const onConfirm = vi.fn();
     const { getByText } = render(
-      <ConfirmModal {...defaults} confirmText="Go" onConfirm={onConfirm}>Body</ConfirmModal>
+      <ConfirmModal {...defaults} confirmText="Go" onConfirm={onConfirm}>
+        Body
+      </ConfirmModal>,
     );
     fireEvent.click(getByText('Go'));
     expect(onConfirm).toHaveBeenCalled();
@@ -51,7 +57,9 @@ describe('ConfirmModal', () => {
 
   it('renders with danger variant styling', () => {
     const { getByText } = render(
-      <ConfirmModal {...defaults} variant="danger" confirmText="Delete">Body</ConfirmModal>
+      <ConfirmModal {...defaults} variant="danger" confirmText="Delete">
+        Body
+      </ConfirmModal>,
     );
     const btn = getByText('Delete');
     expect(btn.style.backgroundColor).toContain('--red');
@@ -59,15 +67,19 @@ describe('ConfirmModal', () => {
 
   it('renders with warning variant styling', () => {
     const { getByText } = render(
-      <ConfirmModal {...defaults} variant="warning" confirmText="Restart">Body</ConfirmModal>
+      <ConfirmModal {...defaults} variant="warning" confirmText="Restart">
+        Body
+      </ConfirmModal>,
     );
     const btn = getByText('Restart');
-    expect(btn.style.backgroundColor).toContain('--orange');
+    expect(btn.style.backgroundColor).toContain('--amber');
   });
 
   it('renders with success variant styling', () => {
     const { getByText } = render(
-      <ConfirmModal {...defaults} variant="success" confirmText="Go">Body</ConfirmModal>
+      <ConfirmModal {...defaults} variant="success" confirmText="Go">
+        Body
+      </ConfirmModal>,
     );
     const btn = getByText('Go');
     expect(btn.style.backgroundColor).toContain('--emerald');
@@ -75,7 +87,9 @@ describe('ConfirmModal', () => {
 
   it('renders with info variant styling (default)', () => {
     const { getByText } = render(
-      <ConfirmModal {...defaults} confirmText="OK">Body</ConfirmModal>
+      <ConfirmModal {...defaults} confirmText="OK">
+        Body
+      </ConfirmModal>,
     );
     const btn = getByText('OK');
     expect(btn.style.backgroundColor).toContain('--sky');
@@ -87,18 +101,28 @@ describe('ConfirmModal', () => {
   });
 
   it('shows loading text when loading', () => {
-    const { getByText } = render(<ConfirmModal {...defaults} loading>Body</ConfirmModal>);
+    const { getByText } = render(
+      <ConfirmModal {...defaults} loading>
+        Body
+      </ConfirmModal>,
+    );
     expect(getByText('modal.running')).toBeDefined();
   });
 
   it('disables confirm button when loading', () => {
-    const { getByText } = render(<ConfirmModal {...defaults} loading>Body</ConfirmModal>);
+    const { getByText } = render(
+      <ConfirmModal {...defaults} loading>
+        Body
+      </ConfirmModal>,
+    );
     expect(getByText('modal.running').hasAttribute('disabled')).toBe(true);
   });
 
   it('shows error message when error is set', () => {
     const { getByText } = render(
-      <ConfirmModal {...defaults} error="Something failed">Body</ConfirmModal>
+      <ConfirmModal {...defaults} error="Something failed">
+        Body
+      </ConfirmModal>,
     );
     expect(getByText('Something failed')).toBeDefined();
   });

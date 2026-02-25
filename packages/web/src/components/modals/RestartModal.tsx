@@ -17,11 +17,13 @@ export function RestartModal({ onClose }: { onClose: () => void }) {
       variant="warning"
       loading={loading}
       error={error}
-      onConfirm={() => { void run(); }}
+      onConfirm={() => {
+        void run();
+      }}
       onCancel={onClose}
     >
       <div className="flex items-center gap-3 mb-4">
-        <ModalIcon color="var(--orange)">
+        <ModalIcon color="var(--amber)">
           <RestartIcon className="w-5 h-5" />
         </ModalIcon>
         <div>

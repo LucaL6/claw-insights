@@ -18,12 +18,19 @@ export function RestartIcon({ className = 'w-3 h-3' }: IconProps) {
 export function DoctorIcon({ className = 'w-3 h-3' }: IconProps) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Stethoscope: tubing arc */}
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={2}
-        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+        d="M4.8 10.5a6.2 6.2 0 0 0 6.2 6.2h2a6.2 6.2 0 0 0 6.2-6.2V4"
       />
+      {/* Ear tips */}
+      <path strokeLinecap="round" strokeWidth={2} d="M4.8 4v3M19.2 4v3" />
+      {/* Chest piece circle */}
+      <circle cx="12" cy="20" r="2" strokeWidth={2} />
+      {/* Chest piece connector */}
+      <path strokeLinecap="round" strokeWidth={2} d="M12 16.7V18" />
     </svg>
   );
 }

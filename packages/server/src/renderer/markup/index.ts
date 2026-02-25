@@ -1,9 +1,10 @@
-import type { Detail,SnapshotData } from '../../services/snapshot-types.js';
+import type { Detail, SnapshotData } from '../../services/snapshot-types.js';
 import { renderCharts } from './charts.js';
 import { getColors } from './colors.js';
 import { renderErrors } from './errors.js';
 import { renderFooter } from './footer.js';
 import { renderHeader } from './header.js';
+import { renderGatewayBanner } from './gateway-banner.js';
 import type { SatoriNode } from './helpers.js';
 import { div } from './helpers.js';
 import { renderMetrics } from './metrics.js';
@@ -21,6 +22,7 @@ export function buildMarkup(data: SnapshotData, opts: MarkupOptions): SatoriNode
   const c = getColors(opts.theme);
   const sections: (SatoriNode | null)[] = [
     renderHeader(data, opts.detail, c),
+    renderGatewayBanner(data, opts.detail, c),
     renderMetrics(data, opts.detail, c),
   ];
   if (opts.detail === 'standard' || opts.detail === 'full') {

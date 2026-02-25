@@ -115,4 +115,36 @@ describe('GatewayBanner', () => {
     expect(screen.getByText('OpenClaw Gateway')).toBeDefined();
     expect(screen.queryByText('TG')).toBeNull();
   });
+
+  it('renders DoctorIcon SVG instead of emoji', () => {
+    renderWithProviders(<GatewayBanner />);
+    const doctorBtn = screen.getByRole('button', { name: /doctor/i });
+    const svg = doctorBtn.querySelector('svg');
+    expect(svg).toBeTruthy();
+  });
+
+  it('restart button uses btn-restart class in running state', () => {
+    renderWithProviders(<GatewayBanner />);
+    const restartBtn = screen.getByRole('button', { name: /restart/i });
+    expect(restartBtn.className).toContain('btn-restart');
+  });
+
+  it('doctor button uses btn-doctor class', () => {
+    renderWithProviders(<GatewayBanner />);
+    const doctorBtn = screen.getByRole('button', { name: /doctor/i });
+    expect(doctorBtn.className).toContain('btn-doctor');
+  });
+
+  it('renders tooltips for both action buttons', () => {
+    const { container } = renderWithProviders(<GatewayBanner />);
+    const tooltips = container.querySelectorAll('[role="tooltip"]');
+    expect(tooltips.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('tooltip text references OpenClaw Gateway', () => {
+    const { container } = renderWithProviders(<GatewayBanner />);
+    const tooltips = container.querySelectorAll('[role="tooltip"]');
+    const texts = Array.from(tooltips).map((t) => t.textContent);
+    expect(texts.some((t) => t?.includes('OpenClaw Gateway'))).toBe(true);
+  });
 });

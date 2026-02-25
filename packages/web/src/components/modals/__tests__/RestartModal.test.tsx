@@ -1,5 +1,5 @@
-import { cleanup,fireEvent, render } from '@testing-library/react';
-import { afterEach,describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RestartModal } from '../RestartModal';
 
@@ -24,10 +24,10 @@ describe('RestartModal', () => {
     expect(getByText('modal.restart.desc')).toBeDefined();
   });
 
-  it('renders with warning variant (orange confirm button)', () => {
+  it('renders with warning variant (amber confirm button)', () => {
     const { getByText } = render(<RestartModal onClose={vi.fn()} />);
     const btn = getByText('modal.restart.confirm');
-    expect(btn.style.backgroundColor).toContain('--orange');
+    expect(btn.style.backgroundColor).toContain('--amber');
   });
 
   it('shows command preview', () => {
