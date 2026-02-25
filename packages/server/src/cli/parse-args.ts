@@ -6,7 +6,9 @@ type Subcommand = (typeof SUBCOMMANDS)[number];
 export interface CliArgs {
   command: Subcommand | 'run'; // 'run' = foreground (no subcommand)
   port: number;
+  portExplicit: boolean;
   webPort: number;
+  webPortExplicit: boolean;
   serverOnly: boolean;
   noAuth: boolean;
   gateway: string | undefined;
@@ -46,8 +48,10 @@ export function parseCliArgs(argv: string[]): CliArgs {
 
   return {
     command,
-    port: values.port ? parseInt(values.port as string, 10) : 4000,
-    webPort: values['web-port'] ? parseInt(values['web-port'] as string, 10) : 3200,
+    port: values.port ? parseInt(values.port as string, 10) : 41041,
+    portExplicit: !!values.port,
+    webPort: values['web-port'] ? parseInt(values['web-port'] as string, 10) : 41042,
+    webPortExplicit: !!values['web-port'],
     serverOnly: (values['server-only'] as boolean) ?? false,
     noAuth: (values['no-auth'] as boolean) ?? false,
     gateway: values.gateway as string | undefined,

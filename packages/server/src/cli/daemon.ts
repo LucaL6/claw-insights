@@ -12,7 +12,7 @@ import {
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
-import { DEFAULT_ROTATE_OPTIONS,rotateIfNeeded } from './log-rotate.js';
+import { DEFAULT_ROTATE_OPTIONS, rotateIfNeeded } from './log-rotate.js';
 import type { CliArgs } from './parse-args.js';
 import { PidFile } from './pid.js';
 
@@ -40,11 +40,21 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   // Check for existing running instance
   if (pidFile.isAlive()) {
     const pid = pidFile.read();
+    // Read saved config for actual port
+    let savedPort = args.port;
+    if (existsSync(paths.daemonJson)) {
+      try {
+        const saved = JSON.parse(readFileSync(paths.daemonJson, 'utf-8'));
+        if (saved.port) savedPort = saved.port;
+      } catch {
+        /* ignore */
+      }
+    }
     console.log('');
     console.log('  ⚠️  Claw Insights is already running.');
     console.log('');
     console.log(`  PID:  ${pid}`);
-    console.log(`  Port: ${args.port}`);
+    console.log(`  Port: ${savedPort}`);
     console.log('');
     console.log('  claw-insights status    Check health & access URL');
     console.log('  claw-insights restart   Restart the server');
@@ -64,7 +74,10 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   // Rotate logs before starting
   rotateIfNeeded(paths.logFile, DEFAULT_ROTATE_OPTIONS);
 
-  // Save daemon config for restart
+  // Save daemon config for restart (full snapshot + explicit tracking)
+  const explicitKeys: string[] = [];
+  if (args.portExplicit) explicitKeys.push('port');
+  if (args.webPortExplicit) explicitKeys.push('webPort');
   writeFileSync(
     paths.daemonJson,
     JSON.stringify(
@@ -75,6 +88,7 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
         noAuth: args.noAuth,
         gateway: args.gateway,
         logDir: args.logDir,
+        _explicit: explicitKeys,
       },
       null,
       2,
@@ -155,7 +169,9 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
         const meaningful = lines.filter((l) => !l.startsWith('{'));
         if (meaningful.length) {
           console.log('  Last output:');
-          meaningful.slice(-3).forEach((l) => { console.log(`    ${l}`); });
+          meaningful.slice(-3).forEach((l) => {
+            console.log(`    ${l}`);
+          });
         }
       }
     } catch {
@@ -194,7 +210,9 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
     const tokenFile = join(paths.dataDir, 'auth-token');
     try {
       const token = readFileSync(tokenFile, 'utf-8').trim();
-      if (token) {url += `/?token=${token}`;}
+      if (token) {
+        url += `/?token=${token}`;
+      }
     } catch {
       // token file not ready
     }
@@ -263,7 +281,9 @@ export function daemonStop(): void {
 function cleanupAuthToken(dataDir: string): void {
   try {
     const tokenFile = join(dataDir, 'auth-token');
-    if (existsSync(tokenFile)) {unlinkSync(tokenFile);}
+    if (existsSync(tokenFile)) {
+      unlinkSync(tokenFile);
+    }
   } catch {
     /* best effort */
   }
@@ -272,10 +292,14 @@ function cleanupAuthToken(dataDir: string): void {
 async function waitForHealth(port: number, timeoutMs: number, earlyExit?: () => boolean): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (earlyExit?.()) {return false;}
+    if (earlyExit?.()) {
+      return false;
+    }
     try {
       const res = await fetch(`http://127.0.0.1:${port}/health`);
-      if (res.ok) {return true;}
+      if (res.ok) {
+        return true;
+      }
     } catch {
       // not ready yet
     }
@@ -291,7 +315,9 @@ export async function daemonStatus(): Promise<void> {
 
   if (pid === null || !pidFile.isAlive()) {
     console.log('💡 Claw Insights is not running.');
-    if (pid !== null) {pidFile.cleanStale();}
+    if (pid !== null) {
+      pidFile.cleanStale();
+    }
     return;
   }
 
@@ -305,7 +331,7 @@ export async function daemonStatus(): Promise<void> {
     }
   }
 
-  const port = (config.port as number) ?? 4000;
+  const port = (config.port as number) ?? 41041;
 
   try {
     const res = await fetch(`http://127.0.0.1:${port}/health`);
@@ -360,14 +386,18 @@ export function daemonLogs(lines?: number): void {
     const rl = createInterface({
       input: createReadStream(paths.logFile, { encoding: 'utf-8', start: 0 }),
     });
-    rl.on('line', (line) => { console.log(line); });
+    rl.on('line', (line) => {
+      console.log(line);
+    });
     rl.on('close', () => {
       lastSize = existsSync(paths.logFile) ? statSync(paths.logFile).size : lastSize;
     });
 
     // Poll for new content
     const watcher = setInterval(() => {
-      if (!existsSync(paths.logFile)) {return;}
+      if (!existsSync(paths.logFile)) {
+        return;
+      }
       const currentSize = statSync(paths.logFile).size;
       if (currentSize > lastSize) {
         const stream = createReadStream(paths.logFile, {
@@ -396,11 +426,22 @@ export async function daemonRestart(args: CliArgs, serverEntry: string): Promise
   if (existsSync(paths.daemonJson)) {
     try {
       const saved = JSON.parse(readFileSync(paths.daemonJson, 'utf-8'));
-      if (!args.port || args.port === 4000) {args.port = saved.port ?? 4000;}
-      if (!args.webPort || args.webPort === 3200) {args.webPort = saved.webPort ?? 3200;}
-      if (!args.serverOnly) {args.serverOnly = saved.serverOnly ?? false;}
-      if (!args.noAuth) {args.noAuth = saved.noAuth ?? false;}
-      if (!args.gateway) {args.gateway = saved.gateway;}
+      // Restore all saved config (restart = same config as last run)
+      if (!args.portExplicit) {
+        args.port = saved.port ?? args.port;
+      }
+      if (!args.webPortExplicit) {
+        args.webPort = saved.webPort ?? args.webPort;
+      }
+      if (!args.serverOnly) {
+        args.serverOnly = saved.serverOnly ?? false;
+      }
+      if (!args.noAuth) {
+        args.noAuth = saved.noAuth ?? false;
+      }
+      if (!args.gateway) {
+        args.gateway = saved.gateway;
+      }
     } catch {
       /* ignore */
     }

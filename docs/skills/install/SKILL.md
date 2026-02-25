@@ -21,7 +21,7 @@ claw-insights start --no-auth         # Disable authentication
 claw-insights start --port 8080       # Custom port
 
 # Verify
-curl http://localhost:4000/health     # No auth required
+curl http://127.0.0.1:41041/health     # No auth required
 
 # Upgrade (pull latest + rebuild)
 git pull && npm install && npm run build
@@ -29,13 +29,14 @@ git pull && npm install && npm run build
 
 ### Key Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CLAW_INSIGHTS_SERVER_PORT` | `4000` | Server port |
-| `CLAW_INSIGHTS_API_TOKEN` | *(auto-generated)* | Auth token (min 32 chars) |
-| `CLAW_INSIGHTS_NO_AUTH` | `false` | Disable auth (`true` or `1`) |
+| Variable                    | Default            | Description                  |
+| --------------------------- | ------------------ | ---------------------------- |
+| `CLAW_INSIGHTS_SERVER_PORT` | `41041`            | Server port                  |
+| `CLAW_INSIGHTS_API_TOKEN`   | _(auto-generated)_ | Auth token (min 32 chars)    |
+| `CLAW_INSIGHTS_NO_AUTH`     | `false`            | Disable auth (`true` or `1`) |
 
 ## Details
 
 For full documentation, see:
+
 - [Configuration](../../configuration.md) — all env vars, config file, NODE_ENV defaults, auth flow

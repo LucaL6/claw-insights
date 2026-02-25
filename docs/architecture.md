@@ -167,8 +167,8 @@ No browser required. Rendering takes ~200ms.
 
 ```bash
 npm run dev              # Start codegen (watch) + server + web concurrently
-npm run dev:server       # Server only (GraphQL API on :4000)
-npm run dev:web          # Web only (Vite dev on :3200, proxies to :4000)
+npm run dev:server       # Server only (GraphQL API on :41041)
+npm run dev:web          # Web only (Vite dev on :41042, proxies to :41041)
 ```
 
 The web dev server proxies `/graphql` and `/api` to the server port.
@@ -213,6 +213,7 @@ npm run codegen:watch    # Watch mode
 ```
 
 **Generated files (do not edit manually):**
+
 - `packages/shared/src/generated/` — Shared types
 - `packages/web/src/generated/` — Client operations + typed hooks
 - `packages/server/src/schema/generated/` — Resolver types

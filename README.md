@@ -60,8 +60,8 @@ npm start
 On first launch you'll see an access URL:
 
 ```text
-💡 Claw Insights started (PID 12345, mode: full, port: 4000)
-🔑 http://127.0.0.1:4000/?token=abc123...
+💡 Claw Insights started (PID 12345, mode: full, port: 41041)
+🔑 http://127.0.0.1:41041/?token=abc123...
 ```
 
 Open the URL in your browser. The token is set as a cookie (valid 7 days).
@@ -79,14 +79,14 @@ claw-insights stop                 # Stop daemon
 1. **Health check:**
 
    ```bash
-   curl http://localhost:4000/health
+   curl http://127.0.0.1:41041/health
    ```
 
    Expected: `{"status":"ok","gateway":"connected","db":"ok",...}`
 
 2. **Dashboard:** Open the token URL — you should see live session data, metrics charts, and event logs.
 
-3. **GraphQL Playground:** Navigate to `http://localhost:4000/graphql` for the interactive API explorer.
+3. **GraphQL Playground:** Navigate to `http://127.0.0.1:41041/graphql` for the interactive API explorer.
 
 ### Common Issues
 
@@ -94,7 +94,7 @@ claw-insights stop                 # Stop daemon
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `claw-insights: command not found` | Run `npx claw-insights start` or add npm global bin to `PATH`: `export PATH="$(npm config get prefix)/bin:$PATH"` |
 | `gateway: disconnected`            | Ensure OpenClaw is running: `openclaw gateway start`                                                              |
-| `EADDRINUSE`                       | Port 4000 in use — set `CLAW_INSIGHTS_SERVER_PORT`                                                                |
+| `EADDRINUSE`                       | Port 41041 in use — set `CLAW_INSIGHTS_SERVER_PORT`                                                               |
 | Empty dashboard                    | Check OpenClaw has active sessions: `openclaw status`                                                             |
 | Token rejected                     | Clear cookies and re-open the token URL                                                                           |
 
@@ -118,7 +118,7 @@ claw-insights/
 Claw Insights uses URL token authentication (similar to Jupyter Notebook).
 
 1. On startup, a token is generated (or use `CLAW_INSIGHTS_API_TOKEN`)
-2. The token URL is printed: `🔑 http://localhost:4000/?token=xxx`
+2. The token URL is printed: `🔑 http://127.0.0.1:41041/?token=xxx`
 3. Open the URL → cookie is set → redirected to dashboard
 4. Cookie lasts 7 days
 
@@ -130,8 +130,8 @@ Priority: Environment variables > `~/.claw-insights/config.json` > NODE_ENV defa
 
 | Variable                           | Default                       | Description               |
 | ---------------------------------- | ----------------------------- | ------------------------- |
-| `CLAW_INSIGHTS_SERVER_PORT`        | `4000`                        | API server port           |
-| `CLAW_INSIGHTS_WEB_PORT`           | `3200`                        | Web UI port (dev only)    |
+| `CLAW_INSIGHTS_SERVER_PORT`        | `41041`                       | API server port           |
+| `CLAW_INSIGHTS_WEB_PORT`           | `41042`                       | Web UI port (dev only)    |
 | `CLAW_INSIGHTS_API_TOKEN`          | _(auto)_                      | Auth token (≥32 chars)    |
 | `CLAW_INSIGHTS_NO_AUTH`            | `false`                       | Disable auth              |
 | `CLAW_INSIGHTS_DB`                 | `~/.claw-insights/metrics.db` | Database path             |

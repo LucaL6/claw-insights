@@ -15,7 +15,7 @@ git clone https://github.com/nicepkg/claw-insights.git
 cd claw-insights && npm install
 
 # Dev server (codegen watch + server + web concurrently)
-npm run dev                # Web :3200 | API :4000 | Auth disabled
+npm run dev                # Web :41042 | API :41041 | Auth disabled
 
 # Codegen (after changing schema.graphql)
 npm run codegen            # One-shot
@@ -35,4 +35,5 @@ npm run format             # Prettier
 ## Details
 
 For full documentation, see:
+
 - [Architecture — Development](../../architecture.md#development) — directory structure, test conventions, code style, commit workflow, Docker smoke test

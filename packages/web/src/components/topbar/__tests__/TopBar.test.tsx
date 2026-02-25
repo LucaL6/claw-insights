@@ -1,21 +1,20 @@
-import { cleanup,screen } from '@testing-library/react';
-import { afterEach,describe, expect, it, vi } from 'vitest';
+// packages/web/src/components/topbar/__tests__/TopBar.test.tsx
+import { cleanup, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '../../../test/render';
-import type { MetricsRange } from '../../charts/metrics/GranularityPicker';
 
 const mockTopBarData = {
-  gateway: { running: true },
-  resources: { cpu: 10 },
-  channels: [{ provider: 'discord', name: 'Discord', connected: true }],
-  uptime: '2h 30m',
   version: '1.2.3',
-  updateLabel: null,
-  fetching: { gateway: false, resources: false, channels: false },
+  fetching: { gateway: false },
 };
 
 vi.mock('../../../hooks/useTopBarData', () => ({
   useTopBarData: () => mockTopBarData,
+}));
+
+vi.mock('../../../hooks/useSnapshot', () => ({
+  useSnapshot: () => ({ snapshotting: false, takeSnapshot: vi.fn() }),
 }));
 
 import { TopBar } from '../TopBar';
@@ -28,22 +27,27 @@ describe('TopBar', () => {
     expect(screen.getByText('v1.2.3')).toBeDefined();
   });
 
-  it('renders with all optional props', () => {
-    renderWithProviders(
-      <TopBar
-        currentPage="dashboard"
-        onNavigate={vi.fn()}
-        onAction={vi.fn()}
-        metricsRange={{ range: 'ONE_HOUR', bucket: 300 } as unknown as MetricsRange}
-      />,
-    );
-    expect(screen.getByText('v1.2.3')).toBeDefined();
+  it('does NOT render gateway status, channels, or resources', () => {
+    renderWithProviders(<TopBar />);
+    expect(screen.queryByText('UP')).toBeNull();
+    expect(screen.queryByText('CPU')).toBeNull();
+    expect(screen.queryByText(/restart/i)).toBeNull();
   });
 
-  it('shows skeleton when fetching', () => {
+  it('renders nav tabs', () => {
+    renderWithProviders(<TopBar currentPage="dashboard" onNavigate={vi.fn()} />);
+    expect(screen.getByText('Dashboard')).toBeDefined();
+    expect(screen.getByText('Logs')).toBeDefined();
+  });
+
+  it('renders snapshot button', () => {
+    renderWithProviders(<TopBar />);
+    expect(screen.getByTitle(/snapshot/i)).toBeDefined();
+  });
+
+  it('shows skeleton when fetching version', () => {
     mockTopBarData.fetching.gateway = true;
     renderWithProviders(<TopBar />);
-    // Should show skeleton instead of version
     const skeletons = document.querySelectorAll('.animate-pulse');
     expect(skeletons.length).toBeGreaterThan(0);
     mockTopBarData.fetching.gateway = false;

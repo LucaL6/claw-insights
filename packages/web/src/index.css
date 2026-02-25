@@ -30,6 +30,15 @@ code,
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
+/* ── Pulse border (gateway down state) ── */
+@keyframes pulse-border {
+  0%, 100% { border-color: var(--red-border); }
+  50% { border-color: var(--red); }
+}
+.pulse-border {
+  animation: pulse-border 3s ease-in-out infinite;
+}
+
 /* ── Scrollbar ── */
 .sb::-webkit-scrollbar,
 .scrollbar-thin::-webkit-scrollbar {

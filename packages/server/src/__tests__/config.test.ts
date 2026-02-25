@@ -1,11 +1,11 @@
-import { chmodSync, mkdirSync, rmSync,writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach,describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Non-dynamic tests for existing exports
-import { CLI_ENV,config } from '../config.js';
+import { CLI_ENV, config } from '../config.js';
 
 describe('config singleton', () => {
   it('has all required fields', () => {
@@ -98,14 +98,14 @@ describe('NODE_ENV defaults', () => {
     vi.resetModules();
   });
 
-  it('development defaults: noAuth true, port 4000', async () => {
+  it('development defaults: noAuth true, port 41041', async () => {
     process.env.NODE_ENV = 'development';
     delete process.env.CLAW_INSIGHTS_NO_AUTH;
     delete process.env.CLAW_INSIGHTS_SERVER_PORT;
     const { resolveConfig } = await import('../config.js');
     const cfg = resolveConfig();
     expect(cfg.noAuth).toBe(true);
-    expect(cfg.serverPort).toBe(4000);
+    expect(cfg.serverPort).toBe(41041);
   });
 
   it('test defaults: noAuth true, port 4111/3211', async () => {
@@ -119,13 +119,13 @@ describe('NODE_ENV defaults', () => {
     expect(cfg.webPort).toBe(3211);
   });
 
-  it('production defaults: noAuth false, port 4000', async () => {
+  it('production defaults: noAuth false, port 41041', async () => {
     process.env.NODE_ENV = 'production';
     delete process.env.CLAW_INSIGHTS_NO_AUTH;
     const { resolveConfig } = await import('../config.js');
     const cfg = resolveConfig();
     expect(cfg.noAuth).toBe(false);
-    expect(cfg.serverPort).toBe(4000);
+    expect(cfg.serverPort).toBe(41041);
   });
 
   it('env var overrides NODE_ENV default', async () => {

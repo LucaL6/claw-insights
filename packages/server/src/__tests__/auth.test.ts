@@ -1,17 +1,19 @@
 import { createHash } from 'node:crypto';
 
 import type { Request, Response } from 'express';
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockConfig = vi.hoisted(() => ({ apiToken: '', noAuth: false, serverPort: 4000 }));
+const mockConfig = vi.hoisted(() => ({ apiToken: '', noAuth: false, serverPort: 41041 }));
 vi.mock('../config.js', () => ({ config: mockConfig }));
 
 import { authMiddleware } from '../middleware/auth.js';
 
-function mockReq(opts: {
-  headers?: Record<string, string>;
-  method?: string;
-} = {}): Request {
+function mockReq(
+  opts: {
+    headers?: Record<string, string>;
+    method?: string;
+  } = {},
+): Request {
   return {
     headers: opts.headers ?? {},
     method: opts.method ?? 'GET',
@@ -34,7 +36,7 @@ describe('authMiddleware', () => {
     next = vi.fn();
     mockConfig.apiToken = TOKEN;
     mockConfig.noAuth = false;
-    mockConfig.serverPort = 4000;
+    mockConfig.serverPort = 41041;
   });
 
   // --- noAuth mode ---
@@ -65,21 +67,13 @@ describe('authMiddleware', () => {
 
   // --- Cookie auth ---
   it('passes through with valid cookie (GET)', () => {
-    authMiddleware(
-      mockReq({ headers: { cookie: `claw_session=${COOKIE_HASH}` }, method: 'GET' }),
-      mockRes(),
-      next,
-    );
+    authMiddleware(mockReq({ headers: { cookie: `claw_session=${COOKIE_HASH}` }, method: 'GET' }), mockRes(), next);
     expect(next).toHaveBeenCalled();
   });
 
   it('returns 401 with invalid cookie', () => {
     const res = mockRes();
-    authMiddleware(
-      mockReq({ headers: { cookie: 'claw_session=invalid' }, method: 'GET' }),
-      res,
-      next,
-    );
+    authMiddleware(mockReq({ headers: { cookie: 'claw_session=invalid' }, method: 'GET' }), res, next);
     expect(res.status).toHaveBeenCalledWith(401);
   });
 
@@ -89,8 +83,8 @@ describe('authMiddleware', () => {
       mockReq({
         headers: {
           cookie: `claw_session=${COOKIE_HASH}`,
-          origin: 'http://127.0.0.1:4000',
-          host: '127.0.0.1:4000',
+          origin: 'http://127.0.0.1:41041',
+          host: '127.0.0.1:41041',
         },
         method: 'POST',
       }),
@@ -107,7 +101,7 @@ describe('authMiddleware', () => {
         headers: {
           cookie: `claw_session=${COOKIE_HASH}`,
           origin: 'http://evil.com',
-          host: '127.0.0.1:4000',
+          host: '127.0.0.1:41041',
         },
         method: 'POST',
       }),
@@ -122,7 +116,7 @@ describe('authMiddleware', () => {
     const res = mockRes();
     authMiddleware(
       mockReq({
-        headers: { cookie: `claw_session=${COOKIE_HASH}`, host: '127.0.0.1:4000' },
+        headers: { cookie: `claw_session=${COOKIE_HASH}`, host: '127.0.0.1:41041' },
         method: 'POST',
       }),
       res,
@@ -136,8 +130,8 @@ describe('authMiddleware', () => {
       mockReq({
         headers: {
           cookie: `claw_session=${COOKIE_HASH}`,
-          referer: 'http://127.0.0.1:4000/dashboard',
-          host: '127.0.0.1:4000',
+          referer: 'http://127.0.0.1:41041/dashboard',
+          host: '127.0.0.1:41041',
         },
         method: 'POST',
       }),

@@ -1,16 +1,17 @@
-import { useCallback,useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Provider } from 'urql';
 
 import type { MetricsRange } from './components/charts/metrics/GranularityPicker';
 import { MetricsSection } from './components/charts/metrics/MetricsSection';
 import { MainLayout } from './components/layout/MainLayout';
 import { LogPage } from './components/logs/LogPage';
-import { DoctorModal,RestartModal, useOperationModals } from './components/modals/OperationModals';
+import { DoctorModal, RestartModal, useOperationModals } from './components/modals/OperationModals';
 import { SessionPanel } from './components/sessions/SessionPanel';
+import { GatewayBanner } from './components/gateway/GatewayBanner';
 import { TopBar } from './components/topbar/TopBar';
 import { AuthErrorScreen } from './components/ui/AuthErrorScreen';
 import { AuthErrorProvider, useAuthError } from './context/AuthErrorContext';
-import { type Route,useHashRoute } from './hooks/useHashRoute';
+import { type Route, useHashRoute } from './hooks/useHashRoute';
 import { usePreference } from './hooks/usePreference';
 import { I18nProvider } from './i18n/context';
 import { client, setAuthErrorCallback } from './lib/urql-client';
@@ -31,20 +32,27 @@ function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: 
   const [sessionsReady, setSessionsReady] = useState(false);
   const [metricsReady, setMetricsReady] = useState(false);
 
-  const onSessionsReady = useCallback(() => { setSessionsReady(true); }, []);
-  const onMetricsReady = useCallback(() => { setMetricsReady(true); }, []);
+  const onSessionsReady = useCallback(() => {
+    setSessionsReady(true);
+  }, []);
+  const onMetricsReady = useCallback(() => {
+    setMetricsReady(true);
+  }, []);
 
   useEffect(() => {
     if (sessionsReady && metricsReady) {
       document.body.setAttribute('data-ready', 'true');
     }
-    return () => { document.body.removeAttribute('data-ready'); };
+    return () => {
+      document.body.removeAttribute('data-ready');
+    };
   }, [sessionsReady, metricsReady]);
 
   return (
     <>
       <MainLayout
-        topBar={<TopBar currentPage="dashboard" onNavigate={navigate} onAction={open} metricsRange={range} />}
+        topBar={<TopBar currentPage="dashboard" onNavigate={navigate} metricsRange={range} />}
+        banner={<GatewayBanner onAction={open} />}
         sessions={<SessionPanel onReady={onSessionsReady} />}
         metrics={<MetricsSection range={range} onRangeChange={setRange} navigate={navigate} onReady={onMetricsReady} />}
       />
@@ -58,11 +66,17 @@ function AppInner({ route, navigate }: { route: Route; navigate: (h: string) => 
   const { authError, setAuthError } = useAuthError();
 
   useEffect(() => {
-    setAuthErrorCallback(() => { setAuthError(true); });
-    return () => { setAuthErrorCallback(null); };
+    setAuthErrorCallback(() => {
+      setAuthError(true);
+    });
+    return () => {
+      setAuthErrorCallback(null);
+    };
   }, [setAuthError]);
 
-  if (authError) {return <AuthErrorScreen />;}
+  if (authError) {
+    return <AuthErrorScreen />;
+  }
 
   return (
     <Provider value={client}>

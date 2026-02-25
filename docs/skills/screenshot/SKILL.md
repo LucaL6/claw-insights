@@ -11,18 +11,18 @@ Server-side dashboard rendering using Satori (no browser needed). Returns a PNG 
 
 ### Parameters
 
-| Field | Type | Default | Values |
-|-------|------|---------|--------|
+| Field    | Type   | Default    | Values                                                |
+| -------- | ------ | ---------- | ----------------------------------------------------- |
 | `detail` | string | `standard` | `compact` (390px), `standard` (540px), `full` (540px) |
-| `range` | string | `1h` | `1h`, `6h`, `12h`, `24h` |
-| `theme` | string | `dark` | `dark`, `light` |
-| `lang` | string | `en` | `en`, `zh` |
-| `format` | string | `png` | `png`, `json` |
+| `range`  | string | `1h`       | `1h`, `6h`, `12h`, `24h`                              |
+| `theme`  | string | `dark`     | `dark`, `light`                                       |
+| `lang`   | string | `en`       | `en`, `zh`                                            |
+| `format` | string | `png`      | `png`, `json`                                         |
 
 ### Example
 
 ```bash
-curl -X POST http://localhost:4000/api/snapshot \
+curl -X POST http://127.0.0.1:41041/api/snapshot \
   -H "Authorization: Bearer YOUR_EXAMPLE_TOKEN # gitleaks:allow" \
   -H "Content-Type: application/json" \
   -d '{"detail":"full","range":"24h","theme":"light","lang":"en"}' \
@@ -34,4 +34,5 @@ Response headers include `Content-Disposition` with a timestamped filename. Use 
 ## Details
 
 For full documentation, see:
+
 - [API Reference — POST /api/snapshot](../../api-reference.md#post-apisnapshot) — response format, no-auth mode, all examples

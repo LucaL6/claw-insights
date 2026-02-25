@@ -1,4 +1,4 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { parseCliArgs } from '../parse-args.js';
 
@@ -6,8 +6,8 @@ describe('parseCliArgs', () => {
   it('defaults to foreground run with no args', () => {
     const result = parseCliArgs([]);
     expect(result.command).toBe('run');
-    expect(result.port).toBe(4000);
-    expect(result.webPort).toBe(3200);
+    expect(result.port).toBe(41041);
+    expect(result.webPort).toBe(41042);
     expect(result.serverOnly).toBe(false);
     expect(result.help).toBe(false);
     expect(result.version).toBe(false);
