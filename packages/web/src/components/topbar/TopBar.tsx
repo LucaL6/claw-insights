@@ -61,7 +61,6 @@ export function TopBar({
           {snapshotting ? <SpinnerIcon /> : <CameraIcon />}
           {snapshotting ? t('topbar.snapshotting') : t('topbar.snapshot')}
         </button>
-
         <div className="h-4 w-px bg-edge-subtle" />
 
         <button

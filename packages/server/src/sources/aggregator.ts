@@ -2,13 +2,9 @@ import type { DatabaseSync as Database } from 'node:sqlite';
 
 import { config } from '../config.js';
 import { getBucketedEventCount, getBucketedGatewayEvents } from '../db/event-queries.js';
-import {
-  getBucketedModelTokens,
-  getBucketedSampledSessions,
-  getBucketedSampledTokens,
-  getRangeTokensK,
-} from '../db/metric-queries.js';
-import { bucketLabel, type MetricsRangeKey,RANGE_CONFIG, rangeStart } from '../db/query-utils.js';
+import { bucketLabel, type MetricsRangeKey, RANGE_CONFIG, rangeStart } from '../db/query-utils.js';
+import { getBucketedSessions } from '../db/system-queries.js';
+import { getBucketedModelTokenUsage, getBucketedTokenUsage, getRangeTokenUsageK } from '../db/token-queries.js';
 
 export class Aggregator {
   private cache: { key: string; data: unknown; ts: number } | null = null;
@@ -54,21 +50,20 @@ export class Aggregator {
       ]),
     );
     const sessions = new Map(
-      getBucketedSampledSessions(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly).map((r) => [
+      getBucketedSessions(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly).map((r) => [
         r.bucket,
         r.sessions,
       ]),
     );
     const tokens = new Map(
-      getBucketedSampledTokens(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly).map((r) => [
-        r.bucket,
-        r.tokensK,
-      ]),
+      getBucketedTokenUsage(this.db, startTs, endTs, rangeConfig.bucketMinutes).map((r) => [r.bucket, r.tokensK]),
     );
-    const modelTokens = getBucketedModelTokens(this.db, startTs, endTs, rangeConfig.bucketMinutes, useHourly);
+    const modelTokens = getBucketedModelTokenUsage(this.db, startTs, endTs, rangeConfig.bucketMinutes);
     const modelByBucket = new Map<number, Array<{ model: string; tokensK: number }>>();
     for (const mt of modelTokens) {
-      if (!modelByBucket.has(mt.bucket)) {modelByBucket.set(mt.bucket, []);}
+      if (!modelByBucket.has(mt.bucket)) {
+        modelByBucket.set(mt.bucket, []);
+      }
       modelByBucket.get(mt.bucket)!.push({ model: mt.model, tokensK: mt.tokensK });
     }
     const apiCalls = new Map(
@@ -112,7 +107,7 @@ export class Aggregator {
     const absM = Math.abs(offsetMin) % 60;
     const timezone = absM === 0 ? `UTC${sign}${absH}` : `UTC${sign}${absH}:${absM.toString().padStart(2, '0')}`;
 
-    const rangeTokensK = getRangeTokensK(this.db, startTs, endTs, useHourly);
+    const rangeTokensK = getRangeTokenUsageK(this.db, startTs, endTs);
     const summary = {
       date: day,
       range,

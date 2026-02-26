@@ -139,3 +139,21 @@ export const RecentLogsQuery = graphql(/* GraphQL */ `
     }
   }
 `);
+
+export const LifetimeStatsQuery = graphql(/* GraphQL */ `
+  query LifetimeStats {
+    lifetimeStats {
+      isReady
+      createdAt
+      daysSinceCreation
+      totalSessions
+      totalInputTokens
+      totalOutputTokens
+      totalCacheReadTokens
+      totalCacheWriteTokens
+      totalTokens
+      totalUserMessages
+      totalAssistantMessages
+    }
+  }
+`);

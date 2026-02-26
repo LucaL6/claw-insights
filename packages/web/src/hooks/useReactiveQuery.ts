@@ -1,8 +1,9 @@
-import { useCallback,useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { AnyVariables, UseQueryArgs, UseQueryResponse } from 'urql';
 import { useQuery, useSubscription } from 'urql';
 
 import { DataChangedSubscription } from '../graphql/subscriptions';
+import { connectionHealth } from '../lib/connection-health';
 
 type DataSource = 'sessions' | 'metrics' | 'gateway';
 
@@ -12,6 +13,9 @@ interface ReactiveOptions {
   fallbackPollMs?: number;
 }
 
+// Module-level counter for unique instance keys
+let instanceCounter = 0;
+
 export function useReactiveQuery<TData = unknown, TVariables extends AnyVariables = AnyVariables>(
   queryArgs: UseQueryArgs<TVariables, TData>,
   reactive: ReactiveOptions,
@@ -20,20 +24,29 @@ export function useReactiveQuery<TData = unknown, TVariables extends AnyVariable
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const sseHealthy = useRef(true);
 
+  // Stable instance-unique key
+  const sseKey = useRef(`rq-${++instanceCounter}`);
+
   const refetch = useCallback(() => {
     executeQuery({ requestPolicy: 'network-only' });
   }, [executeQuery]);
 
-  // Subscription handler — receives DataChanged signals
+  // Stabilize sources for dep arrays
   const handleSubscription = useCallback(
     (_prev: unknown, data: { dataChanged: { source: string; ts: string } }) => {
-      if (!data.dataChanged) {return data;} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- defensive: subscription data
+       
+      if (!data.dataChanged) {
+        return data;
+      }
 
       const { source } = data.dataChanged;
-      if (!reactive.sources.includes(source as DataSource)) {return data;}
+      if (!reactive.sources.includes(source as DataSource)) {
+        return data;
+      }
 
-      // Debounce refetch
-      if (debounceTimer.current) {clearTimeout(debounceTimer.current);}
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
       debounceTimer.current = setTimeout(refetch, reactive.debounceMs ?? 500);
 
       return data;
@@ -41,12 +54,31 @@ export function useReactiveQuery<TData = unknown, TVariables extends AnyVariable
     [reactive.sources, reactive.debounceMs, refetch],
   );
 
-  // Track SSE by checking subscription result errors
   const [subResult] = useSubscription({ query: DataChangedSubscription }, handleSubscription);
 
+  // Report SSE health
   useEffect(() => {
-    sseHealthy.current = !subResult.error;
+    const healthy = !subResult.error;
+    sseHealthy.current = healthy;
+    connectionHealth.reportSseHealth(sseKey.current, healthy);
   }, [subResult.error]);
+
+  // Cleanup SSE entry on unmount
+  useEffect(() => {
+    const key = sseKey.current;
+    return () => {
+      connectionHealth.unregisterSse(key);
+    };
+  }, []);
+
+  // Report fetch health
+  useEffect(() => {
+    if (result.error) {
+      connectionHealth.reportFetchFailure();
+    } else if (result.data && !result.fetching) {
+      connectionHealth.reportFetchSuccess();
+    }
+  }, [result.data, result.error, result.fetching]);
 
   // Fallback poll only when SSE has actual errors
   useEffect(() => {
@@ -59,13 +91,17 @@ export function useReactiveQuery<TData = unknown, TVariables extends AnyVariable
     }, pollMs);
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') {refetch();}
+      if (document.visibilityState === 'visible') {
+        refetch();
+      }
     };
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       clearInterval(healthCheck);
-      if (debounceTimer.current) {clearTimeout(debounceTimer.current);}
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [reactive.fallbackPollMs, refetch]);

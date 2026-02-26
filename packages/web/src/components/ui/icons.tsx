@@ -2,39 +2,6 @@ interface IconProps {
   className?: string;
 }
 
-export function RestartIcon({ className = 'w-3 h-3' }: IconProps) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-      />
-    </svg>
-  );
-}
-
-export function DoctorIcon({ className = 'w-3 h-3' }: IconProps) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      {/* Stethoscope: tubing arc */}
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M4.8 10.5a6.2 6.2 0 0 0 6.2 6.2h2a6.2 6.2 0 0 0 6.2-6.2V4"
-      />
-      {/* Ear tips */}
-      <path strokeLinecap="round" strokeWidth={2} d="M4.8 4v3M19.2 4v3" />
-      {/* Chest piece circle */}
-      <circle cx="12" cy="20" r="2" strokeWidth={2} />
-      {/* Chest piece connector */}
-      <path strokeLinecap="round" strokeWidth={2} d="M12 16.7V18" />
-    </svg>
-  );
-}
-
 export function DownloadIcon({ className = 'w-3 h-3' }: IconProps) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">

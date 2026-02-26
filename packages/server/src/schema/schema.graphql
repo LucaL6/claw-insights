@@ -273,34 +273,38 @@ type Query {
   events(from: Int, to: Int, types: [String!], limit: Int): EventsResult!
   eventDensity: [EventDensityBucket!]!
   diagnostics: DiagnosticsResult!
-}
-
-"""Result of a gateway operation (restart, update, doctor)"""
-type OperationResult {
-  success: Boolean!
-  message: String
-  output: String
-  duration: Int
-}
-
-"""Options for the gateway doctor diagnostic"""
-input DoctorOptions {
-  """Run deep scan for extra gateway installs"""
-  deep: Boolean
-  """Apply recommended repairs automatically"""
-  fix: Boolean
-}
-
-type Mutation {
-  restartGateway: OperationResult!
-  updateGateway: OperationResult!
-  runDoctor(options: DoctorOptions!): OperationResult!
+  lifetimeStats: LifetimeStats!
 }
 
 """Lightweight signal emitted when a data source updates"""
 type DataChangeSignal {
   source: String!
   ts: String!
+}
+
+# ── Lifetime Stats ──
+
+"""
+Lifetime aggregate statistics from transcript history.
+Token values are cumulative API consumption (not context window size).
+Uses Float to avoid GraphQL Int32 overflow — values are integer counts.
+"""
+type LifetimeStats {
+  """Whether the initial scan has completed. If false, numeric fields may be zero/partial."""
+  isReady: Boolean!
+  """ISO timestamp — min of device.json createdAtMs and earliest transcript timestamp"""
+  createdAt: String!
+  daysSinceCreation: Int!
+  """Count of transcript .jsonl files currently on disk (reflects deletions)"""
+  totalSessions: Int!
+  totalInputTokens: Float!
+  totalOutputTokens: Float!
+  totalCacheReadTokens: Float!
+  totalCacheWriteTokens: Float!
+  """Sum of input + output + cacheRead + cacheWrite"""
+  totalTokens: Float!
+  totalUserMessages: Int!
+  totalAssistantMessages: Int!
 }
 
 type Subscription {

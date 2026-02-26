@@ -116,9 +116,9 @@ const MIGRATIONS: Migration[] = [
         'hourly_model_tokens',
       ];
       for (const table of expectedTables) {
-        const row = db
-          .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
-          .get(table) as { name: string } | undefined;
+        const row = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(table) as
+          | { name: string }
+          | undefined;
         if (!row) {
           throw new Error(`[DB] Sanity check failed: table '${table}' missing. Run migrations from a clean state.`);
         }
@@ -160,6 +160,83 @@ const MIGRATIONS: Migration[] = [
         db.exec('ALTER TABLE model_token_samples ADD COLUMN token_delta_k REAL NOT NULL DEFAULT 0');
       }
       log.info('v6: added token_delta_k to model_token_samples');
+    },
+  },
+  {
+    version: 7,
+    up: (db) => {
+      // 1. New tables
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS token_usage_events (
+          id              INTEGER PRIMARY KEY AUTOINCREMENT,
+          timestamp       TEXT NOT NULL,
+          session_key     TEXT NOT NULL,
+          model           TEXT NOT NULL,
+          input_tokens    INTEGER NOT NULL DEFAULT 0,
+          output_tokens   INTEGER NOT NULL DEFAULT 0,
+          cache_read      INTEGER NOT NULL DEFAULT 0,
+          cache_write     INTEGER NOT NULL DEFAULT 0,
+          UNIQUE(timestamp, session_key, model)
+        );
+        CREATE INDEX IF NOT EXISTS idx_token_usage_time ON token_usage_events(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_token_usage_model ON token_usage_events(model, timestamp);
+
+        CREATE TABLE IF NOT EXISTS system_samples (
+          id              INTEGER PRIMARY KEY AUTOINCREMENT,
+          timestamp       TEXT NOT NULL,
+          active_sessions INTEGER NOT NULL DEFAULT 0,
+          cpu             REAL NOT NULL DEFAULT 0,
+          memory_mb       INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_system_samples_time ON system_samples(timestamp DESC);
+
+        CREATE TABLE IF NOT EXISTS hourly_system_samples (
+          id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+          hour                  TEXT NOT NULL,
+          active_sessions_max   INTEGER NOT NULL DEFAULT 0,
+          active_sessions_avg   REAL NOT NULL DEFAULT 0,
+          cpu_avg               REAL NOT NULL DEFAULT 0,
+          cpu_max               REAL NOT NULL DEFAULT 0,
+          memory_mb_avg         REAL NOT NULL DEFAULT 0,
+          memory_mb_max         INTEGER NOT NULL DEFAULT 0,
+          sample_count          INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_hourly_system_hour ON hourly_system_samples(hour);
+      `);
+
+      // 2. Migrate system metrics history
+      db.exec(`
+        INSERT INTO system_samples (timestamp, active_sessions, cpu, memory_mb)
+        SELECT timestamp, active_sessions, cpu, memory_mb FROM metric_samples
+      `);
+      db.exec(`
+        INSERT INTO hourly_system_samples (hour, active_sessions_max, active_sessions_avg, cpu_avg, cpu_max, memory_mb_avg, memory_mb_max, sample_count)
+        SELECT hour, active_sessions_max, active_sessions_avg, cpu_avg, cpu_max, memory_mb_avg, memory_mb_max, sample_count
+        FROM hourly_metric_samples
+      `);
+
+      // 3. Rename old tables (with existence checks for partial-migration safety)
+      const tablesToRename = [
+        ['metric_samples', '_deprecated_metric_samples'],
+        ['model_token_samples', '_deprecated_model_token_samples'],
+        ['hourly_metric_samples', '_deprecated_hourly_metric_samples'],
+        ['hourly_model_tokens', '_deprecated_hourly_model_tokens'],
+      ];
+      for (const [src, dst] of tablesToRename) {
+        const srcExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(src) as
+          | { name: string }
+          | undefined;
+        const dstExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(dst) as
+          | { name: string }
+          | undefined;
+        if (srcExists && !dstExists) {
+          db.exec(`ALTER TABLE ${src} RENAME TO ${dst}`);
+        } else if (!srcExists) {
+          log.warn({ table: src }, 'v7: table not found for rename, skipping');
+        }
+      }
+
+      log.info('v7: token_usage_events + system_samples created, old tables deprecated');
     },
   },
 ];

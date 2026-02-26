@@ -7,7 +7,6 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: 
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
 export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
-export type RequireFields<T, K extends keyof T> = Omit<T, K> & { [P in K]-?: NonNullable<T[P]> };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string; }
@@ -83,14 +82,6 @@ export type DiagnosticsResult = {
   snapshotSummary: Scalars['String']['output'];
 };
 
-/** Options for the gateway doctor diagnostic */
-export type DoctorOptions = {
-  /** Run deep scan for extra gateway installs */
-  deep?: InputMaybe<Scalars['Boolean']['input']>;
-  /** Apply recommended repairs automatically */
-  fix?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
 export type EventCounts = {
   error: Scalars['Int']['output'];
   restart: Scalars['Int']['output'];
@@ -132,6 +123,29 @@ export type GatewayStatus = {
   updateAvailable?: Maybe<Scalars['String']['output']>;
   uptime: Scalars['String']['output'];
   version: Scalars['String']['output'];
+};
+
+/**
+ * Lifetime aggregate statistics from transcript history.
+ * Token values are cumulative API consumption (not context window size).
+ * Uses Float to avoid GraphQL Int32 overflow — values are integer counts.
+ */
+export type LifetimeStats = {
+  /** ISO timestamp — min of device.json createdAtMs and earliest transcript timestamp */
+  createdAt: Scalars['String']['output'];
+  daysSinceCreation: Scalars['Int']['output'];
+  /** Whether the initial scan has completed. If false, numeric fields may be zero/partial. */
+  isReady: Scalars['Boolean']['output'];
+  totalAssistantMessages: Scalars['Int']['output'];
+  totalCacheReadTokens: Scalars['Float']['output'];
+  totalCacheWriteTokens: Scalars['Float']['output'];
+  totalInputTokens: Scalars['Float']['output'];
+  totalOutputTokens: Scalars['Float']['output'];
+  /** Count of transcript .jsonl files currently on disk (reflects deletions) */
+  totalSessions: Scalars['Int']['output'];
+  /** Sum of input + output + cacheRead + cacheWrite */
+  totalTokens: Scalars['Float']['output'];
+  totalUserMessages: Scalars['Int']['output'];
 };
 
 export type LogBatch = {
@@ -216,25 +230,6 @@ export type ModelTokens = {
   tokensK: Scalars['Float']['output'];
 };
 
-export type Mutation = {
-  restartGateway: OperationResult;
-  runDoctor: OperationResult;
-  updateGateway: OperationResult;
-};
-
-
-export type MutationRunDoctorArgs = {
-  options: DoctorOptions;
-};
-
-/** Result of a gateway operation (restart, update, doctor) */
-export type OperationResult = {
-  duration?: Maybe<Scalars['Int']['output']>;
-  message?: Maybe<Scalars['String']['output']>;
-  output?: Maybe<Scalars['String']['output']>;
-  success: Scalars['Boolean']['output'];
-};
-
 export type Query = {
   channels: Array<Channel>;
   costSummary: CostSummary;
@@ -243,6 +238,7 @@ export type Query = {
   eventDensity: Array<EventDensityBucket>;
   events: EventsResult;
   gateway: GatewayStatus;
+  lifetimeStats: LifetimeStats;
   metrics: MetricsSummary;
   recentLogs: Array<LogEntry>;
   resources: SystemResources;
@@ -417,7 +413,6 @@ export type ResolversTypes = ResolversObject<{
   DiagnosticFinding: ResolverTypeWrapper<DiagnosticFinding>;
   DiagnosticSeverity: DiagnosticSeverity;
   DiagnosticsResult: ResolverTypeWrapper<DiagnosticsResult>;
-  DoctorOptions: DoctorOptions;
   EventCounts: ResolverTypeWrapper<EventCounts>;
   EventDensityBucket: ResolverTypeWrapper<EventDensityBucket>;
   EventEntry: ResolverTypeWrapper<EventEntry>;
@@ -425,6 +420,7 @@ export type ResolversTypes = ResolversObject<{
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   GatewayStatus: ResolverTypeWrapper<GatewayStatus>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
+  LifetimeStats: ResolverTypeWrapper<LifetimeStats>;
   LogBatch: ResolverTypeWrapper<LogBatch>;
   LogCounts: ResolverTypeWrapper<LogCounts>;
   LogEntry: ResolverTypeWrapper<LogEntry>;
@@ -435,8 +431,6 @@ export type ResolversTypes = ResolversObject<{
   MetricsSummary: ResolverTypeWrapper<MetricsSummary>;
   ModelCost: ResolverTypeWrapper<ModelCost>;
   ModelTokens: ResolverTypeWrapper<ModelTokens>;
-  Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
-  OperationResult: ResolverTypeWrapper<OperationResult>;
   Query: ResolverTypeWrapper<Record<PropertyKey, never>>;
   Session: ResolverTypeWrapper<Session>;
   SessionFilter: SessionFilter;
@@ -457,7 +451,6 @@ export type ResolversParentTypes = ResolversObject<{
   DataChangeSignal: DataChangeSignal;
   DiagnosticFinding: DiagnosticFinding;
   DiagnosticsResult: DiagnosticsResult;
-  DoctorOptions: DoctorOptions;
   EventCounts: EventCounts;
   EventDensityBucket: EventDensityBucket;
   EventEntry: EventEntry;
@@ -465,6 +458,7 @@ export type ResolversParentTypes = ResolversObject<{
   Float: Scalars['Float']['output'];
   GatewayStatus: GatewayStatus;
   Int: Scalars['Int']['output'];
+  LifetimeStats: LifetimeStats;
   LogBatch: LogBatch;
   LogCounts: LogCounts;
   LogEntry: LogEntry;
@@ -473,8 +467,6 @@ export type ResolversParentTypes = ResolversObject<{
   MetricsSummary: MetricsSummary;
   ModelCost: ModelCost;
   ModelTokens: ModelTokens;
-  Mutation: Record<PropertyKey, never>;
-  OperationResult: OperationResult;
   Query: Record<PropertyKey, never>;
   Session: Session;
   SessionFilter: SessionFilter;
@@ -571,6 +563,20 @@ export type GatewayStatusResolvers<ContextType = AppContext, ParentType extends 
   version?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
 
+export type LifetimeStatsResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['LifetimeStats'] = ResolversParentTypes['LifetimeStats']> = ResolversObject<{
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  daysSinceCreation?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  isReady?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  totalAssistantMessages?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalCacheReadTokens?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  totalCacheWriteTokens?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  totalInputTokens?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  totalOutputTokens?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  totalSessions?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalTokens?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  totalUserMessages?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+}>;
+
 export type LogBatchResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['LogBatch'] = ResolversParentTypes['LogBatch']> = ResolversObject<{
   counts?: Resolver<ResolversTypes['LogCounts'], ParentType, ContextType>;
   entries?: Resolver<Array<ResolversTypes['LogEntry']>, ParentType, ContextType>;
@@ -635,19 +641,6 @@ export type ModelTokensResolvers<ContextType = AppContext, ParentType extends Re
   tokensK?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
 }>;
 
-export type MutationResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = ResolversObject<{
-  restartGateway?: Resolver<ResolversTypes['OperationResult'], ParentType, ContextType>;
-  runDoctor?: Resolver<ResolversTypes['OperationResult'], ParentType, ContextType, RequireFields<MutationRunDoctorArgs, 'options'>>;
-  updateGateway?: Resolver<ResolversTypes['OperationResult'], ParentType, ContextType>;
-}>;
-
-export type OperationResultResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['OperationResult'] = ResolversParentTypes['OperationResult']> = ResolversObject<{
-  duration?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
-  message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  output?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
-}>;
-
 export type QueryResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
   channels?: Resolver<Array<ResolversTypes['Channel']>, ParentType, ContextType>;
   costSummary?: Resolver<ResolversTypes['CostSummary'], ParentType, ContextType>;
@@ -656,6 +649,7 @@ export type QueryResolvers<ContextType = AppContext, ParentType extends Resolver
   eventDensity?: Resolver<Array<ResolversTypes['EventDensityBucket']>, ParentType, ContextType>;
   events?: Resolver<ResolversTypes['EventsResult'], ParentType, ContextType, Partial<QueryEventsArgs>>;
   gateway?: Resolver<ResolversTypes['GatewayStatus'], ParentType, ContextType>;
+  lifetimeStats?: Resolver<ResolversTypes['LifetimeStats'], ParentType, ContextType>;
   metrics?: Resolver<ResolversTypes['MetricsSummary'], ParentType, ContextType, Partial<QueryMetricsArgs>>;
   recentLogs?: Resolver<Array<ResolversTypes['LogEntry']>, ParentType, ContextType, Partial<QueryRecentLogsArgs>>;
   resources?: Resolver<ResolversTypes['SystemResources'], ParentType, ContextType>;
@@ -709,6 +703,7 @@ export type Resolvers<ContextType = AppContext> = ResolversObject<{
   EventEntry?: EventEntryResolvers<ContextType>;
   EventsResult?: EventsResultResolvers<ContextType>;
   GatewayStatus?: GatewayStatusResolvers<ContextType>;
+  LifetimeStats?: LifetimeStatsResolvers<ContextType>;
   LogBatch?: LogBatchResolvers<ContextType>;
   LogCounts?: LogCountsResolvers<ContextType>;
   LogEntry?: LogEntryResolvers<ContextType>;
@@ -716,8 +711,6 @@ export type Resolvers<ContextType = AppContext> = ResolversObject<{
   MetricsSummary?: MetricsSummaryResolvers<ContextType>;
   ModelCost?: ModelCostResolvers<ContextType>;
   ModelTokens?: ModelTokensResolvers<ContextType>;
-  Mutation?: MutationResolvers<ContextType>;
-  OperationResult?: OperationResultResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   Session?: SessionResolvers<ContextType>;
   Subscription?: SubscriptionResolvers<ContextType>;

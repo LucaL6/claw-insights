@@ -1,5 +1,5 @@
 import { cleanup } from '@testing-library/react';
-import { afterEach,describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '../../../../test/render';
 import { MetricsSection } from '../MetricsSection';
@@ -55,9 +55,7 @@ function makeMetricsReturn(overrides = {}) {
 describe('MetricsSection', () => {
   it('shows loading skeletons when fetching', () => {
     mockUseMetricsData.mockReturnValue(makeMetricsReturn({ fetching: true, result: { data: null, fetching: true } }));
-    const { container } = renderWithProviders(
-      <MetricsSection range="ONE_HOUR" onRangeChange={() => {}} />,
-    );
+    const { container } = renderWithProviders(<MetricsSection range="ONE_HOUR" onRangeChange={() => {}} />);
     // Skeletons use the Skeleton component with animate-pulse
     const skeletons = container.querySelectorAll('[class*="animate-pulse"], [class*="skeleton"]');
     expect(skeletons.length).toBeGreaterThan(0);
@@ -81,9 +79,7 @@ describe('MetricsSection', () => {
     mockUseMetricsData.mockReturnValue(
       makeMetricsReturn({ totalTokensK: 42.5, totalErrors: 3, totalWarnings: 1, uptimePct: 98.7 }),
     );
-    const { container } = renderWithProviders(
-      <MetricsSection range="ONE_HOUR" onRangeChange={() => {}} />,
-    );
+    const { container } = renderWithProviders(<MetricsSection range="ONE_HOUR" onRangeChange={() => {}} />);
     const text = container.textContent ?? '';
     expect(text).toContain('42.5k');
     expect(text).toContain('98.7%');

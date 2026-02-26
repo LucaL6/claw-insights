@@ -4,7 +4,7 @@ import { builtinModules } from 'node:module';
 const nodeExternals = builtinModules.flatMap((m) => [m, `node:${m}`]);
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/cli/parse-args.ts', 'src/cli/daemon.ts'],
+  entry: ['src/index.ts', 'src/cli/parse-args.ts', 'src/cli/daemon.ts', 'src/cli/snapshot-cmd.ts'],
   format: ['esm'],
   dts: true,
   splitting: true,

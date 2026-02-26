@@ -1,3 +1,4 @@
+ 
 import { spawn } from 'node:child_process';
 import {
   createReadStream,
@@ -20,7 +21,7 @@ const HOME = process.env.HOME ?? '/tmp';
 
 /* ── CLI Spinner ── */
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-const IS_INTERACTIVE = process.stdout.isTTY === true && !process.env.CI;
+const IS_INTERACTIVE = process.stdout.isTTY && !process.env.CI;
 
 function createSpinner(message: string) {
   let stopped = false;
@@ -49,7 +50,9 @@ function createSpinner(message: string) {
       message = msg;
     },
     stop(finalMessage: string) {
-      if (stopped) return;
+      if (stopped) {
+        return;
+      }
       stopped = true;
       clearInterval(timer);
       process.stdout.write(`\x1b[2K\r  ${finalMessage}\n`);
@@ -84,7 +87,9 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
     if (existsSync(paths.daemonJson)) {
       try {
         const saved = JSON.parse(readFileSync(paths.daemonJson, 'utf-8'));
-        if (saved.port) savedPort = saved.port;
+        if (saved.port) {
+          savedPort = saved.port;
+        }
       } catch {
         /* ignore */
       }
@@ -115,8 +120,12 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
 
   // Save daemon config for restart (full snapshot + explicit tracking)
   const explicitKeys: string[] = [];
-  if (args.portExplicit) explicitKeys.push('port');
-  if (args.webPortExplicit) explicitKeys.push('webPort');
+  if (args.portExplicit) {
+    explicitKeys.push('port');
+  }
+  if (args.webPortExplicit) {
+    explicitKeys.push('webPort');
+  }
   writeFileSync(
     paths.daemonJson,
     JSON.stringify(

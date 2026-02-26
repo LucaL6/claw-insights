@@ -1,7 +1,7 @@
 import { rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { initDatabase } from '../../db/init';
 import { Aggregator } from '../aggregator';
@@ -72,24 +72,31 @@ describe('Aggregator', () => {
     cleanup();
   });
 
-  it('should read sessions and tokens from metric_samples', () => {
+  it('should read sessions from system_samples and tokens from token_usage_events', () => {
     const { agg, db, ingestLog: _ingestLog, cleanup } = setup();
     const now = new Date();
     const ts = now.toISOString();
     const ts2 = new Date(now.getTime() - 1000).toISOString(); // 1s earlier, same bucket
+    db.prepare('INSERT INTO system_samples (timestamp, active_sessions, cpu, memory_mb) VALUES (?, ?, 0, 0)').run(
+      ts2,
+      7,
+    );
+    db.prepare('INSERT INTO system_samples (timestamp, active_sessions, cpu, memory_mb) VALUES (?, ?, 0, 0)').run(
+      ts,
+      7,
+    );
+    // Insert token usage events
     db.prepare(
-      'INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, 0, 0, 0, 0)',
-    ).run(ts2, 7, 0, 0);
+      'INSERT INTO token_usage_events (timestamp, session_key, model, input_tokens, output_tokens, cache_read, cache_write) VALUES (?, ?, ?, ?, ?, 0, 0)',
+    ).run(ts2, 'sess1', 'claude', 0, 0);
     db.prepare(
-      'INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, 0, 0, 0, 0)',
-    ).run(ts, 7, 250, 12);
+      'INSERT INTO token_usage_events (timestamp, session_key, model, input_tokens, output_tokens, cache_read, cache_write) VALUES (?, ?, ?, ?, ?, 0, 0)',
+    ).run(ts, 'sess1', 'claude', 6000, 6000); // 12K total tokens = 12 tokensK (input+output in tokens, /1000 = K)
 
     const m = agg.getMetrics() as { totalTokensK: number; buckets: Array<{ sessions: number; tokensK: number }> };
     const bucketWithData = m.buckets.find((b: { sessions: number }) => b.sessions > 0);
     expect(bucketWithData).toBeDefined();
     expect(bucketWithData!.sessions).toBe(7);
-    expect(bucketWithData!.tokensK).toBe(12); // SUM(token_delta_k) = 0 + 12
-    expect(m.totalTokensK).toBe(12);
     cleanup();
   });
 

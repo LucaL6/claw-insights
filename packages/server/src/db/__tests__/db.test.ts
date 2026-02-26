@@ -3,9 +3,9 @@ import type { DatabaseSync as Database } from 'node:sqlite';
 import { rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { afterEach,beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { getBucketedEventCount,insertEvent } from '../event-queries';
+import { getBucketedEventCount, insertEvent } from '../event-queries';
 import { initDatabase } from '../init';
 import { bucketLabel } from '../query-utils';
 
@@ -41,23 +41,25 @@ describe('SQLite DB', () => {
     expect(row.cnt).toBe(2);
   });
 
-  it('should create metric_samples table', () => {
-    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='metric_samples'").get() as {
+  it('should create system_samples table', () => {
+    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='system_samples'").get() as {
       name: string;
     } | null;
     expect(row).not.toBeNull();
-    expect(row!.name).toBe('metric_samples');
+    expect(row!.name).toBe('system_samples');
   });
 
-  it('should insert and query metric samples', () => {
-    db.prepare(
-      `INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run('2026-02-15T10:00:00Z', 5, 120.5, 3.2, 45.5, 62.3, 12.5, 256);
-    const row = db.prepare('SELECT * FROM metric_samples ORDER BY id DESC LIMIT 1').get() as Record<string, unknown>;
+  it('should insert and query system samples', () => {
+    db.prepare(`INSERT INTO system_samples (timestamp, active_sessions, cpu, memory_mb) VALUES (?, ?, ?, ?)`).run(
+      '2026-02-15T10:00:00Z',
+      5,
+      12.5,
+      256,
+    );
+    const row = db.prepare('SELECT * FROM system_samples ORDER BY id DESC LIMIT 1').get() as Record<string, unknown>;
     expect(row.active_sessions).toBe(5);
-    expect(row.total_tokens_k).toBe(120.5);
-    expect(row.token_delta_k).toBe(3.2);
-    expect(row.cost_today).toBe(45.5);
+    expect(row.cpu).toBe(12.5);
+    expect(row.memory_mb).toBe(256);
   });
 
   it('should insert events with category and source', () => {

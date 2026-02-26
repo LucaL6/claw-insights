@@ -1,8 +1,8 @@
 /**
  * E2E test seed data — populates SQLite with deterministic metric and event data.
  *
- * NOTE: Only DB-backed data (metric_samples, metric_events, model_token_samples,
- * hourly_metric_samples, hourly_model_tokens) can be seeded.
+ * NOTE: Only DB-backed data (system_samples, metric_events, token_usage_events,
+ * hourly_system_samples) can be seeded.
  * Sessions, channels, cron, and gateway status come from live sources
  * (files / CLI) and are NOT seeded here.
  */
@@ -19,39 +19,34 @@ export function seedTestData(dbPath: string): DatabaseSync {
   const db = initDatabase(dbPath);
 
   const now = Date.now();
-  // ── metric_samples: 48 rows, every 30 min over 24h ──
+  // ── system_samples: 48 rows, every 30 min over 24h ──
   const sampleStmt = db.prepare(
-    `INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO system_samples (timestamp, active_sessions, cpu, memory_mb)
+     VALUES (?, ?, ?, ?)`,
   );
   for (let i = 0; i < 48; i++) {
     const ts = new Date(now - (47 - i) * 30 * 60 * 1000).toISOString();
     const sessions = 1 + (i % 4); // 1-4 active sessions
-    const totalTokensK = 100 + i * 5.2;
-    const tokenDeltaK = 3 + Math.sin(i / 3) * 2;
-    const costToday = 0.5 + i * 0.03;
-    const tokensTodayM = 0.01 + i * 0.002;
     const cpu = 15 + Math.sin(i / 6) * 10;
     const memoryMb = 256 + (i % 8) * 32;
-    sampleStmt.run(ts, sessions, totalTokensK, tokenDeltaK, costToday, tokensTodayM, cpu, memoryMb);
+    sampleStmt.run(ts, sessions, cpu, memoryMb);
   }
 
-  // ── model_token_samples: 48 rows × 2 models ──
-  const modelStmt = db.prepare(
-    `INSERT INTO model_token_samples (timestamp, model, total_tokens_k, token_delta_k) VALUES (?, ?, ?, ?)`,
+  // ── token_usage_events: 96 rows (2 models × 48 timestamps) ──
+  const tokenStmt = db.prepare(
+    `INSERT OR IGNORE INTO token_usage_events (timestamp, session_key, model, input_tokens, output_tokens, cache_read, cache_write)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
   const models = ['claude-sonnet-4-20250514', 'gpt-4o'];
-  const prevModelK: Record<string, number> = {};
   for (let i = 0; i < 48; i++) {
     const ts = new Date(now - (47 - i) * 30 * 60 * 1000).toISOString();
-    const m0K = 80 + i * 3.5;
-    const m1K = 20 + i * 1.7;
-    const d0 = i === 0 ? 0 : Math.max(0, m0K - (prevModelK[models[0]] ?? m0K));
-    const d1 = i === 0 ? 0 : Math.max(0, m1K - (prevModelK[models[1]] ?? m1K));
-    modelStmt.run(ts, models[0], m0K, d0);
-    modelStmt.run(ts, models[1], m1K, d1);
-    prevModelK[models[0]] = m0K;
-    prevModelK[models[1]] = m1K;
+    for (const model of models) {
+      const input = 500 + i * 20 + (model === models[0] ? 0 : 100);
+      const output = 200 + i * 10;
+      const cacheRead = Math.floor(input * 0.3);
+      const cacheWrite = Math.floor(input * 0.1);
+      tokenStmt.run(ts, `session-${(i % 4) + 1}`, model, input, output, cacheRead, cacheWrite);
+    }
   }
 
   // ── metric_events: ~100 rows (mixed types over 24h) ──
@@ -121,37 +116,16 @@ export function seedTestData(dbPath: string): DatabaseSync {
     }
   }
 
-  // ── hourly_metric_samples: 24 rows ──
+  // ── hourly_system_samples: 24 rows ──
   const hourlyStmt = db.prepare(
-    `INSERT INTO hourly_metric_samples (hour, active_sessions_max, active_sessions_avg, token_delta_k, cost_end, cpu_avg, cpu_max, memory_mb_avg, memory_mb_max, sample_count)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO hourly_system_samples (hour, active_sessions_max, active_sessions_avg, cpu_avg, cpu_max, memory_mb_avg, memory_mb_max, sample_count)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   for (let i = 0; i < 24; i++) {
     const hour = new Date(now - (23 - i) * 60 * 60 * 1000);
     hour.setMinutes(0, 0, 0);
     const hourTs = hour.toISOString();
-    hourlyStmt.run(
-      hourTs,
-      2 + (i % 3),
-      1.5 + (i % 3) * 0.5,
-      6 + i * 0.5,
-      0.5 + i * 0.06,
-      15 + i,
-      25 + i,
-      280 + i * 10,
-      320 + i * 10,
-      2,
-    );
-  }
-
-  // ── hourly_model_tokens: 24 rows × 2 models ──
-  const hourlyModelStmt = db.prepare(`INSERT INTO hourly_model_tokens (hour, model, token_delta_k) VALUES (?, ?, ?)`);
-  for (let i = 0; i < 24; i++) {
-    const hour = new Date(now - (23 - i) * 60 * 60 * 1000);
-    hour.setMinutes(0, 0, 0);
-    const hourTs = hour.toISOString();
-    hourlyModelStmt.run(hourTs, models[0], 4 + i * 0.3);
-    hourlyModelStmt.run(hourTs, models[1], 2 + i * 0.2);
+    hourlyStmt.run(hourTs, 2 + (i % 3), 1.5 + (i % 3) * 0.5, 15 + i, 25 + i, 280 + i * 10, 320 + i * 10, 2);
   }
 
   log.info('test data inserted');
@@ -162,13 +136,7 @@ export function seedTestData(dbPath: string): DatabaseSync {
 
 export function cleanTestData(dbPath: string): void {
   const db = new DatabaseSync(dbPath);
-  const tables = [
-    'metric_events',
-    'metric_samples',
-    'model_token_samples',
-    'hourly_metric_samples',
-    'hourly_model_tokens',
-  ];
+  const tables = ['metric_events', 'system_samples', 'token_usage_events', 'hourly_system_samples'];
   for (const t of tables) {
     db.exec(`DELETE FROM ${t}`);
   }

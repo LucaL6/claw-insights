@@ -213,24 +213,8 @@
   --theme-btn-bg: rgba(39, 39, 42, 0.8);
   --theme-btn-text: #a1a1aa;
 
-  /* Doctor button — muted default, emerald on hover/focus (intentional: dark=emerald) */
-  --doctor-btn-bg: rgba(39, 39, 42, 0.3);
-  --doctor-btn-text: #a1a1aa;
-  --doctor-btn-border: rgba(63, 63, 70, 0.6);
-  --doctor-btn-hover-bg: rgba(16, 185, 129, 0.12);
-  --doctor-btn-hover-text: #34d399;
-  --doctor-btn-hover-border: rgba(16, 185, 129, 0.4);
 
-  /* Doctor modal accent (dark=emerald) */
-  --doctor-accent: #34d399;
-  --doctor-accent-bg: rgba(16, 185, 129, 0.1);
-  --doctor-accent-border: rgba(16, 185, 129, 0.2);
 
-  /* Restart button — amber caution (matches modal warning variant) */
-  --restart-btn-bg: rgba(251, 191, 36, 0.08);
-  --restart-btn-text: #fbbf24;
-  --restart-btn-border: rgba(251, 191, 36, 0.2);
-  --restart-btn-hover-border: rgba(251, 191, 36, 0.4);
 }
 
 /* ═══════════ Light Theme ═══════════ */
@@ -371,54 +355,7 @@
   --theme-btn-bg: rgba(251, 191, 36, 0.1);
   --theme-btn-text: #d97706;
 
-  /* Doctor button — muted default, violet on hover/focus (intentional: light=violet) */
-  --doctor-btn-bg: rgba(244, 244, 245, 0.3);
-  --doctor-btn-text: #71717a;
-  --doctor-btn-border: rgba(212, 212, 216, 0.6);
-  --doctor-btn-hover-bg: rgba(124, 58, 237, 0.08);
-  --doctor-btn-hover-text: #7c3aed;
-  --doctor-btn-hover-border: rgba(124, 58, 237, 0.35);
 
-  /* Doctor modal accent (light=violet) */
-  --doctor-accent: #7c3aed;
-  --doctor-accent-bg: rgba(124, 58, 237, 0.06);
-  --doctor-accent-border: rgba(124, 58, 237, 0.12);
 
-  /* Restart button — amber caution (matches modal warning variant) */
-  --restart-btn-bg: rgba(217, 119, 6, 0.06);
-  --restart-btn-text: #b45309;
-  --restart-btn-border: rgba(217, 119, 6, 0.2);
-  --restart-btn-hover-border: rgba(217, 119, 6, 0.4);
 }
 
-/* ═══════════ Action Button Classes ═══════════ */
-
-.btn-restart {
-  background-color: var(--restart-btn-bg);
-  color: var(--restart-btn-text);
-  border-color: var(--restart-btn-border);
-}
-.btn-restart:hover,
-.btn-restart:focus-visible {
-  border-color: var(--restart-btn-hover-border);
-}
-.btn-restart:focus-visible {
-  outline: 2px solid var(--restart-btn-text);
-  outline-offset: 1px;
-}
-
-.btn-doctor {
-  background-color: var(--doctor-btn-bg);
-  color: var(--doctor-btn-text);
-  border-color: var(--doctor-btn-border);
-}
-.btn-doctor:hover,
-.btn-doctor:focus-visible {
-  background-color: var(--doctor-btn-hover-bg);
-  color: var(--doctor-btn-hover-text);
-  border-color: var(--doctor-btn-hover-border);
-}
-.btn-doctor:focus-visible {
-  outline: 2px solid var(--doctor-btn-hover-text);
-  outline-offset: 1px;
-}

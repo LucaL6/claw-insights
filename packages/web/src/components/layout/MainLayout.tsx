@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { StaleOverlay } from '../gateway/StaleOverlay';
+
 interface Props {
   topBar: ReactNode;
   banner?: ReactNode;
@@ -15,7 +17,8 @@ export function MainLayout({ topBar, banner, sessions, metrics }: Props) {
       </header>
       <main className="flex flex-col p-4 h-[calc(100vh-45px)]">
         {banner && <div className="mb-3 flex-shrink-0">{banner}</div>}
-        <div className="grid grid-cols-12 gap-0 flex-1 min-h-0">
+        <div className="grid grid-cols-12 gap-0 flex-1 min-h-0 relative">
+          <StaleOverlay />
           <div
             data-section="sessions"
             className="col-span-5 flex flex-col min-h-0 overflow-y-auto sb pr-3 border-r border-edge-subtle"

@@ -129,3 +129,88 @@ npm run -w @claw-insights/server dev    # tsx --watch
 npm run -w @claw-insights/server test   # vitest run
 npm run -w @claw-insights/server build  # tsup → dist/
 ```
+
+## Snapshot API
+
+### API Endpoint
+
+```
+POST /api/snapshot
+```
+
+**Parameters** (JSON body):
+
+| Param     | Values                        | Default     | Notes                                  |
+| --------- | ----------------------------- | ----------- | -------------------------------------- |
+| `format`  | `png`, `svg`, `json`          | `png`       | SVG returns `image/svg+xml`            |
+| `detail`  | `compact`, `standard`, `full` | `standard`  | Auto-degrades if output exceeds 2MB    |
+| `range`   | `1h`, `6h`, `12h`, `24h`      | `6h`        | Default changed from 24h to 6h         |
+| `theme`   | `dark`, `light`               | `dark`      |                                        |
+| `lang`    | `en`, `zh`                    | `en`        |                                        |
+| `layout`  | `desktop`, `mobile`           | `desktop`   |                                        |
+| `section` | `dashboard`, `logs`           | `dashboard` | v1 no-op (forward-compatibility param) |
+
+**Response headers:** `X-Snapshot-Duration`, `Content-Disposition`, `Cache-Control: no-store`
+
+**Error codes:** `INVALID_PARAM` (400), `RATE_LIMITED` (429), `QUEUE_FULL` (503), `QUEUE_TIMEOUT` (503), `COLLECT_TIMEOUT` (504), `TOTAL_TIMEOUT` (504), `PAYLOAD_TOO_LARGE` (413), `RENDER_FAILED` (500)
+
+All error responses use a unified format: `{ error, code, suggestion?, retryAfter? }`
+
+### Data Freshness
+
+Data sources use a 10-second cache (coalescing). Snapshots reflect data that is **at most 10 seconds stale**. This is an intentional v1 trade-off to avoid hammering the OpenClaw CLI.
+
+### CLI Snapshot
+
+```bash
+# Save PNG snapshot
+claw-insights snapshot
+
+# Custom options
+claw-insights snapshot --format svg --range 1h --detail full --theme light
+
+# Output to stdout (pipe to file)
+claw-insights snapshot --format json > status.json
+```
+
+### MCP Integration
+
+The server exposes a Streamable HTTP MCP endpoint at `/mcp` (port 41041) with a single `snapshot` tool.
+
+**OpenClaw** (`~/.openclaw/config.yaml`):
+
+```yaml
+mcp:
+  claw-insights:
+    url: http://127.0.0.1:41041/mcp
+```
+
+**Claude Code** (`~/.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "claw-insights": {
+      "type": "url",
+      "url": "http://127.0.0.1:41041/mcp"
+    }
+  }
+}
+```
+
+**Cursor** (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "claw-insights": {
+      "type": "url",
+      "url": "http://127.0.0.1:41041/mcp"
+    }
+  }
+}
+```
+
+### `section` Parameter
+
+The `section` parameter (`dashboard` | `logs`) is accepted in v1 but has no effect — it exists for forward-compatibility with future section-specific rendering. The default is `dashboard`.

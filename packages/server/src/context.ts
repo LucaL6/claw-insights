@@ -4,17 +4,21 @@ import type { LogEntry } from '@claw-insights/shared';
 
 import { config } from './config.js';
 import { initDatabase } from './db/init.js';
+import { insertTokenUsageEventBatch } from './db/token-queries.js';
+import type { TokenUsageEvent } from './events/token-event-bus.js';
+import { TokenEventBus } from './events/token-event-bus.js';
 import { Pipeline } from './pipeline/index.js';
 import { Aggregator } from './sources/aggregator.js';
+import { LifetimeScanner } from './sources/collectors/lifetime-scanner.js';
 import { createLogIngester } from './sources/collectors/log-ingester.js';
 import { LogTailer } from './sources/collectors/log-tailer.js';
-import { MetricsCollector } from './sources/collectors/metrics-collector.js';
+import { SystemSampler } from './sources/collectors/metrics-collector.js';
 import { DataRetention } from './sources/data-retention.js';
 import { DataValidator } from './sources/data-validator.js';
 import { CronReader } from './sources/readers/cron-reader.js';
 import { SessionReader } from './sources/readers/session-reader.js';
 import { SpawnTracker } from './sources/readers/spawn-tracker.js';
-import { getSystemMetrics, getUsageCost } from './sources/system-info.js';
+import { getSystemMetrics } from './sources/system-info.js';
 
 export interface AppContext {
   db: DatabaseSync;
@@ -24,9 +28,11 @@ export interface AppContext {
   logTailer: LogTailer;
   spawnTracker: SpawnTracker;
   aggregator: Aggregator;
-  metricsCollector: MetricsCollector;
+  systemSampler: SystemSampler;
   dataValidator: DataValidator;
   dataRetention: DataRetention;
+  lifetimeScanner: LifetimeScanner;
+  flushTokenEvents: () => void;
 }
 
 export function createContext(): AppContext {
@@ -37,13 +43,23 @@ export function createContext(): AppContext {
   const spawnTracker = new SpawnTracker();
   const aggregator = new Aggregator(db);
 
-  const metricsCollector = new MetricsCollector(
-    db,
-    sessionReader,
-    () => getSystemMetrics(),
-    () => getUsageCost(),
-    aggregator,
-  );
+  const tokenBus = new TokenEventBus();
+  const BATCH_SIZE = 100;
+  let tokenEventBuffer: TokenUsageEvent[] = [];
+  const flushTokenEvents = () => {
+    if (tokenEventBuffer.length > 0) {
+      insertTokenUsageEventBatch(db, tokenEventBuffer);
+      tokenEventBuffer = [];
+    }
+  };
+  tokenBus.on((event) => {
+    tokenEventBuffer.push(event);
+    if (tokenEventBuffer.length >= BATCH_SIZE) {
+      flushTokenEvents();
+    }
+  });
+
+  const systemSampler = new SystemSampler(db, sessionReader, () => getSystemMetrics(), aggregator);
 
   const dataValidator = new DataValidator(
     db,
@@ -57,19 +73,27 @@ export function createContext(): AppContext {
     aggregateIntervalMs: config.aggregateIntervalMs,
   });
 
+  const lifetimeScanner = new LifetimeScanner(config.transcriptsDir, config.deviceJsonPath, tokenBus);
+
   const pipeline = new Pipeline()
     // Sources — emit events
     .addSource('logTailer', logTailer)
     // Managed — lifecycle-only resources (no events, just destroy)
+    .addManaged('tokenBus', { destroy: () => tokenBus.destroy() })
     .addManaged('sessionReader', sessionReader)
     .addManaged('cronReader', cronReader)
     // Processors — handle events
     .addProcessor('logIngester', createLogIngester(db))
-    .addProcessor('spawnTracker', { handle: (entry: unknown) => { spawnTracker.ingest(entry as LogEntry); } })
+    .addProcessor('spawnTracker', {
+      handle: (entry: unknown) => {
+        spawnTracker.ingest(entry as LogEntry);
+      },
+    })
     // Services — background lifecycle
-    .addService('metricsCollector', metricsCollector)
+    .addService('systemSampler', systemSampler)
     .addService('dataValidator', dataValidator)
     .addService('dataRetention', dataRetention)
+    .addManaged('lifetimeScanner', lifetimeScanner)
     // Wiring — declarative data flow
     .wire('logTailer', 'log', ['logIngester', 'spawnTracker'])
     .build();
@@ -82,14 +106,24 @@ export function createContext(): AppContext {
     logTailer,
     spawnTracker,
     aggregator,
-    metricsCollector,
+    systemSampler,
     dataValidator,
     dataRetention,
+    lifetimeScanner,
+    flushTokenEvents,
   };
 }
 
 export function startContext(ctx: AppContext): void {
   ctx.pipeline.start();
+  ctx.lifetimeScanner
+    .init()
+    .then(() => {
+      ctx.flushTokenEvents();
+    })
+    .catch((err: unknown) => {
+      console.error('lifetime scanner init failed:', err);
+    });
 }
 
 export function destroyContext(ctx: AppContext): void {

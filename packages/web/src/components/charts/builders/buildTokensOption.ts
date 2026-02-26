@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts';
 
+import { formatTokensK } from '../../../utils/format';
 import { getModelColor, shortModelName } from '../core/model-utils';
 import { buildCategoryXAxis, CHART_GRID, COMPACT_Y_AXIS, tooltipHtml } from './shared';
 
@@ -7,7 +8,7 @@ const TOKEN_Y_AXIS = {
   ...COMPACT_Y_AXIS,
   axisLabel: {
     ...COMPACT_Y_AXIS.axisLabel,
-    formatter: (v: number) => (v === 0 ? '0' : v >= 1000 ? `${(v / 1000).toFixed(1)}M` : `${v}k`),
+    formatter: (v: number) => formatTokensK(v),
   },
 };
 
@@ -32,7 +33,9 @@ export function buildTokensOption(
   // Collect unique models
   const modelSet = new Set<string>();
   for (const d of data) {
-    for (const mt of d.tokensByModel ?? []) {modelSet.add(mt.model);}
+    for (const mt of d.tokensByModel ?? []) {
+      modelSet.add(mt.model);
+    }
   }
   const models = Array.from(modelSet).sort();
 
@@ -47,10 +50,13 @@ export function buildTokensOption(
         trigger: 'axis',
         formatter: (params: unknown) => {
           const p = (params as Array<{ name: string; value: number }>)[0];
-          if (!p) {return '';} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- defensive: params cast from unknown
+           
+          if (!p) {
+            return '';
+          }
           return tooltipHtml({
             title: p.name,
-            rows: [{ color: '#38bdf8', label: 'tokens', value: `${p.value.toFixed(1)}k` }],
+            rows: [{ color: '#38bdf8', label: 'tokens', value: formatTokensK(p.value) }],
             footer: footerText,
           });
         },
@@ -96,16 +102,18 @@ export function buildTokensOption(
       trigger: 'axis',
       formatter: (params: unknown) => {
         const items = params as Array<{ seriesName: string; value: number; color: string; name: string }>;
-        if (!items.length) {return '';}
+        if (!items.length) {
+          return '';
+        }
         const rows = items
           .filter((i) => i.value > 0)
           .map((i) => ({
             color: i.color,
             label: i.seriesName,
-            value: `${i.value.toFixed(1)}k`,
+            value: formatTokensK(i.value),
           }));
         const total = items.reduce((s, i) => s + i.value, 0);
-        const extra = items.length > 1 ? `Total: <b>${total.toFixed(1)}k</b>` : undefined;
+        const extra = items.length > 1 ? `Total: <b>${formatTokensK(total)}</b>` : undefined;
         return tooltipHtml({ title: items[0].name, rows, footer: footerText, extra });
       },
     },

@@ -4,8 +4,8 @@ import { cronResolvers } from './cron.resolver.js';
 import { diagnosticsResolvers } from './diagnostics.resolver.js';
 import { eventsResolvers } from './events.resolver.js';
 import { gatewayResolvers } from './gateway.resolver.js';
+import { lifetimeResolvers } from './lifetime.resolver.js';
 import { metricsResolvers } from './metrics.resolver.js';
-import { mutationResolvers } from './mutations.resolver.js';
 import { sessionsResolvers } from './sessions.resolver.js';
 import { subscriptionResolvers } from './subscriptions.resolver.js';
 import { usageResolvers } from './usage.resolver.js';
@@ -21,7 +21,7 @@ const factories: ResolverFactory[] = [
   usageResolvers,
   subscriptionResolvers,
   diagnosticsResolvers,
-  mutationResolvers,
+  lifetimeResolvers,
 ];
 
 export function createResolvers(ctx: AppContext): Resolvers {

@@ -154,24 +154,3 @@ test.describe('P1: Metrics Model Selector (T6)', () => {
     await expect(page.getByText('Claw Insights')).toBeVisible();
   });
 });
-
-test.describe('P1: Operation Modals (T7)', () => {
-  test('Restart modal opens and Cancel closes it', async ({ page }) => {
-    await page.goto('/');
-    const restartBtn = page.getByRole('button', { name: /restart/i });
-    await restartBtn.click();
-    // Modal content visible
-    await expect(page.getByText(/restart gateway/i)).toBeVisible({ timeout: 3000 });
-    // Cancel
-    await page.getByRole('button', { name: /cancel/i }).click();
-    await expect(page.getByText(/restart gateway/i)).not.toBeVisible();
-  });
-
-  test('Doctor modal opens and Cancel closes it', async ({ page }) => {
-    await page.goto('/');
-    const doctorBtn = page.getByRole('button', { name: /doctor/i });
-    await doctorBtn.click();
-    await expect(page.getByRole('button', { name: /cancel/i })).toBeVisible({ timeout: 3000 });
-    await page.getByRole('button', { name: /cancel/i }).click();
-  });
-});

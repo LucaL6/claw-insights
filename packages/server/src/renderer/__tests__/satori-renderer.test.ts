@@ -1,7 +1,7 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { SnapshotData } from '../../services/snapshot-types.js';
-import { renderSnapshot } from '../satori-renderer.js';
+import { renderSnapshot, renderSnapshotSvg } from '../satori-renderer.js';
 
 const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -12,9 +12,13 @@ const mockData: SnapshotData = {
   range: '24h',
   time: '2026-02-23 00:00',
   summary: {
-    activeSessions: 2, totalSessions: 4,
-    tokens: 128400, tokensDisplay: '128.4k',
-    errors: 1, warnings: 0, uptimePercent: 99.8,
+    activeSessions: 2,
+    totalSessions: 4,
+    tokens: 128400,
+    tokensDisplay: '128.4k',
+    errors: 1,
+    warnings: 0,
+    uptimePercent: 99.8,
   },
   sparklines: {
     sessions: Array(24).fill(2),
@@ -23,12 +27,20 @@ const mockData: SnapshotData = {
     uptime: Array(24).fill('up') as ('up' | 'degraded' | 'down')[],
   },
   sessions: [
-    { name: 'main', status: 'active', model: 'claude-opus-4', modelDisplay: 'opus-4', channel: 'telegram',
-      totalTokens: 42100, totalTokensDisplay: '42.1k', usagePercent: 68, updatedAt: '2m ago', subAgentCount: 0 },
+    {
+      name: 'main',
+      status: 'active',
+      model: 'claude-opus-4',
+      modelDisplay: 'opus-4',
+      channel: 'telegram',
+      totalTokens: 42100,
+      totalTokensDisplay: '42.1k',
+      usagePercent: 68,
+      updatedAt: '2m ago',
+      subAgentCount: 0,
+    },
   ],
-  recentErrors: [
-    { timestamp: '14:32', type: 'error', module: 'gateway', message: 'WebSocket timeout' },
-  ],
+  recentErrors: [{ timestamp: '14:32', type: 'error', module: 'gateway', message: 'WebSocket timeout' }],
 };
 
 describe('renderSnapshot', () => {
@@ -83,5 +95,35 @@ describe('renderSnapshot', () => {
   it('handles Chinese lang option', async () => {
     const buf = await renderSnapshot(mockData, { detail: 'standard', theme: 'dark', lang: 'zh' });
     expect(buf.subarray(0, 8)).toEqual(PNG_HEADER);
+  });
+});
+
+describe('renderSnapshotSvg', () => {
+  it('returns valid SVG string (compact/dark)', async () => {
+    const svg = await renderSnapshotSvg(mockData, { detail: 'compact', theme: 'dark', lang: 'en' });
+    expect(typeof svg).toBe('string');
+    expect(svg).toContain('<svg');
+    expect(svg).toContain('</svg>');
+  });
+
+  it('returns valid SVG string (standard/dark)', async () => {
+    const svg = await renderSnapshotSvg(mockData, { detail: 'standard', theme: 'dark', lang: 'en' });
+    expect(svg).toContain('<svg');
+  });
+
+  it('returns valid SVG string (full/dark)', async () => {
+    const svg = await renderSnapshotSvg(mockData, { detail: 'full', theme: 'dark', lang: 'en' });
+    expect(svg).toContain('<svg');
+  });
+
+  it('returns valid SVG for light theme', async () => {
+    const svg = await renderSnapshotSvg(mockData, { detail: 'standard', theme: 'light', lang: 'en' });
+    expect(svg).toContain('<svg');
+  });
+
+  it('SVG does not go through Resvg (returns string, not Buffer)', async () => {
+    const svg = await renderSnapshotSvg(mockData, { detail: 'compact', theme: 'dark', lang: 'en' });
+    expect(svg).not.toBeInstanceOf(Buffer);
+    expect(typeof svg).toBe('string');
   });
 });

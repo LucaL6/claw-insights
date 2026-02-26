@@ -1,4 +1,4 @@
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock all dependencies before importing
 vi.mock('../config.js', () => ({
@@ -23,21 +23,44 @@ vi.mock('../db/init.js', () => ({
 
 vi.mock('../pipeline/index.js', () => ({
   Pipeline: class {
-    addSource() { return this; }
-    addManaged() { return this; }
-    addProcessor() { return this; }
-    addService() { return this; }
-    wire() { return this; }
-    build() { return this; }
+    addSource() {
+      return this;
+    }
+    addManaged() {
+      return this;
+    }
+    addProcessor() {
+      return this;
+    }
+    addService() {
+      return this;
+    }
+    wire() {
+      return this;
+    }
+    build() {
+      return this;
+    }
     start = vi.fn();
     destroy = vi.fn();
-    get() { return null; }
-    getConfig() { return { sources: new Map(), managed: new Map(), processors: new Map(), services: new Map(), wiring: [] }; }
+    get() {
+      return null;
+    }
+    getConfig() {
+      return { sources: new Map(), managed: new Map(), processors: new Map(), services: new Map(), wiring: [] };
+    }
   },
 }));
 
 function mockClass(props: Record<string, unknown>) {
-  return class { constructor(..._args: unknown[]) { Object.assign(this, Object.fromEntries(Object.entries(props).map(([k, v]) => [k, typeof v === 'function' ? vi.fn(v) : v]))); } };
+  return class {
+    constructor(..._args: unknown[]) {
+      Object.assign(
+        this,
+        Object.fromEntries(Object.entries(props).map(([k, v]) => [k, typeof v === 'function' ? vi.fn(v) : v])),
+      );
+    }
+  };
 }
 
 vi.mock('../sources/readers/session-reader.js', () => ({
@@ -66,7 +89,7 @@ vi.mock('../sources/aggregator.js', () => ({
 }));
 
 vi.mock('../sources/collectors/metrics-collector.js', () => ({
-  MetricsCollector: mockClass({ start() {}, stop() {} }),
+  SystemSampler: mockClass({ start() {}, stop() {} }),
 }));
 
 vi.mock('../sources/data-validator.js', () => ({
@@ -93,7 +116,7 @@ describe('context', () => {
     expect(ctx.logTailer).toBeDefined();
     expect(ctx.spawnTracker).toBeDefined();
     expect(ctx.aggregator).toBeDefined();
-    expect(ctx.metricsCollector).toBeDefined();
+    expect(ctx.systemSampler).toBeDefined();
     expect(ctx.dataValidator).toBeDefined();
     expect(ctx.dataRetention).toBeDefined();
   });
@@ -120,14 +143,14 @@ describe('context', () => {
     destroyContext(ctx);
 
     expect(ctx.pipeline.destroy).toHaveBeenCalled();
-    expect(((ctx.db as unknown as Record<string, unknown>)).close).toHaveBeenCalled();
+    expect((ctx.db as unknown as Record<string, unknown>).close).toHaveBeenCalled();
   });
 
   it('destroyContext handles db without close method', async () => {
     const { createContext, destroyContext } = await import('../context');
     const ctx = createContext();
     // Remove close method to test the typeof check
-    delete ((ctx.db as unknown as Record<string, unknown>)).close;
+    delete (ctx.db as unknown as Record<string, unknown>).close;
     // Should not throw
     destroyContext(ctx);
   });

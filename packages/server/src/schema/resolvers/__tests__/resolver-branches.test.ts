@@ -1,4 +1,4 @@
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../context.js';
 
@@ -47,15 +47,6 @@ vi.mock('../../../config', () => ({
 vi.mock('../../../logger', () => ({
   createChildLogger: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }),
 }));
-
-vi.mock('node:child_process', () => ({
-  execFile: vi.fn(),
-}));
-
-vi.mock('node:util', async () => {
-  const actual = await vi.importActual<typeof import('node:util')>('node:util');
-  return { ...actual, promisify: vi.fn((fn: unknown) => fn) };
-});
 
 function mockCtx(): AppContext {
   return {
@@ -197,93 +188,5 @@ describe('diagnosticsResolvers branches', () => {
     const diagnostics = resolvers.Query!.diagnostics!;
 
     await expect((diagnostics as Function)({}, {})).rejects.toThrow('snapshot fail');
-  });
-});
-
-// ── Mutations resolver branches ──
-
-describe('mutationResolvers branches', () => {
-  it('handles CLI error with stdout/stderr', async () => {
-    const { execFile } = await import('node:child_process');
-    const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
-
-    // promisify returns the fn itself in our mock, so execFile IS the async fn
-    const err = Object.assign(new Error('Command failed'), {
-      stdout: 'some output',
-      stderr: 'some error',
-      code: 1,
-    });
-    mockExecFile.mockRejectedValue(err);
-
-    const { mutationResolvers } = await import('../mutations.resolver.js');
-    const resolvers = mutationResolvers(mockCtx());
-
-    const result = await (resolvers.Mutation!.restartGateway as Function)({}, {});
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Command failed');
-    expect(result.output).toBe('some outputsome error');
-    expect(result.duration).toBeGreaterThanOrEqual(0);
-  });
-
-  it('handles CLI error without stdout/stderr', async () => {
-    const { execFile } = await import('node:child_process');
-    const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
-
-    mockExecFile.mockRejectedValue(new Error('timeout'));
-
-    const { mutationResolvers } = await import('../mutations.resolver.js');
-    const resolvers = mutationResolvers(mockCtx());
-
-    const result = await (resolvers.Mutation!.updateGateway as Function)({}, {});
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('timeout');
-    expect(result.output).toBeNull();
-  });
-
-  it('handles CLI success', async () => {
-    const { execFile } = await import('node:child_process');
-    const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
-
-    mockExecFile.mockResolvedValue({ stdout: 'done', stderr: '' });
-
-    const { mutationResolvers } = await import('../mutations.resolver.js');
-    const resolvers = mutationResolvers(mockCtx());
-
-    const result = await (resolvers.Mutation!.restartGateway as Function)({}, {});
-    expect(result.success).toBe(true);
-    expect(result.output).toBe('done');
-  });
-
-  it('runDoctor passes fix and deep flags', async () => {
-    const { execFile } = await import('node:child_process');
-    const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
-
-    mockExecFile.mockResolvedValue({ stdout: 'ok', stderr: '' });
-
-    const { mutationResolvers } = await import('../mutations.resolver.js');
-    const resolvers = mutationResolvers(mockCtx());
-
-    const result = await (resolvers.Mutation!.runDoctor as Function)({}, { options: { fix: true, deep: true } });
-    expect(result.success).toBe(true);
-    // Verify the args included --fix and --deep
-    expect(mockExecFile).toHaveBeenCalledWith(
-      expect.anything(),
-      ['doctor', '--non-interactive', '--fix', '--deep'],
-      expect.anything(),
-    );
-  });
-
-  it('runDoctor without fix/deep flags', async () => {
-    const { execFile } = await import('node:child_process');
-    const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
-
-    mockExecFile.mockResolvedValue({ stdout: '', stderr: '' });
-
-    const { mutationResolvers } = await import('../mutations.resolver.js');
-    const resolvers = mutationResolvers(mockCtx());
-
-    const result = await (resolvers.Mutation!.runDoctor as Function)({}, { options: { fix: false, deep: false } });
-    expect(result.success).toBe(true);
-    expect(result.output).toBeNull(); // empty string trimmed → null
   });
 });

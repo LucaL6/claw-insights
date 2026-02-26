@@ -1,5 +1,5 @@
-import { fireEvent,screen } from '@testing-library/react';
-import { describe, expect,it } from 'vitest';
+import { fireEvent, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { SessionGroup } from '../SessionGroup';
 import type { SessionData } from '../shared/types';
@@ -55,10 +55,7 @@ describe('SessionGroup', () => {
 
   it('renders sub-agents as compact cards when expanded', () => {
     const session = makeSession({
-      subAgents: [
-        makeSubAgent('sa-1', 'worker-alpha'),
-        makeSubAgent('sa-2', 'worker-beta'),
-      ],
+      subAgents: [makeSubAgent('sa-1', 'worker-alpha'), makeSubAgent('sa-2', 'worker-beta')],
     });
     renderWithI18n(<SessionGroup session={session} />);
     expect(screen.getByText('worker-alpha')).toBeDefined();
@@ -102,10 +99,7 @@ describe('SessionGroup', () => {
 
   it('can collapse/expand a SubAgentGroup', () => {
     const session = makeSession({
-      subAgents: [
-        makeSubAgent('sa-1', 'grp-one'),
-        makeSubAgent('sa-2', 'grp-two'),
-      ],
+      subAgents: [makeSubAgent('sa-1', 'grp-one'), makeSubAgent('sa-2', 'grp-two')],
     });
     renderWithI18n(<SessionGroup session={session} />);
     expect(screen.getByText('grp-one')).toBeDefined();

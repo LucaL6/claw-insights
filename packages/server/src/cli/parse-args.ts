@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 
-const SUBCOMMANDS = ['start', 'stop', 'status', 'logs', 'restart'] as const;
+const SUBCOMMANDS = ['start', 'stop', 'status', 'logs', 'restart', 'snapshot'] as const;
 type Subcommand = (typeof SUBCOMMANDS)[number];
 
 export interface CliArgs {

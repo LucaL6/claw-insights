@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useI18n } from '../../i18n/context';
+import { formatTokensRaw } from '../../utils/format';
 import { formatModel } from '../../utils/formatModel';
 import { ChevronDownIcon } from '../ui/icons';
 import { BORDER_BY_STATUS } from './shared/constants';
@@ -65,8 +66,12 @@ export function SessionCard({
       style={{
         border: `1px solid ${hovered ? borderInfo.hoverBorder : borderInfo.border}`,
       }}
-      onMouseEnter={() => { setHovered(true); }}
-      onMouseLeave={() => { setHovered(false); }}
+      onMouseEnter={() => {
+        setHovered(true);
+      }}
+      onMouseLeave={() => {
+        setHovered(false);
+      }}
     >
       <div className="flex items-center justify-between gap-3 mb-1.5">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
@@ -97,7 +102,7 @@ export function SessionCard({
           {subAgentCount !== undefined && subAgentCount > 0 && <TagPill variant="sub">{subAgentCount} sub</TagPill>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="mono text-[13px] font-semibold text-fg-secondary">{(totalTokens / 1000).toFixed(1)}k</span>
+          <span className="mono text-[13px] font-semibold text-fg-secondary">{formatTokensRaw(totalTokens)}</span>
           <InlineProgress percent={usagePercent} />
         </div>
       </div>
@@ -151,8 +156,12 @@ function CompactCard({
                 : 'var(--subagent-border)'
         }`,
       }}
-      onMouseEnter={() => { setHovered(true); }}
-      onMouseLeave={() => { setHovered(false); }}
+      onMouseEnter={() => {
+        setHovered(true);
+      }}
+      onMouseLeave={() => {
+        setHovered(false);
+      }}
     >
       {isStarting ? (
         <div className="flex items-center gap-2">
@@ -179,7 +188,7 @@ function CompactCard({
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className={`mono text-[12px] ${isDone ? 'text-fg-dim' : 'text-fg-muted'}`}>
-              {(totalTokens / 1000).toFixed(1)}k
+              {formatTokensRaw(totalTokens)}
             </span>
             <InlineProgress percent={usagePercent} width={32} height={2} />
             <span className="text-[10px] w-12 text-right text-fg-dim">{relativeTime(updatedAt, t)}</span>

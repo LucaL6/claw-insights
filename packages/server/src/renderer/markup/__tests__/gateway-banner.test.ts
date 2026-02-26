@@ -6,9 +6,15 @@ import { renderGatewayBanner } from '../gateway-banner.js';
 import type { SatoriNode } from '../helpers.js';
 
 function collectText(node: SatoriNode | string | unknown): string[] {
-  if (typeof node === 'string') return [node];
-  if (typeof node === 'number') return [String(node)];
-  if (!node || typeof node !== 'object') return [];
+  if (typeof node === 'string') {
+    return [node];
+  }
+  if (typeof node === 'number') {
+    return [String(node)];
+  }
+  if (!node || typeof node !== 'object') {
+    return [];
+  }
   const n = node as SatoriNode;
   const results: string[] = [];
   const children = n.props?.children;
@@ -22,13 +28,17 @@ function collectText(node: SatoriNode | string | unknown): string[] {
   return results;
 }
 
-function hasStyle(node: unknown, key: string, value: unknown): boolean {
-  if (!node || typeof node !== 'object') return false;
+function _hasStyle(node: unknown, key: string, value: unknown): boolean {
+  if (!node || typeof node !== 'object') {
+    return false;
+  }
   const n = node as SatoriNode;
-  if (n.props?.style?.[key] === value) return true;
+  if (n.props?.style?.[key] === value) {
+    return true;
+  }
   const children = n.props?.children;
   if (Array.isArray(children)) {
-    return children.some((c) => hasStyle(c, key, value));
+    return children.some((c) => _hasStyle(c, key, value));
   }
   return false;
 }

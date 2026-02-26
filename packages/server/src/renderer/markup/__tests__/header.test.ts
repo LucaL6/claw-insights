@@ -2,13 +2,19 @@ import { describe, expect, it } from 'vitest';
 
 import type { SnapshotData } from '../../../services/snapshot-types.js';
 import { DARK } from '../colors.js';
-import type { SatoriNode } from '../helpers.js';
 import { renderHeader } from '../header.js';
+import type { SatoriNode } from '../helpers.js';
 
 function collectText(node: SatoriNode | string | unknown): string[] {
-  if (typeof node === 'string') return [node];
-  if (typeof node === 'number') return [String(node)];
-  if (!node || typeof node !== 'object') return [];
+  if (typeof node === 'string') {
+    return [node];
+  }
+  if (typeof node === 'number') {
+    return [String(node)];
+  }
+  if (!node || typeof node !== 'object') {
+    return [];
+  }
   const n = node as SatoriNode;
   const results: string[] = [];
   const children = n.props?.children;

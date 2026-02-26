@@ -9,7 +9,7 @@ import {
   relativeTime,
   uptimeStatus,
 } from './snapshot-formatters.js';
-import type { DataSources, Detail, Range, SnapshotData, SnapshotSession } from './snapshot-types.js';
+import type { DataSources, Detail, InternalRange, SnapshotData, SnapshotSession } from './snapshot-types.js';
 
 const log = createChildLogger('snapshot-data');
 
@@ -67,7 +67,7 @@ function buildSession(s: Record<string, unknown>, includeSubs: boolean): Snapsho
 
 export async function buildSnapshotData(
   sources: DataSources,
-  opts: { detail: Detail; range: Range },
+  opts: { detail: Detail; range: InternalRange },
 ): Promise<SnapshotData> {
   const { detail, range } = opts;
 

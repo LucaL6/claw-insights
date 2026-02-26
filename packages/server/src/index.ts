@@ -1,17 +1,21 @@
+ 
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync,readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname, extname,join, resolve } from 'node:path';
+import { chmodSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import express from 'express';
 
 import { config, generateToken, setApiToken } from './config.js';
-import { createContext, destroyContext,startContext } from './context.js';
+import { createContext, destroyContext, startContext } from './context.js';
 import { createChildLogger } from './logger.js';
 import { cookieExchangeMiddleware } from './middleware/cookie-exchange.js';
 import { registerGraphQL } from './routes/graphql.js';
 import { createHealthHandler } from './routes/health.js';
+import { registerMcp } from './routes/mcp.js';
 import { registerSnapshot } from './routes/snapshot.js';
+import { SnapshotEngine } from './services/snapshot-engine.js';
+import { createSnapshotSources } from './services/snapshot-sources.js';
 
 const log = createChildLogger('server');
 
@@ -42,7 +46,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
   if (issues.length > 0) {
     console.log('\n🔍 Startup checks:\n');
-    issues.forEach((i) => { console.log(i); });
+    issues.forEach((i) => {
+      console.log(i);
+    });
     console.log('\n   Dashboard will start but may show incomplete data.\n');
   }
 }
@@ -62,7 +68,10 @@ app.use(express.json());
 app.use(cookieExchangeMiddleware);
 
 registerGraphQL(app, ctx);
-registerSnapshot(app, ctx);
+const snapshotSources = createSnapshotSources(ctx);
+const snapshotEngine = new SnapshotEngine(snapshotSources);
+registerSnapshot(app, snapshotEngine);
+registerMcp(app, snapshotEngine, config.noAuth);
 
 // Health check — no auth, no GraphQL dependency
 app.get(
@@ -108,11 +117,13 @@ if (!config.isDev && !config.serverOnly && existsSync(webDistPath)) {
   app.get('/', serveIndex);
   app.get('/{*path}', (req, res, next) => {
     if (req.path.startsWith('/graphql') || req.path.startsWith('/api') || req.path.startsWith('/health')) {
-      next(); return;
+      next();
+      return;
     }
     // Don't serve index.html for requests with file extensions (e.g. /foo.js, /bar.css)
     if (extname(req.path)) {
-      next(); return;
+      next();
+      return;
     }
     serveIndex(req, res);
   });

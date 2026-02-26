@@ -1,91 +1,206 @@
-import { beforeEach,describe, expect, it, vi } from 'vitest';
-
-vi.mock('../../services/snapshot-types.js', () => ({
-  parseSnapshotRequest: vi.fn(),
-  RANGE_MAP: { '1h': 'ONE_HOUR', '6h': 'SIX_HOUR', '12h': 'TWELVE_HOUR', '24h': 'TWENTY_FOUR_HOUR' },
-}));
-
-vi.mock('../../services/snapshot-service.js', () => ({
-  buildSnapshotData: vi.fn(async () => ({ gateway: {}, sessions: [] })),
-}));
-
-vi.mock('../../renderer/satori-renderer.js', () => ({
-  renderSnapshot: vi.fn(async () => Buffer.from('fake-png')),
-}));
-
 import type { Request, Response } from 'express';
 import type { Mock } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderSnapshot } from '../../renderer/satori-renderer.js';
-import type { DataSources } from '../../services/snapshot-types.js';
-import { parseSnapshotRequest } from '../../services/snapshot-types.js';
+import type { SnapshotEngine, SnapshotResult } from '../../services/snapshot-engine.js';
+import {
+  CollectTimeoutError,
+  ErrorCodes,
+  PayloadTooLargeError,
+  QueueFullError,
+  QueueTimeoutError,
+  RateLimitedError,
+  TotalTimeoutError,
+} from '../../utils/snapshot-errors.js';
 import { createSnapshotHandler } from '../snapshot-handler.js';
 
 function mockRes() {
-  const res = { status: vi.fn().mockReturnThis(), json: vi.fn(), set: vi.fn(), send: vi.fn() } as unknown as Response & { status: Mock; json: Mock; set: Mock; send: Mock };
-  return res;
+  return {
+    status: vi.fn().mockReturnThis(),
+    json: vi.fn(),
+    set: vi.fn(),
+    send: vi.fn(),
+  } as unknown as Response & { status: Mock; json: Mock; set: Mock; send: Mock };
 }
 
+function mockEngine(executeImpl?: Mock): SnapshotEngine {
+  return {
+    execute: executeImpl ?? vi.fn(),
+  } as unknown as SnapshotEngine;
+}
+
+const BASE_RESULT: SnapshotResult = {
+  format: 'png',
+  output: Buffer.from('fake-png'),
+  contentType: 'image/png',
+  detail: 'standard',
+  degraded: false,
+  durationMs: 42,
+};
+
 describe('createSnapshotHandler', () => {
-  const sources = {} as unknown as DataSources;
+  let engine: SnapshotEngine;
+  let executeMock: Mock;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    executeMock = vi.fn().mockResolvedValue({ ...BASE_RESULT });
+    engine = mockEngine(executeMock);
   });
 
-  it('returns 400 on invalid request', async () => {
-    (vi.mocked(parseSnapshotRequest)).mockImplementation(() => { throw new Error('bad input'); });
-    const handler = createSnapshotHandler(sources);
+  it('returns 400 INVALID_PARAM for invalid parameters', async () => {
+    const handler = createSnapshotHandler(engine);
     const res = mockRes();
-    await handler({ body: {} } as unknown as Request, res);
+    await handler({ body: { format: 'bmp' } } as unknown as Request, res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'bad input' });
-  });
-
-  it('returns JSON for json format', async () => {
-    (vi.mocked(parseSnapshotRequest)).mockReturnValue({ format: 'json', range: '1h', detail: 'standard' });
-    const handler = createSnapshotHandler(sources);
-    const res = mockRes();
-    await handler({ body: {} } as unknown as Request, res);
-    expect(res.json).toHaveBeenCalledWith(expect.any(Object));
-    expect(renderSnapshot).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.INVALID_PARAM }));
+    expect(executeMock).not.toHaveBeenCalled();
   });
 
   it('returns PNG with correct headers', async () => {
-    (vi.mocked(parseSnapshotRequest)).mockReturnValue({ format: 'png', range: '1h', detail: 'standard', theme: 'dark', lang: 'en' });
-    const handler = createSnapshotHandler(sources);
+    const handler = createSnapshotHandler(engine);
     const res = mockRes();
-    await handler({ body: {} } as unknown as Request, res);
+    await handler({ body: { format: 'png' } } as unknown as Request, res);
     expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/png');
     expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-store');
+    expect(res.set).toHaveBeenCalledWith('X-Snapshot-Duration', '42');
     expect(res.send).toHaveBeenCalledWith(Buffer.from('fake-png'));
-    expect(renderSnapshot).toHaveBeenCalledWith(
-      expect.any(Object),
-      { detail: 'standard', theme: 'dark', lang: 'en' },
-    );
   });
 
-  it('includes detail, range, and theme in Content-Disposition filename', async () => {
-    (vi.mocked(parseSnapshotRequest)).mockReturnValue({ format: 'png', range: '6h', detail: 'standard', theme: 'dark', lang: 'en' });
-    const handler = createSnapshotHandler(sources);
+  it('returns SVG with correct content-type', async () => {
+    executeMock.mockResolvedValue({
+      ...BASE_RESULT,
+      format: 'svg',
+      output: '<svg></svg>',
+      contentType: 'image/svg+xml',
+    });
+    const handler = createSnapshotHandler(engine);
     const res = mockRes();
-    await handler({ body: {} } as unknown as Request, res);
+    await handler({ body: { format: 'svg' } } as unknown as Request, res);
+    expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/svg+xml');
+    expect(res.send).toHaveBeenCalledWith('<svg></svg>');
+  });
+
+  it('returns JSON via res.json', async () => {
+    executeMock.mockResolvedValue({
+      ...BASE_RESULT,
+      format: 'json',
+      output: { gateway: {} },
+      contentType: 'application/json',
+    });
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: { format: 'json' } } as unknown as Request, res);
+    expect(res.json).toHaveBeenCalledWith({ gateway: {} });
+    expect(res.set).toHaveBeenCalledWith('X-Snapshot-Duration', '42');
+  });
+
+  it('includes detail, range, theme in Content-Disposition filename', async () => {
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: { detail: 'standard', range: '6h', theme: 'dark' } } as unknown as Request, res);
     const cdCall = (res.set as Mock).mock.calls.find((c: string[]) => c[0] === 'Content-Disposition');
     expect(cdCall).toBeDefined();
-    const filename = cdCall[1];
-    expect(filename).toContain('standard');
-    expect(filename).toContain('6h');
-    expect(filename).toContain('dark');
-    expect(filename).toMatch(/^attachment; filename="claw-insights-standard-6h-dark-.*\.png"$/);
+    expect(cdCall![1]).toMatch(/^attachment; filename="claw-insights-standard-6h-dark-.*\.png"$/);
   });
 
-  it('returns 503 on render error', async () => {
-    (vi.mocked(parseSnapshotRequest)).mockReturnValue({ format: 'png', range: '1h', detail: 'standard', theme: 'dark', lang: 'en' });
-    (vi.mocked(renderSnapshot)).mockRejectedValueOnce(new Error('render crash'));
-    const handler = createSnapshotHandler(sources);
+  it('sets X-Snapshot-Degraded header when detail downgraded', async () => {
+    executeMock.mockResolvedValue({
+      ...BASE_RESULT,
+      detail: 'compact',
+      degraded: true,
+    });
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: { detail: 'full' } } as unknown as Request, res);
+    expect(res.set).toHaveBeenCalledWith('X-Snapshot-Degraded', expect.stringContaining('compact'));
+  });
+
+  it('returns 429 with Retry-After when rate limited', async () => {
+    executeMock.mockRejectedValue(new RateLimitedError(3000));
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.set).toHaveBeenCalledWith('Retry-After', '3');
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.RATE_LIMITED }));
+  });
+
+  it('returns 503 QUEUE_FULL when render queue is full', async () => {
+    executeMock.mockRejectedValue(new QueueFullError(10));
+    const handler = createSnapshotHandler(engine);
     const res = mockRes();
     await handler({ body: {} } as unknown as Request, res);
     expect(res.status).toHaveBeenCalledWith(503);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Snapshot render failed' });
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.QUEUE_FULL }));
+  });
+
+  it('returns 503 QUEUE_TIMEOUT on queue wait timeout', async () => {
+    executeMock.mockRejectedValue(new QueueTimeoutError());
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.QUEUE_TIMEOUT }));
+  });
+
+  it('returns 504 COLLECT_TIMEOUT on data collection timeout', async () => {
+    executeMock.mockRejectedValue(new CollectTimeoutError());
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    expect(res.status).toHaveBeenCalledWith(504);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.COLLECT_TIMEOUT }));
+  });
+
+  it('returns 504 TOTAL_TIMEOUT on total timeout', async () => {
+    executeMock.mockRejectedValue(new TotalTimeoutError());
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    expect(res.status).toHaveBeenCalledWith(504);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.TOTAL_TIMEOUT }));
+  });
+
+  it('returns 413 PAYLOAD_TOO_LARGE when all levels exceed limit', async () => {
+    executeMock.mockRejectedValue(new PayloadTooLargeError());
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.PAYLOAD_TOO_LARGE }));
+  });
+
+  it('returns 500 RENDER_FAILED on unexpected errors', async () => {
+    executeMock.mockRejectedValue(new Error('unexpected'));
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.RENDER_FAILED }));
+  });
+
+  it('returns X-Snapshot-Duration on error responses too', async () => {
+    executeMock.mockRejectedValue(new CollectTimeoutError());
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    const durationCall = (res.set as Mock).mock.calls.find((c: string[]) => c[0] === 'X-Snapshot-Duration');
+    expect(durationCall).toBeDefined();
+    expect(Number(durationCall![1])).toBeGreaterThanOrEqual(0);
+  });
+
+  it('SVG filename has .svg extension', async () => {
+    executeMock.mockResolvedValue({
+      ...BASE_RESULT,
+      format: 'svg',
+      output: '<svg></svg>',
+      contentType: 'image/svg+xml',
+    });
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: { format: 'svg' } } as unknown as Request, res);
+    const cdCall = (res.set as Mock).mock.calls.find((c: string[]) => c[0] === 'Content-Disposition');
+    expect(cdCall![1]).toMatch(/\.svg"$/);
   });
 });

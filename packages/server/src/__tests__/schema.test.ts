@@ -1,5 +1,5 @@
 import { buildSchema } from 'graphql';
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { typeDefs } from '../schema/typeDefs';
 
@@ -30,13 +30,8 @@ describe('GraphQL Schema', () => {
     expect(fields).toContain('dataChanged');
   });
 
-  it('should contain mutations for gateway operations', () => {
+  it('should not have a Mutation type (read-only architecture)', () => {
     const schema = buildSchema(typeDefs);
-    const mutationType = schema.getMutationType();
-    expect(mutationType).toBeDefined();
-    const fields = Object.keys(mutationType!.getFields());
-    expect(fields).toContain('restartGateway');
-    expect(fields).toContain('updateGateway');
-    expect(fields).toContain('runDoctor');
+    expect(schema.getMutationType()).toBeUndefined();
   });
 });

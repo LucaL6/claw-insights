@@ -1,8 +1,9 @@
 import { ChannelsQuery, GatewayQuery, ResourcesQuery } from '../graphql/queries';
 import { formatUptime } from '../utils/format';
+import { useConnectionStatus } from './useConnectionStatus';
 import { useReactiveQuery } from './useReactiveQuery';
 
-export type GatewayStatus = 'running' | 'down' | 'connecting';
+export type GatewayStatus = 'running' | 'gateway-down' | 'dashboard-offline' | 'connecting';
 
 export function useGatewayData() {
   const [gw] = useReactiveQuery({ query: GatewayQuery, requestPolicy: 'cache-and-network' }, { sources: ['gateway'] });
@@ -11,6 +12,8 @@ export function useGatewayData() {
     { sources: ['gateway', 'metrics'] },
   );
   const [ch] = useReactiveQuery({ query: ChannelsQuery, requestPolicy: 'cache-and-network' }, { sources: ['gateway'] });
+
+  const connection = useConnectionStatus();
 
   const gateway = gw.data?.gateway;
   const resources = res.data?.resources;
@@ -24,13 +27,16 @@ export function useGatewayData() {
     channels: ch.fetching && !ch.data,
   };
 
+  // Priority: connecting > dashboard-offline > gateway-down > running
   let status: GatewayStatus;
-  if (fetchingGateway) {
+  if (connection === 'connecting' || fetchingGateway) {
     status = 'connecting';
+  } else if (connection === 'reconnecting') {
+    status = 'dashboard-offline';
   } else if (gateway?.running) {
     status = 'running';
   } else {
-    status = 'down';
+    status = 'gateway-down';
   }
 
   return { gateway, resources, channels, uptime, status, fetching };

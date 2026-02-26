@@ -9,6 +9,15 @@ const pkgPath = resolve(__dirname, '..', 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 
 async function main() {
+  // Early detect 'snapshot' subcommand — handled separately, doesn't need full server
+  if (process.argv[2] === 'snapshot') {
+    const { runSnapshotCmd } = await import(
+      resolve(__dirname, '..', 'packages', 'server', 'dist', 'cli', 'snapshot-cmd.js')
+    );
+    await runSnapshotCmd(process.argv.slice(3));
+    return;
+  }
+
   const { parseCliArgs } = await import(
     resolve(__dirname, '..', 'packages', 'server', 'dist', 'cli', 'parse-args.js')
   );
@@ -73,22 +82,32 @@ function printUsage(version) {
   🦞 Claw Insights v${version}
 
   Usage:
-    claw-insights [options]              Run in foreground (server + web)
     claw-insights start [options]        Start as daemon
     claw-insights stop                   Stop daemon
     claw-insights status                 Show daemon status
     claw-insights logs [--lines N]       View daemon logs
     claw-insights restart [options]      Restart daemon
+    claw-insights snapshot [options]     Take a snapshot (see below)
 
-  Options:
-    --port <port>         Server port (default: 4000)
-    --web-port <port>     Web UI port (default: 3200)
+  Server Options:
+    --port <port>         Server port (default: 41041)
     --server-only         Run server only (no web UI)
     --no-auth             Disable authentication (local/trusted network)
     --gateway <url>       OpenClaw gateway URL
     --log-dir <dir>       Log directory
     --help, -h            Show this help
     --version, -v         Show version
+
+  Snapshot Options:
+    --format <fmt>        Output format: png, svg, json (default: png)
+    --detail <level>      Detail level: compact, standard, full (default: standard)
+    --range <range>       Time range: 1h, 6h, 12h, 24h (default: 6h)
+    --theme <theme>       Theme: dark, light (default: dark)
+    --quick               Shorthand for --detail compact --layout mobile
+    --dry-run             Print parameters without executing
+    -o, --output <file>   Save to file
+    --token <token>       Auth token (auto-detected from ~/.claw-insights/auth-token)
+    --port <port>         Server port to connect to (default: 41041)
   `.trim());
 }
 

@@ -1,24 +1,33 @@
 const VALID_DETAILS = ['compact', 'standard', 'full'] as const;
-const VALID_FORMATS = ['png', 'json'] as const;
+const VALID_FORMATS = ['png', 'json', 'svg'] as const;
 const VALID_RANGES = ['1h', '6h', '12h', '24h'] as const;
 const VALID_THEMES = ['dark', 'light'] as const;
 const VALID_LANGS = ['en', 'zh'] as const;
+const VALID_LAYOUTS = ['desktop', 'mobile'] as const;
+const VALID_SECTIONS = ['dashboard', 'logs'] as const;
 
 export type Detail = (typeof VALID_DETAILS)[number];
 export type Format = (typeof VALID_FORMATS)[number];
 export type Range = (typeof VALID_RANGES)[number];
 export type Theme = (typeof VALID_THEMES)[number];
 export type Lang = (typeof VALID_LANGS)[number];
+export type Layout = (typeof VALID_LAYOUTS)[number];
+export type Section = (typeof VALID_SECTIONS)[number];
 
 export interface SnapshotRequest {
+  layout: Layout;
   detail: Detail;
   format: Format;
   range: Range;
   theme: Theme;
   lang: Lang;
+  section: Section;
 }
 
-export const RANGE_MAP: Record<Range, string> = {
+/** Internal range keys used by MetricsAggregator / query-utils */
+export type InternalRange = 'ONE_HOUR' | 'SIX_HOUR' | 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR';
+
+export const RANGE_MAP: Record<Range, InternalRange> = {
   '1h': 'ONE_HOUR',
   '6h': 'SIX_HOUR',
   '12h': 'TWELVE_HOUR',
@@ -26,7 +35,9 @@ export const RANGE_MAP: Record<Range, string> = {
 };
 
 function validate<T extends string>(value: unknown, valid: readonly T[], field: string, fallback: T): T {
-  if (value === undefined || value === null) {return fallback;}
+  if (value === undefined || value === null) {
+    return fallback;
+  }
   if (typeof value !== 'string' || !(valid as readonly string[]).includes(value)) {
     throw new Error(`Invalid ${field}: ${value}. Must be one of: ${valid.join(', ')}`);
   }
@@ -34,14 +45,14 @@ function validate<T extends string>(value: unknown, valid: readonly T[], field: 
 }
 
 export function parseSnapshotRequest(body: Record<string, unknown>): SnapshotRequest {
-  // Note: `layout` and `section` were removed in the Satori migration.
-  // Old clients may still send them — silently ignored for backward compatibility.
   return {
+    layout: validate(body.layout, VALID_LAYOUTS, 'layout', 'desktop'),
     detail: validate(body.detail, VALID_DETAILS, 'detail', 'standard'),
     format: validate(body.format, VALID_FORMATS, 'format', 'png'),
-    range: validate(body.range, VALID_RANGES, 'range', '1h'),
+    range: validate(body.range, VALID_RANGES, 'range', '6h'),
     theme: validate(body.theme, VALID_THEMES, 'theme', 'dark'),
     lang: validate(body.lang, VALID_LANGS, 'lang', 'en'),
+    section: validate(body.section, VALID_SECTIONS, 'section', 'dashboard'),
   };
 }
 

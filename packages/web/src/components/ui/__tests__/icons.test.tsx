@@ -1,11 +1,9 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { renderWithProviders } from '../../../test/render';
-import { CameraIcon, ChevronDownIcon,DoctorIcon, DownloadIcon, RestartIcon, SpinnerIcon } from '../icons';
+import { CameraIcon, ChevronDownIcon, DownloadIcon, SpinnerIcon } from '../icons';
 
 const icons = [
-  ['RestartIcon', RestartIcon],
-  ['DoctorIcon', DoctorIcon],
   ['DownloadIcon', DownloadIcon],
   ['CameraIcon', CameraIcon],
   ['SpinnerIcon', SpinnerIcon],
@@ -21,7 +19,7 @@ describe('Icon components', () => {
   }
 
   it('accepts custom className', () => {
-    const { container } = renderWithProviders(<RestartIcon className="w-5 h-5" />);
+    const { container } = renderWithProviders(<DownloadIcon className="w-5 h-5" />);
     expect((container.querySelector('svg') as SVGElement).getAttribute('class')).toContain('w-5');
   });
 });

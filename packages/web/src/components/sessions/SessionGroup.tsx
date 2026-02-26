@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { formatTokensRaw } from '../../utils/format';
 import { groupByPrefix } from '../../utils/groupByPrefix';
 import { SessionCard } from './SessionCard';
 import { TreeConnector } from './shared/TreeConnector';
@@ -10,13 +11,15 @@ function SubAgentGroup({ prefix, items, totalTokens }: { prefix: string; items: 
   return (
     <div>
       <button
-        onClick={() => { setExpanded(!expanded); }}
+        onClick={() => {
+          setExpanded(!expanded);
+        }}
         className="flex items-center gap-2 w-full pl-4 py-1 text-left rounded transition-colors text-fg-muted"
       >
         <span className={`text-[10px] transition-transform ${expanded ? '' : '-rotate-90'}`}>▼</span>
         <span className="text-[12px] font-medium">{prefix} tasks</span>
         <span className="text-[11px] text-fg-dim">({items.length})</span>
-        <span className="text-[11px] mono ml-auto text-fg-muted">{(totalTokens / 1000).toFixed(1)}k total</span>
+        <span className="text-[11px] mono ml-auto text-fg-muted">{formatTokensRaw(totalTokens)} total</span>
       </button>
       {expanded && (
         <div className="pl-3 mt-1 space-y-1">
@@ -47,7 +50,13 @@ export function SessionGroup({ session }: { session: SessionData }) {
 
   return (
     <div>
-      <div onClick={() => { if (hasChildren) { setExpanded(!expanded); } }}>
+      <div
+        onClick={() => {
+          if (hasChildren) {
+            setExpanded(!expanded);
+          }
+        }}
+      >
         <SessionCard
           displayName={session.displayName}
           kind={session.kind}
@@ -59,7 +68,9 @@ export function SessionGroup({ session }: { session: SessionData }) {
           updatedAt={session.updatedAt}
           hasChildren={hasChildren}
           expanded={expanded}
-          onToggle={() => { setExpanded(!expanded); }}
+          onToggle={() => {
+            setExpanded(!expanded);
+          }}
           subAgentCount={hasChildren ? session.subAgents.length : undefined}
         />
       </div>

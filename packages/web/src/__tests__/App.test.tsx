@@ -13,7 +13,9 @@ if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localSto
       delete store[k];
     },
     clear: () => {
-      for (const k in store) {delete store[k];}
+      for (const k in store) {
+        delete store[k];
+      }
     },
     get length() {
       return Object.keys(store).length;
@@ -48,26 +50,6 @@ vi.mock('../components/charts/metrics/MetricsSection', () => ({
     return <div data-testid="metrics" />;
   },
 }));
-let mockModal: string | null = null;
-const mockOpen = vi.fn((m: string) => {
-  mockModal = m;
-});
-const mockClose = vi.fn(() => {
-  mockModal = null;
-});
-vi.mock('../components/modals/OperationModals', () => ({
-  useOperationModals: () => ({ modal: mockModal, open: mockOpen, close: mockClose }),
-  RestartModal: ({ onClose }: { onClose?: () => void }) => (
-    <div data-testid="restart-modal">
-      <button onClick={onClose}>close</button>
-    </div>
-  ),
-  DoctorModal: ({ onClose }: { onClose?: () => void }) => (
-    <div data-testid="doctor-modal">
-      <button onClick={onClose}>close</button>
-    </div>
-  ),
-}));
 
 vi.mock('../components/logs/LogPage', () => ({
   LogPage: () => <div data-testid="log-page" />,
@@ -100,19 +82,5 @@ describe('App', () => {
     render(<App />);
     expect(screen.getAllByTestId('metrics').length).toBeGreaterThan(0);
     mockRoute.route = { page: 'dashboard' as const, params: {} };
-  });
-
-  it('renders restart modal when modal is restart', () => {
-    mockModal = 'restart';
-    render(<App />);
-    expect(screen.getByTestId('restart-modal')).toBeTruthy();
-    mockModal = null;
-  });
-
-  it('renders doctor modal when modal is doctor', () => {
-    mockModal = 'doctor';
-    render(<App />);
-    expect(screen.getByTestId('doctor-modal')).toBeTruthy();
-    mockModal = null;
   });
 });

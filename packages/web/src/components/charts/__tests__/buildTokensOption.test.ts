@@ -1,5 +1,5 @@
-import type { BarSeriesOption, TooltipComponentOption,YAXisComponentOption } from 'echarts';
-import { describe, expect,it } from 'vitest';
+import type { BarSeriesOption, TooltipComponentOption, YAXisComponentOption } from 'echarts';
+import { describe, expect, it } from 'vitest';
 
 import { buildTokensOption } from '../builders/buildTokensOption';
 
@@ -67,11 +67,12 @@ describe('buildTokensOption', () => {
 
   it('yAxis formatter handles 0, small, and large values', () => {
     const opt = buildTokensOption(MOCK_DATA_SIMPLE, null, 'footer');
-    const formatter = (opt.yAxis as YAXisComponentOption & { axisLabel: { formatter: (v: number) => string } }).axisLabel.formatter;
+    const formatter = (opt.yAxis as YAXisComponentOption & { axisLabel: { formatter: (v: number) => string } })
+      .axisLabel.formatter;
     expect(formatter(0)).toBe('0');
-    expect(formatter(500)).toBe('500k');
-    expect(formatter(1000)).toBe('1.0M');
-    expect(formatter(2500)).toBe('2.5M');
+    expect(formatter(500)).toBe('500.0k');
+    expect(formatter(1000)).toBe('1.00M');
+    expect(formatter(2500)).toBe('2.50M');
   });
 
   it('no-model tooltip formatter renders correctly', () => {
@@ -131,11 +132,15 @@ describe('buildTokensOption', () => {
   it('handles model with missing tokensByModel entries (returns 0)', () => {
     const data = [
       {
-        bucket: 0, label: '0h', tokensK: 10,
+        bucket: 0,
+        label: '0h',
+        tokensK: 10,
         tokensByModel: [{ model: 'anthropic/claude-sonnet-4', tokensK: 10 }],
       },
       {
-        bucket: 1, label: '1h', tokensK: 5,
+        bucket: 1,
+        label: '1h',
+        tokensK: 5,
         tokensByModel: [{ model: 'anthropic/claude-haiku-4', tokensK: 5 }],
       },
     ];

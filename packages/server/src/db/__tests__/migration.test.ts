@@ -1,4 +1,4 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { initDatabase } from '../init';
 
@@ -86,33 +86,31 @@ describe('DB migrations', () => {
     expect(row.v).toBeGreaterThanOrEqual(3);
   });
 
-  it('should create hourly_metric_samples table via migration 4', () => {
+  it('should create hourly_system_samples table', () => {
     const db = initDatabase(':memory:');
     const tables = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hourly_metric_samples'")
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hourly_system_samples'")
       .all();
     expect(tables.length).toBe(1);
   });
 
-  it('should create hourly_model_tokens table via migration 4', () => {
+  it('should create token_usage_events table', () => {
     const db = initDatabase(':memory:');
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hourly_model_tokens'").all();
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='token_usage_events'").all();
     expect(tables.length).toBe(1);
   });
 
-  it('should create unique indexes on hourly tables', () => {
+  it('should create unique index on hourly_system_samples', () => {
     const db = initDatabase(':memory:');
     const idx1 = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_hourly_samples_hour'")
+      .prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_hourly_system_hour'")
       .all();
-    const idx2 = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_hourly_model_hour'").all();
     expect(idx1.length).toBe(1);
-    expect(idx2.length).toBe(1);
   });
 
-  it('should reach schema version 6', () => {
+  it('should reach schema version 7', () => {
     const db = initDatabase(':memory:');
     const row = db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number };
-    expect(row.v).toBe(6);
+    expect(row.v).toBe(7);
   });
 });

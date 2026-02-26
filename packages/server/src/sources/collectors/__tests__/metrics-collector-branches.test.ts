@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { initDatabase } from '../../../db/init.js';
-import { MetricsCollector } from '../metrics-collector.js';
+import { SystemSampler } from '../metrics-collector.js';
 
 const { mockWarn } = vi.hoisted(() => {
   const mockWarn = vi.fn();
@@ -15,61 +15,42 @@ vi.mock('../../../logger.js', () => ({
   }),
 }));
 
-describe('MetricsCollector branch coverage', () => {
+describe('SystemSampler branch coverage', () => {
   it('start() calls sampleSlow and handles rejection', async () => {
     const db = initDatabase(':memory:');
     const sessionReader = {
       getSessions: () => [],
-      getTokensByModel: () => new Map(),
-      getTotalTokensK: () => 0,
     };
     const getSystemMetrics = vi.fn().mockRejectedValue(new Error('metrics fail'));
-    const getUsageCost = vi.fn().mockRejectedValue(new Error('cost fail'));
     const aggregator = { clearCache: vi.fn() };
 
-    const collector = new MetricsCollector(
-      db,
-      sessionReader,
-      getSystemMetrics,
-      getUsageCost,
-      aggregator,
-      100_000,
-      100_000,
-    );
+    const sampler = new SystemSampler(db, sessionReader, getSystemMetrics, aggregator, 100_000, 100_000);
 
-    // start() calls sampleFast() synchronously and sampleSlow().catch()
-    collector.start();
+    sampler.start();
 
     // Wait for sampleSlow rejection to be caught
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(mockWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ err: expect.any(Error) }),
-      'sampleSlow error',
-    );
+    expect(mockWarn).toHaveBeenCalledWith(expect.objectContaining({ err: expect.any(Error) }), 'sampleSlow error');
 
-    collector.stop();
+    sampler.stop();
     db.close();
   });
 
   it('sampleFast with no aggregator does not throw', () => {
     const db = initDatabase(':memory:');
     const sessionReader = {
-      getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens: 1000 }],
-      getTokensByModel: () => new Map([['claude', 5000]]),
-      getTotalTokensK: () => 5,
+      getSessions: () => [{ key: 'a', status: 'ACTIVE' }],
     };
 
-    // No aggregator passed (undefined)
-    const collector = new MetricsCollector(
+    const sampler = new SystemSampler(
       db,
       sessionReader,
       () => ({ cpu: 0, memoryMB: 0, diskMB: 0, sampledAt: new Date().toISOString() }),
-      () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
       undefined,
     );
 
-    expect(() => collector.sampleFast()).not.toThrow();
+    expect(() => sampler.sampleFast()).not.toThrow();
     db.close();
   });
 });

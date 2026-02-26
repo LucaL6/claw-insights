@@ -39,6 +39,14 @@ code,
   animation: pulse-border 3s ease-in-out infinite;
 }
 
+@keyframes pulse-border-amber {
+  0%, 100% { border-color: var(--amber-border); }
+  50% { border-color: var(--amber); }
+}
+.pulse-border-amber {
+  animation: pulse-border-amber 2s ease-in-out infinite;
+}
+
 /* ── Scrollbar ── */
 .sb::-webkit-scrollbar,
 .scrollbar-thin::-webkit-scrollbar {

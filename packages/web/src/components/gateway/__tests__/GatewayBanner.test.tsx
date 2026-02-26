@@ -1,8 +1,8 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '../../../test/render';
 import type { GatewayStatus } from '../../../hooks/useGatewayData';
+import { renderWithProviders } from '../../../test/render';
 
 interface MockData {
   gateway: { running: boolean } | undefined;
@@ -61,52 +61,26 @@ describe('GatewayBanner', () => {
 
   it('renders down state with red styling and greyed channels', () => {
     mockGatewayData.gateway = { running: false };
-    mockGatewayData.status = 'down';
+    mockGatewayData.status = 'gateway-down';
     mockGatewayData.resources = null;
     mockGatewayData.channels = [{ provider: 'telegram', name: 'Telegram', connected: false, latencyMs: null }];
     mockGatewayData.uptime = undefined;
 
     renderWithProviders(<GatewayBanner />);
     expect(screen.getByText('DOWN')).toBeDefined();
-    const restartBtn = screen.getByRole('button', { name: /restart/i });
-    expect(restartBtn.className).toMatch(/red/);
     expect(screen.getAllByText('—')).toHaveLength(2);
   });
 
-  it('renders connecting state with skeletons and disabled buttons', () => {
+  it('renders connecting state with Claw Insights title, no channels/resources', () => {
     mockGatewayData.status = 'connecting';
     mockGatewayData.fetching = { gateway: true, resources: true, channels: true };
     mockGatewayData.gateway = undefined;
 
     renderWithProviders(<GatewayBanner />);
+    expect(screen.getByText('Claw Insights')).toBeDefined();
     expect(screen.getByText('CONNECTING')).toBeDefined();
-    const skeletons = document.querySelectorAll('.animate-pulse');
-    expect(skeletons.length).toBeGreaterThan(0);
-    const restartBtn = screen.getByRole('button', { name: /restart/i });
-    expect(restartBtn).toHaveProperty('disabled', true);
-  });
-
-  it('calls onAction with correct payload on restart click', () => {
-    const onAction = vi.fn();
-    renderWithProviders(<GatewayBanner onAction={onAction} />);
-    fireEvent.click(screen.getByRole('button', { name: /restart/i }));
-    expect(onAction).toHaveBeenCalledWith('restart');
-  });
-
-  it('calls onAction with correct payload on doctor click', () => {
-    const onAction = vi.fn();
-    renderWithProviders(<GatewayBanner onAction={onAction} />);
-    fireEvent.click(screen.getByRole('button', { name: /doctor/i }));
-    expect(onAction).toHaveBeenCalledWith('doctor');
-  });
-
-  it('does not call onAction when buttons are disabled (connecting)', () => {
-    mockGatewayData.status = 'connecting';
-    mockGatewayData.fetching = { gateway: true, resources: true, channels: true };
-    const onAction = vi.fn();
-    renderWithProviders(<GatewayBanner onAction={onAction} />);
-    fireEvent.click(screen.getByRole('button', { name: /restart/i }));
-    expect(onAction).not.toHaveBeenCalled();
+    // isDashboardIssue = true → no channels, no resources
+    expect(screen.queryByText('CPU')).toBeNull();
   });
 
   it('renders empty channels without breaking', () => {
@@ -116,35 +90,32 @@ describe('GatewayBanner', () => {
     expect(screen.queryByText('TG')).toBeNull();
   });
 
-  it('renders DoctorIcon SVG instead of emoji', () => {
+  it('renders dashboard-offline with Claw Insights title and amber styling', () => {
+    mockGatewayData.status = 'dashboard-offline';
+    mockGatewayData.gateway = undefined;
+    mockGatewayData.resources = null;
+    mockGatewayData.channels = [];
+    mockGatewayData.uptime = undefined;
+    mockGatewayData.fetching = { gateway: false, resources: false, channels: false };
+
     renderWithProviders(<GatewayBanner />);
-    const doctorBtn = screen.getByRole('button', { name: /doctor/i });
-    const svg = doctorBtn.querySelector('svg');
-    expect(svg).toBeTruthy();
+    expect(screen.getByText('Claw Insights')).toBeDefined();
+    expect(screen.getByText('OFFLINE')).toBeDefined();
+    expect(screen.getByText('Reconnecting…')).toBeDefined();
+    expect(screen.queryByText('TG')).toBeNull();
+    expect(screen.queryByText('CPU')).toBeNull();
   });
 
-  it('restart button uses btn-restart class in running state', () => {
+  it('renders gateway-down with OpenClaw Gateway title', () => {
+    mockGatewayData.status = 'gateway-down';
+    mockGatewayData.gateway = { running: false };
+    mockGatewayData.resources = null;
+    mockGatewayData.channels = [];
+    mockGatewayData.uptime = undefined;
+
     renderWithProviders(<GatewayBanner />);
-    const restartBtn = screen.getByRole('button', { name: /restart/i });
-    expect(restartBtn.className).toContain('btn-restart');
-  });
-
-  it('doctor button uses btn-doctor class', () => {
-    renderWithProviders(<GatewayBanner />);
-    const doctorBtn = screen.getByRole('button', { name: /doctor/i });
-    expect(doctorBtn.className).toContain('btn-doctor');
-  });
-
-  it('renders tooltips for both action buttons', () => {
-    const { container } = renderWithProviders(<GatewayBanner />);
-    const tooltips = container.querySelectorAll('[role="tooltip"]');
-    expect(tooltips.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('tooltip text references OpenClaw Gateway', () => {
-    const { container } = renderWithProviders(<GatewayBanner />);
-    const tooltips = container.querySelectorAll('[role="tooltip"]');
-    const texts = Array.from(tooltips).map((t) => t.textContent);
-    expect(texts.some((t) => t?.includes('OpenClaw Gateway'))).toBe(true);
+    expect(screen.getByText('OpenClaw Gateway')).toBeDefined();
+    expect(screen.getByText('DOWN')).toBeDefined();
+    expect(screen.getByText('CPU')).toBeDefined();
   });
 });

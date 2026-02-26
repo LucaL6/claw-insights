@@ -3,11 +3,10 @@ import { Provider } from 'urql';
 
 import type { MetricsRange } from './components/charts/metrics/GranularityPicker';
 import { MetricsSection } from './components/charts/metrics/MetricsSection';
+import { GatewayBanner } from './components/gateway/GatewayBanner';
 import { MainLayout } from './components/layout/MainLayout';
 import { LogPage } from './components/logs/LogPage';
-import { DoctorModal, RestartModal, useOperationModals } from './components/modals/OperationModals';
 import { SessionPanel } from './components/sessions/SessionPanel';
-import { GatewayBanner } from './components/gateway/GatewayBanner';
 import { TopBar } from './components/topbar/TopBar';
 import { AuthErrorScreen } from './components/ui/AuthErrorScreen';
 import { AuthErrorProvider, useAuthError } from './context/AuthErrorContext';
@@ -20,7 +19,6 @@ import { ThemeProvider } from './theme/context';
 const VALID_RANGES: MetricsRange[] = ['ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TWENTY_FOUR_HOUR'];
 
 function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: Route }) {
-  const { modal, open, close } = useOperationModals();
   const urlRange = VALID_RANGES.includes(route.params.range as MetricsRange)
     ? (route.params.range as MetricsRange)
     : undefined;
@@ -49,16 +47,12 @@ function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: 
   }, [sessionsReady, metricsReady]);
 
   return (
-    <>
-      <MainLayout
-        topBar={<TopBar currentPage="dashboard" onNavigate={navigate} metricsRange={range} />}
-        banner={<GatewayBanner onAction={open} />}
-        sessions={<SessionPanel onReady={onSessionsReady} />}
-        metrics={<MetricsSection range={range} onRangeChange={setRange} navigate={navigate} onReady={onMetricsReady} />}
-      />
-      {modal === 'restart' && <RestartModal onClose={close} />}
-      {modal === 'doctor' && <DoctorModal onClose={close} />}
-    </>
+    <MainLayout
+      topBar={<TopBar currentPage="dashboard" onNavigate={navigate} metricsRange={range} />}
+      banner={<GatewayBanner />}
+      sessions={<SessionPanel onReady={onSessionsReady} />}
+      metrics={<MetricsSection range={range} onRangeChange={setRange} navigate={navigate} onReady={onMetricsReady} />}
+    />
   );
 }
 

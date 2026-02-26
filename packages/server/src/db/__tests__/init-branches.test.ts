@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { RetentionConfig } from '../../sources/data-retention.js';
 import { DataRetention } from '../../sources/data-retention.js';
@@ -51,9 +51,18 @@ describe('init.ts - hasColumn true branches (columns already exist)', () => {
     // Now initDatabase will run v2+ migrations; v2 hasColumn('module') → true → skip
     const db2 = initDatabase(path);
     const row = db2.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number };
-    expect(row.v).toBeGreaterThanOrEqual(6);
+    expect(row.v).toBeGreaterThanOrEqual(7);
+    // Old tables should be renamed to _deprecated
+    const deprecated = db2
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_deprecated_metric_samples'")
+      .all();
+    expect(deprecated.length).toBe(1);
     db2.close();
-    try { unlinkSync(path); } catch { /* ignore */ }
+    try {
+      unlinkSync(path);
+    } catch {
+      /* ignore */
+    }
   });
 
   it('v3 skips ALTER when category/source already exist', () => {
@@ -93,12 +102,16 @@ describe('init.ts - hasColumn true branches (columns already exist)', () => {
     // v3 hasColumn('category') → true, hasColumn('source') → true → skip ALTERs
     const db2 = initDatabase(path);
     const row = db2.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number };
-    expect(row.v).toBeGreaterThanOrEqual(6);
+    expect(row.v).toBeGreaterThanOrEqual(7);
     db2.close();
-    try { unlinkSync(path); } catch { /* ignore */ }
+    try {
+      unlinkSync(path);
+    } catch {
+      /* ignore */
+    }
   });
 
-  it('v6 skips ALTER when token_delta_k already exists on model_token_samples', () => {
+  it('v7 creates new tables and renames old ones', () => {
     const path = tmpDbPath();
     const db = new DatabaseSync(path);
     db.exec('PRAGMA journal_mode=WAL');
@@ -136,17 +149,32 @@ describe('init.ts - hasColumn true branches (columns already exist)', () => {
       );
       CREATE UNIQUE INDEX IF NOT EXISTS idx_hourly_model_hour ON hourly_model_tokens(hour, model);
     `);
-    for (let v = 1; v <= 5; v++) {
+    for (let v = 1; v <= 6; v++) {
       db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(v);
     }
     db.close();
 
-    // v6 hasColumn('token_delta_k') → true → skip ALTER
     const db2 = initDatabase(path);
     const row = db2.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number };
-    expect(row.v).toBe(6);
+    expect(row.v).toBe(7);
+    // New tables exist
+    const newTables = db2
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('system_samples','token_usage_events','hourly_system_samples')",
+      )
+      .all();
+    expect(newTables.length).toBe(3);
+    // Old tables deprecated
+    const deprecated = db2
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '_deprecated_%'")
+      .all();
+    expect(deprecated.length).toBe(4);
     db2.close();
-    try { unlinkSync(path); } catch { /* ignore */ }
+    try {
+      unlinkSync(path);
+    } catch {
+      /* ignore */
+    }
   });
 });
 
@@ -162,12 +190,12 @@ describe('data-retention branches', () => {
     const retention = new DataRetention(db, config);
     // No data inserted → hours query returns empty → early return
     retention.runOnce();
-    const rows = db.prepare('SELECT COUNT(*) as c FROM hourly_metric_samples').get() as { c: number };
+    const rows = db.prepare('SELECT COUNT(*) as c FROM hourly_system_samples').get() as { c: number };
     expect(rows.c).toBe(0);
     db.close();
   });
 
-  it('aggregates hour with no cost row (costRow undefined)', () => {
+  it('aggregates hour with no data (early return)', () => {
     const db = createTestDb();
     const config: RetentionConfig = { rawRetentionDays: 0, hourlyRetention: 'permanent', aggregateIntervalMs: 60000 };
     const retention = new DataRetention(db, config);
@@ -177,14 +205,16 @@ describe('data-retention branches', () => {
     pastHour.setMinutes(15, 0, 0);
     const ts = pastHour.toISOString();
 
-    db.prepare(`
-      INSERT INTO metric_samples (timestamp, active_sessions, total_tokens_k, token_delta_k, cost_today, tokens_today_m, cpu, memory_mb)
-      VALUES (?, 2, 100, 5, 1.5, 0.1, 30, 512)
-    `).run(ts);
+    db.prepare(
+      `
+      INSERT INTO system_samples (timestamp, active_sessions, cpu, memory_mb)
+      VALUES (?, 2, 30, 512)
+    `,
+    ).run(ts);
 
     retention.runOnce();
 
-    const rows = db.prepare('SELECT * FROM hourly_metric_samples').all() as Record<string, unknown>[];
+    const rows = db.prepare('SELECT * FROM hourly_system_samples').all() as Record<string, unknown>[];
     expect(rows.length).toBe(1);
     db.close();
   });
@@ -196,11 +226,13 @@ describe('data-retention branches', () => {
 
     // Insert old hourly data
     const oldHour = new Date(Date.now() - 5 * 24 * 3600_000).toISOString().replace(/:\d{2}\.\d{3}Z/, ':00:00Z');
-    db.prepare('INSERT INTO hourly_metric_samples (hour, active_sessions_max, active_sessions_avg, token_delta_k, cost_end, cpu_avg, cpu_max, memory_mb_avg, memory_mb_max, sample_count) VALUES (?, 1, 1, 0, 0, 0, 0, 0, 0, 1)').run(oldHour);
+    db.prepare(
+      'INSERT INTO hourly_system_samples (hour, active_sessions_max, active_sessions_avg, cpu_avg, cpu_max, memory_mb_avg, memory_mb_max, sample_count) VALUES (?, 1, 1, 0, 0, 0, 0, 1)',
+    ).run(oldHour);
 
     retention.runOnce();
 
-    const rows = db.prepare('SELECT COUNT(*) as c FROM hourly_metric_samples').get() as { c: number };
+    const rows = db.prepare('SELECT COUNT(*) as c FROM hourly_system_samples').get() as { c: number };
     expect(rows.c).toBe(0); // pruned
     db.close();
   });

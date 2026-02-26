@@ -4,14 +4,18 @@ import type { SatoriNode } from './helpers.js';
 import { div, span, StatusBadge } from './helpers.js';
 
 export function renderGatewayBanner(data: SnapshotData, detail: Detail, c: ColorScheme): SatoriNode | null {
-  if (detail === 'compact') return null;
+  if (detail === 'compact') {
+    return null;
+  }
 
   const gw = data.gateway;
   const isDown = gw.status === 'down' || gw.status === 'connecting';
 
   // Sort channels: copy first, connected first then alpha by name
   const channels = [...(data.channels ?? [])].sort((a, b) => {
-    if (a.connected !== b.connected) return a.connected ? -1 : 1;
+    if (a.connected !== b.connected) {
+      return a.connected ? -1 : 1;
+    }
     return (a.name ?? '').localeCompare(b.name ?? '');
   });
 
@@ -79,7 +83,9 @@ export function renderGatewayBanner(data: SnapshotData, detail: Detail, c: Color
   }
 
   const children: SatoriNode[] = [leftGroup];
-  if (centerGroup) children.push(centerGroup);
+  if (centerGroup) {
+    children.push(centerGroup);
+  }
   children.push(rightGroup);
 
   return div(bannerStyle, children);

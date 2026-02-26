@@ -131,6 +131,8 @@ export function loadConfigFile(): Record<string, unknown> {
       'rawRetentionDays',
       'serverOnly',
       'hourlyRetention',
+      'transcriptsDir',
+      'deviceJsonPath',
     ]);
     for (const key of Object.keys(raw)) {
       if (!knownKeys.has(key)) {
@@ -151,6 +153,8 @@ export interface AppConfig {
   sessionsPath: string;
   logDir: string;
   cronPath: string;
+  transcriptsDir: string;
+  deviceJsonPath: string;
   openclawDir: string;
   dbPath: string;
   serverPort: number;
@@ -216,6 +220,8 @@ export function resolveConfig(): AppConfig {
     sessionsPath: env('SESSIONS_PATH') ?? `${HOME}/.openclaw/agents/main/sessions/sessions.json`,
     logDir: env('LOG_DIR') ?? '/tmp/openclaw/',
     cronPath: env('CRON_PATH') ?? `${HOME}/.openclaw/cron/jobs.json`,
+    transcriptsDir: env('TRANSCRIPTS_DIR') ?? join(env('DIR') ?? `${HOME}/.openclaw`, 'agents/main/sessions'),
+    deviceJsonPath: env('DEVICE_JSON') ?? join(env('DIR') ?? `${HOME}/.openclaw`, 'identity/device.json'),
     openclawDir: env('DIR') ?? `${HOME}/.openclaw`,
     dbPath:
       env('DB') ??

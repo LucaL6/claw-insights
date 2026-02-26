@@ -1,5 +1,5 @@
-import { act,renderHook } from '@testing-library/react';
-import { afterEach,beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useSnapshot } from '../useSnapshot';
 
@@ -30,7 +30,10 @@ describe('useSnapshot', () => {
     vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: true,
       blob: async () => mockBlob,
-      headers: new Headers({ 'X-Filename': 'claw-insights-standard-1h-dark-2026-02-23-13-15.png' }),
+      headers: new Headers({
+        'X-Filename': 'claw-insights-standard-1h-dark-2026-02-23-13-15.png',
+        'X-Snapshot-Duration': '1.23s',
+      }),
     } as unknown as Response);
 
     const clickSpy = vi.fn();
@@ -53,10 +56,16 @@ describe('useSnapshot', () => {
   });
 
   it('maps range to short form', async () => {
-    vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() } as unknown as Response);
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      blob: async () => new Blob(),
+      headers: new Headers(),
+    } as unknown as Response);
     const origCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
-      if (String(tagName).toLowerCase() === 'a') {return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;}
+      if (String(tagName).toLowerCase() === 'a') {
+        return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;
+      }
       return origCreate(tagName, options);
     }) as typeof document.createElement);
 
@@ -70,10 +79,16 @@ describe('useSnapshot', () => {
   });
 
   it('uses 24h fallback for unknown range', async () => {
-    vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, blob: async () => new Blob(), headers: new Headers() } as unknown as Response);
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      blob: async () => new Blob(),
+      headers: new Headers(),
+    } as unknown as Response);
     const origCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
-      if (String(tagName).toLowerCase() === 'a') {return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;}
+      if (String(tagName).toLowerCase() === 'a') {
+        return { click: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;
+      }
       return origCreate(tagName, options);
     }) as typeof document.createElement);
 

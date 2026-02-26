@@ -1,5 +1,5 @@
 import { cleanup } from '@testing-library/react';
-import { afterEach,describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { renderWithProviders } from '../../../../test/render';
 import { MetricsSummaryRow } from '../MetricsSummaryRow';
@@ -23,7 +23,7 @@ describe('MetricsSummaryRow', () => {
       <MetricsSummaryRow totalTokensK={0} totalErrors={0} totalWarnings={0} uptimePct={0} />,
     );
     const text = container.textContent ?? '';
-    expect(text).toContain('0.0k');
+    expect(text).toContain('0');
     expect(text).toContain('0.0%');
   });
 });

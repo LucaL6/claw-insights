@@ -58,9 +58,9 @@ export function getTooltips(t: T) {
 
     // ── Chart data point (ECharts tooltip footer) ──
     chartFooter: {
-      sessions: 'active sessions · MAX(active_sessions)',
-      tokens: 'token consumption · SUM(token_delta_k)',
-      errors: 'event count · COUNT(*)',
+      sessions: 'active sessions · peak per bucket',
+      tokens: 'token consumption · from transcript usage',
+      errors: 'event count · from metric events',
     },
   } as const;
 }

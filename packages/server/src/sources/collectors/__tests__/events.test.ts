@@ -1,11 +1,11 @@
 import { rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { initDatabase } from '../../../db/init';
-import { dataBus, type DataChangeEvent,emitChange } from '../../../events';
-import { MetricsCollector } from '../metrics-collector';
+import { dataBus, type DataChangeEvent, emitChange } from '../../../events';
+import { SystemSampler } from '../metrics-collector';
 
 describe('dataBus', () => {
   it('should emit change events with source and ts', () => {
@@ -27,24 +27,21 @@ describe('dataBus', () => {
 });
 
 describe('dataBus integration', () => {
-  it('MetricsCollector.sampleFast emits metrics signal', () => {
+  it('SystemSampler.sampleFast emits metrics signal', () => {
     const dbPath = join(tmpdir(), `evt-${Date.now()}.db`);
     const db = initDatabase(dbPath);
     const received: string[] = [];
     dataBus.on('change', (e: DataChangeEvent) => received.push(e.source));
 
-    const mc = new MetricsCollector(
+    const ss = new SystemSampler(
       db,
       {
-        getSessions: () => [{ key: 'a', status: 'ACTIVE', totalTokens: 1000 }],
-        getTokensByModel: () => new Map(),
-        getTotalTokensK: () => 1,
+        getSessions: () => [{ key: 'a', status: 'ACTIVE' }],
       },
       () => ({ cpu: 1, memoryMB: 100, diskMB: 500, sampledAt: new Date().toISOString() }),
-      () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: new Date().toISOString() }),
     );
 
-    mc.sampleFast();
+    ss.sampleFast();
     expect(received).toContain('metrics');
 
     dataBus.removeAllListeners();
