@@ -7,6 +7,7 @@ import { initDatabase } from '../init';
 import {
   getBucketedModelTokenUsage,
   getBucketedTokenUsage,
+  getRangeModelTokenUsage,
   getRangeTokenUsageK,
   insertTokenUsageEvent,
 } from '../token-queries';
@@ -149,6 +150,61 @@ describe('token-queries', () => {
       const { db, cleanup } = setup();
       const result = getRangeTokenUsageK(db, '2026-02-27T10:00:00Z', '2026-02-27T11:00:00Z');
       expect(result).toBe(0);
+      cleanup();
+    });
+  });
+
+  describe('getRangeModelTokenUsage', () => {
+    it('returns token totals grouped by model in descending order', () => {
+      const { db, cleanup } = setup();
+      insertTokenUsageEvent(db, {
+        timestamp: '2026-02-27T10:01:00Z',
+        sessionKey: 'sess-1',
+        model: 'gpt-5.3-codex',
+        inputTokens: 3000,
+        outputTokens: 1000,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      });
+      insertTokenUsageEvent(db, {
+        timestamp: '2026-02-27T10:02:00Z',
+        sessionKey: 'sess-2',
+        model: 'claude-opus-4-6',
+        inputTokens: 1000,
+        outputTokens: 500,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      });
+
+      const result = getRangeModelTokenUsage(db, '2026-02-27T10:00:00Z', '2026-02-27T11:00:00Z');
+      expect(result).toEqual([
+        { model: 'gpt-5.3-codex', tokensK: 4 },
+        { model: 'claude-opus-4-6', tokensK: 1.5 },
+      ]);
+      cleanup();
+    });
+
+    it('returns empty array for empty range', () => {
+      const { db, cleanup } = setup();
+      const result = getRangeModelTokenUsage(db, '2026-02-27T10:00:00Z', '2026-02-27T11:00:00Z');
+      expect(result).toEqual([]);
+      cleanup();
+    });
+
+    it('returns one row for a single model', () => {
+      const { db, cleanup } = setup();
+      insertTokenUsageEvent(db, {
+        timestamp: '2026-02-27T10:01:00Z',
+        sessionKey: 'sess-1',
+        model: 'claude-opus-4-6',
+        inputTokens: 2000,
+        outputTokens: 1000,
+        cacheReadTokens: 500,
+        cacheWriteTokens: 500,
+      });
+
+      const result = getRangeModelTokenUsage(db, '2026-02-27T10:00:00Z', '2026-02-27T11:00:00Z');
+      expect(result).toEqual([{ model: 'claude-opus-4-6', tokensK: 4 }]);
       cleanup();
     });
   });

@@ -14,6 +14,7 @@ export interface CliArgs {
   gateway: string | undefined;
   logDir: string | undefined;
   lines: number | undefined;
+  open: boolean;
   help: boolean;
   version: boolean;
 }
@@ -24,7 +25,10 @@ export function parseCliArgs(argv: string[]): CliArgs {
   const args = [...argv];
 
   if (args.length > 0 && !args[0].startsWith('-')) {
-    const sub = args.shift()!;
+    const sub = args.shift();
+    if (sub === undefined) {
+      throw new Error('Expected subcommand argument');
+    }
     if (SUBCOMMANDS.includes(sub as Subcommand)) {
       command = sub as Subcommand;
     }
@@ -40,6 +44,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       gateway: { type: 'string' },
       'log-dir': { type: 'string' },
       lines: { type: 'string', short: 'n' },
+      open: { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
       version: { type: 'boolean', short: 'v', default: false },
     },
@@ -57,6 +62,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     gateway: values.gateway as string | undefined,
     logDir: values['log-dir'] as string | undefined,
     lines: values.lines ? parseInt(values.lines as string, 10) : undefined,
+    open: (values.open as boolean) ?? false,
     help: (values.help as boolean) ?? false,
     version: (values.version as boolean) ?? false,
   };

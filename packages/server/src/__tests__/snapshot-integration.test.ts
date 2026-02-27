@@ -35,12 +35,7 @@ const _mockSnapshotData: SnapshotData = {
     warnings: 0,
     uptimePercent: 99.8,
   },
-  sparklines: {
-    sessions: Array(24).fill(2),
-    tokens: Array(24).fill(100),
-    errors: Array(24).fill(0),
-    uptime: Array(24).fill('up') as ('up' | 'degraded' | 'down')[],
-  },
+  tokensByModel: [{ model: 'claude-opus-4', modelDisplay: 'opus-4', tokensK: 128.4, percent: 100 }],
   sessions: [
     {
       name: 'main',
@@ -52,6 +47,7 @@ const _mockSnapshotData: SnapshotData = {
       totalTokensDisplay: '42.1k',
       usagePercent: 68,
       updatedAt: '2m ago',
+      turnCount: 4,
       subAgentCount: 0,
     },
   ],
@@ -70,6 +66,9 @@ const mockSources: DataSources = {
     buckets: [],
   }),
   getRecentErrors: () => [{ timestamp: '14:32', type: 'error', module: 'gateway', message: 'WebSocket timeout' }],
+  getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'claude-opus-4', tokensK: 128.4 }]),
+  getTokenTrend: vi.fn().mockReturnValue(10),
+  getTurnCounts: vi.fn().mockReturnValue({ total: 4, bySession: [] }),
 };
 
 // ── Mock the heavy renderer (avoids font loading) ──

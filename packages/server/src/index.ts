@@ -186,6 +186,16 @@ const server = app.listen(PORT, '127.0.0.1', () => {
       console.log(`🔒 Auth enabled. Run 'claw-insights status' to get the access URL.`);
     }
   }
+
+  // --open flag: auto-open browser in foreground mode
+  if (process.env.CLAW_INSIGHTS_OPEN === 'true' && !config.serverOnly && process.stderr.isTTY) {
+    void import('./cli/open-browser.js').then(({ openBrowser }) => {
+      const openUrl = config.noAuth
+        ? `http://127.0.0.1:${PORT}`
+        : `http://127.0.0.1:${PORT}/?token=${config.apiToken}`;
+      openBrowser(openUrl);
+    });
+  }
 });
 
 // BUG-027: Friendly port conflict message

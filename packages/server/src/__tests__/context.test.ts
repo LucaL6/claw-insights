@@ -80,6 +80,10 @@ vi.mock('../sources/collectors/log-tailer.js', () => ({
   LogTailer: mockClass({ on() {}, off() {}, destroy() {} }),
 }));
 
+vi.mock('../sources/collectors/lifetime-scanner.js', () => ({
+  LifetimeScanner: mockClass({ init: () => Promise.resolve(), destroy() {}, getStats: () => ({}) }),
+}));
+
 vi.mock('../sources/readers/spawn-tracker.js', () => ({
   SpawnTracker: mockClass({ ingest() {} }),
 }));
@@ -119,6 +123,8 @@ describe('context', () => {
     expect(ctx.systemSampler).toBeDefined();
     expect(ctx.dataValidator).toBeDefined();
     expect(ctx.dataRetention).toBeDefined();
+    expect(ctx.flushTokenEvents).toBeTypeOf('function');
+    expect(ctx.flushMessageEvents).toBeTypeOf('function');
   });
 
   it('createContext builds pipeline with declarative wiring', async () => {
@@ -129,19 +135,30 @@ describe('context', () => {
     expect(ctx.pipeline).toBeDefined();
   });
 
-  it('startContext starts pipeline', async () => {
+  it('startContext starts pipeline and flushes buffered events after init', async () => {
     const { createContext, startContext } = await import('../context');
     const ctx = createContext();
+    const flushTokenSpy = vi.spyOn(ctx, 'flushTokenEvents');
+    const flushMessageSpy = vi.spyOn(ctx, 'flushMessageEvents');
+
     startContext(ctx);
+    await Promise.resolve();
 
     expect(ctx.pipeline.start).toHaveBeenCalled();
+    expect(flushTokenSpy).toHaveBeenCalled();
+    expect(flushMessageSpy).toHaveBeenCalled();
   });
 
-  it('destroyContext cleans up via pipeline and closes db', async () => {
+  it('destroyContext flushes buffers, destroys pipeline, and closes db', async () => {
     const { createContext, destroyContext } = await import('../context');
     const ctx = createContext();
+    const flushTokenSpy = vi.spyOn(ctx, 'flushTokenEvents');
+    const flushMessageSpy = vi.spyOn(ctx, 'flushMessageEvents');
+
     destroyContext(ctx);
 
+    expect(flushTokenSpy).toHaveBeenCalled();
+    expect(flushMessageSpy).toHaveBeenCalled();
     expect(ctx.pipeline.destroy).toHaveBeenCalled();
     expect((ctx.db as unknown as Record<string, unknown>).close).toHaveBeenCalled();
   });

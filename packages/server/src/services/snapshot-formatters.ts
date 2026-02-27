@@ -1,38 +1,57 @@
 // ─── Formatting ──────────────────────────────────────────────────
 
 export function formatTokens(n: number): string {
-  if (n >= 1_000_000) {return `${(n / 1_000_000).toFixed(2)}M`;}
-  if (n >= 1_000) {return `${(n / 1_000).toFixed(1)}k`;}
+  if (n >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(2)}M`;
+  }
+  if (n >= 1_000) {
+    return `${(n / 1_000).toFixed(1)}k`;
+  }
   return String(n);
 }
 
 export function friendlyModel(model: string): string {
   // "anthropic/claude-opus-4-6" → "Opus 4.6"
-  const last = model.includes('/') ? model.split('/').pop()! : model;
+  const segments = model.split('/');
+  const last = model.includes('/') ? (segments[segments.length - 1] ?? model) : model;
   const stripped = last.replace(/^claude-/, '');
   const parts = stripped.split('-');
-  if (parts.length === 0) {return model;}
+  if (parts.length === 0) {
+    return model;
+  }
   const name = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
   const version = parts.slice(1).join('.');
   return version ? `${name} ${version}` : name;
 }
 
 export function normalize(values: number[]): number[] {
-  if (values.length === 0) {return [];}
+  if (values.length === 0) {
+    return [];
+  }
   const max = Math.max(...values);
-  if (max === 0) {return values.map(() => 0);}
+  if (max === 0) {
+    return values.map(() => 0);
+  }
   return values.map((v) => Math.round((v / max) * 100));
 }
 
 export function relativeTime(input: number | string): string {
   const ts = typeof input === 'number' ? input : new Date(input).getTime();
-  if (!ts || isNaN(ts)) {return '—';}
+  if (!ts || isNaN(ts)) {
+    return '—';
+  }
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) {return 'just now';}
-  if (mins < 60) {return `${mins}m ago`;}
+  if (mins < 1) {
+    return 'just now';
+  }
+  if (mins < 60) {
+    return `${mins}m ago`;
+  }
   const hours = Math.floor(mins / 60);
-  if (hours < 24) {return `${hours}h ago`;}
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
@@ -44,7 +63,9 @@ export function relativeTime(input: number | string): string {
  * Use for non-aggregatable data (e.g. uptime status strings).
  */
 export function sample<T>(arr: T[], count: number): T[] {
-  if (arr.length <= count) {return arr;}
+  if (arr.length <= count) {
+    return arr;
+  }
   const step = (arr.length - 1) / (count - 1);
   return Array.from({ length: count }, (_, i) => arr[Math.round(i * step)]);
 }
@@ -65,8 +86,12 @@ export interface MetricsBucket {
  * MAX for peak fields (sessions). Preserves totals.
  */
 export function aggregateSample(arr: MetricsBucket[], count: number): MetricsBucket[] {
-  if (count <= 0 || arr.length === 0) {return [];}
-  if (arr.length <= count) {return arr;}
+  if (count <= 0 || arr.length === 0) {
+    return [];
+  }
+  if (arr.length <= count) {
+    return arr;
+  }
   const binSize = arr.length / count;
   const result: MetricsBucket[] = [];
   for (let i = 0; i < count; i++) {
@@ -85,7 +110,11 @@ export function aggregateSample(arr: MetricsBucket[], count: number): MetricsBuc
 }
 
 export function uptimeStatus(percent: number): 'up' | 'degraded' | 'down' {
-  if (percent >= 99) {return 'up';}
-  if (percent >= 90) {return 'degraded';}
+  if (percent >= 99) {
+    return 'up';
+  }
+  if (percent >= 90) {
+    return 'degraded';
+  }
   return 'down';
 }

@@ -2,8 +2,9 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { type MessageEvent, MessageEventBus } from '../../../events/message-event-bus';
 import { TokenEventBus, type TokenUsageEvent } from '../../../events/token-event-bus';
 import { LifetimeScanner } from '../lifetime-scanner';
 
@@ -435,6 +436,22 @@ describe('LifetimeScanner', () => {
 
   describe('truncate and inode change', () => {
     // -- Test 21: File truncated (size shrinks) triggers correct rescan
+    it('calls onBeforeRescan before full rescan on truncation', async () => {
+      const file = join(dir, 'callback.jsonl');
+      writeFileSync(file, [sessionLine(), userMsg(), assistantMsg({ input: 100, output: 50 })].join('\n') + '\n');
+
+      const onBeforeRescan = vi.fn();
+      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), undefined, undefined, onBeforeRescan);
+      await scanner.init();
+      onBeforeRescan.mockClear();
+
+      writeFileSync(file, [sessionLine(), userMsg()].join('\n') + '\n');
+      (scanner as any).lastRefreshMs = 0;
+      await scanner.getStats();
+
+      expect(onBeforeRescan).toHaveBeenCalledTimes(1);
+    });
+
     it('handles file truncation without double counting', async () => {
       const file = join(dir, 'truncated.jsonl');
       writeFileSync(
@@ -552,6 +569,43 @@ describe('LifetimeScanner', () => {
       expect(stats2.totalUserMessages).toBe(stats1.totalUserMessages);
       expect(stats2.totalAssistantMessages).toBe(stats1.totalAssistantMessages);
       expect(stats2.createdAt).toBe(stats1.createdAt);
+    });
+  });
+
+  // ── MessageEventBus integration ──
+
+  describe('MessageEventBus integration', () => {
+    it('emits message events for user, assistant, and toolResult roles', async () => {
+      const bus = new MessageEventBus();
+      const events: MessageEvent[] = [];
+      bus.on((e) => events.push(e));
+
+      makeTranscript(dir, 'sess-msg.jsonl', [
+        writeLine({
+          type: 'message',
+          timestamp: '2025-06-01T00:00:00Z',
+          message: { role: 'user', content: 'hi' },
+        }),
+        writeLine({
+          type: 'message',
+          timestamp: '2025-06-01T00:00:01Z',
+          message: { role: 'assistant', content: 'hello', usage: { input: 10, output: 5 } },
+        }),
+        writeLine({
+          type: 'message',
+          timestamp: '2025-06-01T00:00:02Z',
+          message: { role: 'toolResult', content: 'ok' },
+        }),
+      ]);
+
+      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), undefined, bus);
+      await scanner.init();
+
+      expect(events).toEqual([
+        { timestamp: '2025-06-01T00:00:00Z', sessionKey: 'sess-msg', role: 'user' },
+        { timestamp: '2025-06-01T00:00:01Z', sessionKey: 'sess-msg', role: 'assistant' },
+        { timestamp: '2025-06-01T00:00:02Z', sessionKey: 'sess-msg', role: 'tool' },
+      ]);
     });
   });
 

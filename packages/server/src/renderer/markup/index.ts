@@ -1,5 +1,4 @@
 import type { Detail, SnapshotData } from '../../services/snapshot-types.js';
-import { renderCharts } from './charts.js';
 import { getColors } from './colors.js';
 import { renderErrors } from './errors.js';
 import { renderFooter } from './footer.js';
@@ -9,6 +8,7 @@ import type { SatoriNode } from './helpers.js';
 import { div } from './helpers.js';
 import { renderMetrics } from './metrics.js';
 import { renderSessions } from './sessions.js';
+import { renderTokenUsage } from './token-usage.js';
 
 export const VIEWPORT_WIDTH: Record<Detail, number> = { compact: 390, standard: 540, full: 540 };
 
@@ -24,14 +24,12 @@ export function buildMarkup(data: SnapshotData, opts: MarkupOptions): SatoriNode
     renderHeader(data, opts.detail, c),
     renderGatewayBanner(data, opts.detail, c),
     renderMetrics(data, opts.detail, c),
+    renderTokenUsage(data, opts.detail, c),
   ];
   if (opts.detail === 'standard' || opts.detail === 'full') {
     sections.push(renderSessions(data, opts.detail, c));
   }
-  if (opts.detail !== 'compact') {
-    sections.push(renderCharts(data, opts.detail, c));
-  }
-  if (opts.detail === 'standard' || opts.detail === 'full') {
+  if ((opts.detail === 'standard' || opts.detail === 'full') && data.summary.errors > 0) {
     sections.push(renderErrors(data, c));
   }
   sections.push(renderFooter(data, c));

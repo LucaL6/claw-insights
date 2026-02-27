@@ -1,10 +1,12 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { SnapshotData } from '../../../services/snapshot-types.js';
 import { renderCharts } from '../charts.js';
 import { DARK } from '../colors.js';
 import { renderErrors } from '../errors.js';
-import { Sparkline,StatusBadge } from '../helpers.js';
+import { type SatoriNode, Sparkline, StatusBadge } from '../helpers.js';
+import { buildMarkup } from '../index.js';
+import { renderSessions } from '../sessions.js';
 
 const c = DARK;
 
@@ -89,5 +91,108 @@ describe('renderCharts branches', () => {
     const result = renderCharts(data, 'standard', c);
     // parseInt('abc') is NaN, || 6 → 6
     expect(result).toBeDefined();
+  });
+});
+
+function collectText(node: SatoriNode | string | unknown): string[] {
+  if (typeof node === 'string') {
+    return [node];
+  }
+  if (typeof node === 'number') {
+    return [String(node)];
+  }
+  if (!node || typeof node !== 'object') {
+    return [];
+  }
+
+  const n = node as SatoriNode;
+  const results: string[] = [];
+  const children = n.props?.children;
+
+  if (typeof children === 'string') {
+    results.push(children);
+  } else if (Array.isArray(children)) {
+    for (const child of children) {
+      results.push(...collectText(child));
+    }
+  }
+
+  return results;
+}
+
+describe('buildMarkup snapshot content', () => {
+  it('shows TOKENS section, hides errors when summary.errors=0, and does not render charts', () => {
+    const data = {
+      gateway: { status: 'up', version: '1.0.0', uptime: '2d', cpu: 5, memoryMB: 100 },
+      channels: [],
+      timestamp: '2026-02-23T00:00:00Z',
+      range: '6h',
+      time: '00:00',
+      summary: {
+        activeSessions: 2,
+        totalSessions: 3,
+        tokens: 12000,
+        tokensDisplay: '12k',
+        errors: 0,
+        warnings: 0,
+        uptimePercent: 99.5,
+      },
+      sparklines: {
+        sessions: [1, 2, 3],
+        tokens: [100, 200, 300],
+        errors: [0, 0, 0],
+        uptime: ['up', 'up', 'up'],
+      },
+      sessions: [],
+      recentErrors: [{ timestamp: 'now', type: 'error', module: 'x', message: 'should be hidden' }],
+      tokensByModel: [{ model: 'claude', modelDisplay: 'Claude', tokensK: 12, percent: 100 }],
+    } as unknown as SnapshotData;
+
+    const tree = buildMarkup(data, { detail: 'standard', theme: 'dark', lang: 'en' });
+    const texts = collectText(tree);
+
+    expect(texts).toContain('TOKENS');
+    expect(texts).not.toContain('UPTIME');
+    expect(texts).not.toContain('RECENT ERRORS');
+  });
+});
+
+describe('renderSessions turnCount', () => {
+  it('shows turn count only when turnCount > 0', () => {
+    const data = {
+      sessions: [
+        {
+          name: 'main',
+          status: 'active',
+          model: 'm',
+          modelDisplay: 'M',
+          channel: 'telegram',
+          totalTokens: 1000,
+          totalTokensDisplay: '1k',
+          usagePercent: 40,
+          updatedAt: '2m ago',
+          subAgentCount: 0,
+          turnCount: 5,
+        },
+        {
+          name: 'idle',
+          status: 'idle',
+          model: 'm2',
+          modelDisplay: 'M2',
+          channel: 'discord',
+          totalTokens: 500,
+          totalTokensDisplay: '0.5k',
+          usagePercent: 10,
+          updatedAt: '5m ago',
+          subAgentCount: 0,
+          turnCount: 0,
+        },
+      ],
+    } as unknown as SnapshotData;
+
+    const tree = renderSessions(data, 'standard', c);
+    const texts = collectText(tree);
+    expect(texts).toContain('💬 5');
+    expect(texts).not.toContain('💬 0');
   });
 });

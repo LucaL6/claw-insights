@@ -1,5 +1,5 @@
-import { existsSync,readFileSync } from 'node:fs';
-import { dirname,resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -25,18 +25,20 @@ export function resetFontCache(): void {
 }
 
 export function loadFonts(): SatoriFont[] {
-  if (fontCache) {return fontCache;}
+  if (fontCache) {
+    return fontCache;
+  }
 
   const customDir = process.env.CLAW_INSIGHTS_FONTS_DIR;
-  const candidates = [
-    resolve(__dirname, '../../assets/fonts'),
-    resolve(__dirname, '../assets/fonts'),
-  ];
-  const builtinDir = candidates.find(d => existsSync(d));
+  const candidates = [resolve(__dirname, '../../assets/fonts'), resolve(__dirname, '../assets/fonts')];
+  const builtinDir = candidates.find((d) => existsSync(d));
   if (!builtinDir && !customDir) {
     throw new Error('Font directory not found. Set CLAW_INSIGHTS_FONTS_DIR or check installation.');
   }
-  const fontDir = customDir && existsSync(customDir) ? customDir : builtinDir!;
+  const fontDir = customDir && existsSync(customDir) ? customDir : builtinDir;
+  if (!fontDir) {
+    throw new Error('No valid font directory found');
+  }
 
   fontCache = FONT_FILES.map(({ file, name, weight }) => ({
     name,

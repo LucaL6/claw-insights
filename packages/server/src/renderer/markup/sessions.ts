@@ -1,4 +1,4 @@
-import type { Detail,SnapshotData, SnapshotSession } from '../../services/snapshot-types.js';
+import type { Detail, SnapshotData, SnapshotSession } from '../../services/snapshot-types.js';
 import type { ColorScheme } from './colors.js';
 import type { SatoriNode } from './helpers.js';
 import { div, span, Tag } from './helpers.js';
@@ -6,6 +6,7 @@ import { div, span, Tag } from './helpers.js';
 function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
   const active = sess.status === 'active';
   const pct = sess.usagePercent != null ? Math.round(sess.usagePercent) : 0;
+  const turnCount = sess.turnCount ?? 0;
 
   const tags: SatoriNode[] = [
     Tag(sess.modelDisplay || sess.model, c.tagModel.bg, c.tagModel.color, c.tagModel.border),
@@ -20,26 +21,38 @@ function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
       flexDirection: 'column',
       backgroundColor: c.cardBg,
       border: `1px solid ${active ? 'rgba(16,185,129,0.2)' : c.border}`,
-      borderRadius: 10, padding: '10px 12px', gap: 6,
+      borderRadius: 10,
+      padding: '10px 12px',
+      gap: 6,
     },
     [
       // Row 1: name + lastActive
       div({ alignItems: 'center', justifyContent: 'space-between' }, [
         div({ alignItems: 'center', gap: 8 }, [
           div({
-            width: 7, height: 7, borderRadius: '50%',
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
             backgroundColor: active ? c.emerald : c.textDim,
           }),
-          span({
-            color: c.textPrimary, fontSize: 13, fontWeight: 500,
-            fontFamily: 'JetBrains Mono',
-          }, sess.name),
+          span(
+            {
+              color: c.textPrimary,
+              fontSize: 13,
+              fontWeight: 500,
+              fontFamily: 'JetBrains Mono',
+            },
+            sess.name,
+          ),
         ]),
-        span({ color: c.textDim, fontSize: 10 }, sess.updatedAt),
       ]),
-      // Row 2: tags + token bar
+      // Row 2: tags + turn count + updatedAt + token bar
       div({ alignItems: 'center', justifyContent: 'space-between' }, [
-        div({ alignItems: 'center', gap: 4 }, tags),
+        div({ alignItems: 'center', gap: 8 }, [
+          div({ alignItems: 'center', gap: 4 }, tags),
+          turnCount > 0 ? span({ color: c.textSecondary, fontSize: 10 }, `💬 ${turnCount}`) : null,
+          span({ color: c.textDim, fontSize: 10 }, sess.updatedAt),
+        ]),
         div({ alignItems: 'center', gap: 6 }, [
           span({ color: c.textMuted, fontSize: 11, fontFamily: 'JetBrains Mono' }, sess.totalTokensDisplay),
           div({ width: 44, height: 5, borderRadius: 3, backgroundColor: c.trackBg, overflow: 'hidden' }, [
@@ -53,21 +66,22 @@ function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
 }
 
 export function renderSessions(data: SnapshotData, detail: Detail, c: ColorScheme): SatoriNode | null {
-  if (detail === 'compact') {return null;}
+  if (detail === 'compact') {
+    return null;
+  }
 
   const sessions = data.sessions;
-  if (!sessions || sessions.length === 0) {return null;}
+  if (!sessions || sessions.length === 0) {
+    return null;
+  }
 
-  const activeCount = sessions.filter(s => s.status === 'active').length;
+  const activeCount = sessions.filter((s) => s.status === 'active').length;
 
-  return div(
-    { flexDirection: 'column', gap: 6, padding: '0 16px 12px' },
-    [
-      div({ justifyContent: 'space-between', marginBottom: 2 }, [
-        span({ color: c.textMuted, fontSize: 11, fontWeight: 600 }, 'SESSIONS'),
-        span({ color: c.textDim, fontSize: 11 }, `${activeCount} active · ${sessions.length} total`),
-      ]),
-      ...sessions.map(s => renderSessionCard(s, c)),
-    ],
-  );
+  return div({ flexDirection: 'column', gap: 6, padding: '0 16px 12px' }, [
+    div({ justifyContent: 'space-between', marginBottom: 2 }, [
+      span({ color: c.textMuted, fontSize: 11, fontWeight: 600 }, 'SESSIONS'),
+      span({ color: c.textDim, fontSize: 11 }, `${activeCount} active · ${sessions.length} total`),
+    ]),
+    ...sessions.map((s) => renderSessionCard(s, c)),
+  ]);
 }

@@ -1,4 +1,4 @@
-import { describe, expect,test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { buildSnapshotData } from '../snapshot-service.js';
 import type { DataSources } from '../snapshot-types.js';
@@ -8,7 +8,16 @@ function makeSources(overrides: Partial<DataSources> = {}): DataSources {
     getGateway: async () => ({ running: true, version: '1.0.0', uptime: '1d', cpu: 5, memoryMB: 128 }),
     getChannels: async () => [{ provider: 'discord', name: 'main', connected: true, latencyMs: 10 }],
     getSessions: () => [
-      { displayName: 'S1', status: 'active', model: 'claude', channel: 'discord', totalTokens: 1000, usagePercent: 50, updatedAt: new Date().toISOString(), subAgents: [] },
+      {
+        displayName: 'S1',
+        status: 'active',
+        model: 'claude',
+        channel: 'discord',
+        totalTokens: 1000,
+        usagePercent: 50,
+        updatedAt: new Date().toISOString(),
+        subAgents: [],
+      },
     ],
     getMetrics: () => ({
       totalTokensK: 10,
@@ -18,6 +27,9 @@ function makeSources(overrides: Partial<DataSources> = {}): DataSources {
       buckets: Array.from({ length: 12 }, () => ({ sessions: 1, tokensK: 1, errors: 0, uptimePercent: 100 })),
     }),
     getRecentErrors: () => [{ timestamp: new Date().toISOString(), type: 'error', module: 'core', message: 'fail' }],
+    getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'claude', tokensK: 10 }]),
+    getTokenTrend: vi.fn().mockReturnValue(5),
+    getTurnCounts: vi.fn().mockReturnValue({ total: 1, bySession: [{ sessionKey: 'S1', turns: 1 }] }),
     ...overrides,
   };
 }
@@ -26,28 +38,22 @@ describe('buildSnapshotData – branch coverage', () => {
   test('gateway down sets status to "down"', async () => {
     const result = await buildSnapshotData(
       makeSources({ getGateway: async () => ({ running: false, version: '1.0.0', uptime: '0' }) }),
-      { detail: 'compact', range: '24h' },
+      { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
     );
     expect(result.gateway.status).toBe('down');
     expect(result.gateway.cpu).toBe(0); // cpu ?? 0 fallback
     expect(result.gateway.memoryMB).toBe(0); // memoryMB ?? 0 fallback
   });
 
-  test('bucket tokensK fallback to tokens field', async () => {
+  test('includes tokensByModel payload in compact result', async () => {
     const result = await buildSnapshotData(
       makeSources({
-        getMetrics: () => ({
-          totalTokensK: 1,
-          totalErrors: 0,
-          totalWarnings: 0,
-          uptimePercent: 100,
-          buckets: [{ sessions: 1, tokens: 500, errors: 0, uptimePercent: 100 }],
-        }),
+        getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'claude', tokensK: 12 }]),
       }),
-      { detail: 'compact', range: '24h' },
+      { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
     );
-    // tokens sparkline should use the tokens field as fallback
-    expect(result.sparklines.tokens.length).toBeGreaterThan(0);
+    expect(result.tokensByModel.length).toBe(1);
+    expect(result).not.toHaveProperty('sparklines');
   });
 
   test('unknown channel provider falls back to channel name', async () => {
@@ -55,13 +61,13 @@ describe('buildSnapshotData – branch coverage', () => {
       makeSources({
         getChannels: async () => [{ provider: 'matrix', name: 'my-room', connected: true, latencyMs: 5 }],
       }),
-      { detail: 'compact', range: '24h' },
+      { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
     );
     expect(result.channels[0].name).toBe('my-room');
   });
 
   test('known range maps to display string', async () => {
-    const result = await buildSnapshotData(makeSources(), { detail: 'compact', range: '24h' });
+    const result = await buildSnapshotData(makeSources(), { detail: 'compact', range: 'TWENTY_FOUR_HOUR' });
     // '24h' is not in RANGE_DISPLAY keys (those are like TWENTY_FOUR_HOUR), so falls through to raw range
     expect(result.range).toBe('24h');
   });
@@ -71,7 +77,7 @@ describe('buildSnapshotData – branch coverage', () => {
       makeSources({
         getSessions: () => [{ status: 'active' }], // minimal session
       }),
-      { detail: 'full', range: '24h' },
+      { detail: 'full', range: 'TWENTY_FOUR_HOUR' },
     );
     const sess = result.sessions![0];
     expect(sess.name).toBe('');
@@ -86,7 +92,7 @@ describe('buildSnapshotData – branch coverage', () => {
       makeSources({
         getSessions: () => [{ displayName: 'X', totalTokens: 1 }], // no status field
       }),
-      { detail: 'standard', range: '24h' },
+      { detail: 'standard', range: 'TWENTY_FOUR_HOUR' },
     );
     // undefined status → won't match 'active' filter
     expect(result.sessions!.length).toBe(0);
@@ -99,7 +105,7 @@ describe('buildSnapshotData – branch coverage', () => {
       makeSources({
         getRecentErrors: (() => ({ events })) as unknown as DataSources['getRecentErrors'],
       }),
-      { detail: 'full', range: '24h' },
+      { detail: 'full', range: 'TWENTY_FOUR_HOUR' },
     );
     expect(result.recentErrors).toEqual(events);
   });
@@ -109,7 +115,7 @@ describe('buildSnapshotData – branch coverage', () => {
       makeSources({
         getRecentErrors: (() => ({})) as unknown as DataSources['getRecentErrors'],
       }),
-      { detail: 'full', range: '24h' },
+      { detail: 'full', range: 'TWENTY_FOUR_HOUR' },
     );
     expect(result.recentErrors).toEqual([]);
   });
@@ -117,12 +123,17 @@ describe('buildSnapshotData – branch coverage', () => {
   test('sub-agent with missing fields uses defaults', async () => {
     const result = await buildSnapshotData(
       makeSources({
-        getSessions: () => [{
-          displayName: 'S1', status: 'active', model: 'claude', totalTokens: 100,
-          subAgents: [{}], // minimal sub-agent
-        }],
+        getSessions: () => [
+          {
+            displayName: 'S1',
+            status: 'active',
+            model: 'claude',
+            totalTokens: 100,
+            subAgents: [{}], // minimal sub-agent
+          },
+        ],
       }),
-      { detail: 'full', range: '24h' },
+      { detail: 'full', range: 'TWENTY_FOUR_HOUR' },
     );
     const sub = result.sessions![0].subAgents![0];
     expect(sub.name).toBe('');
@@ -135,7 +146,7 @@ describe('buildSnapshotData – branch coverage', () => {
       makeSources({
         getSessions: () => [{ name: 'fallback-name', status: 'active', totalTokens: 1, subAgents: [] }],
       }),
-      { detail: 'standard', range: '24h' },
+      { detail: 'standard', range: 'TWENTY_FOUR_HOUR' },
     );
     expect(result.sessions![0].name).toBe('fallback-name');
   });
@@ -143,12 +154,16 @@ describe('buildSnapshotData – branch coverage', () => {
   test('sub-agent name fallback: uses name when no displayName', async () => {
     const result = await buildSnapshotData(
       makeSources({
-        getSessions: () => [{
-          displayName: 'S1', status: 'active', totalTokens: 1,
-          subAgents: [{ name: 'sub-fallback', status: 'done', completed: true }],
-        }],
+        getSessions: () => [
+          {
+            displayName: 'S1',
+            status: 'active',
+            totalTokens: 1,
+            subAgents: [{ name: 'sub-fallback', status: 'done', completed: true }],
+          },
+        ],
       }),
-      { detail: 'full', range: '24h' },
+      { detail: 'full', range: 'TWENTY_FOUR_HOUR' },
     );
     expect(result.sessions![0].subAgents![0].name).toBe('sub-fallback');
   });

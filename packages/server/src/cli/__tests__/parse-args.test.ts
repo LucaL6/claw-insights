@@ -95,4 +95,14 @@ describe('parseCliArgs', () => {
     const args = parseCliArgs(['start']);
     expect(args.noAuth).toBe(false);
   });
+
+  it('parses --open flag', () => {
+    const result = parseCliArgs(['start', '--open']);
+    expect(result.open).toBe(true);
+  });
+
+  it('defaults open to false', () => {
+    const result = parseCliArgs(['start']);
+    expect(result.open).toBe(false);
+  });
 });

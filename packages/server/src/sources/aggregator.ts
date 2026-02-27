@@ -64,7 +64,10 @@ export class Aggregator {
       if (!modelByBucket.has(mt.bucket)) {
         modelByBucket.set(mt.bucket, []);
       }
-      modelByBucket.get(mt.bucket)!.push({ model: mt.model, tokensK: mt.tokensK });
+      const arr = modelByBucket.get(mt.bucket);
+      if (arr) {
+        arr.push({ model: mt.model, tokensK: mt.tokensK });
+      }
     }
     const apiCalls = new Map(
       getBucketedEventCount(this.db, startTs, endTs, 'api_call', rangeConfig.bucketMinutes).map((r) => [

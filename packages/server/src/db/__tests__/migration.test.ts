@@ -108,9 +108,9 @@ describe('DB migrations', () => {
     expect(idx1.length).toBe(1);
   });
 
-  it('should reach schema version 7', () => {
+  it('should reach schema version 8', () => {
     const db = initDatabase(':memory:');
     const row = db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number };
-    expect(row.v).toBe(7);
+    expect(row.v).toBe(8);
   });
 });

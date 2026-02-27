@@ -1,6 +1,7 @@
 import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
+import type { MessageEventBus } from '../../events/message-event-bus.js';
 import type { TokenEventBus } from '../../events/token-event-bus.js';
 import { createChildLogger } from '../../logger.js';
 
@@ -11,6 +12,7 @@ const log = createChildLogger('lifetime-scanner');
 export interface FileState {
   offset: number;
   inode: number;
+  birthtimeMs: number;
   partialLine: string;
 }
 
@@ -63,6 +65,8 @@ export class LifetimeScanner {
     private transcriptsDir: string,
     private deviceJsonPath: string,
     private tokenBus?: TokenEventBus,
+    private messageBus?: MessageEventBus,
+    private onBeforeRescan?: () => void,
   ) {}
 
   // ── Lifecycle ──
@@ -105,6 +109,8 @@ export class LifetimeScanner {
   // ── Internal: full scan ──
 
   private scanAll(): void {
+    this.onBeforeRescan?.();
+
     if (!existsSync(this.transcriptsDir)) {
       log.warn({ path: this.transcriptsDir }, 'transcripts directory not found');
       return;
@@ -136,7 +142,7 @@ export class LifetimeScanner {
         }
       }
       // offset = end of file (we store partial separately for incremental join)
-      this.fileStates.set(file, { offset: st.size, inode: st.ino, partialLine: partial });
+      this.fileStates.set(file, { offset: st.size, inode: st.ino, birthtimeMs: st.birthtimeMs, partialLine: partial });
     } catch (err) {
       log.warn({ file, err }, 'failed to scan transcript file');
     }
@@ -154,15 +160,16 @@ export class LifetimeScanner {
     if (this.refreshPromise) {
       return this.refreshPromise;
     }
-    this.refreshPromise = this.refresh().finally(() => {
-      this.refreshPromise = null;
-      this.lastRefreshMs = Date.now();
-    });
+    this.refreshPromise = Promise.resolve()
+      .then(() => this.refresh())
+      .finally(() => {
+        this.refreshPromise = null;
+        this.lastRefreshMs = Date.now();
+      });
     return this.refreshPromise;
   }
 
-   
-  private async refresh(): Promise<void> {
+  private refresh(): void {
     if (!existsSync(this.transcriptsDir)) {
       return;
     }
@@ -194,14 +201,16 @@ export class LifetimeScanner {
 
       try {
         const st = statSync(file);
-        // Detect truncate / inode change → full rescan
-        // We don't track per-file contributions, so any inode/truncate
+        // Detect truncate / inode change / file replacement → full rescan
+        // We don't track per-file contributions, so any inode/truncate/replace
         // invalidates incremental state. Full rescan is safe and rare.
-        if (st.ino !== saved.inode || st.size < saved.offset) {
+        if (st.ino !== saved.inode || st.size < saved.offset || st.birthtimeMs !== saved.birthtimeMs) {
+          const reason =
+            st.ino !== saved.inode ? 'inode' : st.birthtimeMs !== saved.birthtimeMs ? 'replaced' : 'truncate';
           log.info(
             {
               file: basename(file),
-              reason: st.ino !== saved.inode ? 'inode' : 'truncate',
+              reason,
             },
             'file changed, triggering full rescan',
           );
@@ -272,10 +281,15 @@ export class LifetimeScanner {
     }
 
     const role = message.role;
+    const ts = parsed.timestamp as string | undefined;
+
+    let emittedRole: string | null = null;
     if (role === 'user') {
       this.stats.totalUserMessages++;
+      emittedRole = 'user';
     } else if (role === 'assistant') {
       this.stats.totalAssistantMessages++;
+      emittedRole = 'assistant';
       const usage = this.normalizeUsage(
         (message.usage as Record<string, unknown>) ?? (parsed.usage as Record<string, unknown>),
       );
@@ -286,7 +300,6 @@ export class LifetimeScanner {
         this.stats.totalCacheWriteTokens += usage.cacheWrite;
 
         if (this.tokenBus && sessionKey) {
-          const ts = parsed.timestamp as string | undefined;
           const model = message.model as string | undefined;
           if (!ts) {
             log.warn({ sessionKey }, 'skipping token event: missing timestamp');
@@ -305,6 +318,16 @@ export class LifetimeScanner {
           }
         }
       }
+    } else if (role === 'toolResult') {
+      emittedRole = 'tool';
+    }
+
+    if (this.messageBus && sessionKey && ts && emittedRole) {
+      this.messageBus.emit({
+        timestamp: ts,
+        sessionKey,
+        role: emittedRole,
+      });
     }
   }
 

@@ -20,7 +20,7 @@ export function cached(db: Database, sql: string): ReturnType<Database['prepare'
 
 // ── Range Config ──
 
-export type MetricsRangeKey = 'ONE_HOUR' | 'SIX_HOUR' | 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR';
+export type MetricsRangeKey = 'THIRTY_MIN' | 'ONE_HOUR' | 'SIX_HOUR' | 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR';
 
 interface RangeConfig {
   rangeMinutes: number;
@@ -29,6 +29,7 @@ interface RangeConfig {
 }
 
 export const RANGE_CONFIG: Record<MetricsRangeKey, RangeConfig> = {
+  THIRTY_MIN: { rangeMinutes: 30, bucketMinutes: 5, bucketCount: 6 },
   ONE_HOUR: { rangeMinutes: 60, bucketMinutes: 5, bucketCount: 12 },
   SIX_HOUR: { rangeMinutes: 360, bucketMinutes: 15, bucketCount: 24 },
   TWELVE_HOUR: { rangeMinutes: 720, bucketMinutes: 30, bucketCount: 24 },
@@ -52,6 +53,8 @@ export function bucketLabel(bucket: number, bucketMinutes: number): string {
   const d = new Date(epochMs);
   const h = d.getHours();
   const m = d.getMinutes();
-  if (bucketMinutes >= 60) {return `${h}:00`;}
+  if (bucketMinutes >= 60) {
+    return `${h}:00`;
+  }
   return `${h}:${m.toString().padStart(2, '0')}`;
 }

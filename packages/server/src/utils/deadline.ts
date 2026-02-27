@@ -24,7 +24,7 @@ export async function withDeadline<T>(
     throw new TimeoutError();
   }
 
-  let timer: ReturnType<typeof setTimeout>;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new TimeoutError()), ms);
   });
@@ -34,6 +34,8 @@ export async function withDeadline<T>(
   try {
     return await Promise.race([promise, timeoutPromise]);
   } finally {
-    clearTimeout(timer!);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
   }
 }

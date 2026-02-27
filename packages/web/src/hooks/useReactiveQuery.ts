@@ -31,16 +31,19 @@ export function useReactiveQuery<TData = unknown, TVariables extends AnyVariable
     executeQuery({ requestPolicy: 'network-only' });
   }, [executeQuery]);
 
-  // Stabilize sources for dep arrays
+  // Stabilize sources as a string key — callers pass inline array literals,
+  // so the raw array ref changes every render.
+  const sourcesKey = reactive.sources.join(',');
+
   const handleSubscription = useCallback(
     (_prev: unknown, data: { dataChanged: { source: string; ts: string } }) => {
-       
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime: initial subscription push may omit dataChanged
       if (!data.dataChanged) {
         return data;
       }
 
       const { source } = data.dataChanged;
-      if (!reactive.sources.includes(source as DataSource)) {
+      if (!sourcesKey.split(',').includes(source)) {
         return data;
       }
 
@@ -51,7 +54,7 @@ export function useReactiveQuery<TData = unknown, TVariables extends AnyVariable
 
       return data;
     },
-    [reactive.sources, reactive.debounceMs, refetch],
+    [sourcesKey, reactive.debounceMs, refetch],
   );
 
   const [subResult] = useSubscription({ query: DataChangedSubscription }, handleSubscription);

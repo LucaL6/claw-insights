@@ -4,7 +4,9 @@ import type { LogEntry } from '@claw-insights/shared';
 
 import { config } from './config.js';
 import { initDatabase } from './db/init.js';
+import { deleteAllMessageEvents, insertMessageEventBatch } from './db/message-queries.js';
 import { insertTokenUsageEventBatch } from './db/token-queries.js';
+import { type MessageEvent, MessageEventBus } from './events/message-event-bus.js';
 import type { TokenUsageEvent } from './events/token-event-bus.js';
 import { TokenEventBus } from './events/token-event-bus.js';
 import { Pipeline } from './pipeline/index.js';
@@ -33,6 +35,7 @@ export interface AppContext {
   dataRetention: DataRetention;
   lifetimeScanner: LifetimeScanner;
   flushTokenEvents: () => void;
+  flushMessageEvents: () => void;
 }
 
 export function createContext(): AppContext {
@@ -44,7 +47,9 @@ export function createContext(): AppContext {
   const aggregator = new Aggregator(db);
 
   const tokenBus = new TokenEventBus();
+  const messageBus = new MessageEventBus();
   const BATCH_SIZE = 100;
+
   let tokenEventBuffer: TokenUsageEvent[] = [];
   const flushTokenEvents = () => {
     if (tokenEventBuffer.length > 0) {
@@ -56,6 +61,20 @@ export function createContext(): AppContext {
     tokenEventBuffer.push(event);
     if (tokenEventBuffer.length >= BATCH_SIZE) {
       flushTokenEvents();
+    }
+  });
+
+  let messageEventBuffer: MessageEvent[] = [];
+  const flushMessageEvents = () => {
+    if (messageEventBuffer.length > 0) {
+      insertMessageEventBatch(db, messageEventBuffer);
+      messageEventBuffer = [];
+    }
+  };
+  messageBus.on((event) => {
+    messageEventBuffer.push(event);
+    if (messageEventBuffer.length >= BATCH_SIZE) {
+      flushMessageEvents();
     }
   });
 
@@ -73,13 +92,23 @@ export function createContext(): AppContext {
     aggregateIntervalMs: config.aggregateIntervalMs,
   });
 
-  const lifetimeScanner = new LifetimeScanner(config.transcriptsDir, config.deviceJsonPath, tokenBus);
+  const lifetimeScanner = new LifetimeScanner(
+    config.transcriptsDir,
+    config.deviceJsonPath,
+    tokenBus,
+    messageBus,
+    () => {
+      deleteAllMessageEvents(db);
+      messageEventBuffer = [];
+    },
+  );
 
   const pipeline = new Pipeline()
     // Sources — emit events
     .addSource('logTailer', logTailer)
     // Managed — lifecycle-only resources (no events, just destroy)
     .addManaged('tokenBus', { destroy: () => tokenBus.destroy() })
+    .addManaged('messageBus', { destroy: () => messageBus.destroy() })
     .addManaged('sessionReader', sessionReader)
     .addManaged('cronReader', cronReader)
     // Processors — handle events
@@ -111,6 +140,7 @@ export function createContext(): AppContext {
     dataRetention,
     lifetimeScanner,
     flushTokenEvents,
+    flushMessageEvents,
   };
 }
 
@@ -120,6 +150,7 @@ export function startContext(ctx: AppContext): void {
     .init()
     .then(() => {
       ctx.flushTokenEvents();
+      ctx.flushMessageEvents();
     })
     .catch((err: unknown) => {
       console.error('lifetime scanner init failed:', err);
@@ -127,6 +158,8 @@ export function startContext(ctx: AppContext): void {
 }
 
 export function destroyContext(ctx: AppContext): void {
+  ctx.flushTokenEvents();
+  ctx.flushMessageEvents();
   ctx.pipeline.destroy();
   if (typeof (ctx.db as unknown as { close?: () => void }).close === 'function') {
     (ctx.db as unknown as { close(): void }).close();

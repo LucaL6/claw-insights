@@ -156,7 +156,7 @@ describe('init.ts - hasColumn true branches (columns already exist)', () => {
 
     const db2 = initDatabase(path);
     const row = db2.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number };
-    expect(row.v).toBe(7);
+    expect(row.v).toBe(8);
     // New tables exist
     const newTables = db2
       .prepare(

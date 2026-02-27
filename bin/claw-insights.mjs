@@ -44,11 +44,20 @@ async function main() {
     console.warn('⚠️  --web-port is ignored in server-only mode.');
   }
 
+  if (args.serverOnly && args.open) {
+    console.warn('⚠️  --open is ignored in server-only mode.');
+  }
+
   process.env.NODE_ENV = 'production';
   process.env.CLAW_INSIGHTS_SERVER_PORT = String(args.port);
   process.env.CLAW_INSIGHTS_WEB_PORT = String(args.webPort);
   if (args.serverOnly) process.env.CLAW_INSIGHTS_SERVER_ONLY = 'true';
   if (args.noAuth) process.env.CLAW_INSIGHTS_NO_AUTH = 'true';
+  // Support CLAW_INSIGHTS_OPEN env var as equivalent to --open
+  if (!args.open && process.env.CLAW_INSIGHTS_OPEN === 'true') {
+    args.open = true;
+  }
+  if (args.open) process.env.CLAW_INSIGHTS_OPEN = 'true';
   if (args.gateway) process.env.CLAW_INSIGHTS_GATEWAY = args.gateway;
 
   const { daemonStart, daemonStop, daemonStatus, daemonLogs, daemonRestart } = await import(
@@ -93,6 +102,7 @@ function printUsage(version) {
     --port <port>         Server port (default: 41041)
     --server-only         Run server only (no web UI)
     --no-auth             Disable authentication (local/trusted network)
+    --open                Open dashboard in browser after start
     --gateway <url>       OpenClaw gateway URL
     --log-dir <dir>       Log directory
     --help, -h            Show this help

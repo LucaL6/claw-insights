@@ -239,6 +239,19 @@ const MIGRATIONS: Migration[] = [
       log.info('v7: token_usage_events + system_samples created, old tables deprecated');
     },
   },
+  {
+    version: 8,
+    up: `
+      CREATE TABLE IF NOT EXISTS message_events (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp   TEXT NOT NULL,
+        session_key TEXT NOT NULL,
+        role        TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_msg_events_time ON message_events(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_msg_events_session ON message_events(session_key, timestamp);
+    `,
+  },
 ];
 
 // ── Helpers ──

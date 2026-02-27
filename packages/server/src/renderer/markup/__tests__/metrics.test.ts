@@ -1,4 +1,4 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { SnapshotData } from '../../../services/snapshot-types.js';
 import { DARK } from '../colors.js';
@@ -7,9 +7,15 @@ import { renderMetrics } from '../metrics.js';
 
 /** Recursively collect all text content from a SatoriNode tree. */
 function collectText(node: SatoriNode | string | unknown): string[] {
-  if (typeof node === 'string') {return [node];}
-  if (typeof node === 'number') {return [String(node)];}
-  if (!node || typeof node !== 'object') {return [];}
+  if (typeof node === 'string') {
+    return [node];
+  }
+  if (typeof node === 'number') {
+    return [String(node)];
+  }
+  if (!node || typeof node !== 'object') {
+    return [];
+  }
   const n = node as SatoriNode;
   const results: string[] = [];
   const children = n.props?.children;
@@ -23,7 +29,7 @@ function collectText(node: SatoriNode | string | unknown): string[] {
   return results;
 }
 
-function makeData(): SnapshotData {
+function makeData(errors = 0, uptimePercent = 99.9): SnapshotData {
   return {
     gateway: { status: 'up', version: '1.0.0', uptime: '2d', cpu: 5, memoryMB: 100 },
     channels: [],
@@ -35,9 +41,9 @@ function makeData(): SnapshotData {
       totalSessions: 10,
       tokens: 12345,
       tokensDisplay: '12.3k',
-      errors: 0,
+      errors,
       warnings: 0,
-      uptimePercent: 99.9,
+      uptimePercent,
     },
     sparklines: {
       sessions: [1, 2, 3],
@@ -49,26 +55,25 @@ function makeData(): SnapshotData {
 }
 
 describe('renderMetrics', () => {
-  const data = makeData();
-
-  it('compact mode includes rangeLabel', () => {
-    const tree = renderMetrics(data, 'compact', DARK);
+  it.each(['compact', 'standard', 'full'] as const)('renders a single-line summary for %s', (detail) => {
+    const tree = renderMetrics(makeData(0), detail, DARK);
     const texts = collectText(tree);
-    expect(texts).toContain('peak 6h');
-    expect(texts).toContain('6h total');
+    expect(texts).toContain('3 active sessions');
+    expect(texts).toContain('99.9% uptime');
+    expect(texts).not.toContain('⚠️ 0 errors');
+    expect(texts.join(' ')).not.toContain('peak 6h');
+    expect(texts.join(' ')).not.toContain('6h total');
   });
 
-  it('standard mode includes rangeLabel', () => {
-    const tree = renderMetrics(data, 'standard', DARK);
+  it('formats uptimePercent to one decimal place', () => {
+    const tree = renderMetrics(makeData(0, 99), 'compact', DARK);
     const texts = collectText(tree);
-    expect(texts).toContain('peak 6h');
-    expect(texts).toContain('6h total');
+    expect(texts).toContain('99.0% uptime');
   });
 
-  it('full mode includes rangeLabel', () => {
-    const tree = renderMetrics(data, 'full', DARK);
+  it('shows errors item only when errors > 0', () => {
+    const tree = renderMetrics(makeData(2), 'standard', DARK);
     const texts = collectText(tree);
-    expect(texts).toContain('peak 6h');
-    expect(texts).toContain('6h total');
+    expect(texts).toContain('⚠️ 2 errors');
   });
 });

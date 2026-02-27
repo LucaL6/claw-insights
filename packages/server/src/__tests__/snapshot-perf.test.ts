@@ -23,10 +23,16 @@ describe('snapshot performance', () => {
         buckets: [],
       }),
       getRecentErrors: vi.fn().mockReturnValue([]),
+      getModelTokenUsage: vi.fn().mockReturnValue([]),
+      getTokenTrend: vi.fn().mockReturnValue(null),
+      getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
     };
 
     const start = performance.now();
-    await buildSnapshotData(mockSources as unknown as import("../services/snapshot-types.js").DataSources, { detail: 'standard', range: 'TWENTY_FOUR_HOUR' });
+    await buildSnapshotData(mockSources as unknown as import('../services/snapshot-types.js').DataSources, {
+      detail: 'standard',
+      range: 'TWENTY_FOUR_HOUR',
+    });
     const elapsed = performance.now() - start;
 
     expect(elapsed).toBeLessThan(500);
@@ -52,10 +58,16 @@ describe('snapshot performance', () => {
         buckets: [],
       }),
       getRecentErrors: vi.fn().mockReturnValue([]),
+      getModelTokenUsage: vi.fn().mockReturnValue([]),
+      getTokenTrend: vi.fn().mockReturnValue(null),
+      getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
     };
 
     const start = performance.now();
-    await buildSnapshotData(mockSources as unknown as import("../services/snapshot-types.js").DataSources, { detail: 'compact', range: 'ONE_HOUR' });
+    await buildSnapshotData(mockSources as unknown as import('../services/snapshot-types.js').DataSources, {
+      detail: 'compact',
+      range: 'ONE_HOUR',
+    });
     const elapsed = performance.now() - start;
 
     // If parallel: ~100ms. If sequential: ~200ms. Allow margin.
@@ -83,9 +95,15 @@ describe('snapshot performance', () => {
         buckets: [],
       }),
       getRecentErrors: vi.fn().mockReturnValue([]),
+      getModelTokenUsage: vi.fn().mockReturnValue([]),
+      getTokenTrend: vi.fn().mockReturnValue(null),
+      getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
     };
 
-    const result = await buildSnapshotData(mockSources as unknown as import("../services/snapshot-types.js").DataSources, { detail: 'compact', range: 'ONE_HOUR' });
+    const result = await buildSnapshotData(
+      mockSources as unknown as import('../services/snapshot-types.js').DataSources,
+      { detail: 'compact', range: 'ONE_HOUR' },
+    );
 
     // Should use Claw-Insights app version, not mocked gateway version
     expect(result.gateway.version).toBe(getAppVersion());

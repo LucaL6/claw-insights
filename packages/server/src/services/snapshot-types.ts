@@ -1,6 +1,6 @@
 const VALID_DETAILS = ['compact', 'standard', 'full'] as const;
 const VALID_FORMATS = ['png', 'json', 'svg'] as const;
-const VALID_RANGES = ['1h', '6h', '12h', '24h'] as const;
+const VALID_RANGES = ['30m', '1h', '6h', '12h', '24h'] as const;
 const VALID_THEMES = ['dark', 'light'] as const;
 const VALID_LANGS = ['en', 'zh'] as const;
 const VALID_LAYOUTS = ['desktop', 'mobile'] as const;
@@ -25,9 +25,10 @@ export interface SnapshotRequest {
 }
 
 /** Internal range keys used by MetricsAggregator / query-utils */
-export type InternalRange = 'ONE_HOUR' | 'SIX_HOUR' | 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR';
+export type InternalRange = 'THIRTY_MIN' | 'ONE_HOUR' | 'SIX_HOUR' | 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR';
 
 export const RANGE_MAP: Record<Range, InternalRange> = {
+  '30m': 'THIRTY_MIN',
   '1h': 'ONE_HOUR',
   '6h': 'SIX_HOUR',
   '12h': 'TWELVE_HOUR',
@@ -70,9 +71,25 @@ export interface DataSources {
     buckets: Record<string, unknown>[];
   };
   getRecentErrors: (limit: number) => { timestamp: string; type: string; module: string; message: string }[];
+  getModelTokenUsage: (startTs: string, endTs: string) => { model: string; tokensK: number }[];
+  getTokenTrend: (rangeMinutes: number, endTs: string) => number | null;
+  getTurnCounts: (
+    startTs: string,
+    endTs: string,
+  ) => {
+    total: number;
+    bySession: Array<{ sessionKey: string; turns: number }>;
+  };
 }
 
 // ─── Output Types ────────────────────────────────────────────────
+
+export interface ModelTokenUsage {
+  model: string;
+  modelDisplay: string;
+  tokensK: number;
+  percent: number;
+}
 
 export interface SnapshotSession {
   name: string;
@@ -84,6 +101,7 @@ export interface SnapshotSession {
   totalTokensDisplay: string;
   usagePercent: number;
   updatedAt: string;
+  turnCount: number;
   subAgentCount: number;
   subAgents?: { name: string; status: string; completed: boolean; updatedAt: string }[];
 }
@@ -103,12 +121,8 @@ export interface SnapshotData {
     warnings: number;
     uptimePercent: number;
   };
-  sparklines: {
-    sessions: number[];
-    tokens: number[];
-    errors: number[];
-    uptime: ('up' | 'degraded' | 'down')[];
-  };
+  tokensByModel: ModelTokenUsage[];
+  tokensTrend?: string;
   buckets?: Record<string, unknown>[];
   sessions?: SnapshotSession[];
   recentErrors?: { timestamp: string; type: string; module: string; message: string }[];

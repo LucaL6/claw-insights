@@ -15,6 +15,7 @@ export interface ColorScheme {
   violet: string;
   amber: string;
   orange: string;
+  modelColors: string[];
   trackBg: string;
   tagModel: { bg: string; color: string; border: string };
   tagChannel: { bg: string; color: string; border: string };
@@ -41,6 +42,7 @@ export const DARK: ColorScheme = {
   violet: '#a78bfa',
   amber: '#fbbf24',
   orange: '#f97316',
+  modelColors: ['#34d399', '#38bdf8', '#fbbf24', '#a78bfa', '#f472b6'],
   trackBg: '#27272a',
   tagModel: { bg: 'rgba(56,189,248,0.08)', color: 'rgba(56,189,248,0.8)', border: 'rgba(56,189,248,0.12)' },
   tagChannel: { bg: 'rgba(167,139,250,0.08)', color: 'rgba(167,139,250,0.8)', border: 'rgba(167,139,250,0.12)' },
@@ -67,6 +69,7 @@ export const LIGHT: ColorScheme = {
   violet: '#7c3aed',
   amber: '#d97706',
   orange: '#ea580c',
+  modelColors: ['#059669', '#0284c7', '#d97706', '#7c3aed', '#db2777'],
   trackBg: '#e4e4e7',
   tagModel: { bg: 'rgba(2,132,199,0.08)', color: 'rgba(2,132,199,0.9)', border: 'rgba(2,132,199,0.15)' },
   tagChannel: { bg: 'rgba(124,58,237,0.08)', color: 'rgba(124,58,237,0.9)', border: 'rgba(124,58,237,0.15)' },

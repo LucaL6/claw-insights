@@ -79,32 +79,12 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   const paths = getDaemonPaths();
   const pidFile = new PidFile(paths.pidFile);
 
-  // Check for existing running instance
+  // If already running, auto-restart with the new build
   if (pidFile.isAlive()) {
     const pid = pidFile.read();
-    // Read saved config for actual port
-    let savedPort = args.port;
-    if (existsSync(paths.daemonJson)) {
-      try {
-        const saved = JSON.parse(readFileSync(paths.daemonJson, 'utf-8'));
-        if (saved.port) {
-          savedPort = saved.port;
-        }
-      } catch {
-        /* ignore */
-      }
-    }
     console.log('');
-    console.log('  ⚠️  Claw Insights is already running.');
-    console.log('');
-    console.log(`  PID:  ${pid}`);
-    console.log(`  Port: ${savedPort}`);
-    console.log('');
-    console.log('  claw-insights status    Check health & access URL');
-    console.log('  claw-insights restart   Restart the server');
-    console.log('  claw-insights stop      Stop the server');
-    console.log('');
-    process.exit(1);
+    console.log(`  ⚠️  Claw Insights is already running (PID ${pid ?? '?'}). Restarting...`);
+    await daemonStop();
   }
 
   // Clean stale PID
@@ -280,6 +260,12 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   console.log('');
   console.log('  claw-insights status | stop | logs');
   console.log('');
+
+  // Auto-open browser if --open flag was passed
+  if (args.open && !args.serverOnly) {
+    const { openBrowser } = await import('./open-browser.js');
+    openBrowser(url);
+  }
 }
 
 export async function daemonStop(): Promise<void> {
@@ -298,9 +284,18 @@ export async function daemonStop(): Promise<void> {
     return;
   }
 
-  // Send SIGTERM
-  process.kill(pid, 'SIGTERM');
   const spinner = createSpinner(`Stopping Claw Insights (PID ${pid})...`);
+
+  // Send SIGTERM (may throw if process exited between isAlive check and kill)
+  try {
+    process.kill(pid, 'SIGTERM');
+  } catch {
+    // Process already gone — clean up and return
+    pidFile.remove();
+    cleanupAuthToken(paths.dataDir);
+    spinner.stop('💡 Claw Insights stopped (process already exited).');
+    return;
+  }
 
   try {
     // Wait up to 5 seconds for graceful shutdown
@@ -509,6 +504,9 @@ export async function daemonRestart(args: CliArgs, serverEntry: string): Promise
       /* ignore */
     }
   }
+
+  // --open is only for initial start, not restart
+  args.open = false;
 
   // Stop if running
   if (pidFile.isAlive()) {

@@ -41,7 +41,7 @@ export default tseslint.config(
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       // Relaxed strict rules — too noisy for existing codebase
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'error',
       // Too noisy: {} from JSON/health responses, structural types in templates
       '@typescript-eslint/restrict-template-expressions': 'off',
       // Unsafe-* rules: codebase uses `any` in some infra layers; suppress for now
@@ -95,6 +95,7 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-imports': 'off',
       'no-console': 'off',
       '@typescript-eslint/no-extraneous-class': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
 );

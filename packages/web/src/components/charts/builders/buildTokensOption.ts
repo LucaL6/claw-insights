@@ -50,7 +50,7 @@ export function buildTokensOption(
         trigger: 'axis',
         formatter: (params: unknown) => {
           const p = (params as Array<{ name: string; value: number }>)[0];
-           
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime: echarts may call with empty array
           if (!p) {
             return '';
           }

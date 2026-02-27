@@ -89,3 +89,15 @@ export function getRangeTokenUsageK(db: Database, startTs: string, endTs: string
   const row = stmt.get(startTs, endTs) as { total: number } | undefined;
   return row?.total ?? 0;
 }
+
+export function getRangeModelTokenUsage(
+  db: Database,
+  startTs: string,
+  endTs: string,
+): Array<{ model: string; tokensK: number }> {
+  const stmt = cached(
+    db,
+    `SELECT model, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY model HAVING tokensK > 0 ORDER BY tokensK DESC`,
+  );
+  return stmt.all(startTs, endTs) as Array<{ model: string; tokensK: number }>;
+}

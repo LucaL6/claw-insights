@@ -1,7 +1,7 @@
-import { mkdirSync, rmSync,writeFileSync } from 'fs';
+import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { afterEach,describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { SessionReader } from '../session-reader';
 
@@ -180,6 +180,18 @@ describe('SessionReader', () => {
     reader.attachSubAgents(map);
     const parent = reader.getSession('agent:main:parent');
     expect(parent!.subAgents.length).toBe(0); // Missing child filtered out
+    reader.destroy();
+  });
+
+  it('returns sessionId -> key map', () => {
+    writeSessions({
+      'agent:main:alpha': { sessionId: 'uuid-alpha', updatedAt: Date.now(), chatType: 'direct' },
+      'agent:main:beta': { sessionId: 'uuid-beta', updatedAt: Date.now(), chatType: 'direct' },
+    });
+    const reader = new SessionReader(tmpFile);
+    const map = reader.getSessionIdToKeyMap();
+    expect(map.get('uuid-alpha')).toBe('agent:main:alpha');
+    expect(map.get('uuid-beta')).toBe('agent:main:beta');
     reader.destroy();
   });
 

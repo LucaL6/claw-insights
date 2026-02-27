@@ -27,7 +27,7 @@ vi.mock('../snapshot-service.js', () => ({
       warnings: 0,
       uptimePercent: 100,
     },
-    sparklines: { sessions: [], tokens: [], errors: [], uptime: [] },
+    tokensByModel: [],
   }),
 }));
 
@@ -43,6 +43,9 @@ const mockSources: DataSources = {
     .fn()
     .mockReturnValue({ totalTokensK: 0, totalErrors: 0, totalWarnings: 0, uptimePercent: 100, buckets: [] }),
   getRecentErrors: vi.fn().mockReturnValue([]),
+  getModelTokenUsage: vi.fn().mockReturnValue([]),
+  getTokenTrend: vi.fn().mockReturnValue(null),
+  getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
 };
 
 const defaultParams: SnapshotRequest = {

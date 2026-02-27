@@ -7,11 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+
+- 30-minute time range option for snapshots (`?range=30m`)
+- Per-model token usage breakdown with stacked progress bar in snapshot
+- Session turn count display (`💬 N turns`) from persistent message event tracking
+- Token usage trend indicator (`↑/↓ N%` vs previous period, `⚠️` for spikes >100%)
+- `message_events` table for persistent per-message tracking (DB migration v8)
+- `MessageEventBus` for message event pipeline (mirrors `TokenEventBus` pattern)
+
+### Changed
+
+- Snapshot metrics section condensed from 4-card grid to single-line summary
+- Snapshot charts (sparklines, uptime bar) replaced with stacked token usage bar
+- Snapshot errors section now hidden when error count is 0
+- Token usage in snapshot now shows per-model breakdown with colored legend
 
 ## [0.1.0] - 2026-02-23
 
 ### Added
+
 - Real-time monitoring dashboard for OpenClaw gateway
 - Live session viewer with sub-agent tree, token usage, and context progress
 - Metrics charts: sessions, tokens (per-model), errors, uptime over 1h/6h/12h/24h
@@ -32,6 +47,7 @@ _Nothing yet._
 - Comprehensive test suite: 1370+ tests across server and web packages
 
 ### Security
+
 - Auth enabled by default in production (auto-generated token)
 - API token minimum 32 characters enforced
 - Cookie-based session with 7-day expiry

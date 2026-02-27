@@ -1,33 +1,39 @@
-// Root ESLint config — delegates to workspace configs
-// This file exists so lint-staged can run eslint from the repo root.
-// Actual rules are in packages/server/eslint.config.js and packages/web/eslint.config.js.
+// Root ESLint config — Hybrid monorepo setup.
+// Provides shared ignores and minimal base rules.
+// Full lint rules live in packages/*/eslint.config.js.
+// lint-staged uses --config to point at package configs directly.
+//
+// This config is NOT used for linting packages — run lint from each package.
+// It exists as an IDE fallback for root-level files (scripts, configs).
 
 import eslint from '@eslint/js';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', '**/generated/**', '**/node_modules/**'],
+    // Package sources are linted by their own configs
+    ignores: [
+      'dist/**',
+      '**/generated/**',
+      '**/node_modules/**',
+      'packages/web/src/**',
+      'packages/server/src/**',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['packages/server/src/**/*.ts'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unsafe-function-type': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        destructuredArrayIgnorePattern: '^_',
-      }],
+    files: ['**/*.{ts,tsx}'],
+    plugins: {
+      'simple-import-sort': simpleImportSort,
     },
-  },
-  {
-    files: ['packages/web/src/**/*.{ts,tsx}'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unsafe-function-type': 'warn',
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+      curly: 'error',
+      'prefer-const': 'error',
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
     },
   },
 );

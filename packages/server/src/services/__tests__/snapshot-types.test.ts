@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
+import type { DataSources, SnapshotData, SnapshotSession } from '../snapshot-types';
 import { parseSnapshotRequest } from '../snapshot-types';
 
 describe('parseSnapshotRequest', () => {
@@ -45,6 +46,11 @@ describe('parseSnapshotRequest', () => {
     expect(req.range).toBe('6h');
   });
 
+  test('should accept range=30m', () => {
+    const req = parseSnapshotRequest({ range: '30m' });
+    expect(req.range).toBe('30m');
+  });
+
   test('should accept layout=mobile', () => {
     const req = parseSnapshotRequest({ layout: 'mobile' });
     expect(req.layout).toBe('mobile');
@@ -71,5 +77,65 @@ describe('parseSnapshotRequest', () => {
 
   test('throws on invalid section', () => {
     expect(() => parseSnapshotRequest({ section: 'metrics' })).toThrow('Invalid section');
+  });
+});
+
+describe('snapshot type compatibility', () => {
+  test('SnapshotSession includes turnCount', () => {
+    const session: SnapshotSession = {
+      name: 'Session 1',
+      status: 'active',
+      model: 'anthropic/claude-opus-4-6',
+      modelDisplay: 'Claude Opus 4.6',
+      channel: 'discord',
+      totalTokens: 12345,
+      totalTokensDisplay: '12.3k',
+      usagePercent: 80,
+      updatedAt: '1m ago',
+      turnCount: 42,
+      subAgentCount: 0,
+    };
+    expect(session.turnCount).toBe(42);
+  });
+
+  test('SnapshotData includes model token fields and no sparklines requirement', () => {
+    const data: SnapshotData = {
+      gateway: { status: 'up', version: '1.0.0', uptime: '1h', cpu: 10, memoryMB: 256 },
+      channels: [{ name: 'Discord', provider: 'discord', connected: true, latencyMs: 12 }],
+      timestamp: new Date().toISOString(),
+      range: '24h',
+      time: '12:34',
+      summary: {
+        activeSessions: 1,
+        totalSessions: 2,
+        tokens: 1000,
+        tokensDisplay: '1.0k',
+        errors: 0,
+        warnings: 0,
+        uptimePercent: 100,
+      },
+      tokensByModel: [
+        { model: 'anthropic/claude-opus-4-6', modelDisplay: 'Claude Opus 4.6', tokensK: 100, percent: 100 },
+      ],
+      tokensTrend: '↑12%',
+    };
+
+    expect(data.tokensByModel).toHaveLength(1);
+    expect(data.tokensTrend).toBe('↑12%');
+  });
+
+  test('DataSources requires token and turn methods', () => {
+    const sources: DataSources = {
+      getGateway: async () => ({ running: true, version: '1.0.0', uptime: '1h' }),
+      getChannels: async () => [],
+      getSessions: () => [],
+      getMetrics: () => ({ totalTokensK: 0, totalErrors: 0, totalWarnings: 0, uptimePercent: 100, buckets: [] }),
+      getRecentErrors: () => [],
+      getModelTokenUsage: vi.fn().mockReturnValue([]),
+      getTokenTrend: vi.fn().mockReturnValue(null),
+      getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
+    };
+
+    expect(sources.getTurnCounts('', '').total).toBe(0);
   });
 });
