@@ -77,10 +77,9 @@ describe('renderHeader', () => {
     expect(texts).toContain('Offline');
   });
 
-  it('shows companion days and hostname', () => {
+  it('shows range in subtitle', () => {
     const tree = renderHeader(makeData(), 'standard', c);
     const texts = collectText(tree);
-    expect(texts.join(' ')).toContain('42');
-    expect(texts.join(' ')).toContain('mini');
+    expect(texts.join(' ')).toContain('Past 6h Stats');
   });
 });

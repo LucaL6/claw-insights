@@ -10,23 +10,11 @@ vi.mock('../../../db/event-queries', () => ({
 }));
 
 vi.mock('../../../sources/system-info', () => ({
-  getSystemMetrics: vi.fn().mockResolvedValue({ cpu: 25, memoryMB: 512 }),
-  getUsageCost: vi.fn().mockResolvedValue({ totalCostUsd: 1.5, breakdown: [] }),
+  createSystemInfoService: vi.fn(),
 }));
 
 vi.mock('../../../sources/gateway-cli', () => ({
-  getGatewayStatus: vi.fn().mockResolvedValue({
-    running: true,
-    pid: 1234,
-    version: '1.0.0',
-    updateAvailable: false,
-    uptime: '2h',
-    startedAt: '2025-01-01T00:00:00Z',
-    connectLatencyMs: 42,
-    latestVersion: '1.0.0',
-    securitySummary: { critical: 0, warn: 1 },
-    channels: [{ provider: 'DISCORD', name: 'general', connected: true, latencyMs: 10 }],
-  }),
+  createGatewayClient: vi.fn(),
 }));
 
 function createMockCtx(): AppContext {
@@ -56,6 +44,28 @@ function createMockCtx(): AppContext {
       ingestLog: vi.fn(),
     },
     metricsCollector: { start: vi.fn(), stop: vi.fn() },
+    gatewayClient: {
+      getGatewayStatus: vi.fn().mockResolvedValue({
+        running: true,
+        pid: 1234,
+        version: '1.0.0',
+        updateAvailable: false,
+        uptime: '2h',
+        startedAt: '2025-01-01T00:00:00Z',
+        connectLatencyMs: 42,
+        latestVersion: '1.0.0',
+        securitySummary: { critical: 0, warn: 1 },
+        channels: [{ provider: 'DISCORD', name: 'general', connected: true, latencyMs: 10 }],
+      }),
+      getVersion: vi.fn().mockResolvedValue('1.0.0'),
+      warmCache: vi.fn().mockResolvedValue(undefined),
+    },
+    systemInfoService: {
+      getSystemMetrics: vi.fn().mockResolvedValue({ cpu: 25, memoryMB: 512 }),
+      getUsageCost: vi.fn().mockResolvedValue({ totalCostUsd: 1.5, breakdown: [] }),
+      resetMetricsCache: vi.fn(),
+      resetCostCache: vi.fn(),
+    },
     dataValidator: {
       runValidation: vi.fn().mockReturnValue([
         { pass: true, message: 'ok' },
@@ -138,8 +148,9 @@ describe('createResolvers', () => {
   });
 
   describe('usageCost', () => {
-    it('calls getUsageCost', async () => {
+    it('calls getUsageCost via ctx', async () => {
       const result = await resolvers.Query.usageCost({}, {});
+      expect(ctx.systemInfoService.getUsageCost).toHaveBeenCalled();
       expect(result).toMatchObject({ totalCostUsd: 1.5 });
     });
   });
@@ -157,8 +168,9 @@ describe('createResolvers', () => {
   });
 
   describe('gateway', () => {
-    it('calls getGatewayStatus and maps fields', async () => {
+    it('calls getGatewayStatus via ctx and maps fields', async () => {
       const result = await resolvers.Query.gateway({}, {});
+      expect(ctx.gatewayClient.getGatewayStatus).toHaveBeenCalled();
       expect(result).toMatchObject({
         running: true,
         pid: 1234,
@@ -170,18 +182,18 @@ describe('createResolvers', () => {
   });
 
   describe('channels', () => {
-    it('returns status.channels', async () => {
+    it('returns status.channels via ctx', async () => {
       const result = await resolvers.Query.channels({}, {});
+      expect(ctx.gatewayClient.getGatewayStatus).toHaveBeenCalled();
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ provider: 'DISCORD', connected: true });
     });
   });
 
   describe('resources', () => {
-    it('calls getSystemMetrics', async () => {
-      const { getSystemMetrics } = await import('../../../sources/system-info');
+    it('calls getSystemMetrics via ctx', async () => {
       const result = await resolvers.Query.resources({}, {});
-      expect(getSystemMetrics).toHaveBeenCalled();
+      expect(ctx.systemInfoService.getSystemMetrics).toHaveBeenCalled();
       expect(result).toMatchObject({ cpu: 25, memoryMB: 512 });
     });
   });

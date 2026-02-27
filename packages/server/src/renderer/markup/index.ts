@@ -32,8 +32,40 @@ export function buildMarkup(data: SnapshotData, opts: MarkupOptions): SatoriNode
   }
   sections.push(renderFooter(data, c));
 
+  // Ambient glow blobs (indigo top-left, emerald bottom-right) — soft circles
+  const blobs =
+    opts.theme === 'dark'
+      ? [
+          div({
+            position: 'absolute',
+            top: -80,
+            left: -80,
+            width: 260,
+            height: 260,
+            borderRadius: '50%',
+            backgroundColor: 'rgba(99,102,241,0.06)',
+          }),
+          div({
+            position: 'absolute',
+            bottom: -60,
+            right: -60,
+            width: 220,
+            height: 220,
+            borderRadius: '50%',
+            backgroundColor: 'rgba(52,211,153,0.04)',
+          }),
+        ]
+      : [];
+
   return div(
-    { flexDirection: 'column', width: VIEWPORT_WIDTH[opts.detail], backgroundColor: c.bg, fontFamily: 'Inter' },
-    sections.filter(Boolean),
+    {
+      flexDirection: 'column',
+      width: VIEWPORT_WIDTH[opts.detail],
+      backgroundColor: c.bg,
+      fontFamily: 'Inter',
+      position: 'relative',
+      overflow: 'hidden',
+    },
+    [...blobs, ...sections.filter(Boolean)],
   );
 }

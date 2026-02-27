@@ -1,7 +1,18 @@
+/**
+ * Shared chart font sizes (px).
+ * Mirrors CSS --font-size-caption (0.75rem = 12px) and --font-size-body-s (0.8125rem = 13px).
+ * ECharts requires numeric px, so these are hardcoded but documented.
+ * If --base-font-size changes, update these manually.
+ */
+export const CHART_FONT = {
+  axis: 11,
+  tooltip: 12,
+} as const;
+
 /** Shared dark theme matching V7 design palette */
 export const DARK_THEME = {
   backgroundColor: 'transparent',
-  textStyle: { color: '#71717a', fontFamily: "'JetBrains Mono', monospace", fontSize: 9 },
+  textStyle: { color: '#71717a', fontFamily: "'JetBrains Mono', monospace", fontSize: CHART_FONT.axis },
   title: { textStyle: { color: '#a1a1aa' } },
   legend: { textStyle: { color: '#71717a' } },
   categoryAxis: {
@@ -19,7 +30,7 @@ export const DARK_THEME = {
   tooltip: {
     backgroundColor: '#18181b',
     borderColor: '#3f3f46',
-    textStyle: { color: '#d4d4d8', fontSize: 11 },
+    textStyle: { color: '#d4d4d8', fontSize: CHART_FONT.tooltip },
   },
 };
 
@@ -30,7 +41,7 @@ export function buildEChartsTheme() {
 
   return {
     backgroundColor: 'transparent',
-    textStyle: { color: v('--text-muted'), fontFamily: "'JetBrains Mono', monospace", fontSize: 9 },
+    textStyle: { color: v('--text-muted'), fontFamily: "'JetBrains Mono', monospace", fontSize: CHART_FONT.axis },
     title: { textStyle: { color: v('--text-secondary') } },
     legend: { textStyle: { color: v('--text-muted') } },
     categoryAxis: {
@@ -48,7 +59,7 @@ export function buildEChartsTheme() {
     tooltip: {
       backgroundColor: v('--chart-tooltip-bg'),
       borderColor: v('--chart-tooltip-border'),
-      textStyle: { color: v('--chart-tooltip-text'), fontSize: 11 },
+      textStyle: { color: v('--chart-tooltip-text'), fontSize: CHART_FONT.tooltip },
     },
   };
 }

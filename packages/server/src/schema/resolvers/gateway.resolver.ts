@@ -1,14 +1,12 @@
 import type { AppContext } from '../../context.js';
-import { getGatewayStatus } from '../../sources/gateway-cli.js';
-import { getSystemMetrics } from '../../sources/system-info.js';
 import { getAppVersion } from '../../version.js';
-import type { ChannelProvider,QueryResolvers, Resolvers } from '../generated/resolver-types.js';
+import type { ChannelProvider, QueryResolvers, Resolvers } from '../generated/resolver-types.js';
 import { safe } from './utils.js';
 
-export function gatewayResolvers(_ctx: AppContext): Partial<Resolvers> {
+export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
   const gateway: QueryResolvers['gateway'] = () =>
     safe(async () => {
-      const status = await getGatewayStatus();
+      const status = await ctx.gatewayClient.getGatewayStatus();
       return {
         running: status.running,
         pid: status.pid,
@@ -26,7 +24,7 @@ export function gatewayResolvers(_ctx: AppContext): Partial<Resolvers> {
 
   const channels: QueryResolvers['channels'] = () =>
     safe(async () => {
-      const status = await getGatewayStatus();
+      const status = await ctx.gatewayClient.getGatewayStatus();
       return status.channels as Array<{
         provider: ChannelProvider;
         name: string;
@@ -35,7 +33,7 @@ export function gatewayResolvers(_ctx: AppContext): Partial<Resolvers> {
       }>;
     });
 
-  const resources: QueryResolvers['resources'] = () => safe(async () => getSystemMetrics());
+  const resources: QueryResolvers['resources'] = () => safe(async () => ctx.systemInfoService.getSystemMetrics());
 
   return { Query: { gateway, channels, resources } };
 }

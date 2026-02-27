@@ -121,7 +121,7 @@ function collectText(node: SatoriNode | string | unknown): string[] {
 }
 
 describe('buildMarkup snapshot content', () => {
-  it('shows TOKENS section, hides errors when summary.errors=0, and does not render charts', () => {
+  it('shows TOKEN USED section, hides errors when summary.errors=0, and does not render charts', () => {
     const data = {
       gateway: { status: 'up', version: '1.0.0', uptime: '2d', cpu: 5, memoryMB: 100 },
       channels: [],
@@ -136,6 +136,7 @@ describe('buildMarkup snapshot content', () => {
         errors: 0,
         warnings: 0,
         uptimePercent: 99.5,
+        totalMessages: 100,
       },
       sparklines: {
         sessions: [1, 2, 3],
@@ -151,7 +152,7 @@ describe('buildMarkup snapshot content', () => {
     const tree = buildMarkup(data, { detail: 'standard', theme: 'dark', lang: 'en' });
     const texts = collectText(tree);
 
-    expect(texts).toContain('TOKENS');
+    expect(texts).toContain('TOKEN USED');
     expect(texts).not.toContain('UPTIME');
     expect(texts).not.toContain('RECENT ERRORS');
   });
@@ -192,7 +193,8 @@ describe('renderSessions turnCount', () => {
 
     const tree = renderSessions(data, 'standard', c);
     const texts = collectText(tree);
-    expect(texts).toContain('💬 5');
-    expect(texts).not.toContain('💬 0');
+    // turns no longer displayed in session cards
+    expect(texts).not.toContain('5 turns');
+    expect(texts).not.toContain('0 turns');
   });
 });

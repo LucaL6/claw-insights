@@ -5,6 +5,17 @@ import { lifetimeResolvers } from '../lifetime.resolver.js';
 
 function makeContext(overrides: Partial<{ getStats: ReturnType<typeof vi.fn> }> = {}): AppContext {
   return {
+    gatewayClient: {
+      getGatewayStatus: vi.fn().mockResolvedValue({ running: false }),
+      getVersion: vi.fn().mockResolvedValue('0.0.0'),
+      warmCache: vi.fn().mockResolvedValue(undefined),
+    },
+    systemInfoService: {
+      getSystemMetrics: vi.fn().mockResolvedValue({ cpu: 0, memoryMB: 0 }),
+      getUsageCost: vi.fn().mockResolvedValue({ totalCost: 0 }),
+      resetMetricsCache: vi.fn(),
+      resetCostCache: vi.fn(),
+    },
     lifetimeScanner: {
       getStats: vi.fn().mockResolvedValue({
         isReady: true,

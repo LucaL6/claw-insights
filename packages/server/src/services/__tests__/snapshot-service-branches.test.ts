@@ -32,6 +32,7 @@ function makeSources(overrides: Partial<DataSources> = {}): DataSources {
     getTurnCounts: vi.fn().mockReturnValue({ total: 1, bySession: [{ sessionKey: 'S1', turns: 1 }] }),
     getStartedAt: () => null,
     getTotalConversations: () => 0,
+    getRangeMessageCount: () => 0,
     ...overrides,
   };
 }

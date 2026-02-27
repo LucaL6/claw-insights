@@ -7,12 +7,13 @@ function errorBadge(type: string, c: ColorScheme): SatoriNode {
   const isError = type === 'error';
   return span(
     {
-      padding: '1px 5px',
+      padding: '2px 6px',
       borderRadius: 3,
-      fontSize: 9,
-      fontWeight: 600,
-      backgroundColor: isError ? c.redBg : 'rgba(234,179,8,0.15)',
-      color: isError ? c.red : c.amber,
+      fontSize: 10,
+      fontWeight: 700,
+      flexShrink: 0,
+      backgroundColor: isError ? 'rgba(239,68,68,0.12)' : 'rgba(234,179,8,0.12)',
+      color: isError ? '#f87171' : c.amber,
     },
     type.toUpperCase(),
   );
@@ -35,6 +36,10 @@ export function renderErrors(data: SnapshotData, c: ColorScheme): SatoriNode | n
       const t = e.timestamp
         ? new Date(e.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
         : '';
+      // Truncate long messages to ~120 chars
+      const maxLen = 60;
+      const msg = e.message.length > maxLen ? e.message.slice(0, maxLen) + '...' : e.message;
+
       return div(
         {
           alignItems: 'center',
@@ -45,9 +50,12 @@ export function renderErrors(data: SnapshotData, c: ColorScheme): SatoriNode | n
           padding: '10px 12px',
         },
         [
-          span({ color: c.textDim, fontSize: 11, fontFamily: 'JetBrains Mono' }, t),
+          span({ color: c.textDim, fontSize: 11, fontFamily: 'JetBrains Mono', flexShrink: 0, lineHeight: 1 }, t),
           errorBadge(e.type || 'error', c),
-          span({ color: c.textSecondary, fontSize: 12 }, e.message),
+          span(
+            { color: c.textSecondary, fontSize: 12, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis' },
+            msg,
+          ),
         ],
       );
     }),

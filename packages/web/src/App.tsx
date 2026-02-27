@@ -9,6 +9,7 @@ import { LogPage } from './components/logs/LogPage';
 import { SessionPanel } from './components/sessions/SessionPanel';
 import { TopBar } from './components/topbar/TopBar';
 import { AuthErrorScreen } from './components/ui/AuthErrorScreen';
+import { ToastContainer } from './components/ui/Toast';
 import { AuthErrorProvider, useAuthError } from './context/AuthErrorContext';
 import { type Route, useHashRoute } from './hooks/useHashRoute';
 import { usePreference } from './hooks/usePreference';
@@ -16,7 +17,7 @@ import { I18nProvider } from './i18n/context';
 import { client, setAuthErrorCallback } from './lib/urql-client';
 import { ThemeProvider } from './theme/context';
 
-const VALID_RANGES: MetricsRange[] = ['ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TWENTY_FOUR_HOUR'];
+const VALID_RANGES: MetricsRange[] = ['THIRTY_MIN', 'ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TWENTY_FOUR_HOUR'];
 
 function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: Route }) {
   const urlRange = VALID_RANGES.includes(route.params.range as MetricsRange)
@@ -79,7 +80,7 @@ function AppInner({ route, navigate }: { route: Route; navigate: (h: string) => 
       ) : (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)' }}>
           <header
-            className="backdrop-blur-sm sticky top-0 z-50 px-5 py-2"
+            className="backdrop-blur-sm sticky top-0 z-50 px-5 pt-2 pb-0"
             style={{
               borderBottom: '1px solid var(--border)',
               backgroundColor: 'var(--bg-surface-solid)',
@@ -102,6 +103,7 @@ function App() {
       <I18nProvider>
         <AuthErrorProvider>
           <AppInner route={route} navigate={navigate} />
+          <ToastContainer />
         </AuthErrorProvider>
       </I18nProvider>
     </ThemeProvider>

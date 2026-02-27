@@ -5,7 +5,7 @@ import type { SatoriNode } from './helpers.js';
 import { div, span } from './helpers.js';
 
 export function renderFooter(data: SnapshotData, c: ColorScheme): SatoriNode {
-  const datetime = data.timestamp.slice(0, 16).replace('T', ' ');
+  const datetime = data.timestamp.slice(0, 16).replace('T', ' ') + ' UTC';
 
   return div(
     {

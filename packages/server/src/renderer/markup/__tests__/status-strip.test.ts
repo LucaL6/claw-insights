@@ -46,6 +46,7 @@ function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
       errors: 2,
       warnings: 1,
       uptimePercent: 99,
+      totalMessages: 256,
     },
     companionDays: 30,
     hostname: 'mini',
@@ -68,11 +69,11 @@ describe('renderStatusStrip', () => {
     expect(texts).toContain('telegram');
   });
 
-  it('renders total conversations', () => {
+  it('renders total messages', () => {
     const tree = renderStatusStrip(makeData(), 'standard', c)!;
     const texts = collectText(tree);
     expect(texts).toContain('256');
-    expect(texts).toContain('conversations');
+    expect(texts).toContain('messages');
   });
 
   it('renders metrics values', () => {

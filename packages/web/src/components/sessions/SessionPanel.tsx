@@ -76,7 +76,7 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
           </ToggleButton>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[9px] mr-0.5 text-fg-dim">{t('sessions.sort')}</span>
+          <span className="text-xs mr-0.5 text-fg-dim">{t('sessions.sort')}</span>
           {sortOptions.map(({ val, label }) => (
             <ToggleButton key={val} active={sortBy === val} variant="sort" onClick={() => { setSortBy(val); }}>
               {label}

@@ -13,7 +13,7 @@
   "sessions.starting": "Starting...",
   "metrics.title": "Metrics",
   "metrics.sessions": "Active Sessions",
-  "metrics.conversations": "Conversations",
+  "metrics.conversations": "Messages",
   "metrics.tokens": "Token Consumption",
   "metrics.errors": "Gateway Errors",
   "metrics.uptime": "Gateway Uptime",
@@ -23,6 +23,7 @@
   "metrics.legendWarn": "warn",
   "metrics.legendRestart": "restart",
   "summary.tokens": "Tokens",
+  "summary.messages": "Messages",
   "summary.errors": "Errors",
   "summary.warnings": "Warnings",
   "summary.uptime": "Uptime",
@@ -46,6 +47,8 @@
   "time.dAgo": "{n}d ago",
   "nav.dashboard": "Dashboard",
   "nav.logs": "Logs",
+  "nav.sessions": "Sessions",
+  "nav.metrics": "Metrics",
   "logs.viewAll": "View all events",
   "logs.noEvents": "No events in this range",
   "logs.title": "Events",
@@ -90,5 +93,10 @@
   "gateway.dashboardTitle": "Claw Insights",
   "topbar.offline": "OFFLINE",
   "topbar.reconnecting": "Reconnecting…",
-  "overlay.staleData": "Data may be outdated"
+  "overlay.staleData": "Data may be outdated",
+  "metrics.roleAll": "All",
+  "metrics.roleUser": "User",
+  "metrics.roleAssistant": "OpenClaw",
+  "tooltip.sections.conversations": "Message count per bucket",
+  "tooltip.detail.sections.conversations": "Number of messages per bucket, split by role (user sends vs OpenClaw replies)"
 }

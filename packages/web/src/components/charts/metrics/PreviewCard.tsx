@@ -49,20 +49,20 @@ export function PreviewCard({ source, title, timeLabel, events, total, linkHref,
         className="flex items-center justify-between px-3 py-2 border-b border-edge bg-elevated"
       >
         <div className="flex items-center gap-2">
-          <span className="text-[12px] font-semibold text-fg">{title}</span>
+          <span className="text-[13px] font-semibold text-fg">{title}</span>
           <span
-            className="mono text-[9px] px-2 py-0.5 rounded bg-elevated border border-edge text-fg-muted"
+            className="mono text-xs px-2 py-0.5 rounded bg-elevated border border-edge text-fg-muted"
           >
             {timeLabel}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="mono text-[11px] font-semibold" style={{ color: accent }}>
+          <span className="mono text-xs font-semibold" style={{ color: accent }}>
             {total}
           </span>
           <button
             onClick={onClose}
-            className="text-[12px] leading-none cursor-pointer text-fg-dim bg-transparent border-none"
+            className="text-xs leading-none cursor-pointer text-fg-dim bg-transparent border-none"
           >
             ✕
           </button>
@@ -71,7 +71,7 @@ export function PreviewCard({ source, title, timeLabel, events, total, linkHref,
 
       {/* Event rows */}
       {events.length === 0 ? (
-        <div className="px-3 py-3 text-center text-[11px] text-fg-dim">{t('logs.noEvents')}</div>
+        <div className="px-3 py-3 text-center text-xs text-fg-dim">{t('logs.noEvents')}</div>
       ) : (
         events.map((ev, i) => {
           const tc = TYPE_COLORS[ev.type] ?? TYPE_COLORS.error;
@@ -81,14 +81,14 @@ export function PreviewCard({ source, title, timeLabel, events, total, linkHref,
               className="grid gap-1 px-3 py-1.5 items-center border-b border-edge-subtle"
               style={{ gridTemplateColumns: '60px 42px 1fr' }}
             >
-              <span className="mono text-[10px] text-fg-muted">{fmtTime(ev.timestamp)}</span>
+              <span className="mono text-xs text-fg-muted">{fmtTime(ev.timestamp)}</span>
               <span
-                className="mono text-[8px] font-semibold px-1.5 py-0.5 rounded text-center"
+                className="mono text-xs font-semibold px-1 py-px rounded text-center"
                 style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}
               >
                 {TYPE_LABELS[ev.type] ?? ev.type.slice(0, 3).toUpperCase()}
               </span>
-              <span className="mono text-[10px] truncate text-fg-secondary">{ev.message || ev.module}</span>
+              <span className="mono text-xs truncate text-fg-secondary">{ev.message || ev.module}</span>
             </div>
           );
         })
@@ -100,11 +100,11 @@ export function PreviewCard({ source, title, timeLabel, events, total, linkHref,
       >
         <button
           onClick={() => { onNavigate(linkHref); }}
-          className="text-[11px] font-semibold flex items-center gap-1 cursor-pointer text-sky bg-transparent border-none"
+          className="text-xs font-semibold flex items-center gap-1 cursor-pointer text-sky bg-transparent border-none"
         >
           {t('logs.viewAll')} →
         </button>
-        <span className="mono text-[10px] text-fg-dim">
+        <span className="mono text-xs text-fg-dim">
           {events.length} of {total}
         </span>
       </div>

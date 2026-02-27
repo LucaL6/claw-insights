@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 
+import { showToast } from '../components/ui/toast-store';
+
 interface SnapshotOptions {
   section: 'dashboard' | 'logs';
   range: string;
@@ -8,6 +10,7 @@ interface SnapshotOptions {
 }
 
 const RANGE_SHORT: Record<string, string> = {
+  THIRTY_MIN: '30m',
   ONE_HOUR: '1h',
   SIX_HOUR: '6h',
   TWELVE_HOUR: '12h',
@@ -19,10 +22,12 @@ export function useSnapshot() {
 
   const takeSnapshot = useCallback(async (opts: SnapshotOptions) => {
     setSnapshotting(true);
+    showToast('Generating snapshot...', 'success');
     try {
       const rangeValue = RANGE_SHORT[opts.range] ?? '24h';
       const res = await fetch('/api/snapshot', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           detail: 'standard',
@@ -55,8 +60,11 @@ export function useSnapshot() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
+      showToast('Snapshot saved', 'success');
     } catch (e) {
       console.error('[snapshot]', e);
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      showToast(`Snapshot failed: ${msg}`);
     } finally {
       setSnapshotting(false);
     }

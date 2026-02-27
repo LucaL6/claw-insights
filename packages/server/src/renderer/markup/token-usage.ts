@@ -3,9 +3,16 @@ import type { ColorScheme } from './colors.js';
 import type { SatoriNode } from './helpers.js';
 import { div, span } from './helpers.js';
 
+/** Format token count: ≥1000k → M (2 decimals), <1000k → k (1 decimal) */
+function formatModelTokens(tokensK: number): string {
+  if (tokensK >= 1000) {
+    return `${(tokensK / 1000).toFixed(2)}M`;
+  }
+  return `${tokensK.toFixed(1)}k`;
+}
+
 export function renderTokenUsage(data: SnapshotData, _detail: Detail, c: ColorScheme): SatoriNode {
   const models = data.tokensByModel ?? [];
-  const trend = data.tokensTrend;
 
   // Split tokensDisplay into number + unit (e.g. "12.3k" → "12.3" + "K")
   const display = data.summary.tokensDisplay;
@@ -14,45 +21,13 @@ export function renderTokenUsage(data: SnapshotData, _detail: Detail, c: ColorSc
   const unitPart = match && match[2] ? match[2].toUpperCase() : '';
 
   return div({ flexDirection: 'column', gap: 10, padding: '0 16px 12px' }, [
-    // Top row: TOKENS label + range pill (left) | trend badge (right)
-    div({ justifyContent: 'space-between', alignItems: 'center' }, [
-      div({ alignItems: 'center', gap: 8 }, [
-        span({ color: c.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }, 'TOKENS'),
-        data.range
-          ? span(
-              {
-                backgroundColor: c.rangePill.bg,
-                color: c.rangePill.color,
-                border: `1px solid ${c.rangePill.border}`,
-                borderRadius: 6,
-                padding: '2px 8px',
-                fontSize: 10,
-                fontWeight: 600,
-              },
-              data.range,
-            )
-          : null,
-      ]),
-      trend
-        ? span(
-            {
-              backgroundColor: c.trendBadge.bg,
-              color: c.trendBadge.color,
-              border: `1px solid ${c.trendBadge.border}`,
-              borderRadius: 8,
-              padding: '4px 10px',
-              fontSize: 12,
-              fontWeight: 600,
-            },
-            trend,
-          )
-        : null,
-    ]),
+    // Label
+    span({ color: c.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }, 'TOKEN USED'),
 
     // Big number
-    div({ alignItems: 'baseline', gap: 2 }, [
-      span({ color: c.textPrimary, fontSize: 28, fontWeight: 800 }, numberPart),
-      unitPart ? span({ color: c.textMuted, fontSize: 14, fontWeight: 600 }, unitPart) : null,
+    div({ alignItems: 'center', gap: 2 }, [
+      span({ color: c.textPrimary, fontSize: 28, fontWeight: 800, lineHeight: 1 }, numberPart),
+      unitPart ? span({ color: c.textMuted, fontSize: 14, fontWeight: 600, lineHeight: 1 }, unitPart) : null,
     ]),
 
     // Stacked bar
@@ -83,8 +58,11 @@ export function renderTokenUsage(data: SnapshotData, _detail: Detail, c: ColorSc
             borderRadius: '50%',
             backgroundImage: `linear-gradient(90deg, ${c.modelGradients[gi][0]}, ${c.modelGradients[gi][1]})`,
           }),
-          span({ color: c.textSecondary, fontSize: 12 }, m.modelDisplay || m.model),
-          span({ color: c.textDim, fontSize: 11, fontFamily: 'JetBrains Mono' }, `${m.tokensK}k`),
+          span({ color: c.textSecondary, fontSize: 12, lineHeight: 1 }, m.modelDisplay || m.model),
+          span(
+            { color: c.textDim, fontSize: 11, fontFamily: 'JetBrains Mono', lineHeight: 1 },
+            formatModelTokens(m.tokensK),
+          ),
         ]);
       }),
     ),

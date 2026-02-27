@@ -18,6 +18,10 @@ export function getTooltips(t: T) {
         label: t('tooltip.sections.errors'),
         detail: t('tooltip.detail.sections.errors'),
       },
+      conversations: {
+        label: t('tooltip.sections.conversations'),
+        detail: t('tooltip.detail.sections.conversations'),
+      },
       uptime: {
         label: t('tooltip.sections.uptime'),
         detail: t('tooltip.detail.sections.uptime'),
@@ -60,6 +64,7 @@ export function getTooltips(t: T) {
     chartFooter: {
       sessions: 'active sessions · peak per bucket',
       tokens: 'token consumption · from transcript usage',
+      conversations: 'messages · user + OpenClaw per bucket',
       errors: 'event count · from metric events',
     },
   } as const;

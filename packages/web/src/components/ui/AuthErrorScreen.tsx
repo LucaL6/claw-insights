@@ -9,7 +9,7 @@ export function AuthErrorScreen() {
     >
       <div className="text-center max-w-md px-6">
         {/* Product identity */}
-        <div className="text-[11px] font-semibold tracking-wider uppercase text-fg-dim mb-6">
+        <div className="text-xs font-semibold tracking-wider uppercase text-fg-dim mb-6">
           {t('auth.error.brand')}
         </div>
 
@@ -19,7 +19,7 @@ export function AuthErrorScreen() {
 
         {/* Possible causes */}
         <div className="text-left bg-elevated/40 rounded-lg border border-edge-subtle px-4 py-3 mb-5">
-          <p className="text-[11px] font-medium text-fg-secondary mb-2">{t('auth.error.causes')}</p>
+          <p className="text-xs font-medium text-fg-secondary mb-2">{t('auth.error.causes')}</p>
           <ul className="text-xs text-fg-muted space-y-1">
             <li>• {t('auth.error.cause1')}</li>
             <li>• {t('auth.error.cause2')}</li>
@@ -28,7 +28,7 @@ export function AuthErrorScreen() {
 
         {/* Recovery steps */}
         <div className="text-left bg-elevated/40 rounded-lg border border-edge-subtle px-4 py-3 mb-6">
-          <p className="text-[11px] font-medium text-fg-secondary mb-2">{t('auth.error.howToFix')}</p>
+          <p className="text-xs font-medium text-fg-secondary mb-2">{t('auth.error.howToFix')}</p>
           <ol className="text-xs text-fg-muted space-y-1.5 list-decimal list-inside">
             <li>{t('auth.error.step1')}</li>
             <li>{t('auth.error.step2')}</li>

@@ -7,6 +7,17 @@ describe('subscriptionResolvers', () => {
   function makeCtx() {
     return {
       logTailer: { on: vi.fn(), off: vi.fn() },
+      gatewayClient: {
+        getGatewayStatus: vi.fn().mockResolvedValue({ running: false }),
+        getVersion: vi.fn().mockResolvedValue('0.0.0'),
+        warmCache: vi.fn().mockResolvedValue(undefined),
+      },
+      systemInfoService: {
+        getSystemMetrics: vi.fn().mockResolvedValue({ cpu: 0, memoryMB: 0 }),
+        getUsageCost: vi.fn().mockResolvedValue({ totalCost: 0 }),
+        resetMetricsCache: vi.fn(),
+        resetCostCache: vi.fn(),
+      },
     } as unknown as AppContext;
   }
 
@@ -20,14 +31,18 @@ describe('subscriptionResolvers', () => {
 
   it('logs subscribe returns async iterable', () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
+    const resolvers = subscriptionResolvers(ctx) as unknown as {
+      Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }>;
+    };
     const repeater = resolvers.Subscription.logs.subscribe(null, {});
     expect(repeater[Symbol.asyncIterator]).toBeDefined();
   });
 
   it('logs subscribe pushes entries via logTailer handler', async () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
+    const resolvers = subscriptionResolvers(ctx) as unknown as {
+      Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }>;
+    };
     const repeater = resolvers.Subscription.logs.subscribe(null, {});
     const iter = repeater[Symbol.asyncIterator]();
 
@@ -48,7 +63,9 @@ describe('subscriptionResolvers', () => {
 
   it('logs filters by level', async () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
+    const resolvers = subscriptionResolvers(ctx) as unknown as {
+      Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }>;
+    };
     const repeater = resolvers.Subscription.logs.subscribe(null, { filter: { level: 'WARN' } });
     const iter = repeater[Symbol.asyncIterator]();
     const nextPromise = iter.next();
@@ -65,7 +82,9 @@ describe('subscriptionResolvers', () => {
 
   it('logs filters by module', async () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
+    const resolvers = subscriptionResolvers(ctx) as unknown as {
+      Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }>;
+    };
     const repeater = resolvers.Subscription.logs.subscribe(null, { filter: { module: 'gateway' } });
     const iter = repeater[Symbol.asyncIterator]();
     const nextPromise = iter.next();
@@ -82,7 +101,9 @@ describe('subscriptionResolvers', () => {
 
   it('dataChanged subscribe returns async iterable', () => {
     const ctx = makeCtx();
-    const resolvers = subscriptionResolvers(ctx) as unknown as { Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }> };
+    const resolvers = subscriptionResolvers(ctx) as unknown as {
+      Subscription: Record<string, { subscribe: (...args: unknown[]) => AsyncIterable<unknown> }>;
+    };
     const repeater = resolvers.Subscription.dataChanged.subscribe();
     expect(repeater[Symbol.asyncIterator]).toBeDefined();
   });

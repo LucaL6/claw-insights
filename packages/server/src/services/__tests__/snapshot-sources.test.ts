@@ -16,8 +16,8 @@ vi.mock('../../db/token-queries.js', () => ({
 }));
 
 vi.mock('../../db/event-queries.js', () => ({ queryEvents: vi.fn(() => []) }));
-vi.mock('../../sources/gateway-cli.js', () => ({ getGatewayStatus: vi.fn(async () => ({ channels: [] })) }));
-vi.mock('../../sources/system-info.js', () => ({ getSystemMetrics: vi.fn(async () => ({ cpu: 0, memoryMB: 0 })) }));
+vi.mock('../../sources/gateway-cli.js', () => ({ createGatewayClient: vi.fn() }));
+vi.mock('../../sources/system-info.js', () => ({ createSystemInfoService: vi.fn() }));
 
 describe('createSnapshotSources.getTurnCounts', () => {
   it('maps turn-count session keys from sessionId to session key', () => {

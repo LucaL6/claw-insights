@@ -31,9 +31,9 @@ export function Tooltip({ text, detail, children, align = 'center' }: TooltipPro
           bg-[var(--chart-tooltip-bg)] border border-[var(--chart-tooltip-border)] shadow-tooltip
           ${alignClass}`}
       >
-        <span className="block text-[11px] leading-snug text-[var(--chart-tooltip-text)]">{text}</span>
+        <span className="block text-xs leading-snug text-[var(--chart-tooltip-text)]">{text}</span>
         {detail && (
-          <span className="block text-[10px] mt-1 leading-snug text-[var(--chart-tooltip-dim)]">{detail}</span>
+          <span className="block text-xs mt-1 leading-snug text-[var(--chart-tooltip-dim)]">{detail}</span>
         )}
       </span>
     </span>

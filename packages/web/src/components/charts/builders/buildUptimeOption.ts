@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts';
 
+import { CHART_FONT } from '../core/echarts-theme';
 import { COLORS } from '../core/model-utils';
 import { buildCategoryXAxis, tooltipHtml } from './shared';
 
@@ -17,7 +18,7 @@ export function buildUptimeOption(data: UptimeBucket[]): EChartsOption {
   return {
     grid: { top: 4, right: 12, bottom: 16, left: 36, containLabel: false },
     xAxis: buildCategoryXAxis(labels, {
-      axisLabel: { interval: 0, fontSize: 8 },
+      axisLabel: { interval: 0, fontSize: CHART_FONT.axis },
       axisLine: { show: false },
       axisTick: { show: false },
     }),

@@ -38,15 +38,15 @@ export function ErrorsChartCard({
       <ChartCard accent="errors">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
-            <span className="text-[12px] font-semibold text-red">
+            <span className="text-[13px] font-semibold text-red">
               {t('metrics.errors')}
               <InfoTooltip {...TOOLTIPS.sections.errors} />
             </span>
-            <span className="text-[11px] px-2 py-0.5 rounded mono bg-red-bg text-red border border-red-border">
+            <span className="text-xs px-2 py-0.5 rounded mono bg-red-bg text-red border border-red-border">
               {t('metrics.errorInRange', { count: totalErrors, range: rangeLabel })}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-[10px] text-fg-dim">
+          <div className="flex items-center gap-3 text-xs text-fg-dim">
             <span>
               <span className="text-red">■</span> {t('metrics.legendError')}
             </span>

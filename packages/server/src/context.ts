@@ -10,6 +10,7 @@ import { type MessageEvent, MessageEventBus } from './events/message-event-bus.j
 import type { TokenUsageEvent } from './events/token-event-bus.js';
 import { TokenEventBus } from './events/token-event-bus.js';
 import { Pipeline } from './pipeline/index.js';
+import { loadPlatform } from './platforms/index.js';
 import { Aggregator } from './sources/aggregator.js';
 import { LifetimeScanner } from './sources/collectors/lifetime-scanner.js';
 import { createLogIngester } from './sources/collectors/log-ingester.js';
@@ -17,10 +18,11 @@ import { LogTailer } from './sources/collectors/log-tailer.js';
 import { SystemSampler } from './sources/collectors/metrics-collector.js';
 import { DataRetention } from './sources/data-retention.js';
 import { DataValidator } from './sources/data-validator.js';
+import { createGatewayClient, type GatewayClient } from './sources/gateway-cli.js';
 import { CronReader } from './sources/readers/cron-reader.js';
 import { SessionReader } from './sources/readers/session-reader.js';
 import { SpawnTracker } from './sources/readers/spawn-tracker.js';
-import { getSystemMetrics } from './sources/system-info.js';
+import { createSystemInfoService, type SystemInfoService } from './sources/system-info.js';
 
 export interface AppContext {
   db: DatabaseSync;
@@ -36,9 +38,15 @@ export interface AppContext {
   lifetimeScanner: LifetimeScanner;
   flushTokenEvents: () => void;
   flushMessageEvents: () => void;
+  gatewayClient: GatewayClient;
+  systemInfoService: SystemInfoService;
 }
 
-export function createContext(): AppContext {
+export async function createContext(): Promise<AppContext> {
+  const platform = await loadPlatform();
+  const gatewayClient = createGatewayClient(platform);
+  const systemInfoService = createSystemInfoService(platform);
+
   const db = initDatabase(config.dbPath);
   const sessionReader = new SessionReader(config.sessionsPath);
   sessionReader.setDb(db);
@@ -80,7 +88,7 @@ export function createContext(): AppContext {
     }
   });
 
-  const systemSampler = new SystemSampler(db, sessionReader, () => getSystemMetrics(), aggregator);
+  const systemSampler = new SystemSampler(db, sessionReader, () => systemInfoService.getSystemMetrics(), aggregator);
 
   const dataValidator = new DataValidator(
     db,
@@ -143,6 +151,8 @@ export function createContext(): AppContext {
     lifetimeScanner,
     flushTokenEvents,
     flushMessageEvents,
+    gatewayClient,
+    systemInfoService,
   };
 }
 

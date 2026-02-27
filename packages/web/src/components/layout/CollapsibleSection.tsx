@@ -32,9 +32,9 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
         </svg>
         <span className="text-[13px] font-semibold uppercase tracking-[0.8px]">{title}</span>
         {badge !== undefined && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald/15 text-emerald font-medium">{badge}</span>
+          <span className="text-xs px-1.5 py-0.5 rounded bg-emerald/15 text-emerald font-medium">{badge}</span>
         )}
-        {updatedAt && <span className="text-[9px] mono text-fg-dim">updated {formatTime(updatedAt)}</span>}
+        {updatedAt && <span className="text-xs mono text-fg-dim">updated {formatTime(updatedAt)}</span>}
         {headerRight && (
           <span className="ml-auto" onClick={(e) => { e.stopPropagation(); }}>
             {headerRight}

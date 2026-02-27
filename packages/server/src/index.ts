@@ -1,4 +1,3 @@
- 
 import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
@@ -53,7 +52,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
   }
 }
 
-const ctx = createContext();
+const ctx = await createContext();
 startContext(ctx);
 
 // Token auto-generation (when auth enabled and no token configured)
@@ -81,8 +80,7 @@ app.get(
     serverOnly: config.serverOnly,
     checkGateway: async () => {
       try {
-        const { getGatewayStatus } = await import('./sources/gateway-cli.js');
-        const status = await getGatewayStatus();
+        const status = await ctx.gatewayClient.getGatewayStatus();
         return status.running;
       } catch {
         return false;
@@ -156,7 +154,7 @@ process.on('SIGINT', () => {
 });
 
 // Pre-warm gateway status cache for faster first snapshot
-import('./sources/gateway-cli.js').then((m) => m.warmCache()).catch(() => {});
+ctx.gatewayClient.warmCache().catch(() => {});
 
 const PORT = config.serverPort;
 const server = app.listen(PORT, '127.0.0.1', () => {
@@ -190,9 +188,7 @@ const server = app.listen(PORT, '127.0.0.1', () => {
   // --open flag: auto-open browser in foreground mode
   if (process.env.CLAW_INSIGHTS_OPEN === 'true' && !config.serverOnly && process.stderr.isTTY) {
     void import('./cli/open-browser.js').then(({ openBrowser }) => {
-      const openUrl = config.noAuth
-        ? `http://127.0.0.1:${PORT}`
-        : `http://127.0.0.1:${PORT}/?token=${config.apiToken}`;
+      const openUrl = config.noAuth ? `http://127.0.0.1:${PORT}` : `http://127.0.0.1:${PORT}/?token=${config.apiToken}`;
       openBrowser(openUrl);
     });
   }

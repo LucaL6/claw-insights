@@ -36,12 +36,12 @@ export function renderStatusStrip(data: SnapshotData, detail: Detail, c: ColorSc
 
   const row1 = div({ alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }, [
     div({ alignItems: 'center', gap: 6, flexWrap: 'wrap' }, channelPills),
-    div({ alignItems: 'baseline', gap: 4 }, [
+    div({ alignItems: 'center', gap: 4 }, [
       span(
-        { fontSize: 14, fontWeight: 700, fontFamily: 'JetBrains Mono', color: c.accentIndigo },
-        String(data.totalConversations),
+        { fontSize: 14, fontWeight: 700, fontFamily: 'JetBrains Mono', color: c.accentIndigo, lineHeight: 1 },
+        String(data.summary.totalMessages),
       ),
-      span({ fontSize: 11, color: c.textDim }, 'conversations'),
+      span({ fontSize: 11, color: c.textDim, lineHeight: 1 }, 'messages'),
     ]),
   ]);
 
@@ -50,9 +50,9 @@ export function renderStatusStrip(data: SnapshotData, detail: Detail, c: ColorSc
 
   // --- Row 2: metrics (left) + CPU/MEM (right) ---
   function metric(value: string, label: string, color: string): SatoriNode {
-    return div({ alignItems: 'baseline', gap: 3 }, [
-      span({ fontSize: 14, fontWeight: 700, fontFamily: 'JetBrains Mono', color }, value),
-      span({ fontSize: 11, color: c.textDim }, label),
+    return div({ alignItems: 'center', gap: 3 }, [
+      span({ fontSize: 14, fontWeight: 700, fontFamily: 'JetBrains Mono', color, lineHeight: 1 }, value),
+      span({ fontSize: 11, color: c.textDim, lineHeight: 1 }, label),
     ]);
   }
 

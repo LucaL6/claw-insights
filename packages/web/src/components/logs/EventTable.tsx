@@ -37,7 +37,7 @@ export function EventTable({ events, highlightFrom, highlightTo, search, loading
     >
       {/* Header */}
       <div
-        className="grid items-center py-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide"
+        className="grid items-center py-1.5 px-1 text-xs font-semibold uppercase tracking-wide"
         style={{
           gridTemplateColumns: '28px 82px 68px 110px 1fr',
           borderBottom: '1px solid var(--border)',
@@ -59,12 +59,12 @@ export function EventTable({ events, highlightFrom, highlightTo, search, loading
               className="inline-block w-5 h-5 border-2 rounded-full animate-spin"
               style={{ borderColor: 'var(--border)', borderTopColor: 'var(--text-muted)' }}
             />
-            <div className="text-[11px] mt-2 text-fg-dim">Loading events...</div>
+            <div className="text-xs mt-2 text-fg-dim">Loading events...</div>
           </div>
         ) : error ? (
-          <div className="py-8 text-center text-[11px] text-red">Failed to load events</div>
+          <div className="py-8 text-center text-xs text-red">Failed to load events</div>
         ) : filtered.length === 0 ? (
-          <div className="py-8 text-center text-[12px] text-fg-dim">No events match filters</div>
+          <div className="py-8 text-center text-xs text-fg-dim">No events match filters</div>
         ) : (
           filtered.map((ev, i) => (
             <EventRow

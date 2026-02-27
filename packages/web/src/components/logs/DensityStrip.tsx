@@ -62,8 +62,8 @@ export function DensityStrip({ data, activeHour, onHourClick, loading }: Props) 
       </div>
       {/* Hour labels */}
       <div className="flex justify-between mt-0.5">
-        <span className="text-[9px] mono text-fg-dim">{String(data[0]?.hour ?? 0).padStart(2, '0')}:00</span>
-        <span className="text-[9px] mono text-fg-dim">now</span>
+        <span className="text-xs mono text-fg-dim">{String(data[0]?.hour ?? 0).padStart(2, '0')}:00</span>
+        <span className="text-xs mono text-fg-dim">now</span>
       </div>
     </div>
   );

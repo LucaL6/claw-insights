@@ -82,6 +82,7 @@ export interface DataSources {
   };
   getStartedAt: () => string | null;
   getTotalConversations: () => number;
+  getRangeMessageCount: (startTs: string, endTs: string) => number;
 }
 
 // ─── Output Types ────────────────────────────────────────────────
@@ -122,6 +123,7 @@ export interface SnapshotData {
     errors: number;
     warnings: number;
     uptimePercent: number;
+    totalMessages: number;
   };
   tokensByModel: ModelTokenUsage[];
   tokensTrend?: string;

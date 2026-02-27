@@ -3,8 +3,6 @@ import { queryEvents } from '../db/event-queries.js';
 import { getRangeTurnCount, getRangeTurnCountBySession } from '../db/message-queries.js';
 import { type MetricsRangeKey, RANGE_CONFIG } from '../db/query-utils.js';
 import { getRangeModelTokenUsage, getRangeTokenUsageK } from '../db/token-queries.js';
-import { getGatewayStatus } from '../sources/gateway-cli.js';
-import { getSystemMetrics } from '../sources/system-info.js';
 import type { DataSources } from './snapshot-types.js';
 
 const VALID_RANGES = new Set<MetricsRangeKey>(Object.keys(RANGE_CONFIG) as MetricsRangeKey[]);
@@ -12,11 +10,11 @@ const VALID_RANGES = new Set<MetricsRangeKey>(Object.keys(RANGE_CONFIG) as Metri
 export function createSnapshotSources(ctx: AppContext): DataSources {
   return {
     getGateway: async () => {
-      const s = await getGatewayStatus();
-      const sys = await getSystemMetrics();
+      const s = await ctx.gatewayClient.getGatewayStatus();
+      const sys = await ctx.systemInfoService.getSystemMetrics();
       return { ...s, cpu: sys.cpu, memoryMB: sys.memoryMB };
     },
-    getChannels: async () => (await getGatewayStatus()).channels,
+    getChannels: async () => (await ctx.gatewayClient.getGatewayStatus()).channels,
     getSessions: () => {
       ctx.sessionReader.attachSubAgents(ctx.spawnTracker.getParentChildMap());
       return ctx.sessionReader.getSessions();
@@ -57,6 +55,9 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
     },
     getTotalConversations: () => {
       return getRangeTurnCount(ctx.db, '1970-01-01T00:00:00Z', new Date().toISOString());
+    },
+    getRangeMessageCount: (startTs: string, endTs: string) => {
+      return getRangeTurnCount(ctx.db, startTs, endTs);
     },
   };
 }

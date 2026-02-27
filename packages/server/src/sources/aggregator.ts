@@ -2,7 +2,7 @@ import type { DatabaseSync as Database } from 'node:sqlite';
 
 import { config } from '../config.js';
 import { getBucketedEventCount, getBucketedGatewayEvents } from '../db/event-queries.js';
-import { getBucketedTurnCount, getRangeTurnCount } from '../db/message-queries.js';
+import { getBucketedTurnCountByRole, getRangeTurnCount } from '../db/message-queries.js';
 import { bucketLabel, type MetricsRangeKey, RANGE_CONFIG, rangeStart } from '../db/query-utils.js';
 import { getBucketedSessions } from '../db/system-queries.js';
 import { getBucketedModelTokenUsage, getBucketedTokenUsage, getRangeTokenUsageK } from '../db/token-queries.js';
@@ -82,9 +82,19 @@ export class Aggregator {
         r.count,
       ]),
     );
-    const turnsByBucket = new Map(
-      getBucketedTurnCount(this.db, startTs, endTs, rangeConfig.bucketMinutes).map((r) => [r.bucket, r.turns]),
-    );
+    const turnRoleRows = getBucketedTurnCountByRole(this.db, startTs, endTs, rangeConfig.bucketMinutes);
+    const turnsByBucket = new Map<number, number>();
+    const userTurnsByBucket = new Map<number, number>();
+    const assistantTurnsByBucket = new Map<number, number>();
+    for (const r of turnRoleRows) {
+      turnsByBucket.set(r.bucket, (turnsByBucket.get(r.bucket) ?? 0) + r.turns);
+      if (r.role === 'user') {
+        userTurnsByBucket.set(r.bucket, r.turns);
+      }
+      if (r.role === 'assistant') {
+        assistantTurnsByBucket.set(r.bucket, r.turns);
+      }
+    }
     const gwEvents = getBucketedGatewayEvents(this.db, startTs, endTs, rangeConfig.bucketMinutes);
     const restartBuckets = new Set(gwEvents.filter((e) => e.type === 'gateway_restart').map((e) => e.bucket));
 
@@ -101,6 +111,8 @@ export class Aggregator {
         apiCalls: apiCalls.get(b) ?? 0,
         toolCalls: toolCalls.get(b) ?? 0,
         turns: turnsByBucket.get(b) ?? 0,
+        userTurns: userTurnsByBucket.get(b) ?? 0,
+        assistantTurns: assistantTurnsByBucket.get(b) ?? 0,
         errors: errors.get(b) ?? 0,
         warnings: warnings.get(b) ?? 0,
         gatewayUp: true,

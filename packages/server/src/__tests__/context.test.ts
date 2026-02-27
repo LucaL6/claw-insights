@@ -77,9 +77,39 @@ vi.mock('../sources/readers/cron-reader.js', () => ({
   CronReader: mockClass({ destroy() {} }),
 }));
 
+vi.mock('../platforms/index.js', () => ({
+  loadPlatform: vi.fn(() =>
+    Promise.resolve({
+      os: 'darwin',
+      process: {
+        getPid: vi.fn(() => Promise.resolve(null)),
+        getProcessMetrics: vi.fn(() => Promise.resolve(null)),
+        getUptime: vi.fn(() => Promise.resolve(null)),
+        findPidByPort: vi.fn(() => Promise.resolve(null)),
+        getDiskMB: vi.fn(() => Promise.resolve(null)),
+      },
+      cli: { exec: vi.fn(() => Promise.resolve('')) },
+    }),
+  ),
+}));
+
+vi.mock('../sources/gateway-cli.js', () => ({
+  createGatewayClient: vi.fn(() => ({
+    getGatewayStatus: vi.fn(() => Promise.resolve({ running: false })),
+    getVersion: vi.fn(() => Promise.resolve('0.0.0')),
+    warmCache: vi.fn(() => Promise.resolve()),
+  })),
+}));
+
 vi.mock('../sources/system-info.js', () => ({
-  getSystemMetrics: vi.fn(async () => ({ cpu: 10, memoryMB: 512, diskMB: 100, sampledAt: '' })),
-  getUsageCost: vi.fn(async () => ({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' })),
+  createSystemInfoService: vi.fn(() => ({
+    getSystemMetrics: vi.fn(() => Promise.resolve({ cpu: 10, memoryMB: 512, diskMB: 100, sampledAt: '' })),
+    getUsageCost: vi.fn(() =>
+      Promise.resolve({ totalCost: 0, totalTokensM: 0, todayCost: 0, todayTokensM: 0, fetchedAt: '' }),
+    ),
+    resetMetricsCache: vi.fn(),
+    resetCostCache: vi.fn(),
+  })),
 }));
 
 vi.mock('../sources/collectors/log-tailer.js', () => ({
@@ -117,7 +147,7 @@ describe('context', () => {
 
   it('createContext returns all expected properties', async () => {
     const { createContext } = await import('../context');
-    const ctx = createContext();
+    const ctx = await createContext();
 
     expect(ctx.db).toBeDefined();
     expect(ctx.pipeline).toBeDefined();
@@ -131,11 +161,13 @@ describe('context', () => {
     expect(ctx.dataRetention).toBeDefined();
     expect(ctx.flushTokenEvents).toBeTypeOf('function');
     expect(ctx.flushMessageEvents).toBeTypeOf('function');
+    expect(ctx.gatewayClient).toBeDefined();
+    expect(ctx.systemInfoService).toBeDefined();
   });
 
   it('createContext builds pipeline with declarative wiring', async () => {
     const { createContext } = await import('../context');
-    const ctx = createContext();
+    const ctx = await createContext();
 
     // Pipeline was built (returned from .build())
     expect(ctx.pipeline).toBeDefined();
@@ -143,7 +175,7 @@ describe('context', () => {
 
   it('startContext starts pipeline and flushes buffered events after init', async () => {
     const { createContext, startContext } = await import('../context');
-    const ctx = createContext();
+    const ctx = await createContext();
     const flushTokenSpy = vi.spyOn(ctx, 'flushTokenEvents');
     const flushMessageSpy = vi.spyOn(ctx, 'flushMessageEvents');
 
@@ -157,7 +189,7 @@ describe('context', () => {
 
   it('destroyContext flushes buffers, destroys pipeline, and closes db', async () => {
     const { createContext, destroyContext } = await import('../context');
-    const ctx = createContext();
+    const ctx = await createContext();
     const flushTokenSpy = vi.spyOn(ctx, 'flushTokenEvents');
     const flushMessageSpy = vi.spyOn(ctx, 'flushMessageEvents');
 
@@ -171,7 +203,7 @@ describe('context', () => {
 
   it('destroyContext handles db without close method', async () => {
     const { createContext, destroyContext } = await import('../context');
-    const ctx = createContext();
+    const ctx = await createContext();
     // Remove close method to test the typeof check
     delete (ctx.db as unknown as Record<string, unknown>).close;
     // Should not throw

@@ -73,6 +73,11 @@
   --color-subagent: var(--subagent-bg);
   --color-subagent-border: var(--subagent-border);
   --color-subagent-hover-border: var(--subagent-hover-border);
+
+  /* ── Font size tokens (rem-based) ── */
+  --font-size-caption: 0.75rem;    /* 12px at 16px base */
+  --font-size-body-s: 0.8125rem;   /* 13px at 16px base */
+  --font-size-body: 0.875rem;      /* 14px at 16px base */
 }
 
 /* ═══════════ Dark Theme (default) ═══════════ */
@@ -363,3 +368,12 @@
 
 }
 
+
+/* Toast animation */
+@keyframes fade-in-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in-down 0.2s ease-out;
+}

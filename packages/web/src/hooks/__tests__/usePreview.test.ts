@@ -29,6 +29,8 @@ const makeBuckets = (count: number): BucketData[] =>
       apiCalls: 0,
       toolCalls: 0,
       turns: 0,
+    userTurns: 0,
+    assistantTurns: 0,
       errors: 0,
       warnings: 0,
       gatewayUp: true,

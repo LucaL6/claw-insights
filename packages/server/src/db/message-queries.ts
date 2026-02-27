@@ -69,3 +69,17 @@ export function getBucketedTurnCount(
   );
   return stmt.all(startTs, endTs) as Array<{ bucket: number; turns: number }>;
 }
+
+export function getBucketedTurnCountByRole(
+  db: Database,
+  startTs: string,
+  endTs: string,
+  bucketMinutes: number,
+): Array<{ bucket: number; role: string; turns: number }> {
+  const expr = bucketExpr(bucketMinutes);
+  const stmt = cached(
+    db,
+    `SELECT ${expr} AS bucket, role, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket, role`,
+  );
+  return stmt.all(startTs, endTs) as Array<{ bucket: number; role: string; turns: number }>;
+}

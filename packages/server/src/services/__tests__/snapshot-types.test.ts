@@ -139,6 +139,7 @@ describe('snapshot type compatibility', () => {
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
       getStartedAt: () => null,
       getTotalConversations: () => 0,
+      getRangeMessageCount: () => 0,
     };
 
     expect(sources.getTurnCounts('', '').total).toBe(0);

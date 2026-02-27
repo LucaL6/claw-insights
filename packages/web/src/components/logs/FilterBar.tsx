@@ -83,7 +83,7 @@ export function FilterBar({
                 key={p.type}
                 onClick={() => { if (!empty) { onToggleType(p.type); } }}
                 disabled={empty}
-                className={`text-[10px] mono font-semibold px-2 py-1 rounded-md flex items-center gap-1.5 transition-all ${
+                className={`text-xs mono font-semibold px-2 py-1 rounded-md flex items-center gap-1.5 transition-all ${
                   empty
                     ? 'bg-elevated text-fg-dim border border-edge-subtle opacity-30 cursor-default'
                     : active
@@ -110,12 +110,12 @@ export function FilterBar({
         {/* Time label chip + Show All button */}
         {timeLabel && (
           <div className="flex items-center gap-2">
-            <span className="mono text-[10px] px-2 py-1 rounded inline-flex items-center gap-1.5 bg-elevated text-fg-muted border border-edge-subtle">
+            <span className="mono text-xs px-2 py-1 rounded inline-flex items-center gap-1.5 bg-elevated text-fg-muted border border-edge-subtle">
               {timeLabel}
               {onClearTimeFilter && (
                 <button
                   onClick={onClearTimeFilter}
-                  className="text-[10px] leading-none cursor-pointer hover:opacity-100 opacity-50 transition-opacity text-fg-dim bg-transparent border-none p-0"
+                  className="text-xs leading-none cursor-pointer hover:opacity-100 opacity-50 transition-opacity text-fg-dim bg-transparent border-none p-0"
                 >
                   ✕
                 </button>
@@ -124,7 +124,7 @@ export function FilterBar({
             {onClearTimeFilter && (
               <button
                 onClick={onClearTimeFilter}
-                className="text-[10px] font-semibold px-2 py-1 rounded-md cursor-pointer transition-colors bg-sky-bg text-sky border border-sky-border"
+                className="text-xs font-semibold px-2 py-1 rounded-md cursor-pointer transition-colors bg-sky-bg text-sky border border-sky-border"
               >
                 Show All 24h
               </button>
@@ -137,12 +137,12 @@ export function FilterBar({
 
         {/* Count */}
         <div className="flex items-center gap-1.5">
-          <span className="mono text-[10px] text-fg-dim">
+          <span className="mono text-xs text-fg-dim">
             {filtered}
             {search ? ` / ${displayed}` : ''} of {total}
           </span>
           {total > displayed && (
-            <span className="text-[9px] text-amber opacity-70">
+            <span className="text-xs text-amber opacity-70">
               (latest {displayed})
             </span>
           )}
@@ -155,7 +155,7 @@ export function FilterBar({
         value={localSearch}
         onChange={(e) => { setLocalSearch(e.target.value); }}
         placeholder={t('logs.filterPlaceholder')}
-        className="mono text-[11px] px-3 py-1.5 rounded-md w-full bg-elevated border border-edge text-fg outline-none"
+        className="mono text-xs px-3 py-1.5 rounded-md w-full bg-elevated border border-edge text-fg outline-none"
       />
     </div>
   );

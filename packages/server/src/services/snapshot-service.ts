@@ -108,6 +108,7 @@ export async function buildSnapshotData(
     errors: metrics.totalErrors,
     warnings: metrics.totalWarnings,
     uptimePercent: metrics.uptimePercent,
+    totalMessages: 0, // populated after range timestamps are known
   };
 
   // 4. Buckets and range timestamps
@@ -115,6 +116,9 @@ export async function buildSnapshotData(
   const endTs = new Date().toISOString();
   const rangeConfig = RANGE_CONFIG[range];
   const startTs = new Date(Date.now() - rangeConfig.rangeMinutes * 60_000).toISOString();
+
+  // 4b. Range-scoped message count
+  summary.totalMessages = sources.getRangeMessageCount(startTs, endTs);
 
   // 5. Per-model token usage
   const rawModelTokens = sources.getModelTokenUsage(startTs, endTs);

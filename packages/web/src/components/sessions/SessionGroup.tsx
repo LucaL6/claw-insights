@@ -16,10 +16,10 @@ function SubAgentGroup({ prefix, items, totalTokens }: { prefix: string; items: 
         }}
         className="flex items-center gap-2 w-full pl-4 py-1 text-left rounded transition-colors text-fg-muted"
       >
-        <span className={`text-[10px] transition-transform ${expanded ? '' : '-rotate-90'}`}>▼</span>
-        <span className="text-[12px] font-medium">{prefix} tasks</span>
-        <span className="text-[11px] text-fg-dim">({items.length})</span>
-        <span className="text-[11px] mono ml-auto text-fg-muted">{formatTokensRaw(totalTokens)} total</span>
+        <span className={`text-xs transition-transform ${expanded ? '' : '-rotate-90'}`}>▼</span>
+        <span className="text-[13px] font-medium">{prefix} tasks</span>
+        <span className="text-xs text-fg-dim">({items.length})</span>
+        <span className="text-xs mono ml-auto text-fg-muted">{formatTokensRaw(totalTokens)} total</span>
       </button>
       {expanded && (
         <div className="pl-3 mt-1 space-y-1">

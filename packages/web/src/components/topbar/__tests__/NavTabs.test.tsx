@@ -1,5 +1,5 @@
-import { cleanup,fireEvent, screen } from '@testing-library/react';
-import { afterEach,describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '../../../test/render';
 import { NavTabs } from '../NavTabs';
@@ -13,10 +13,10 @@ describe('NavTabs', () => {
     expect(screen.getByText('Logs')).toBeDefined();
   });
 
-  it('highlights current page with boxShadow', () => {
+  it('highlights current page with underline', () => {
     renderWithProviders(<NavTabs currentPage="dashboard" />);
     const btn = screen.getByText('Dashboard');
-    expect(btn.style.boxShadow).toContain('rgba');
+    expect(btn.className).toContain('border-indigo-400');
   });
 
   it('calls onNavigate with hash on click', () => {

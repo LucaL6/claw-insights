@@ -179,6 +179,8 @@ type MetricsBucket {
   errors: Int!
   warnings: Int!
   turns: Int!
+  userTurns: Int!
+  assistantTurns: Int!
   gatewayUp: Boolean!
   restartEvent: Boolean!
 }

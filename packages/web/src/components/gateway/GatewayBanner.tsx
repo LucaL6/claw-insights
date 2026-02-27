@@ -40,7 +40,7 @@ function BannerStatusPill({ status }: { status: GatewayStatus }) {
   return (
     <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md ${c.bg} border ${c.border}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-      <span className={`text-[10px] font-medium ${c.text}`}>{c.label}</span>
+      <span className={`text-xs font-medium ${c.text}`}>{c.label}</span>
     </div>
   );
 }
@@ -61,12 +61,12 @@ export function GatewayBanner() {
       <div className="flex items-center justify-between px-4 py-2">
         {/* Left: identity + status */}
         <div className="flex items-center gap-3">
-          <span className={`text-[11px] font-semibold ${isOffline ? 'text-amber' : 'text-fg-secondary'}`}>
+          <span className={`text-xs font-semibold ${isOffline ? 'text-amber' : 'text-fg-secondary'}`}>
             {isDashboardIssue ? t('gateway.dashboardTitle') : t('gateway.title')}
           </span>
           <BannerStatusPill status={status} />
           {uptime && !isDown && !isDashboardIssue && (
-            <span className="text-[10px] mono text-fg-dim">
+            <span className="text-xs mono text-fg-dim">
               {t('gateway.uptime')} {uptime}
             </span>
           )}
@@ -93,9 +93,9 @@ export function GatewayBanner() {
                     <span
                       className={`w-1 h-1 rounded-full ${isDown ? 'bg-fg-dim' : c.connected ? 'bg-emerald' : 'bg-red'}`}
                     />
-                    <span className="text-[10px] text-fg-muted">{channelShortName(c.name)}</span>
+                    <span className="text-xs text-fg-muted">{channelShortName(c.name)}</span>
                     {!isDown && c.latencyMs != null && (
-                      <span className="text-[9px] mono text-fg-dim">{formatLatency(c.latencyMs)}</span>
+                      <span className="text-xs mono text-fg-dim">{formatLatency(c.latencyMs)}</span>
                     )}
                   </div>
                 ))}
@@ -105,7 +105,7 @@ export function GatewayBanner() {
         {/* Right: hidden for dashboard issues, show resources otherwise */}
         {isDashboardIssue ? (
           <div className="flex items-center gap-2">
-            {isOffline && <span className="text-[10px] text-amber animate-pulse">{t('topbar.reconnecting')}</span>}
+            {isOffline && <span className="text-xs text-amber animate-pulse">{t('topbar.reconnecting')}</span>}
           </div>
         ) : (
           <div
@@ -113,21 +113,21 @@ export function GatewayBanner() {
           >
             {fetching.resources ? (
               <>
-                <span className="text-[9px] uppercase tracking-wider text-fg-dim">{t('topbar.cpu')}</span>
+                <span className="text-xs uppercase tracking-wide text-fg-dim">{t('topbar.cpu')}</span>
                 <span className="inline-block w-6 h-2.5 rounded animate-pulse bg-skeleton" />
                 <div className="w-px h-3 bg-edge" />
-                <span className="text-[9px] uppercase tracking-wider text-fg-dim">{t('topbar.mem')}</span>
+                <span className="text-xs uppercase tracking-wide text-fg-dim">{t('topbar.mem')}</span>
                 <span className="inline-block w-6 h-2.5 rounded animate-pulse bg-skeleton" />
               </>
             ) : (
               <>
-                <span className="text-[9px] uppercase tracking-wider text-fg-dim">{t('topbar.cpu')}</span>
-                <span className="text-[10px] mono text-fg-secondary">
+                <span className="text-xs uppercase tracking-wide text-fg-dim">{t('topbar.cpu')}</span>
+                <span className="text-xs mono text-fg-secondary">
                   {isDown || !resources ? '—' : `${resources.cpu.toFixed(1)}%`}
                 </span>
                 <div className="w-px h-3 bg-edge" />
-                <span className="text-[9px] uppercase tracking-wider text-fg-dim">{t('topbar.mem')}</span>
-                <span className="text-[10px] mono text-fg-secondary">
+                <span className="text-xs uppercase tracking-wide text-fg-dim">{t('topbar.mem')}</span>
+                <span className="text-xs mono text-fg-secondary">
                   {isDown || !resources ? '—' : `${resources.memoryMB}M`}
                 </span>
               </>

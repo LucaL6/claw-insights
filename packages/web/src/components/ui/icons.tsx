@@ -38,6 +38,32 @@ export function SpinnerIcon({ className = 'w-3 h-3' }: IconProps) {
   );
 }
 
+export function MoonIcon({ className = 'w-3.5 h-3.5' }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+      />
+    </svg>
+  );
+}
+
+export function SunIcon({ className = 'w-3.5 h-3.5' }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="5" strokeWidth={2} />
+      <path
+        strokeLinecap="round"
+        strokeWidth={2}
+        d="M12 1v2m0 18v2m-9-11h2m18 0h2m-3.64-6.36l-1.41 1.41M6.05 17.95l-1.41 1.41m0-12.73l1.41 1.41m11.31 11.32l1.41 1.41"
+      />
+    </svg>
+  );
+}
+
 export function ChevronDownIcon({ className = 'w-3.5 h-3.5' }: IconProps) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">

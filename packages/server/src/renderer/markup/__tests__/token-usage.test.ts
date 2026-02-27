@@ -54,18 +54,13 @@ function makeData(): SnapshotData {
 }
 
 describe('renderTokenUsage', () => {
-  it('renders tokens label, range pill, trend badge, big number, gradient bar, and legend', () => {
+  it('renders token used label, big number, gradient bar, and legend', () => {
     const tree = renderTokenUsage(makeData(), 'standard', DARK);
     const texts = collectText(tree);
     const json = JSON.stringify(tree);
 
-    // Section label and range pill
-    expect(texts).toContain('TOKENS');
-    expect(texts).toContain('6h');
-
-    // Trend badge
-    expect(texts).toContain('+8%');
-    expect(json).toContain(DARK.trendBadge.bg);
+    // Section label
+    expect(texts).toContain('TOKEN USED');
 
     // Big number split into number + unit
     expect(texts).toContain('12.3');
@@ -83,17 +78,16 @@ describe('renderTokenUsage', () => {
     expect(texts).toContain('3.7k');
 
     // Range pill styling
-    expect(json).toContain(DARK.rangePill.bg);
   });
 
-  it('handles missing trend and empty model list', () => {
+  it('handles empty model list', () => {
     const data = makeData();
     data.tokensByModel = [];
     data.tokensTrend = undefined;
 
     const tree = renderTokenUsage(data, 'compact', DARK);
     const texts = collectText(tree);
-    expect(texts).toContain('TOKENS');
+    expect(texts).toContain('TOKEN USED');
     expect(texts).toContain('12.3');
     expect(texts).not.toContain('undefined');
   });

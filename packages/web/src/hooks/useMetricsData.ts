@@ -14,6 +14,8 @@ export interface BucketData {
   apiCalls: number;
   toolCalls: number;
   turns: number;
+  userTurns: number;
+  assistantTurns: number;
   errors: number;
   warnings: number;
   gatewayUp: boolean;
@@ -51,6 +53,7 @@ export function useMetricsData(range: MetricsRange) {
 
   const peakSessions = buckets.length > 0 ? Math.max(...buckets.map((b) => b.sessions)) : 0;
   const totalTokensK = buckets.reduce((s, b) => s + b.tokensK, 0);
+  const totalMessages = metrics?.totalTurns ?? 0;
   const totalErrors = metrics?.totalErrors ?? 0;
   const totalWarnings = metrics?.totalWarnings ?? 0;
   const uptimePct = metrics?.uptimePercent ?? 0;
@@ -62,6 +65,7 @@ export function useMetricsData(range: MetricsRange) {
     allModels,
     peakSessions,
     totalTokensK,
+    totalMessages,
     totalErrors,
     totalWarnings,
     uptimePct,

@@ -7,7 +7,7 @@ interface InfoTooltipProps {
 export function InfoTooltip({ label, detail, alignRight = false }: InfoTooltipProps) {
   return (
     <span className="relative inline-flex items-center group/info ml-1">
-      <span className="cursor-help hover:opacity-80 transition-opacity text-[11px] leading-none select-none text-fg-dim">
+      <span className="cursor-help hover:opacity-80 transition-opacity text-xs leading-none select-none text-fg-dim">
         ⓘ
       </span>
       <span
@@ -17,11 +17,11 @@ export function InfoTooltip({ label, detail, alignRight = false }: InfoTooltipPr
           bg-[var(--chart-tooltip-bg)] border border-[var(--chart-tooltip-border)] shadow-tooltip
           ${alignRight ? 'right-0' : 'left-0'}`}
       >
-        <span className="block text-[11px] leading-snug text-[var(--chart-tooltip-text)]">
+        <span className="block text-xs leading-snug text-[var(--chart-tooltip-text)]">
           {label}
         </span>
         {detail && (
-          <span className="block text-[10px] font-mono mt-1 leading-snug text-[var(--chart-tooltip-dim)]">
+          <span className="block text-xs font-mono mt-1 leading-snug text-[var(--chart-tooltip-dim)]">
             {detail}
           </span>
         )}

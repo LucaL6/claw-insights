@@ -1,14 +1,21 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-import { CLI_ENV,config } from '../config.js';
+import { config } from '../config.js';
 import { createChildLogger } from '../logger.js';
+import type { UsageCost } from '../platforms/shared/parsers.js';
+import { parseUsageCostOutput } from '../platforms/shared/parsers.js';
+import type { Platform } from '../ports/types.js';
+
+// Re-export shared parsers for test/consumer convenience
+export type { UsageCost } from '../platforms/shared/parsers.js';
+export {
+  parseDuOutput,
+  parseLaunchctlOutput,
+  parsePsOutput,
+  parseUsageCostOutput,
+} from '../platforms/shared/parsers.js';
 
 const log = createChildLogger('system-info');
 
-const execFileAsync = promisify(execFile);
-
-// ── System Metrics ──────────────────────────────────────────────
+// ── Types ───────────────────────────────────────────────────────
 
 export interface SystemMetricsData {
   cpu: number;
@@ -17,144 +24,75 @@ export interface SystemMetricsData {
   sampledAt: string;
 }
 
-let metricsCache: { data: SystemMetricsData; ts: number } | null = null;
+export interface SystemInfoService {
+  getSystemMetrics(): Promise<SystemMetricsData>;
+  getUsageCost(): Promise<UsageCost>;
+  resetMetricsCache(): void;
+  resetCostCache(): void;
+}
+
+// ── Factory Function ────────────────────────────────────────────
+
 const METRICS_CACHE_TTL = 10_000;
+const COST_CACHE_TTL = 5 * 60 * 1000;
 
-// Pure parse functions (exported for testing)
+export function createSystemInfoService(platform: Platform): SystemInfoService {
+  const proc = platform.process;
+  const cli = platform.cli;
 
-export function parseLaunchctlOutput(stdout: string): number | null {
-  const line = stdout.split('\n').find((l) => l.includes('ai.openclaw.gateway'));
-  if (!line) {return null;}
-  const match = line.match(/^(\d+)/);
-  return match ? parseInt(match[1], 10) : null;
-}
+  let metricsCache: { data: SystemMetricsData; ts: number } | null = null;
+  let costCache: { data: UsageCost; ts: number } | null = null;
 
-export function parsePsOutput(stdout: string): { cpu: number; memoryMB: number } | null {
-  const trimmed = stdout.trim();
-  const parts = trimmed.split(/\s+/);
-  if (parts.length < 2) {return null;}
-  const rssKB = parseInt(parts[0], 10);
-  const cpu = parseFloat(parts[1]);
-  if (isNaN(rssKB) || isNaN(cpu)) {return null;}
-  return { cpu, memoryMB: Math.round(rssKB / 1024) };
-}
+  async function getSystemMetrics(): Promise<SystemMetricsData> {
+    const now = Date.now();
+    if (metricsCache && now - metricsCache.ts < METRICS_CACHE_TTL) {
+      return metricsCache.data;
+    }
 
-export function parseDuOutput(stdout: string): number {
-  const match = stdout.match(/^(\d+)/);
-  return match ? parseInt(match[1], 10) : 0;
-}
+    // Demo mode: return fixed values for reproducible screenshots
+    const demoCpu = process.env.CLAW_INSIGHTS_DEMO_CPU;
+    const demoMem = process.env.CLAW_INSIGHTS_DEMO_MEM;
+    if (demoCpu != null && demoMem != null) {
+      const data: SystemMetricsData = {
+        cpu: parseFloat(demoCpu),
+        memoryMB: parseInt(demoMem, 10),
+        diskMB: 0,
+        sampledAt: new Date().toISOString(),
+      };
+      metricsCache = { data, ts: now };
+      return data;
+    }
 
-async function getPid(): Promise<number | null> {
-  try {
-    const { stdout } = await execFileAsync('launchctl', ['list'], { encoding: 'utf-8' });
-    return parseLaunchctlOutput(stdout);
-  } catch {
-    return null;
-  }
-}
+    const pid = await proc.getPid();
+    const [metrics, diskMB] = await Promise.all([
+      pid ? proc.getProcessMetrics(pid) : Promise.resolve(null),
+      proc.getDiskMB(config.openclawDir),
+    ]);
 
-async function getProcessMetrics(pid: number): Promise<{ cpu: number; memoryMB: number } | null> {
-  try {
-    const { stdout } = await execFileAsync('ps', ['-o', 'rss=,pcpu=', '-p', String(pid)], { encoding: 'utf-8' });
-    return parsePsOutput(stdout);
-  } catch {
-    return null;
-  }
-}
-
-async function getDiskMB(): Promise<number> {
-  try {
-    const { stdout } = await execFileAsync('du', ['-sm', `${config.openclawDir}/`], { encoding: 'utf-8' });
-    return parseDuOutput(stdout);
-  } catch {
-    return 0;
-  }
-}
-
-export async function getSystemMetrics(): Promise<SystemMetricsData> {
-  const now = Date.now();
-  if (metricsCache && now - metricsCache.ts < METRICS_CACHE_TTL) {
-    return metricsCache.data;
-  }
-
-  // Demo mode: return fixed values for reproducible screenshots
-  const demoCpu = process.env.CLAW_INSIGHTS_DEMO_CPU;
-  const demoMem = process.env.CLAW_INSIGHTS_DEMO_MEM;
-  if (demoCpu != null && demoMem != null) {
     const data: SystemMetricsData = {
-      cpu: parseFloat(demoCpu),
-      memoryMB: parseInt(demoMem, 10),
-      diskMB: 0,
+      cpu: metrics?.cpu ?? 0,
+      memoryMB: metrics?.memoryMB ?? 0,
+      diskMB,
       sampledAt: new Date().toISOString(),
     };
     metricsCache = { data, ts: now };
     return data;
   }
 
-  const pid = await getPid();
-  const [proc, diskMB] = await Promise.all([pid ? getProcessMetrics(pid) : Promise.resolve(null), getDiskMB()]);
+  async function getUsageCost(): Promise<UsageCost> {
+    if (costCache && Date.now() - costCache.ts < COST_CACHE_TTL) {
+      return costCache.data;
+    }
 
-  const data: SystemMetricsData = {
-    cpu: proc?.cpu ?? 0,
-    memoryMB: proc?.memoryMB ?? 0,
-    diskMB,
-    sampledAt: new Date().toISOString(),
-  };
-  metricsCache = { data, ts: now };
-  return data;
-}
+    const stdout = await cli.exec(['gateway', 'usage-cost']);
+    if (stdout.trim()) {
+      const data = parseUsageCostOutput(stdout);
+      costCache = { data, ts: Date.now() };
+      return data;
+    }
 
-// ── Usage Cost ──────────────────────────────────────────────────
-
-export interface UsageCost {
-  totalCost: number;
-  totalTokensM: number;
-  todayCost: number;
-  todayTokensM: number;
-  fetchedAt: string;
-}
-
-let costCache: { data: UsageCost; ts: number } | null = null;
-const COST_CACHE_TTL = 5 * 60 * 1000;
-
-export function parseUsageCostOutput(output: string): UsageCost {
-  const result: UsageCost = {
-    totalCost: 0,
-    totalTokensM: 0,
-    todayCost: 0,
-    todayTokensM: 0,
-    fetchedAt: new Date().toISOString(),
-  };
-
-  const totalMatch = output.match(/Total:\s*\$([\d.]+)\s*·\s*([\d.]+)m\s*tokens/i);
-  if (totalMatch) {
-    result.totalCost = parseFloat(totalMatch[1]);
-    result.totalTokensM = parseFloat(totalMatch[2]);
-  }
-
-  const todayMatch = output.match(/Latest day:.*?\$([\d.]+)\s*·\s*([\d.]+)m\s*tokens/i);
-  if (todayMatch) {
-    result.todayCost = parseFloat(todayMatch[1]);
-    result.todayTokensM = parseFloat(todayMatch[2]);
-  }
-
-  return result;
-}
-
-export async function getUsageCost(): Promise<UsageCost> {
-  if (costCache && Date.now() - costCache.ts < COST_CACHE_TTL) {return costCache.data;}
-
-  try {
-    const { stdout } = await execFileAsync(config.cliPath, ['gateway', 'usage-cost'], {
-      timeout: 15000,
-      encoding: 'utf-8',
-      env: CLI_ENV,
-    });
-    const data = parseUsageCostOutput(stdout);
-    costCache = { data, ts: Date.now() };
-    return data;
-  } catch (err) {
-    log.warn({ err: err as Error }, 'usage-cost CLI call failed');
+    // CLI failure — return cached or zeros
+    log.warn('usage-cost CLI call returned empty');
     return (
       costCache?.data ?? {
         totalCost: 0,
@@ -165,14 +103,15 @@ export async function getUsageCost(): Promise<UsageCost> {
       }
     );
   }
-}
 
-// ── Cache management ────────────────────────────────────────────
-
-export function resetMetricsCache(): void {
-  metricsCache = null;
-}
-
-export function resetCostCache(): void {
-  costCache = null;
+  return {
+    getSystemMetrics,
+    getUsageCost,
+    resetMetricsCache: () => {
+      metricsCache = null;
+    },
+    resetCostCache: () => {
+      costCache = null;
+    },
+  };
 }

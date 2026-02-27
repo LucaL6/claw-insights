@@ -7,7 +7,7 @@ export function MetricsValidationWarnings({ warnings }: Props) {
   return (
     <div className="mb-2 space-y-1">
       {warnings.map((w, i) => (
-        <div key={i} className="text-[9px] flex items-center gap-1 text-amber">
+        <div key={i} className="text-xs flex items-center gap-1 text-amber">
           <span>⚠️</span> {w}
         </div>
       ))}

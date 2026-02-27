@@ -28,6 +28,7 @@ describe('snapshot performance', () => {
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
       getStartedAt: () => '2026-01-01T00:00:00Z',
       getTotalConversations: () => 0,
+      getRangeMessageCount: () => 0,
     };
 
     const start = performance.now();
@@ -65,6 +66,7 @@ describe('snapshot performance', () => {
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
       getStartedAt: () => '2026-01-01T00:00:00Z',
       getTotalConversations: () => 0,
+      getRangeMessageCount: () => 0,
     };
 
     const start = performance.now();
@@ -104,6 +106,7 @@ describe('snapshot performance', () => {
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
       getStartedAt: () => '2026-01-01T00:00:00Z',
       getTotalConversations: () => 0,
+      getRangeMessageCount: () => 0,
     };
 
     const result = await buildSnapshotData(

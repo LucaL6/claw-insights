@@ -9,7 +9,7 @@ afterEach(cleanup);
 describe('MetricsSummaryRow', () => {
   it('renders formatted values', () => {
     const { container } = renderWithProviders(
-      <MetricsSummaryRow totalTokensK={123.456} totalErrors={5} totalWarnings={2} uptimePct={99.123} />,
+      <MetricsSummaryRow totalTokensK={123.456} totalMessages={723} totalErrors={5} totalWarnings={2} uptimePct={99.123} />,
     );
     const text = container.textContent ?? '';
     expect(text).toContain('123.5k');
@@ -20,7 +20,7 @@ describe('MetricsSummaryRow', () => {
 
   it('handles zero values', () => {
     const { container } = renderWithProviders(
-      <MetricsSummaryRow totalTokensK={0} totalErrors={0} totalWarnings={0} uptimePct={0} />,
+      <MetricsSummaryRow totalTokensK={0} totalMessages={0} totalErrors={0} totalWarnings={0} uptimePct={0} />,
     );
     const text = container.textContent ?? '';
     expect(text).toContain('0');

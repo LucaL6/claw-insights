@@ -90,9 +90,9 @@ export function SessionCard({
           <span className="text-[15px] font-semibold truncate text-fg">{displayName}</span>
           {kind === 'cron' && <TagPill variant="cron">CRON</TagPill>}
         </div>
-        <span className="text-[12px] flex-shrink-0 text-fg-muted">{relativeTime(updatedAt, t)}</span>
+        <span className="text-xs flex-shrink-0 text-fg-muted">{relativeTime(updatedAt, t)}</span>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <div className="flex items-center gap-1.5 flex-wrap">
           <TagPill variant="model">
             <span className="mono">{formatModel(model)}</span>
@@ -101,7 +101,7 @@ export function SessionCard({
           {kind && <TagPill variant="kind">{kind}</TagPill>}
           {subAgentCount !== undefined && subAgentCount > 0 && <TagPill variant="sub">{subAgentCount} sub</TagPill>}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 ml-auto">
           <span className="mono text-[13px] font-semibold text-fg-secondary">{formatTokensRaw(totalTokens)}</span>
           <InlineProgress percent={usagePercent} />
         </div>
@@ -167,10 +167,10 @@ function CompactCard({
         <div className="flex items-center gap-2">
           <StatusDot status={status} size="sm" />
           <span className="mono text-[13px] text-fg">{displayName}</span>
-          <span className="text-[11px] animate-pulse text-fg-dim">{t('sessions.starting')}</span>
+          <span className="text-xs animate-pulse text-fg-dim">{t('sessions.starting')}</span>
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             <StatusDot status={status} size="sm" />
             <span className={`mono text-[13px] font-medium truncate ${isDone ? 'text-fg-muted' : 'text-fg'}`}>
@@ -181,17 +181,19 @@ function CompactCard({
               <span className="mono">{formatModel(model)}</span>
             </TagPill>
             {channel && (
-              <TagPill variant="channel" size="sm">
-                {channel}
-              </TagPill>
+              <span className="hidden md:inline">
+                <TagPill variant="channel" size="sm">
+                  {channel}
+                </TagPill>
+              </span>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className={`mono text-[12px] ${isDone ? 'text-fg-dim' : 'text-fg-muted'}`}>
+          <div className="flex items-center gap-2 ml-auto">
+            <span className={`mono text-xs ${isDone ? 'text-fg-dim' : 'text-fg-muted'}`}>
               {formatTokensRaw(totalTokens)}
             </span>
             <InlineProgress percent={usagePercent} width={32} height={2} />
-            <span className="text-[10px] w-12 text-right text-fg-dim">{relativeTime(updatedAt, t)}</span>
+            <span className="text-xs w-12 text-right text-fg-dim hidden md:inline">{relativeTime(updatedAt, t)}</span>
           </div>
         </div>
       )}

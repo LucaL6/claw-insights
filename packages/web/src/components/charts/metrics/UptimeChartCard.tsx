@@ -35,7 +35,7 @@ export function UptimeChartCard({
     <>
       <ChartCard accent="uptime">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[12px] font-semibold text-fg-muted">
+          <span className="text-[13px] font-semibold text-fg-muted">
             {t('metrics.uptime')}
             <InfoTooltip {...TOOLTIPS.sections.uptime} />
           </span>

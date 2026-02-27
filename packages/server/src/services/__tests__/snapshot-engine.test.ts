@@ -51,6 +51,7 @@ const mockSources: DataSources = {
   getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
   getStartedAt: vi.fn().mockReturnValue(null),
   getTotalConversations: vi.fn().mockReturnValue(0),
+  getRangeMessageCount: () => 0,
 };
 
 const defaultParams: SnapshotRequest = {

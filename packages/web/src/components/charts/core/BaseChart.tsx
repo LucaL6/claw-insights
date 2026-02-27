@@ -1,7 +1,7 @@
 import type { EChartsOption } from 'echarts';
 import * as echarts from 'echarts';
 import ReactECharts from 'echarts-for-react';
-import { useEffect,useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { useTheme } from '../../../theme/context';
 import { buildEChartsTheme, DARK_THEME } from './echarts-theme';
@@ -20,12 +20,9 @@ interface Props {
 export function BaseChart({ option, height = 160, testId, onEvents }: Props) {
   const { theme } = useTheme();
 
-  // Re-register ECharts theme when CSS vars change
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      echarts.registerTheme('ocDynamic', buildEChartsTheme());
-    });
-    return () => { cancelAnimationFrame(id); };
+  // Re-register ECharts theme synchronously before re-mount (key={theme})
+  useMemo(() => {
+    echarts.registerTheme('ocDynamic', buildEChartsTheme());
   }, [theme]);
 
   const mergedOption = useMemo(

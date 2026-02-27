@@ -89,6 +89,8 @@ export const MetricsQuery = graphql(/* GraphQL */ `
         apiCalls
         toolCalls
         turns
+        userTurns
+        assistantTurns
         errors
         warnings
         gatewayUp
@@ -96,6 +98,7 @@ export const MetricsQuery = graphql(/* GraphQL */ `
       }
       totalTokensK
       rangeTokensK
+      totalTurns
       totalErrors
       totalWarnings
       uptimePercent

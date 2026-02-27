@@ -7,6 +7,7 @@ import { useI18n } from '../../../i18n/context';
 import { CollapsibleSection } from '../../layout/CollapsibleSection';
 import { ChartSkeleton, Skeleton } from '../../layout/Skeleton';
 import { InfoTooltip } from '../../ui/InfoTooltip';
+import { ConversationsChart } from '../ConversationsChart';
 import { ChartCard } from '../core/ChartCard';
 import { SessionsChart } from '../SessionsChart';
 import { TokensChart } from '../TokensChart';
@@ -16,6 +17,7 @@ import { MetricsSummaryRow } from './MetricsSummaryRow';
 import { getTooltips } from './metricsTooltips';
 import { MetricsValidationWarnings } from './MetricsValidationWarnings';
 import { ModelSelector } from './ModelSelector';
+import { type RoleFilter, RoleSelector } from './RoleSelector';
 import { UptimeChartCard } from './UptimeChartCard';
 import { useMetricsValidation } from './useMetricsValidation';
 
@@ -30,11 +32,13 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
   const { t } = useI18n();
   const TOOLTIPS = useMemo(() => getTooltips(t), [t]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const {
     metrics,
     buckets,
     allModels,
     totalTokensK,
+    totalMessages,
     totalErrors,
     totalWarnings,
     uptimePct,
@@ -88,6 +92,7 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
       {metrics && (
         <MetricsSummaryRow
           totalTokensK={totalTokensK}
+          totalMessages={totalMessages}
           totalErrors={totalErrors}
           totalWarnings={totalWarnings}
           uptimePct={uptimePct}
@@ -96,21 +101,12 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
 
       <MetricsValidationWarnings warnings={validationWarnings} />
 
-      {/* Row 1: Sessions + Tokens */}
+      {/* Row 1: Tokens + Conversations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <ChartCard accent="sessions">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[12px] font-semibold text-fg-muted">
-              {t('metrics.sessions')}
-              <InfoTooltip {...TOOLTIPS.sections.sessions} />
-            </span>
-          </div>
-          <SessionsChart data={buckets} />
-        </ChartCard>
         <ChartCard accent="tokens">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-semibold text-fg-muted">
+              <span className="text-[13px] font-semibold text-fg-muted">
                 {t('metrics.tokens')}
                 <InfoTooltip {...TOOLTIPS.sections.tokens} />
               </span>
@@ -119,9 +115,34 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
           </div>
           <TokensChart data={buckets} selectedModel={selectedModel} />
         </ChartCard>
+        <ChartCard accent="conversations">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-semibold text-fg-muted">
+                {t('metrics.conversations')}
+                <InfoTooltip {...TOOLTIPS.sections.conversations} />
+              </span>
+              <RoleSelector selected={roleFilter} onChange={setRoleFilter} />
+            </div>
+          </div>
+          <ConversationsChart data={buckets} roleFilter={roleFilter} />
+        </ChartCard>
       </div>
 
-      {/* Row 2: Errors */}
+      {/* Row 2: Sessions (full width) */}
+      <div className="mt-3">
+        <ChartCard accent="sessions">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[13px] font-semibold text-fg-muted">
+              {t('metrics.sessions')}
+              <InfoTooltip {...TOOLTIPS.sections.sessions} />
+            </span>
+          </div>
+          <SessionsChart data={buckets} />
+        </ChartCard>
+      </div>
+
+      {/* Row 3: Errors */}
       <div className="mt-3">
         <ErrorsChartCard
           buckets={buckets}

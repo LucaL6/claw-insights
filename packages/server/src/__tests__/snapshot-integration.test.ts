@@ -71,6 +71,7 @@ const mockSources: DataSources = {
   getTurnCounts: vi.fn().mockReturnValue({ total: 4, bySession: [] }),
   getStartedAt: () => '2026-02-13T00:00:00Z',
   getTotalConversations: () => 128,
+  getRangeMessageCount: () => 42,
 };
 
 // ── Mock the heavy renderer (avoids font loading) ──

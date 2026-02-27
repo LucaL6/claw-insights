@@ -9,28 +9,25 @@ interface NavTabsProps {
 export function NavTabs({ currentPage, onNavigate }: NavTabsProps) {
   const { t } = useI18n();
 
-  const tabStyle = (active: boolean) =>
-    active
-      ? {
-          backgroundColor: 'var(--bg-surface-solid)',
-          color: 'var(--text-primary)',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-        } // inline: dynamic boxShadow
-      : { color: 'var(--text-dim)' };
-
   return (
-    <div className="inline-flex rounded-lg p-0.5 gap-px bg-elevated">
+    <div className="flex items-stretch gap-4">
       <button
         onClick={() => onNavigate?.('#dashboard')}
-        className="text-[11px] font-semibold px-4 py-1 rounded-md transition-all"
-        style={tabStyle(currentPage === 'dashboard')}
+        className={`text-xs font-semibold px-1 flex items-center border-b-2 transition-colors ${
+          currentPage === 'dashboard'
+            ? 'text-fg border-indigo-400'
+            : 'text-fg-dim border-transparent hover:text-fg-muted'
+        }`}
       >
         {t('nav.dashboard')}
       </button>
       <button
         onClick={() => onNavigate?.('#logs')}
-        className="text-[11px] font-semibold px-4 py-1 rounded-md transition-all"
-        style={tabStyle(currentPage === 'logs')}
+        className={`text-xs font-semibold px-1 flex items-center border-b-2 transition-colors ${
+          currentPage === 'logs'
+            ? 'text-fg border-indigo-400'
+            : 'text-fg-dim border-transparent hover:text-fg-muted'
+        }`}
       >
         {t('nav.logs')}
       </button>

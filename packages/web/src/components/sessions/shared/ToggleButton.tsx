@@ -37,7 +37,7 @@ export function ToggleButton({ active, variant = 'filter', onClick, children }: 
   return (
     <button
       onClick={onClick}
-      className="px-2 py-0.5 text-[10px] rounded transition-colors"
+      className="px-2 py-0.5 text-xs rounded transition-colors"
       style={active ? styles.active : styles.inactive}
     >
       {children}

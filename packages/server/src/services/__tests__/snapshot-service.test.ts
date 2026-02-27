@@ -61,6 +61,7 @@ function makeSources(sessionCount = 3): DataSources {
     }),
     getStartedAt: () => new Date(Date.now() - 30 * 86_400_000).toISOString(),
     getTotalConversations: () => 42,
+    getRangeMessageCount: () => 0,
   };
 }
 

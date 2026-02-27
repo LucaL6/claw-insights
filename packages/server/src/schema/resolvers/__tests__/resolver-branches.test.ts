@@ -5,12 +5,11 @@ import type { AppContext } from '../../../context.js';
 // ── Mocks ──
 
 vi.mock('../../../sources/gateway-cli', () => ({
-  getGatewayStatus: vi.fn(),
+  createGatewayClient: vi.fn(),
 }));
 
 vi.mock('../../../sources/system-info', () => ({
-  getSystemMetrics: vi.fn(),
-  getUsageCost: vi.fn(),
+  createSystemInfoService: vi.fn(),
 }));
 
 vi.mock('../../../knowledge/engine', () => {
@@ -62,6 +61,28 @@ function mockCtx(): AppContext {
     spawnTracker: { getParentChildMap: vi.fn().mockReturnValue(new Map()), ingest: vi.fn() },
     aggregator: { getMetrics: vi.fn(), ingestLog: vi.fn() },
     metricsCollector: { start: vi.fn(), stop: vi.fn() },
+    gatewayClient: {
+      getGatewayStatus: vi.fn().mockResolvedValue({
+        running: true,
+        pid: 1234,
+        version: '1.0.0',
+        updateAvailable: false,
+        uptime: '2h',
+        startedAt: '2025-01-01T00:00:00Z',
+        connectLatencyMs: 42,
+        latestVersion: '1.0.0',
+        securitySummary: { critical: 0, warn: 1 },
+        channels: [{ provider: 'DISCORD', name: 'general', connected: true, latencyMs: 10 }],
+      }),
+      getVersion: vi.fn().mockResolvedValue('1.0.0'),
+      warmCache: vi.fn().mockResolvedValue(undefined),
+    },
+    systemInfoService: {
+      getSystemMetrics: vi.fn().mockResolvedValue({ cpu: 25, memoryMB: 512 }),
+      getUsageCost: vi.fn().mockResolvedValue({ totalCostUsd: 1.5, breakdown: [] }),
+      resetMetricsCache: vi.fn(),
+      resetCostCache: vi.fn(),
+    },
     dataValidator: { runValidation: vi.fn().mockReturnValue([]), start: vi.fn(), stop: vi.fn() },
     dataRetention: { start: vi.fn(), stop: vi.fn() },
   } as unknown as AppContext;
@@ -102,33 +123,33 @@ describe('sessionsResolvers branches', () => {
 
 describe('gatewayResolvers branches', () => {
   it('handles error in safe() wrapper for gateway', async () => {
-    const { getGatewayStatus } = await import('../../../sources/gateway-cli.js');
-    (getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('connection refused'));
+    const ctx = mockCtx();
+    (ctx.gatewayClient.getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('connection refused'));
 
     const { gatewayResolvers } = await import('../gateway.resolver.js');
-    const resolvers = gatewayResolvers(mockCtx());
+    const resolvers = gatewayResolvers(ctx);
     const gateway = resolvers.Query!.gateway!;
 
     await expect((gateway as Function)({}, {})).rejects.toThrow('connection refused');
   });
 
   it('handles error in safe() wrapper for channels', async () => {
-    const { getGatewayStatus } = await import('../../../sources/gateway-cli.js');
-    (getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
+    const ctx = mockCtx();
+    (ctx.gatewayClient.getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
 
     const { gatewayResolvers } = await import('../gateway.resolver.js');
-    const resolvers = gatewayResolvers(mockCtx());
+    const resolvers = gatewayResolvers(ctx);
     const channels = resolvers.Query!.channels!;
 
     await expect((channels as Function)({}, {})).rejects.toThrow('fail');
   });
 
   it('handles error in safe() wrapper for resources', async () => {
-    const { getSystemMetrics } = await import('../../../sources/system-info.js');
-    (getSystemMetrics as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('metrics fail'));
+    const ctx = mockCtx();
+    (ctx.systemInfoService.getSystemMetrics as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('metrics fail'));
 
     const { gatewayResolvers } = await import('../gateway.resolver.js');
-    const resolvers = gatewayResolvers(mockCtx());
+    const resolvers = gatewayResolvers(ctx);
     const resources = resolvers.Query!.resources!;
 
     await expect((resources as Function)({}, {})).rejects.toThrow('metrics fail');
@@ -143,9 +164,6 @@ describe('diagnosticsResolvers branches', () => {
   });
 
   it('returns findings with mapped severity and snapshot summary', async () => {
-    const { getGatewayStatus } = await import('../../../sources/gateway-cli.js');
-    (getGatewayStatus as ReturnType<typeof vi.fn>).mockResolvedValue({ running: true });
-
     const { diagnosticsResolvers } = await import('../diagnostics.resolver.js');
     const resolvers = diagnosticsResolvers(mockCtx());
     const diagnostics = resolvers.Query!.diagnostics!;
@@ -160,9 +178,9 @@ describe('diagnosticsResolvers branches', () => {
   });
 
   it('handles getGatewayRunning throwing by returning null', async () => {
+    const ctx = mockCtx();
     // The inner try/catch in getGatewayRunning
-    const { getGatewayStatus } = await import('../../../sources/gateway-cli.js');
-    (getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('no gateway'));
+    (ctx.gatewayClient.getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('no gateway'));
 
     const { buildSnapshot } = await import('../../../knowledge/snapshot.js');
     // Verify buildSnapshot is called — the getGatewayRunning callback handles the error
@@ -173,7 +191,7 @@ describe('diagnosticsResolvers branches', () => {
     });
 
     const { diagnosticsResolvers } = await import('../diagnostics.resolver.js');
-    const resolvers = diagnosticsResolvers(mockCtx());
+    const resolvers = diagnosticsResolvers(ctx);
     const diagnostics = resolvers.Query!.diagnostics!;
 
     await (diagnostics as Function)({}, {});

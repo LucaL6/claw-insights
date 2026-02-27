@@ -9,7 +9,7 @@ interface ModelSelectorProps {
   onChange: (model: string | null) => void;
 }
 
-const BASE = 'text-[9px] px-1.5 py-0.5 rounded transition-colors';
+const BASE = 'text-xs px-1.5 py-0.5 rounded transition-colors';
 // inline: component-specific toggle tokens (not registered in @theme)
 const ACTIVE_STYLE = {
   backgroundColor: 'var(--toggle-sort-bg)',

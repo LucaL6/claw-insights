@@ -1,7 +1,7 @@
 import type { AppContext } from '../../context.js';
 import type { MetricsSummary,QueryResolvers, Resolvers } from '../generated/resolver-types.js';
 
-const VALID_RANGES = new Set(['ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TWENTY_FOUR_HOUR']);
+const VALID_RANGES = new Set(['THIRTY_MIN', 'ONE_HOUR', 'SIX_HOUR', 'TWELVE_HOUR', 'TWENTY_FOUR_HOUR']);
 
 export function metricsResolvers(ctx: AppContext): Partial<Resolvers> {
   const { aggregator, dataValidator } = ctx;

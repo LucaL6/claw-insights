@@ -1,15 +1,7 @@
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-let mockCb: (cmd: string, args: string[], opts: Record<string, unknown>, cb: (...args: unknown[]) => unknown) => void;
-
-vi.mock('node:child_process', () => ({
-  execFile: (cmd: string, args: string[], opts: Record<string, unknown>, cb: (...args: unknown[]) => unknown) => mockCb(cmd, args, opts, cb),
-}));
-
-vi.mock('../../config.js', () => ({
-  config: { cliPath: '/usr/bin/openclaw' },
-  CLI_ENV: {},
-}));
+import type { Platform } from '../../ports/types.js';
+import { createGatewayClient } from '../gateway-cli.js';
 
 vi.mock('../../events.js', () => ({
   emitChange: vi.fn(),
@@ -24,70 +16,79 @@ const MOCK_STATUS_JSON = JSON.stringify({
   sessions: { defaults: { model: 'opus', contextTokens: 200000 } },
 });
 
+function mockPlatform(overrides?: Partial<{ cliExec: (...args: unknown[]) => Promise<string> }>): Platform {
+  const cliExec =
+    overrides?.cliExec ??
+    vi.fn((args: string[]) => {
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
+      return Promise.resolve('2.5.0\n');
+    });
+
+  return {
+    cli: { exec: cliExec as Platform['cli']['exec'] },
+    process: {
+      findPidByPort: vi.fn(() => Promise.resolve(null)),
+      getUptime: vi.fn(() => Promise.resolve('5m 30s')),
+      getPid: vi.fn(() => Promise.resolve(9999)),
+      getProcessMetrics: vi.fn(() => Promise.resolve({ cpu: 1, memoryMB: 100 })),
+      getDiskMB: vi.fn(() => Promise.resolve(500)),
+    },
+  } as unknown as Platform;
+}
+
 describe('gateway-cli extended fields', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.resetModules();
-
-    mockCb = (_cmd, args, _opts, cb) => {
-      if (args.some((a: string) => a.includes('--json'))) {
-        cb(null, { stdout: MOCK_STATUS_JSON });
-      } else {
-        cb(null, { stdout: '2.5.0\n' });
-      }
-    };
   });
 
   it('should include connectLatencyMs in gateway status', async () => {
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const status = await getGatewayStatus();
+    const client = createGatewayClient(mockPlatform());
+    const status = await client.getGatewayStatus();
     expect(status.connectLatencyMs).toBe(25);
   });
 
   it('should include latestVersion in gateway status', async () => {
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const status = await getGatewayStatus();
+    const client = createGatewayClient(mockPlatform());
+    const status = await client.getGatewayStatus();
     expect(status.latestVersion).toBe('3.0.0');
   });
 
   it('should include securitySummary in gateway status', async () => {
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const status = await getGatewayStatus();
+    const client = createGatewayClient(mockPlatform());
+    const status = await client.getGatewayStatus();
     expect(status.securitySummary).toEqual({ critical: 0, warn: 1, info: 5 });
   });
 
   it('should include sessionDefaults in gateway status', async () => {
-    const { getGatewayStatus } = await import('../gateway-cli');
-    const status = await getGatewayStatus();
+    const client = createGatewayClient(mockPlatform());
+    const status = await client.getGatewayStatus();
     expect(status.sessionDefaults).toEqual({ model: 'opus', contextTokens: 200000 });
   });
 
   it('deduplicates concurrent calls (in-flight guard)', async () => {
     let callCount = 0;
-    mockCb = (_cmd, args, _opts, cb) => {
+    const cliExec = vi.fn((args: string[]) => {
       callCount++;
-      // Simulate slow CLI response
-      setTimeout(() => {
-        if (args.some((a: string) => a.includes('--json'))) {
-          cb(null, { stdout: MOCK_STATUS_JSON });
-        } else {
-          cb(null, { stdout: '2.5.0\n' });
-        }
-      }, 50);
-    };
+      return new Promise<string>((resolve) => {
+        setTimeout(() => {
+          if (args.some((a: string) => a.includes('--json'))) {
+            resolve(MOCK_STATUS_JSON);
+          } else {
+            resolve('2.5.0\n');
+          }
+        }, 50);
+      });
+    });
 
-    const { getGatewayStatus } = await import('../gateway-cli');
-    // Fire two concurrent calls
-    const [a, b] = await Promise.all([getGatewayStatus(), getGatewayStatus()]);
+    const client = createGatewayClient(mockPlatform({ cliExec }));
+    const [a, b] = await Promise.all([client.getGatewayStatus(), client.getGatewayStatus()]);
 
-    // Both should return identical results
     expect(a.running).toBe(true);
     expect(b.running).toBe(true);
-    expect(a).toBe(b); // same object reference (in-flight dedup)
-
-    // CLI should only be called once per command (status + version = 2), not doubled
-    // With dedup: 2 calls (status --json + --version)
-    // Without dedup: 4 calls (2x each)
+    expect(a).toBe(b);
+    // With dedup: 2 calls (status --json + --version), not 4
     expect(callCount).toBeLessThanOrEqual(2);
   });
 });

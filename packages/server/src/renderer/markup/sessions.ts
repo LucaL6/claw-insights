@@ -5,7 +5,6 @@ import { div, span, Tag } from './helpers.js';
 
 function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
   const pct = sess.usagePercent != null ? Math.round(sess.usagePercent) : 0;
-  const turnCount = sess.turnCount ?? 0;
 
   const tags: SatoriNode[] = [
     Tag(sess.modelDisplay || sess.model, c.tagModel.bg, c.tagModel.color, c.tagModel.border),
@@ -48,10 +47,7 @@ function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
       ]),
       // Row 2: tags + turn count + mini-bar + tokens
       div({ alignItems: 'center', justifyContent: 'space-between' }, [
-        div({ alignItems: 'center', gap: 8 }, [
-          div({ alignItems: 'center', gap: 4 }, tags),
-          turnCount > 0 ? span({ color: c.textMuted, fontSize: 11 }, `💬 ${turnCount}`) : null,
-        ]),
+        div({ alignItems: 'center', gap: 8 }, [div({ alignItems: 'center', gap: 4 }, tags)]),
         div({ alignItems: 'center', gap: 6 }, [
           span(
             { color: c.textSecondary, fontSize: 12, fontFamily: 'JetBrains Mono', fontWeight: 500 },

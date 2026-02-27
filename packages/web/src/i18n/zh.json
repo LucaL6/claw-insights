@@ -13,7 +13,7 @@
   "sessions.starting": "启动中...",
   "metrics.title": "指标",
   "metrics.sessions": "活跃会话",
-  "metrics.conversations": "对话轮次",
+  "metrics.conversations": "消息数量",
   "metrics.tokens": "Token 消耗",
   "metrics.errors": "网关错误",
   "metrics.uptime": "网关可用性",
@@ -46,6 +46,8 @@
   "time.dAgo": "{n}天前",
   "nav.dashboard": "仪表盘",
   "nav.logs": "日志",
+  "nav.sessions": "会话",
+  "nav.metrics": "指标",
   "logs.viewAll": "查看全部事件",
   "logs.noEvents": "该时间段无事件",
   "logs.title": "事件",
@@ -90,5 +92,10 @@
   "gateway.dashboardTitle": "Claw Insights",
   "topbar.offline": "离线",
   "topbar.reconnecting": "重连中…",
-  "overlay.staleData": "数据可能已过期"
+  "overlay.staleData": "数据可能已过期",
+  "metrics.roleAll": "全部",
+  "metrics.roleUser": "用户",
+  "metrics.roleAssistant": "OpenClaw",
+  "tooltip.sections.conversations": "各时段的消息数量",
+  "tooltip.detail.sections.conversations": "每个时段的消息数量，按角色分类（用户发送 vs OpenClaw 回复）"
 }
