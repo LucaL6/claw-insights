@@ -1,4 +1,4 @@
-import { seedDatabase, getTestDbPath } from './fixtures/seed';
+import { getTestDbPath, seedDatabase } from './fixtures/seed';
 
 async function globalSetup() {
   console.log('[E2E] Seeding test database...');

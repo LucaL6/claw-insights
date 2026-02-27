@@ -88,6 +88,7 @@ export const MetricsQuery = graphql(/* GraphQL */ `
         }
         apiCalls
         toolCalls
+        turns
         errors
         warnings
         gatewayUp

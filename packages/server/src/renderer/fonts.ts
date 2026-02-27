@@ -12,9 +12,11 @@ interface SatoriFont {
 }
 
 const FONT_FILES = [
-  { file: 'IBMPlexSans-Regular.ttf', name: 'IBM Plex Sans', weight: 400 },
-  { file: 'IBMPlexSans-SemiBold.ttf', name: 'IBM Plex Sans', weight: 600 },
-  { file: 'IBMPlexSans-Bold.ttf', name: 'IBM Plex Sans', weight: 700 },
+  { file: 'Inter-Regular.ttf', name: 'Inter', weight: 400 },
+  { file: 'Inter-Medium.ttf', name: 'Inter', weight: 500 },
+  { file: 'Inter-SemiBold.ttf', name: 'Inter', weight: 600 },
+  { file: 'Inter-Bold.ttf', name: 'Inter', weight: 700 },
+  { file: 'Inter-ExtraBold.ttf', name: 'Inter', weight: 800 },
   { file: 'JetBrainsMono-Regular.ttf', name: 'JetBrains Mono', weight: 400 },
 ];
 

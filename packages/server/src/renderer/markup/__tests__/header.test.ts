@@ -44,42 +44,43 @@ function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
       warnings: 0,
       uptimePercent: 100,
     },
-    sparklines: { sessions: [], tokens: [], errors: [], uptime: [] },
+    companionDays: 42,
+    hostname: 'mini',
+    totalConversations: 128,
     ...overrides,
   } as SnapshotData;
 }
 
 describe('renderHeader', () => {
-  const data = makeData();
   const c = DARK;
 
-  it('renders brand name and time', () => {
-    const tree = renderHeader(data, 'standard', c);
+  it('renders OpenClaw brand name', () => {
+    const tree = renderHeader(makeData(), 'standard', c);
     const texts = collectText(tree);
-    expect(texts).toContain('Claw Insights');
-    expect(texts).toContain('23:11');
+    expect(texts).toContain('OpenClaw');
+    expect(texts.join(' ')).not.toContain('Claw Insights');
   });
 
-  it('standard detail renders version', () => {
-    const tree = renderHeader(data, 'standard', c);
+  it('shows Online when gateway is up', () => {
+    const tree = renderHeader(makeData(), 'standard', c);
     const texts = collectText(tree);
-    expect(texts).toContain('v0.1.0');
+    expect(texts).toContain('Online');
   });
 
-  it('compact detail does NOT render version', () => {
-    const tree = renderHeader(data, 'compact', c);
+  it('shows Offline when gateway is down', () => {
+    const tree = renderHeader(
+      makeData({ gateway: { status: 'down', version: '0.1.0', uptime: '0', cpu: 0, memoryMB: 0 } }),
+      'standard',
+      c,
+    );
     const texts = collectText(tree);
-    expect(texts).not.toContain('v0.1.0');
-    expect(texts).not.toContain('0.1.0');
+    expect(texts).toContain('Offline');
   });
 
-  it('does NOT render status badge, CPU, MEM, or range', () => {
-    const tree = renderHeader(data, 'standard', c);
+  it('shows companion days and hostname', () => {
+    const tree = renderHeader(makeData(), 'standard', c);
     const texts = collectText(tree);
-    expect(texts).not.toContain('UP');
-    expect(texts).not.toContain('DOWN');
-    expect(texts.join(' ')).not.toMatch(/CPU/);
-    expect(texts.join(' ')).not.toMatch(/MEM/);
-    expect(texts).not.toContain('6h');
+    expect(texts.join(' ')).toContain('42');
+    expect(texts.join(' ')).toContain('mini');
   });
 });

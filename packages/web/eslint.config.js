@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', '**/generated/**'],
+    ignores: ['dist/**', '**/generated/**', 'coverage/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -67,9 +67,21 @@ export default tseslint.config(
     },
   },
   {
-    // Config/tooling/e2e files — not in tsconfig include, disable type-aware rules
-    files: ['*.config.ts', 'e2e/**/*.ts'],
+    // Config/tooling files — not in tsconfig include, disable type-aware rules
+    files: ['*.config.ts'],
     ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    // E2E test files — disable type-aware rules + relax console/pattern rules
+    files: ['e2e/**/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
+    rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
+      'no-console': 'off',
+      'no-empty-pattern': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
+      '@typescript-eslint/no-invalid-void-type': 'off',
+    },
   },
   {
     files: ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],

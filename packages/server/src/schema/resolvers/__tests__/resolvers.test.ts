@@ -1,4 +1,4 @@
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../context';
 import { createResolvers } from '../index';
@@ -35,7 +35,7 @@ function createMockCtx(): AppContext {
     pipeline: {},
     sessionReader: {
       attachSubAgents: vi.fn(),
-      getSessions: vi.fn().mockReturnValue([{ id: 's1', label: 'test' }]),
+      getSessions: vi.fn().mockReturnValue([{ id: 's1', label: 'test', turnCount: 5 }]),
       destroy: vi.fn(),
     },
     cronReader: {
@@ -83,7 +83,7 @@ describe('createResolvers', () => {
       const result = resolvers.Query.sessions({}, {});
       expect(ctx.sessionReader.attachSubAgents).toHaveBeenCalled();
       expect(ctx.sessionReader.getSessions).toHaveBeenCalledWith(undefined);
-      expect(result).toEqual([{ id: 's1', label: 'test' }]);
+      expect(result).toEqual([{ id: 's1', label: 'test', turnCount: 5 }]);
     });
 
     it('calls getSessions with filter', () => {
@@ -116,8 +116,16 @@ describe('createResolvers', () => {
   describe('events', () => {
     it('calls queryEvents with args', async () => {
       const { queryEvents } = await import('../../../db/event-queries');
-      const result = await resolvers.Query.events({}, { from: '2025-01-01', to: '2025-01-02', types: ['error'], limit: 10 });
-      expect(queryEvents).toHaveBeenCalledWith(ctx.db, { from: '2025-01-01', to: '2025-01-02', types: ['error'], limit: 10 });
+      const result = await resolvers.Query.events(
+        {},
+        { from: '2025-01-01', to: '2025-01-02', types: ['error'], limit: 10 },
+      );
+      expect(queryEvents).toHaveBeenCalledWith(ctx.db, {
+        from: '2025-01-01',
+        to: '2025-01-02',
+        types: ['error'],
+        limit: 10,
+      });
       expect(result).toHaveLength(1);
     });
   });
@@ -151,7 +159,13 @@ describe('createResolvers', () => {
   describe('gateway', () => {
     it('calls getGatewayStatus and maps fields', async () => {
       const result = await resolvers.Query.gateway({}, {});
-      expect(result).toMatchObject({ running: true, pid: 1234, version: '1.0.0', securityCritical: 0, securityWarn: 1 });
+      expect(result).toMatchObject({
+        running: true,
+        pid: 1234,
+        version: '1.0.0',
+        securityCritical: 0,
+        securityWarn: 1,
+      });
     });
   });
 

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('P1: Edge Cases (T12)', () => {
   test('page handles missing/slow server gracefully', async ({ page }) => {

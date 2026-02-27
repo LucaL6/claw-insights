@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-type Accent = 'sessions' | 'tokens' | 'errors' | 'uptime';
+type Accent = 'sessions' | 'tokens' | 'errors' | 'uptime' | 'conversations';
 
 export function ChartCard({ children, accent }: { children: ReactNode; accent: Accent }) {
   return (

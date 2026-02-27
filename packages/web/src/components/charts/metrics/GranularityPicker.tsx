@@ -9,6 +9,7 @@ export interface RangeInfo {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const RANGE_INFO: Record<MetricsRange, RangeInfo> = {
+  THIRTY_MIN: { label: '30m', bucketLabel: '5min' },
   ONE_HOUR: { label: '1h', bucketLabel: '5min' },
   SIX_HOUR: { label: '6h', bucketLabel: '15min' },
   TWELVE_HOUR: { label: '12h', bucketLabel: '30min' },
@@ -16,6 +17,7 @@ export const RANGE_INFO: Record<MetricsRange, RangeInfo> = {
 };
 
 const OPTIONS: Array<{ value: MetricsRange; label: string }> = [
+  { value: 'THIRTY_MIN', label: '30m' },
   { value: 'ONE_HOUR', label: '1h' },
   { value: 'SIX_HOUR', label: '6h' },
   { value: 'TWELVE_HOUR', label: '12h' },
@@ -33,7 +35,9 @@ export function RangePicker({ value, onChange }: Props) {
       {OPTIONS.map((opt) => (
         <button
           key={opt.value}
-          onClick={() => { onChange(opt.value); }}
+          onClick={() => {
+            onChange(opt.value);
+          }}
           className="mono text-[10px] font-medium px-2.5 py-1 rounded transition-all duration-150"
           style={
             value === opt.value

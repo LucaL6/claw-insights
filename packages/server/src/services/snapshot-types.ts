@@ -50,7 +50,7 @@ export function parseSnapshotRequest(body: Record<string, unknown>): SnapshotReq
     layout: validate(body.layout, VALID_LAYOUTS, 'layout', 'desktop'),
     detail: validate(body.detail, VALID_DETAILS, 'detail', 'standard'),
     format: validate(body.format, VALID_FORMATS, 'format', 'png'),
-    range: validate(body.range, VALID_RANGES, 'range', '6h'),
+    range: validate(body.range, VALID_RANGES, 'range', '24h'),
     theme: validate(body.theme, VALID_THEMES, 'theme', 'dark'),
     lang: validate(body.lang, VALID_LANGS, 'lang', 'en'),
     section: validate(body.section, VALID_SECTIONS, 'section', 'dashboard'),
@@ -80,6 +80,8 @@ export interface DataSources {
     total: number;
     bySession: Array<{ sessionKey: string; turns: number }>;
   };
+  getStartedAt: () => string | null;
+  getTotalConversations: () => number;
 }
 
 // ─── Output Types ────────────────────────────────────────────────
@@ -126,4 +128,7 @@ export interface SnapshotData {
   buckets?: Record<string, unknown>[];
   sessions?: SnapshotSession[];
   recentErrors?: { timestamp: string; type: string; module: string; message: string }[];
+  companionDays: number;
+  hostname: string;
+  totalConversations: number;
 }

@@ -54,18 +54,36 @@ function makeData(): SnapshotData {
 }
 
 describe('renderTokenUsage', () => {
-  it('renders tokens header, trend, stacked segments, and legend rows', () => {
+  it('renders tokens label, range pill, trend badge, big number, gradient bar, and legend', () => {
     const tree = renderTokenUsage(makeData(), 'standard', DARK);
     const texts = collectText(tree);
     const json = JSON.stringify(tree);
 
+    // Section label and range pill
     expect(texts).toContain('TOKENS');
-    expect(texts).toContain('12.3k');
+    expect(texts).toContain('6h');
+
+    // Trend badge
     expect(texts).toContain('+8%');
-    expect(texts).toContain('GPT-4o 6.2k (50%)');
-    expect(texts).toContain('Claude 3.7k (30%)');
-    expect(json).toContain(DARK.modelColors[0]);
-    expect(json).toContain(DARK.modelColors[1]);
+    expect(json).toContain(DARK.trendBadge.bg);
+
+    // Big number split into number + unit
+    expect(texts).toContain('12.3');
+    expect(texts).toContain('K');
+
+    // Gradient bar segments
+    expect(json).toContain(DARK.modelGradients[0][0]);
+    expect(json).toContain(DARK.modelGradients[1][0]);
+    expect(json).toContain('linear-gradient');
+
+    // Legend items: separate model name and tokensK
+    expect(texts).toContain('GPT-4o');
+    expect(texts).toContain('6.2k');
+    expect(texts).toContain('Claude');
+    expect(texts).toContain('3.7k');
+
+    // Range pill styling
+    expect(json).toContain(DARK.rangePill.bg);
   });
 
   it('handles missing trend and empty model list', () => {
@@ -76,7 +94,15 @@ describe('renderTokenUsage', () => {
     const tree = renderTokenUsage(data, 'compact', DARK);
     const texts = collectText(tree);
     expect(texts).toContain('TOKENS');
-    expect(texts).toContain('12.3k');
+    expect(texts).toContain('12.3');
     expect(texts).not.toContain('undefined');
+  });
+
+  it('handles tokensDisplay without unit suffix', () => {
+    const data = makeData();
+    data.summary.tokensDisplay = '500';
+    const tree = renderTokenUsage(data, 'standard', DARK);
+    const texts = collectText(tree);
+    expect(texts).toContain('500');
   });
 });

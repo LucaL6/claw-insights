@@ -51,4 +51,16 @@ describe('system-queries', () => {
     expect(result[0].sessions).toBe(5); // MAX
     cleanup();
   });
+
+  it('returns bucketed sessions from hourly table when useHourly=true', () => {
+    const { db, cleanup } = setup();
+    db.prepare(
+      'INSERT INTO hourly_system_samples (hour, active_sessions_max, active_sessions_avg, cpu_avg, cpu_max, memory_mb_avg, memory_mb_max, sample_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run('2026-02-27T10:00:00Z', 5, 3, 10, 20, 256, 512, 6);
+
+    const result = getBucketedSessions(db, '2026-02-27T10:00:00Z', '2026-02-27T11:00:00Z', 60, true);
+    expect(result.length).toBe(1);
+    expect(result[0].sessions).toBe(5);
+    cleanup();
+  });
 });

@@ -1,6 +1,6 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
 
-import { cached } from './query-utils.js';
+import { bucketExpr, cached } from './query-utils.js';
 
 interface MessageEventRecord {
   timestamp: string;
@@ -54,4 +54,18 @@ export function getRangeTurnCountBySession(
     "SELECT session_key AS sessionKey, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY session_key ORDER BY turns DESC",
   );
   return stmt.all(startTs, endTs) as Array<{ sessionKey: string; turns: number }>;
+}
+
+export function getBucketedTurnCount(
+  db: Database,
+  startTs: string,
+  endTs: string,
+  bucketMinutes: number,
+): Array<{ bucket: number; turns: number }> {
+  const expr = bucketExpr(bucketMinutes);
+  const stmt = cached(
+    db,
+    `SELECT ${expr} AS bucket, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket`,
+  );
+  return stmt.all(startTs, endTs) as Array<{ bucket: number; turns: number }>;
 }

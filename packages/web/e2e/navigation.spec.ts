@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('P0/P1: Cross-page Navigation (T4, T8)', () => {
   test('Dashboard → Logs → Dashboard round-trip', async ({ page }) => {

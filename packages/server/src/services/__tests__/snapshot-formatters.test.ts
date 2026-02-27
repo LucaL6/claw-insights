@@ -1,6 +1,14 @@
-import { describe, expect,test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { formatTokens, friendlyModel, normalize, relativeTime, sample, uptimeStatus } from '../snapshot-formatters';
+import {
+  aggregateSample,
+  formatTokens,
+  friendlyModel,
+  normalize,
+  relativeTime,
+  sample,
+  uptimeStatus,
+} from '../snapshot-formatters';
 
 describe('formatTokens', () => {
   test('formats millions', () => {
@@ -80,6 +88,64 @@ describe('sample', () => {
   });
   test('handles empty array', () => {
     expect(sample([], 5)).toEqual([]);
+  });
+});
+
+describe('aggregateSample', () => {
+  test('returns empty for count <= 0', () => {
+    expect(aggregateSample([{ sessions: 1 }], 0)).toEqual([]);
+    expect(aggregateSample([{ sessions: 1 }], -1)).toEqual([]);
+  });
+
+  test('returns empty for empty array', () => {
+    expect(aggregateSample([], 5)).toEqual([]);
+  });
+
+  test('returns same array if length <= count', () => {
+    const input = [
+      { sessions: 1, tokensK: 10 },
+      { sessions: 2, tokensK: 20 },
+    ];
+    expect(aggregateSample(input, 5)).toEqual(input);
+    expect(aggregateSample(input, 2)).toEqual(input);
+  });
+
+  test('aggregates into bins with SUM and MAX', () => {
+    const input = [
+      { sessions: 1, tokensK: 10, errors: 0, warnings: 1, uptimePercent: 100 },
+      { sessions: 3, tokensK: 20, errors: 1, warnings: 0, uptimePercent: 95 },
+      { sessions: 2, tokensK: 30, errors: 0, warnings: 2, uptimePercent: 99 },
+      { sessions: 4, tokensK: 40, errors: 2, warnings: 0, uptimePercent: 80 },
+    ];
+    const result = aggregateSample(input, 2);
+    expect(result).toHaveLength(2);
+    // Bin 1: [0,1] → sessions=MAX(1,3)=3, tokensK=10+20=30, errors=0+1=1
+    expect(result[0].sessions).toBe(3);
+    expect(result[0].tokensK).toBe(30);
+    expect(result[0].errors).toBe(1);
+    expect(result[0].warnings).toBe(1);
+    expect(result[0].uptimePercent).toBe(95);
+    // Bin 2: [2,3] → sessions=MAX(2,4)=4, tokensK=30+40=70
+    expect(result[1].sessions).toBe(4);
+    expect(result[1].tokensK).toBe(70);
+    expect(result[1].errors).toBe(2);
+    expect(result[1].uptimePercent).toBe(80);
+  });
+
+  test('handles buckets with missing optional fields', () => {
+    const input = [{}, {}, {}, {}];
+    const result = aggregateSample(input, 2);
+    expect(result).toHaveLength(2);
+    expect(result[0].sessions).toBe(0);
+    expect(result[0].tokensK).toBe(0);
+    expect(result[0].errors).toBe(0);
+    expect(result[0].uptimePercent).toBe(100);
+  });
+
+  test('uses tokens field as fallback when tokensK is undefined', () => {
+    const input = [{ tokens: 5000 }, { tokens: 3000 }];
+    const result = aggregateSample(input, 1);
+    expect(result[0].tokensK).toBe(8000);
   });
 });
 

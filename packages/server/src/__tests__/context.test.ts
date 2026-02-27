@@ -64,7 +64,13 @@ function mockClass(props: Record<string, unknown>) {
 }
 
 vi.mock('../sources/readers/session-reader.js', () => ({
-  SessionReader: mockClass({ destroy() {}, getSessions: () => [], attachSubAgents() {} }),
+  SessionReader: mockClass({
+    destroy() {},
+    getSessions: () => [],
+    attachSubAgents() {},
+    setDb() {},
+    invalidateTurnCounts() {},
+  }),
 }));
 
 vi.mock('../sources/readers/cron-reader.js', () => ({

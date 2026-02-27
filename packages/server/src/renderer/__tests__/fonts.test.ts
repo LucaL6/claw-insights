@@ -1,16 +1,16 @@
-import { afterEach,describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { loadFonts, resetFontCache } from '../fonts.js';
 
 describe('loadFonts', () => {
   afterEach(() => resetFontCache());
 
-  it('loads 4 built-in fonts', async () => {
+  it('loads 6 built-in fonts', async () => {
     const fonts = await loadFonts();
-    expect(fonts).toHaveLength(4);
-    expect(fonts[0]).toMatchObject({ name: 'IBM Plex Sans', weight: 400, style: 'normal' });
-    expect(fonts[3]).toMatchObject({ name: 'JetBrains Mono', weight: 400, style: 'normal' });
-    fonts.forEach(f => expect(f.data).toBeInstanceOf(Buffer));
+    expect(fonts).toHaveLength(6);
+    expect(fonts[0]).toMatchObject({ name: 'Inter', weight: 400, style: 'normal' });
+    expect(fonts[5]).toMatchObject({ name: 'JetBrains Mono', weight: 400, style: 'normal' });
+    fonts.forEach((f) => expect(f.data).toBeInstanceOf(Buffer));
   });
 
   it('caches fonts on second call', async () => {
@@ -23,7 +23,7 @@ describe('loadFonts', () => {
     const tmpDir = '/tmp/test-fonts-nonexistent';
     vi.stubEnv('CLAW_INSIGHTS_FONTS_DIR', tmpDir);
     const fonts = await loadFonts();
-    expect(fonts).toHaveLength(4);
+    expect(fonts).toHaveLength(6);
     vi.unstubAllEnvs();
   });
 

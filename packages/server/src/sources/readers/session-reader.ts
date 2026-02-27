@@ -1,8 +1,11 @@
-import type { Session, SessionStatus } from '@claw-insights/shared';
+import type { DatabaseSync } from 'node:sqlite';
+
+import type { Session, SessionSortBy, SessionStatus } from '@claw-insights/shared';
 import { type FSWatcher, readFileSync, statSync, watch } from 'fs';
 import { basename, dirname } from 'path';
 
 import { config } from '../../config.js';
+import { getRangeTurnCountBySession } from '../../db/message-queries.js';
 import { emitChange } from '../../events.js';
 import { createChildLogger } from '../../logger.js';
 
@@ -94,6 +97,7 @@ function parseSession(key: string, raw: RawSession): Session {
     usagePercent: contextTokens > 0 ? Math.round((totalTokens / contextTokens) * 1000) / 10 : 0,
     status: inferStatus(raw),
     updatedAt: raw.updatedAt,
+    turnCount: 0,
     subAgents: [],
   };
 }
@@ -102,10 +106,38 @@ export class SessionReader {
   private sessions: Map<string, Session> = new Map();
   private rawSessions: Map<string, RawSession> = new Map();
   private attachedChildKeys: Set<string> = new Set();
+  private turnCountCache: Map<string, number> = new Map();
+  private db: DatabaseSync | null = null;
   private watcher: FSWatcher | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private listeners: Array<() => void> = [];
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Inject DB reference for turn count queries */
+  setDb(db: DatabaseSync): void {
+    this.db = db;
+  }
+
+  /** Refresh turn count cache from DB */
+  refreshTurnCounts(): void {
+    if (!this.db) {
+      return;
+    }
+    const rows = getRangeTurnCountBySession(this.db, '1970-01-01T00:00:00.000Z', new Date().toISOString());
+    this.turnCountCache.clear();
+    for (const r of rows) {
+      this.turnCountCache.set(r.sessionKey, r.turns);
+    }
+    // Update existing sessions
+    for (const [key, session] of this.sessions) {
+      session.turnCount = this.turnCountCache.get(key) ?? 0;
+    }
+  }
+
+  /** Called when message events are written — invalidate and refresh */
+  invalidateTurnCounts(): void {
+    this.refreshTurnCounts();
+  }
 
   constructor(private filePath: string = SESSIONS_PATH) {
     this.reload();
@@ -121,6 +153,7 @@ export class SessionReader {
         this.rawSessions.set(key, entry);
         this.sessions.set(key, parseSession(key, entry));
       }
+      this.refreshTurnCounts();
     } catch (err) {
       log.error({ err }, 'failed to read sessions');
     }
@@ -175,7 +208,7 @@ export class SessionReader {
     }, 5_000);
   }
 
-  getSessions(filter?: { activeOnly?: boolean; sortBy?: string }): Session[] {
+  getSessions(filter?: { activeOnly?: boolean; sortBy?: SessionSortBy }): Session[] {
     let result = Array.from(this.sessions.values()).filter((s) => !this.attachedChildKeys.has(s.key));
     if (filter?.activeOnly) {
       result = result.filter((s) => s.status === 'ACTIVE');

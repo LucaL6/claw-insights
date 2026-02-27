@@ -1,3 +1,5 @@
+import { hostname as osHostname } from 'node:os';
+
 import { RANGE_CONFIG } from '../db/query-utils.js';
 import { createChildLogger } from '../logger.js';
 import { getAppVersion } from '../version.js';
@@ -154,7 +156,14 @@ export async function buildSnapshotData(
   const turnData = sources.getTurnCounts(startTs, endTs);
   const turnBySession = new Map(turnData.bySession.map((r) => [r.sessionKey, r.turns]));
 
-  // 8. Base result (compact)
+  // 8. Companion days + total conversations
+  const startedAt = sources.getStartedAt();
+  const companionDays = startedAt
+    ? Math.max(1, Math.ceil((Date.now() - new Date(startedAt).getTime()) / 86_400_000))
+    : 0;
+  const totalConversations = sources.getTotalConversations();
+
+  // 9. Base result (compact)
   const result: SnapshotData = {
     gateway,
     channels: channels.map((c) => ({
@@ -169,6 +178,9 @@ export async function buildSnapshotData(
     summary,
     tokensByModel,
     tokensTrend,
+    companionDays,
+    hostname: osHostname(),
+    totalConversations,
   };
 
   // 9. Detail augmentation

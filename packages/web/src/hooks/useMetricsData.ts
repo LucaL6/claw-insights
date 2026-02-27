@@ -1,5 +1,5 @@
 import type { MetricsRange, ModelTokens } from '@claw-insights/shared';
-import { useEffect, useMemo,useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { MetricsQuery } from '../graphql/queries';
 import { useReactiveQuery } from './useReactiveQuery';
@@ -13,6 +13,7 @@ export interface BucketData {
   tokensByModel?: ModelTokens[];
   apiCalls: number;
   toolCalls: number;
+  turns: number;
   errors: number;
   warnings: number;
   gatewayUp: boolean;
@@ -29,8 +30,10 @@ export function useMetricsData(range: MetricsRange) {
   );
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (result.data) {setLastFetchTime(Date.now());}
+    if (result.data) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- tracking fetch time for staleness display
+      setLastFetchTime(Date.now());
+    }
   }, [result.data]);
 
   const metrics = result.data?.metrics;

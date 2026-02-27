@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx --watch src/index.ts",
     "build": "tsup --config tsup.config.ts && sed -i '' 's/from \"sqlite\"/from \"node:sqlite\"/g' dist/*.js dist/**/*.js 2>/dev/null || true && cp src/schema/schema.graphql dist/schema.graphql",
+    "lint": "eslint src/",
     "test": "vitest run"
   },
   "dependencies": {

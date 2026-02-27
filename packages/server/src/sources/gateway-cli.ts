@@ -2,7 +2,7 @@ import { execFile, execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, readlinkSync } from 'node:fs';
 import { promisify } from 'node:util';
 
-import { CLI_ENV,config } from '../config.js';
+import { CLI_ENV, config } from '../config.js';
 import { emitChange } from '../events.js';
 import { createChildLogger } from '../logger.js';
 
@@ -86,15 +86,23 @@ export function formatUptime(etimeStr: string): string {
   // Parse `ps -o etime=` output: [[DD-]HH:]MM:SS
   const parts = etimeStr.trim().replace(/-/g, ':').split(':').map(Number);
   let secs = 0;
-  if (parts.length === 4) {secs = parts[0] * 86400 + parts[1] * 3600 + parts[2] * 60 + parts[3];}
-  else if (parts.length === 3) {secs = parts[0] * 3600 + parts[1] * 60 + parts[2];}
-  else if (parts.length === 2) {secs = parts[0] * 60 + parts[1];}
+  if (parts.length === 4) {
+    secs = parts[0] * 86400 + parts[1] * 3600 + parts[2] * 60 + parts[3];
+  } else if (parts.length === 3) {
+    secs = parts[0] * 3600 + parts[1] * 60 + parts[2];
+  } else if (parts.length === 2) {
+    secs = parts[0] * 60 + parts[1];
+  }
 
   const d = Math.floor(secs / 86400);
   const h = Math.floor((secs % 86400) / 3600);
   const m = Math.floor((secs % 3600) / 60);
-  if (d > 0) {return `${d}d ${h}h`;}
-  if (h > 0) {return `${h}h ${m}m`;}
+  if (d > 0) {
+    return `${d}d ${h}h`;
+  }
+  if (h > 0) {
+    return `${h}h ${m}m`;
+  }
   return `${m}m`;
 }
 
@@ -112,7 +120,9 @@ function findPidByPort(port: number): number | null {
         const tcp = readFileSync(tcpFile, 'utf-8');
         for (const line of tcp.split('\n').slice(1)) {
           const cols = line.trim().split(/\s+/);
-          if (!cols[1]) {continue;}
+          if (!cols[1]) {
+            continue;
+          }
           const localPort = cols[1].split(':').pop();
           if (localPort === hexPort && cols[3] === '0A') {
             // 0A = LISTEN
@@ -123,7 +133,9 @@ function findPidByPort(port: number): number | null {
         /* file not present */
       }
     }
-    if (inodes.size === 0) {return null;}
+    if (inodes.size === 0) {
+      return null;
+    }
 
     // Scan /proc/*/fd to find which PID owns the socket inode
     const procs = readdirSync('/proc').filter((d) => /^\d+$/.test(d));
@@ -134,7 +146,9 @@ function findPidByPort(port: number): number | null {
           try {
             const link = readlinkSync(`/proc/${p}/fd/${fd}`);
             const m = link.match(/socket:\[(\d+)\]/);
-            if (m && inodes.has(m[1])) {return parseInt(p, 10);}
+            if (m && inodes.has(m[1])) {
+              return parseInt(p, 10);
+            }
           } catch {
             /* permission denied */
           }
@@ -149,8 +163,30 @@ function findPidByPort(port: number): number | null {
   return null;
 }
 
+function getStartedAtFromPid(pid: number | null): string | null {
+  if (!pid) {
+    return null;
+  }
+  try {
+    // macOS + Linux: `ps -o lstart=` gives full start timestamp
+    const raw = execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
+      timeout: 2000,
+      encoding: 'utf-8',
+    }).trim();
+    if (!raw) {
+      return null;
+    }
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  } catch {
+    return null;
+  }
+}
+
 function getUptimeFromPid(pid: number | null): string {
-  if (!pid) {return 'unknown';}
+  if (!pid) {
+    return 'unknown';
+  }
 
   // Method 1: ps command (macOS + Linux with procps)
   try {
@@ -175,12 +211,18 @@ function getUptimeFromPid(pid: number | null): string {
     const clkTck = 100;
     const processStartSec = startTicks / clkTck;
     const elapsedSec = Math.floor(bootSeconds - processStartSec);
-    if (elapsedSec < 0) {return 'unknown';}
+    if (elapsedSec < 0) {
+      return 'unknown';
+    }
     const h = Math.floor(elapsedSec / 3600);
     const m = Math.floor((elapsedSec % 3600) / 60);
     const s = elapsedSec % 60;
-    if (h > 0) {return `${h}h ${m}m`;}
-    if (m > 0) {return `${m}m ${s}s`;}
+    if (h > 0) {
+      return `${h}h ${m}m`;
+    }
+    if (m > 0) {
+      return `${m}m ${s}s`;
+    }
     return `${s}s`;
   } catch {
     /* /proc not available (macOS) */
@@ -220,7 +262,7 @@ export function parseStatus(json: string, version: string): ParsedStatus {
       version: version ?? 'unknown',
       updateAvailable,
       uptime: getUptimeFromPid(pid),
-      startedAt: null,
+      startedAt: getStartedAtFromPid(pid),
       channels: parseChannels(channelSummary),
       connectLatencyMs,
       latestVersion,
@@ -262,7 +304,9 @@ export async function getGatewayStatus(): Promise<ParsedStatus> {
   if (statusCache && Date.now() - statusCache.ts < CACHE_TTL) {
     return statusCache.data;
   }
-  if (statusInFlight) {return statusInFlight;}
+  if (statusInFlight) {
+    return statusInFlight;
+  }
 
   statusInFlight = (async () => {
     try {

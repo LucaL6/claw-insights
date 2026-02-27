@@ -5,6 +5,8 @@ import type { SatoriNode } from './helpers.js';
 import { div, span } from './helpers.js';
 
 export function renderFooter(data: SnapshotData, c: ColorScheme): SatoriNode {
+  const datetime = data.timestamp.slice(0, 16).replace('T', ' ');
+
   return div(
     {
       justifyContent: 'space-between',
@@ -12,8 +14,8 @@ export function renderFooter(data: SnapshotData, c: ColorScheme): SatoriNode {
       borderTop: `1px solid ${c.border}`,
     },
     [
-      span({ color: c.textDim, fontSize: 10 }, `Uptime: ${data.gateway.uptime}`),
-      span({ color: c.textDim, fontSize: 10 }, `Claw Insights v${getAppVersion()}`),
+      span({ color: c.textDim, fontSize: 11 }, `Claw Insights v${getAppVersion()}`),
+      span({ color: c.textDim, fontSize: 11, fontFamily: 'JetBrains Mono' }, datetime),
     ],
   );
 }

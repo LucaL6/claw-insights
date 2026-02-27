@@ -51,3 +51,6 @@ audit_v3/
 
 # Release artifacts
 *.tgz
+packages/server/*.png
+packages/server/*.svg
+claw-insights-snapshot-*

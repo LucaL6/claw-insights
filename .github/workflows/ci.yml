@@ -25,10 +25,10 @@ jobs:
       - run: npm ci
 
       - name: ESLint (server)
-        run: npx eslint --config packages/server/eslint.config.js packages/server/src/
+        run: npm run -w @claw-insights/server lint
 
       - name: ESLint (web)
-        run: npx eslint --config packages/web/eslint.config.js packages/web/src/
+        run: npm run -w @claw-insights/web lint
 
       - name: actionlint
         uses: raven-actions/actionlint@v2

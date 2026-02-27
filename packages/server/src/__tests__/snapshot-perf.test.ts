@@ -26,6 +26,8 @@ describe('snapshot performance', () => {
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
+      getStartedAt: () => '2026-01-01T00:00:00Z',
+      getTotalConversations: () => 0,
     };
 
     const start = performance.now();
@@ -61,6 +63,8 @@ describe('snapshot performance', () => {
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
+      getStartedAt: () => '2026-01-01T00:00:00Z',
+      getTotalConversations: () => 0,
     };
 
     const start = performance.now();
@@ -98,6 +102,8 @@ describe('snapshot performance', () => {
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
+      getStartedAt: () => '2026-01-01T00:00:00Z',
+      getTotalConversations: () => 0,
     };
 
     const result = await buildSnapshotData(

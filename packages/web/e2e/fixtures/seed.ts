@@ -2,8 +2,8 @@
  * E2E fixture: seed/clean DB for tests.
  * Uses a dedicated test DB path to avoid polluting real data.
  */
-import { resolve, dirname } from 'path';
-import { unlinkSync, existsSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
+import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,7 +32,11 @@ export async function cleanDatabase(): Promise<void> {
     for (const suffix of ['-wal', '-shm']) {
       const p = TEST_DB_PATH + suffix;
       if (existsSync(p)) {
-        try { unlinkSync(p); } catch { /* ignore */ }
+        try {
+          unlinkSync(p);
+        } catch {
+          /* ignore */
+        }
       }
     }
   }

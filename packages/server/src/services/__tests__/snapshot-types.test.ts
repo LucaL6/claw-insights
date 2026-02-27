@@ -10,7 +10,7 @@ describe('parseSnapshotRequest', () => {
       layout: 'desktop',
       detail: 'standard',
       format: 'png',
-      range: '6h',
+      range: '24h',
       theme: 'dark',
       lang: 'en',
       section: 'dashboard',
@@ -41,9 +41,9 @@ describe('parseSnapshotRequest', () => {
     expect(req.format).toBe('svg');
   });
 
-  test('should default range to 6h', () => {
+  test('should default range to 24h', () => {
     const req = parseSnapshotRequest({});
-    expect(req.range).toBe('6h');
+    expect(req.range).toBe('24h');
   });
 
   test('should accept range=30m', () => {
@@ -118,6 +118,9 @@ describe('snapshot type compatibility', () => {
         { model: 'anthropic/claude-opus-4-6', modelDisplay: 'Claude Opus 4.6', tokensK: 100, percent: 100 },
       ],
       tokensTrend: '↑12%',
+      companionDays: 30,
+      hostname: 'test-host',
+      totalConversations: 100,
     };
 
     expect(data.tokensByModel).toHaveLength(1);
@@ -134,6 +137,8 @@ describe('snapshot type compatibility', () => {
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
+      getStartedAt: () => null,
+      getTotalConversations: () => 0,
     };
 
     expect(sources.getTurnCounts('', '').total).toBe(0);

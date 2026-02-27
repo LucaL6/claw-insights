@@ -59,6 +59,8 @@ function makeSources(sessionCount = 3): DataSources {
       total: 20,
       bySession: sessions.map((s, i) => ({ sessionKey: String(s.key), turns: i + 1 })),
     }),
+    getStartedAt: () => new Date(Date.now() - 30 * 86_400_000).toISOString(),
+    getTotalConversations: () => 42,
   };
 }
 

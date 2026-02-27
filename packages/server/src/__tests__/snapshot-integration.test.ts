@@ -69,6 +69,8 @@ const mockSources: DataSources = {
   getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'claude-opus-4', tokensK: 128.4 }]),
   getTokenTrend: vi.fn().mockReturnValue(10),
   getTurnCounts: vi.fn().mockReturnValue({ total: 4, bySession: [] }),
+  getStartedAt: () => '2026-02-13T00:00:00Z',
+  getTotalConversations: () => 128,
 };
 
 // ── Mock the heavy renderer (avoids font loading) ──
@@ -138,12 +140,12 @@ describe('Snapshot Integration', () => {
     expect(res.body).toHaveProperty('gateway');
   });
 
-  // ── 4. Default range = 6h ──
-  it('defaults range to 6h when not specified', async () => {
+  // ── 4. Default range = 24h ──
+  it('defaults range to 24h when not specified', async () => {
     const res = await request(app).post('/api/snapshot').send({ format: 'json' });
 
     expect(res.status).toBe(200);
-    // The snapshot service should use 6h range by default
+    // The snapshot service should use 24h range by default
     // Verified by the fact that the request succeeds without a range param
   });
 

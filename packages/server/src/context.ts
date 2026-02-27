@@ -41,6 +41,7 @@ export interface AppContext {
 export function createContext(): AppContext {
   const db = initDatabase(config.dbPath);
   const sessionReader = new SessionReader(config.sessionsPath);
+  sessionReader.setDb(db);
   const cronReader = new CronReader(config.cronPath);
   const logTailer = new LogTailer(config.logDir);
   const spawnTracker = new SpawnTracker();
@@ -68,6 +69,7 @@ export function createContext(): AppContext {
   const flushMessageEvents = () => {
     if (messageEventBuffer.length > 0) {
       insertMessageEventBatch(db, messageEventBuffer);
+      sessionReader.invalidateTurnCounts();
       messageEventBuffer = [];
     }
   };

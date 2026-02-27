@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('P0: Navigate to Logs (T4)', () => {
   test('LogPage renders with event data from seeded DB', async ({ page }) => {

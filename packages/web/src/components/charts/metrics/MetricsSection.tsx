@@ -1,5 +1,5 @@
 import type { MetricsRange } from '@claw-insights/shared';
-import { useEffect, useMemo,useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useMetricsData } from '../../../hooks/useMetricsData';
 import { usePreview } from '../../../hooks/usePreview';
@@ -11,7 +11,7 @@ import { ChartCard } from '../core/ChartCard';
 import { SessionsChart } from '../SessionsChart';
 import { TokensChart } from '../TokensChart';
 import { ErrorsChartCard } from './ErrorsChartCard';
-import { RANGE_INFO,RangePicker } from './GranularityPicker';
+import { RANGE_INFO, RangePicker } from './GranularityPicker';
 import { MetricsSummaryRow } from './MetricsSummaryRow';
 import { getTooltips } from './metricsTooltips';
 import { MetricsValidationWarnings } from './MetricsValidationWarnings';
@@ -45,7 +45,9 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
   } = useMetricsData(range);
 
   useEffect(() => {
-    if (result.data && onReady) {onReady();}
+    if (result.data && onReady) {
+      onReady();
+    }
   }, [result.data, onReady]);
 
   const { preview, previewEvents, handleErrorClick, handleUptimeClick, closePreview } = usePreview(

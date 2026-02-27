@@ -18,6 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Snapshot Visual Rework (V2 Glassmorphism)**
+  - New Inter font (replacing IBM Plex Sans) with 5 weights (400–800)
+  - Unified 390px viewport for all detail levels (mobile-first)
+  - Indigo/violet color scheme with gradient progress bars
+  - Glass card styling (`backdrop-filter` inspired, Satori-compatible)
+  - Merged gateway banner + metrics into compact status strip
+  - Header: OpenClaw brand with companion time (`陪伴 N 天`) and online/offline status
+  - Footer: version left, full datetime right (removed uptime display)
+  - Default snapshot range changed from 6h to 24h
+  - New data fields: `companionDays`, `hostname`, `totalConversations`
 - Snapshot metrics section condensed from 4-card grid to single-line summary
 - Snapshot charts (sparklines, uptime bar) replaced with stacked token usage bar
 - Snapshot errors section now hidden when error count is 0

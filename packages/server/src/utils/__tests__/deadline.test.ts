@@ -59,4 +59,20 @@ describe('withDeadline', () => {
     await withDeadline(Promise.resolve('ok'), d, CollectTimeoutError);
     // If timer leaked, it would keep process alive — test passing means cleanup worked
   });
+
+  it('cleans up timer when promise rejects', async () => {
+    const d = new Deadline(5000);
+    await expect(withDeadline(Promise.reject(new Error('task failed')), d, CollectTimeoutError)).rejects.toThrow(
+      'task failed',
+    );
+  });
+
+  it('rejects with timeout when deadline expires during slow task', async () => {
+    vi.useFakeTimers();
+    const d = new Deadline(50);
+    const slow = new Promise<string>((resolve) => setTimeout(() => resolve('late'), 5000));
+    const promise = withDeadline(slow, d, CollectTimeoutError);
+    vi.advanceTimersByTime(51);
+    await expect(promise).rejects.toThrow(CollectTimeoutError);
+  });
 });

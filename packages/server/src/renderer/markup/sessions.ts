@@ -4,7 +4,6 @@ import type { SatoriNode } from './helpers.js';
 import { div, span, Tag } from './helpers.js';
 
 function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
-  const active = sess.status === 'active';
   const pct = sess.usagePercent != null ? Math.round(sess.usagePercent) : 0;
   const turnCount = sess.turnCount ?? 0;
 
@@ -19,46 +18,53 @@ function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
   return div(
     {
       flexDirection: 'column',
-      backgroundColor: c.cardBg,
-      border: `1px solid ${active ? 'rgba(16,185,129,0.2)' : c.border}`,
-      borderRadius: 10,
-      padding: '10px 12px',
+      backgroundColor: c.glassBg,
+      border: `1px solid ${c.glassBorder}`,
+      borderRadius: 12,
+      padding: '12px 14px',
       gap: 6,
     },
     [
-      // Row 1: name + lastActive
+      // Row 1: name + time
       div({ alignItems: 'center', justifyContent: 'space-between' }, [
         div({ alignItems: 'center', gap: 8 }, [
           div({
             width: 7,
             height: 7,
             borderRadius: '50%',
-            backgroundColor: active ? c.emerald : c.textDim,
+            backgroundColor: sess.status === 'active' ? c.emerald : c.textDim,
           }),
           span(
             {
               color: c.textPrimary,
-              fontSize: 13,
-              fontWeight: 500,
+              fontSize: 14,
+              fontWeight: 600,
               fontFamily: 'JetBrains Mono',
             },
             sess.name,
           ),
         ]),
+        span({ color: c.textDim, fontSize: 11 }, sess.updatedAt),
       ]),
-      // Row 2: tags + turn count + updatedAt + token bar
+      // Row 2: tags + turn count + mini-bar + tokens
       div({ alignItems: 'center', justifyContent: 'space-between' }, [
         div({ alignItems: 'center', gap: 8 }, [
           div({ alignItems: 'center', gap: 4 }, tags),
-          turnCount > 0 ? span({ color: c.textSecondary, fontSize: 10 }, `💬 ${turnCount}`) : null,
-          span({ color: c.textDim, fontSize: 10 }, sess.updatedAt),
+          turnCount > 0 ? span({ color: c.textMuted, fontSize: 11 }, `💬 ${turnCount}`) : null,
         ]),
         div({ alignItems: 'center', gap: 6 }, [
-          span({ color: c.textMuted, fontSize: 11, fontFamily: 'JetBrains Mono' }, sess.totalTokensDisplay),
+          span(
+            { color: c.textSecondary, fontSize: 12, fontFamily: 'JetBrains Mono', fontWeight: 500 },
+            sess.totalTokensDisplay,
+          ),
           div({ width: 44, height: 5, borderRadius: 3, backgroundColor: c.trackBg, overflow: 'hidden' }, [
-            div({ height: '100%', width: `${pct}%`, borderRadius: 3, backgroundColor: 'rgba(56,189,248,0.7)' }),
+            div({
+              height: '100%',
+              width: `${pct}%`,
+              borderRadius: 3,
+              backgroundImage: `linear-gradient(90deg, ${c.miniBarGradient[0]}, ${c.miniBarGradient[1]})`,
+            }),
           ]),
-          span({ color: c.textDim, fontSize: 9 }, `${pct}%`),
         ]),
       ]),
     ],
@@ -79,7 +85,7 @@ export function renderSessions(data: SnapshotData, detail: Detail, c: ColorSchem
 
   return div({ flexDirection: 'column', gap: 6, padding: '0 16px 12px' }, [
     div({ justifyContent: 'space-between', marginBottom: 2 }, [
-      span({ color: c.textMuted, fontSize: 11, fontWeight: 600 }, 'SESSIONS'),
+      span({ color: c.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }, 'SESSIONS'),
       span({ color: c.textDim, fontSize: 11 }, `${activeCount} active · ${sessions.length} total`),
     ]),
     ...sessions.map((s) => renderSessionCard(s, c)),

@@ -1,16 +1,13 @@
-#!/usr/bin/env sh
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
+trap 'echo "❌ Checks failed. Push blocked."' ERR
 
-echo "🧪 Running tests before push..."
+echo "🔍 Running ESLint..."
+npm run -w @claw-insights/server lint
+npm run -w @claw-insights/web lint
 
-npm run -w @claw-insights/server test
-SERVER_EXIT=$?
+echo "🧪 Running tests with coverage..."
+npm run -w @claw-insights/server test -- --coverage
+npm run -w @claw-insights/web test -- --coverage
 
-npm run -w @claw-insights/web test
-WEB_EXIT=$?
-
-if [ "$SERVER_EXIT" -ne 0 ] || [ "$WEB_EXIT" -ne 0 ]; then
-  echo "❌ Tests failed. Push blocked."
-  exit 1
-fi
-echo "✅ All tests passed."
+echo "✅ All checks passed."

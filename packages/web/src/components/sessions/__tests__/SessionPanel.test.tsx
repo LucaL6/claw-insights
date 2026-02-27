@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react';
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionData } from '../shared/types';
 import { renderWithI18n } from './testUtils';
@@ -40,10 +40,7 @@ describe('SessionPanel', () => {
       makeSession({ key: 's1', displayName: 'session-one' }),
       makeSession({ key: 's2', displayName: 'session-two', status: 'IDLE' }),
     ];
-    mockUseReactiveQuery.mockReturnValue([
-      { data: { sessions }, fetching: false, error: undefined },
-      vi.fn(),
-    ]);
+    mockUseReactiveQuery.mockReturnValue([{ data: { sessions }, fetching: false, error: undefined }, vi.fn()]);
 
     renderWithI18n(<SessionPanel />);
     expect(screen.getByText('session-one')).toBeDefined();
@@ -51,10 +48,7 @@ describe('SessionPanel', () => {
   });
 
   it('shows skeletons during initial loading', () => {
-    mockUseReactiveQuery.mockReturnValue([
-      { data: undefined, fetching: true, error: undefined },
-      vi.fn(),
-    ]);
+    mockUseReactiveQuery.mockReturnValue([{ data: undefined, fetching: true, error: undefined }, vi.fn()]);
 
     const { container } = renderWithI18n(<SessionPanel />);
     // SessionSkeleton renders animated placeholder divs
@@ -63,10 +57,7 @@ describe('SessionPanel', () => {
   });
 
   it('shows empty message when no sessions', () => {
-    mockUseReactiveQuery.mockReturnValue([
-      { data: { sessions: [] }, fetching: false, error: undefined },
-      vi.fn(),
-    ]);
+    mockUseReactiveQuery.mockReturnValue([{ data: { sessions: [] }, fetching: false, error: undefined }, vi.fn()]);
 
     renderWithI18n(<SessionPanel />);
     // The i18n key sessions.noSessions resolves to "No active sessions" or similar
@@ -89,10 +80,7 @@ describe('SessionPanel', () => {
   });
 
   it('renders filter and sort controls', () => {
-    mockUseReactiveQuery.mockReturnValue([
-      { data: { sessions: [] }, fetching: false, error: undefined },
-      vi.fn(),
-    ]);
+    mockUseReactiveQuery.mockReturnValue([{ data: { sessions: [] }, fetching: false, error: undefined }, vi.fn()]);
 
     renderWithI18n(<SessionPanel />);
     // Active/All toggle buttons

@@ -1,7 +1,10 @@
-import { act,renderHook } from '@testing-library/react';
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockUseQuery = vi.fn((): [{ data: unknown; fetching: boolean; error: unknown }, unknown] => [{ data: null, fetching: false, error: null }, vi.fn()]);
+const mockUseQuery = vi.fn((): [{ data: unknown; fetching: boolean; error: unknown }, unknown] => [
+  { data: null, fetching: false, error: null },
+  vi.fn(),
+]);
 
 vi.mock('urql', () => ({
   useQuery: () => mockUseQuery(),
@@ -15,19 +18,23 @@ import type { BucketData } from '../useMetricsData';
 import { usePreview } from '../usePreview';
 
 const makeBuckets = (count: number): BucketData[] =>
-  Array.from({ length: count }, (_, i): BucketData => ({
-    bucket: i,
-    epochStart: 1000 + i * 3600,
-    label: `${i}h`,
-    sessions: 0,
-    tokensK: 0,
-    apiCalls: 0,
-    toolCalls: 0,
-    errors: 0,
-    warnings: 0,
-    gatewayUp: true,
-    restartEvent: false,
-  }));
+  Array.from(
+    { length: count },
+    (_, i): BucketData => ({
+      bucket: i,
+      epochStart: 1000 + i * 3600,
+      label: `${i}h`,
+      sessions: 0,
+      tokensK: 0,
+      apiCalls: 0,
+      toolCalls: 0,
+      turns: 0,
+      errors: 0,
+      warnings: 0,
+      gatewayUp: true,
+      restartEvent: false,
+    }),
+  );
 
 describe('usePreview', () => {
   beforeEach(() => {
@@ -96,11 +103,14 @@ describe('usePreview', () => {
   });
 
   it('passes events query results when preview is set', () => {
-    mockUseQuery.mockReturnValue([{
-      data: { events: { events: [{ timestamp: '2026-01-01', type: 'error' }], total: 1 } },
-      fetching: false,
-      error: null,
-    }, vi.fn()]);
+    mockUseQuery.mockReturnValue([
+      {
+        data: { events: { events: [{ timestamp: '2026-01-01', type: 'error' }], total: 1 } },
+        fetching: false,
+        error: null,
+      },
+      vi.fn(),
+    ]);
 
     const { result } = renderHook(() => usePreview(makeBuckets(3), 3600));
     act(() => result.current.handleErrorClick(0));

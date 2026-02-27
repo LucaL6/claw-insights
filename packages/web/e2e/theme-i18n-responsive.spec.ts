@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('P2: Theme Switch (T9)', () => {
   test('dark theme sets data-theme="dark" on html', async ({ page }) => {

@@ -4,26 +4,47 @@ import type { SatoriNode } from './helpers.js';
 import { div, span } from './helpers.js';
 
 export function renderHeader(data: SnapshotData, detail: Detail, c: ColorScheme): SatoriNode {
-  const leftItems: SatoriNode[] = [
-    span({ fontSize: 15 }, '💡'),
-    span({ color: c.textPrimary, fontWeight: 600, fontSize: 15 }, 'Claw Insights'),
-  ];
+  const isOnline = data.gateway.status === 'up';
+  const dotColor = isOnline ? c.onlineDot : c.red;
+  const statusLabel = isOnline ? 'Online' : 'Offline';
 
-  if (detail !== 'compact') {
-    const ver = data.gateway.version.startsWith('v') ? data.gateway.version : `v${data.gateway.version}`;
-    leftItems.push(span({ color: c.textDim, fontSize: 11 }, ver));
-  }
+  const subtitle = `陪伴 ${data.companionDays} 天 · ${data.hostname}`;
+
+  const iconBox = div(
+    {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundImage: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    [span({ fontSize: 16 }, '🐾')],
+  );
+
+  const textCol = div({ flexDirection: 'column', gap: 2 }, [
+    span({ color: c.textPrimary, fontWeight: 700, fontSize: 16 }, 'OpenClaw'),
+    span({ color: c.textMuted, fontSize: 11 }, subtitle),
+  ]);
+
+  const statusDot = div({
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    backgroundColor: dotColor,
+  });
+
+  const statusText = span({ color: dotColor, fontSize: 13, fontWeight: 600 }, statusLabel);
 
   return div(
     {
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '14px 20px',
-      borderBottom: `1px solid ${c.border}`,
     },
     [
-      div({ alignItems: 'center', gap: 10 }, leftItems),
-      div({ alignItems: 'center', gap: 8 }, [span({ color: c.textMuted, fontSize: 11, fontWeight: 500 }, data.time)]),
+      div({ alignItems: 'center', gap: 10 }, [iconBox, textCol]),
+      div({ alignItems: 'center', gap: 6 }, [statusDot, statusText]),
     ],
   );
 }

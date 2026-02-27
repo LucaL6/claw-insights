@@ -50,5 +50,13 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
       }));
       return { total, bySession };
     },
+    getStartedAt: () => {
+      // Gateway status has startedAt
+      // For now, return null - will be populated from gateway cache
+      return null;
+    },
+    getTotalConversations: () => {
+      return getRangeTurnCount(ctx.db, '1970-01-01T00:00:00Z', new Date().toISOString());
+    },
   };
 }

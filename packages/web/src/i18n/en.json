@@ -13,6 +13,7 @@
   "sessions.starting": "Starting...",
   "metrics.title": "Metrics",
   "metrics.sessions": "Active Sessions",
+  "metrics.conversations": "Conversations",
   "metrics.tokens": "Token Consumption",
   "metrics.errors": "Gateway Errors",
   "metrics.uptime": "Gateway Uptime",

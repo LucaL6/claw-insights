@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('P0: Dashboard First Load (T1)', () => {
   test('page loads and renders main UI', async ({ page }) => {

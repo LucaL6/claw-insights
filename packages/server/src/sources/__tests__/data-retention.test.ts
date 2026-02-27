@@ -197,6 +197,27 @@ describe('DataRetention', () => {
     cleanup();
   });
 
+  it('rolls back when aggregateHour throws (catch branch)', () => {
+    const { db, retention, cleanup } = setup();
+    const hour = hoursAgo(3);
+    insertSamplesForHour(db, hour, 2);
+
+    const r = retention as unknown as Record<string, unknown>;
+    const original = (r.aggregateHour as (h: string) => void).bind(retention as any);
+    r.aggregateHour = () => {
+      throw new Error('boom');
+    };
+
+    // Should not throw — aggregate() handles and rolls back internally
+    expect(() => retention.runOnce()).not.toThrow();
+
+    // Restore and ensure system remains usable
+    r.aggregateHour = original;
+    expect(() => retention.runOnce()).not.toThrow();
+
+    cleanup();
+  });
+
   it('start/stop manages the timer', () => {
     const { retention, cleanup } = setup({ aggregateIntervalMs: 100_000 });
     expect((retention as unknown as Record<string, unknown>).timer).toBeNull();

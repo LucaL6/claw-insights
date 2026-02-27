@@ -13,6 +13,7 @@
   "sessions.starting": "启动中...",
   "metrics.title": "指标",
   "metrics.sessions": "活跃会话",
+  "metrics.conversations": "对话轮次",
   "metrics.tokens": "Token 消耗",
   "metrics.errors": "网关错误",
   "metrics.uptime": "网关可用性",

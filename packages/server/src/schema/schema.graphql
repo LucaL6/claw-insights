@@ -110,6 +110,7 @@ type Session {
   usagePercent: Float!
   status: SessionStatus!
   updatedAt: Float!
+  turnCount: Int!
   subAgents: [Session!]!
 }
 
@@ -154,6 +155,7 @@ input LogFilter {
 # ── Metrics ──
 
 enum MetricsRange {
+  THIRTY_MIN
   ONE_HOUR
   SIX_HOUR
   TWELVE_HOUR
@@ -176,6 +178,7 @@ type MetricsBucket {
   toolCalls: Int!
   errors: Int!
   warnings: Int!
+  turns: Int!
   gatewayUp: Boolean!
   restartEvent: Boolean!
 }
@@ -191,6 +194,7 @@ type MetricsSummary {
   totalErrors: Int!
   totalWarnings: Int!
   uptimePercent: Float!
+  totalTurns: Int!
   warnings: [String!]!
 }
 
