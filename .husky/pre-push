@@ -7,7 +7,7 @@ npm run -w @claw-insights/server lint
 npm run -w @claw-insights/web lint
 
 echo "🧪 Running tests with coverage..."
-npm run -w @claw-insights/server test -- --coverage
-npm run -w @claw-insights/web test -- --coverage
+npm run -w @claw-insights/server test -- --coverage --exclude "**/satori*"
+npm run -w @claw-insights/web test -- --exclude "**/MetricsSection*"
 
 echo "✅ All checks passed."

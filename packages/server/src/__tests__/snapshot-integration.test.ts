@@ -69,7 +69,7 @@ const mockSources: DataSources = {
   getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'claude-opus-4', tokensK: 128.4 }]),
   getTokenTrend: vi.fn().mockReturnValue(10),
   getTurnCounts: vi.fn().mockReturnValue({ total: 4, bySession: [] }),
-  getStartedAt: () => '2026-02-13T00:00:00Z',
+  getCompanionDays: async () => 15,
   getTotalConversations: () => 128,
   getRangeMessageCount: () => 42,
 };

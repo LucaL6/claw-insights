@@ -161,10 +161,7 @@ export async function buildSnapshotData(
   const turnBySession = new Map(turnData.bySession.map((r) => [r.sessionKey, r.turns]));
 
   // 8. Companion days + total conversations
-  const startedAt = sources.getStartedAt();
-  const companionDays = startedAt
-    ? Math.max(1, Math.ceil((Date.now() - new Date(startedAt).getTime()) / 86_400_000))
-    : 0;
+  const companionDays = await sources.getCompanionDays();
   const totalConversations = sources.getTotalConversations();
 
   // 9. Base result (compact)

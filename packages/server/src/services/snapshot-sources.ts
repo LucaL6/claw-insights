@@ -1,8 +1,11 @@
+import { config } from '../config.js';
 import type { AppContext } from '../context.js';
 import { queryEvents } from '../db/event-queries.js';
 import { getRangeTurnCount, getRangeTurnCountBySession } from '../db/message-queries.js';
 import { type MetricsRangeKey, RANGE_CONFIG } from '../db/query-utils.js';
+import { getCompanionSince } from '../db/system-queries.js';
 import { getRangeModelTokenUsage, getRangeTokenUsageK } from '../db/token-queries.js';
+import { resolveCompanionSince } from '../sources/companion-days.js';
 import type { DataSources } from './snapshot-types.js';
 
 const VALID_RANGES = new Set<MetricsRangeKey>(Object.keys(RANGE_CONFIG) as MetricsRangeKey[]);
@@ -48,10 +51,24 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
       }));
       return { total, bySession };
     },
-    getStartedAt: () => {
-      // Gateway status has startedAt
-      // For now, return null - will be populated from gateway cache
-      return null;
+    getCompanionDays: async () => {
+      // Fast path: if DB already has companion_since, skip lifetime scanner entirely
+      const cached = getCompanionSince(ctx.db);
+      if (cached) {
+        return Math.max(1, Math.ceil((Date.now() - new Date(cached).getTime()) / 86_400_000));
+      }
+      // Cold path: collect all sources including lifetime scanner
+      const lifetimeResult = await ctx.lifetimeScanner?.getStats();
+      const lifetimeCreatedAt = lifetimeResult?.createdAt ?? null;
+      const since = await resolveCompanionSince(ctx.db, {
+        deviceJsonPath: config.deviceJsonPath,
+        openclawDir: config.openclawDir,
+        lifetimeCreatedAt,
+      });
+      if (!since) {
+        return 0;
+      }
+      return Math.max(1, Math.ceil((Date.now() - new Date(since).getTime()) / 86_400_000));
     },
     getTotalConversations: () => {
       return getRangeTurnCount(ctx.db, '1970-01-01T00:00:00Z', new Date().toISOString());

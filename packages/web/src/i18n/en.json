@@ -54,6 +54,7 @@
   "logs.title": "Events",
   "logs.filterPlaceholder": "Filter events...",
   "brand.name": "Claw Insights",
+  "brand.footer": "Claw Insights",
   "tooltip.sections.sessions": "Active session count per bucket",
   "tooltip.sections.tokens": "Token consumption per bucket",
   "tooltip.sections.errors": "Error and warning count per bucket",

@@ -53,6 +53,7 @@
   "logs.title": "事件",
   "logs.filterPlaceholder": "过滤事件...",
   "brand.name": "Claw Insights",
+  "brand.footer": "Claw Insights",
   "tooltip.sections.sessions": "各时段的活跃会话数",
   "tooltip.sections.tokens": "各时段的 token 消耗量",
   "tooltip.sections.errors": "各时段的错误与警告数量",

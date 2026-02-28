@@ -1,21 +1,27 @@
 import { cleanup, fireEvent, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '../../../test/render';
+
+vi.mock('../../../hooks/useTopBarData', () => ({
+  useTopBarData: () => ({ version: '1.0.0', fetching: { gateway: false } }),
+}));
+
 import { MainLayout } from '../MainLayout';
 
 function mockMatchMedia(matches: boolean) {
   Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: matches ? 600 : 1024 });
-  window.matchMedia = (query: string) => ({
-    matches,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  }) as MediaQueryList;
+  window.matchMedia = (query: string) =>
+    ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
 }
 
 describe('MainLayout', () => {
@@ -99,6 +105,21 @@ describe('MainLayout', () => {
     expect(tabs[1].getAttribute('aria-selected')).toBe('true');
     expect(sessionsPanel.classList.contains('hidden')).toBe(true);
     expect(metricsPanel.classList.contains('hidden')).toBe(false);
+  });
+
+  it('renders version in footer', () => {
+    mockMatchMedia(false);
+    renderWithProviders(<MainLayout topBar={<span />} sessions={<span />} metrics={<span />} />);
+    const footer = document.querySelector('footer');
+    expect(footer!.textContent).toMatch(/v\d+\.\d+\.\d+/);
+  });
+
+  it('renders brand footer with Claw Insights', () => {
+    mockMatchMedia(false);
+    renderWithProviders(<MainLayout topBar={<span />} sessions={<span />} metrics={<span />} />);
+    const footer = document.querySelector('footer');
+    expect(footer).toBeTruthy();
+    expect(footer!.textContent).toContain('Claw Insights');
   });
 
   it('keeps both panels mounted in tab mode', () => {

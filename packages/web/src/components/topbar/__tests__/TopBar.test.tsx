@@ -4,15 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '../../../test/render';
 
-const mockTopBarData = {
-  version: '1.2.3',
-  fetching: { gateway: false },
-};
-
-vi.mock('../../../hooks/useTopBarData', () => ({
-  useTopBarData: () => mockTopBarData,
-}));
-
 vi.mock('../../../hooks/useSnapshot', () => ({
   useSnapshot: () => ({ snapshotting: false, takeSnapshot: vi.fn() }),
 }));
@@ -22,9 +13,10 @@ import { TopBar } from '../TopBar';
 describe('TopBar', () => {
   afterEach(cleanup);
 
-  it('renders brand name and version', () => {
+  it('does not render brand name or version', () => {
     renderWithProviders(<TopBar />);
-    expect(screen.getByText('v1.2.3')).toBeDefined();
+    expect(screen.queryByText('Claw Insights')).toBeNull();
+    expect(screen.queryByText('v1.2.3')).toBeNull();
   });
 
   it('does NOT render gateway status, channels, or resources', () => {
@@ -43,13 +35,5 @@ describe('TopBar', () => {
   it('renders snapshot button', () => {
     renderWithProviders(<TopBar />);
     expect(screen.getByTitle(/snapshot/i)).toBeDefined();
-  });
-
-  it('shows skeleton when fetching version', () => {
-    mockTopBarData.fetching.gateway = true;
-    renderWithProviders(<TopBar />);
-    const skeletons = document.querySelectorAll('.animate-pulse');
-    expect(skeletons.length).toBeGreaterThan(0);
-    mockTopBarData.fetching.gateway = false;
   });
 });

@@ -306,32 +306,6 @@ export class SessionReader {
     return result;
   }
 
-  /** Per-session token data for cost calculation */
-  getSessionTokenData(): Array<{
-    key: string;
-    model: string;
-    inputTokens: number;
-    outputTokens: number;
-  }> {
-    const result: Array<{
-      key: string;
-      model: string;
-      inputTokens: number;
-      outputTokens: number;
-    }> = [];
-
-    for (const [key, raw] of this.rawSessions) {
-      result.push({
-        key,
-        model: raw.model ?? 'unknown',
-        inputTokens: raw.inputTokens ?? 0,
-        outputTokens: raw.outputTokens ?? 0,
-      });
-    }
-
-    return result;
-  }
-
   /** Full total tokens in K (bypasses dedup filter) */
   getTotalTokensK(): number {
     let total = 0;

@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Live session viewer with sub-agent tree, token usage, and context progress
 - Metrics charts: sessions, tokens (per-model), errors, uptime over 1h/6h/12h/24h
 - Structured event log viewer with density heatmap, type filtering, and search
-- Gateway control operations: restart, diagnostics (Doctor), update
+- Gateway control operations: restart, update
 - Screenshot API: `POST /api/snapshot` — capture dashboard as PNG
   - Detail levels: compact, standard, full
   - Themes: dark, light

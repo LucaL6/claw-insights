@@ -49,6 +49,14 @@ describe('GatewayBanner', () => {
     resetMock();
   });
 
+  it('renders the lobster logo as decorative', () => {
+    renderWithProviders(<GatewayBanner />);
+    const logo = document.querySelector('img[src="/logo.svg"]') as HTMLImageElement;
+    expect(logo).toBeTruthy();
+    expect(logo.alt).toBe('');
+    expect(logo.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('renders running state with gateway title, channels and resources', () => {
     renderWithProviders(<GatewayBanner />);
     expect(screen.getByText('OpenClaw Gateway')).toBeDefined();

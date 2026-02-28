@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { RetentionConfig } from '../../sources/data-retention.js';
 import { DataRetention } from '../../sources/data-retention.js';
-import { initDatabase } from '../init.js';
+import { initDatabase, MIGRATIONS } from '../init.js';
 
 function tmpDbPath() {
   const dir = join(tmpdir(), 'claw-test-' + Date.now());
@@ -156,7 +156,7 @@ describe('init.ts - hasColumn true branches (columns already exist)', () => {
 
     const db2 = initDatabase(path);
     const row = db2.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number };
-    expect(row.v).toBe(8);
+    expect(row.v).toBe(MIGRATIONS.length);
     // New tables exist
     const newTables = db2
       .prepare(

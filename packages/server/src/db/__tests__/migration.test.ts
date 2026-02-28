@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { initDatabase } from '../init';
+import { initDatabase, MIGRATIONS } from '../init';
 
 describe('DB migrations', () => {
   it('should create schema_version table', () => {
@@ -108,9 +108,9 @@ describe('DB migrations', () => {
     expect(idx1.length).toBe(1);
   });
 
-  it('should reach schema version 8', () => {
+  it('should reach latest schema version', () => {
     const db = initDatabase(':memory:');
     const row = db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number };
-    expect(row.v).toBe(8);
+    expect(row.v).toBe(MIGRATIONS.length);
   });
 });

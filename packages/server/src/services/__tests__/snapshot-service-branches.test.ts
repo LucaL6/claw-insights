@@ -30,7 +30,7 @@ function makeSources(overrides: Partial<DataSources> = {}): DataSources {
     getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'claude', tokensK: 10 }]),
     getTokenTrend: vi.fn().mockReturnValue(5),
     getTurnCounts: vi.fn().mockReturnValue({ total: 1, bySession: [{ sessionKey: 'S1', turns: 1 }] }),
-    getStartedAt: () => null,
+    getCompanionDays: async () => 0,
     getTotalConversations: () => 0,
     getRangeMessageCount: () => 0,
     ...overrides,

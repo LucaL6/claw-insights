@@ -22,7 +22,7 @@ This project ships with structured resources for AI agents — see **[AGENTS.md]
 - **Live Sessions** — Active sessions with sub-agent tree, token usage, and context progress
 - **Metrics Charts** — Sessions, token consumption (per-model breakdown), errors, and uptime over 1h/6h/12h/24h
 - **Event Logs** — Structured event viewer with density heatmap, type filtering, and search
-- **Gateway Control** — Restart, diagnostics (Doctor), and update operations
+- **Gateway Control** — Restart and update operations
 - **Screenshot API** — Capture dashboard state as PNG via REST endpoint
 - **Dark / Light Theme** — CSS variable-based theming with toggle
 - **i18n** — English and Chinese (中文) with runtime switching

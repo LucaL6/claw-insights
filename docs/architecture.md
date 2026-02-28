@@ -84,7 +84,6 @@ packages/server/src/
 │   └── queries/               Parameterized SQL queries
 ├── middleware/      Express middleware (auth, error handling)
 ├── pipeline/        Data processing pipeline
-├── knowledge/       Domain knowledge / constants
 ├── cli/             CLI entry point + argument parsing
 ├── config.ts        Configuration loader
 ├── context.ts       GraphQL context factory

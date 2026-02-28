@@ -35,3 +35,18 @@ export function getBucketedSessions(
   );
   return stmt.all(startTs, endTs) as Array<{ bucket: number; sessions: number }>;
 }
+
+// ── Companion Days ──
+
+/** Read the persisted companion_since timestamp, or null if not yet stored. */
+export function getCompanionSince(db: Database): string | null {
+  const row = db.prepare('SELECT value FROM kv_meta WHERE key = ?').get('companion_since') as
+    | { value: string }
+    | undefined;
+  return row?.value ?? null;
+}
+
+/** Persist companion_since — INSERT IGNORE so the first write wins forever. */
+export function setCompanionSince(db: Database, isoTimestamp: string): void {
+  db.prepare('INSERT OR IGNORE INTO kv_meta (key, value) VALUES (?, ?)').run('companion_since', isoTimestamp);
+}

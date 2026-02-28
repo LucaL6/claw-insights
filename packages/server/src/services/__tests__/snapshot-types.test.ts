@@ -137,7 +137,7 @@ describe('snapshot type compatibility', () => {
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
-      getStartedAt: () => null,
+      getCompanionDays: async () => 0,
       getTotalConversations: () => 0,
       getRangeMessageCount: () => 0,
     };

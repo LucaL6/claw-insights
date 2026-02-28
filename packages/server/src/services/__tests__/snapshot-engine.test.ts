@@ -49,7 +49,7 @@ const mockSources: DataSources = {
   getModelTokenUsage: vi.fn().mockReturnValue([]),
   getTokenTrend: vi.fn().mockReturnValue(null),
   getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
-  getStartedAt: vi.fn().mockReturnValue(null),
+  getCompanionDays: vi.fn().mockResolvedValue(0),
   getTotalConversations: vi.fn().mockReturnValue(0),
   getRangeMessageCount: () => 0,
 };

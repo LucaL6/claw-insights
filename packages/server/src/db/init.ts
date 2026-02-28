@@ -18,7 +18,7 @@ interface Migration {
   up: string | ((db: DatabaseSync) => void);
 }
 
-const MIGRATIONS: Migration[] = [
+export const MIGRATIONS: Migration[] = [
   {
     version: 1,
     up: `
@@ -250,6 +250,15 @@ const MIGRATIONS: Migration[] = [
       );
       CREATE INDEX IF NOT EXISTS idx_msg_events_time ON message_events(timestamp);
       CREATE INDEX IF NOT EXISTS idx_msg_events_session ON message_events(session_key, timestamp);
+    `,
+  },
+  {
+    version: 9,
+    up: `
+      CREATE TABLE IF NOT EXISTS kv_meta (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
     `,
   },
 ];

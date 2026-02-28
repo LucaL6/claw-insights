@@ -80,7 +80,7 @@ export interface DataSources {
     total: number;
     bySession: Array<{ sessionKey: string; turns: number }>;
   };
-  getStartedAt: () => string | null;
+  getCompanionDays: () => Promise<number>;
   getTotalConversations: () => number;
   getRangeMessageCount: (startTs: string, endTs: string) => number;
 }

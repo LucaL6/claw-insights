@@ -41,6 +41,7 @@ function makeMetricsReturn(overrides = {}) {
     allModels: [],
     peakSessions: 0,
     totalTokensK: 0,
+    totalMessages: 0,
     totalErrors: 0,
     totalWarnings: 0,
     uptimePct: 100,
@@ -77,7 +78,7 @@ describe('MetricsSection', () => {
 
   it('renders summary row when metrics exist', () => {
     mockUseMetricsData.mockReturnValue(
-      makeMetricsReturn({ totalTokensK: 42.5, totalErrors: 3, totalWarnings: 1, uptimePct: 98.7 }),
+      makeMetricsReturn({ totalTokensK: 42.5, totalMessages: 123, totalErrors: 3, totalWarnings: 1, uptimePct: 98.7 }),
     );
     const { container } = renderWithProviders(<MetricsSection range="ONE_HOUR" onRangeChange={() => {}} />);
     const text = container.textContent ?? '';

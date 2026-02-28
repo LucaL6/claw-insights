@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
+
 import { useI18n } from '../../i18n/context';
 
 interface Props {
@@ -20,7 +21,9 @@ export function LayoutTabs({ sessions, metrics }: Props) {
           role="tab"
           aria-selected={activeTab === 'sessions'}
           aria-controls="tabpanel-sessions"
-          onClick={() => setActiveTab('sessions')}
+          onClick={() => {
+            setActiveTab('sessions');
+          }}
           className={`text-xs font-semibold px-3 py-1.5 border-b-2 transition-colors ${
             activeTab === 'sessions'
               ? 'text-fg border-indigo-400'
@@ -34,11 +37,11 @@ export function LayoutTabs({ sessions, metrics }: Props) {
           role="tab"
           aria-selected={activeTab === 'metrics'}
           aria-controls="tabpanel-metrics"
-          onClick={() => setActiveTab('metrics')}
+          onClick={() => {
+            setActiveTab('metrics');
+          }}
           className={`text-xs font-semibold px-3 py-1.5 border-b-2 transition-colors ${
-            activeTab === 'metrics'
-              ? 'text-fg border-indigo-400'
-              : 'text-fg-dim border-transparent hover:text-fg-muted'
+            activeTab === 'metrics' ? 'text-fg border-indigo-400' : 'text-fg-dim border-transparent hover:text-fg-muted'
           }`}
         >
           {t('nav.metrics')}

@@ -53,34 +53,6 @@ type UsageCost {
   fetchedAt: String!
 }
 
-"""Source of cost calculation data"""
-enum CostSource {
-  TOKENTALLY
-  CLI_FALLBACK
-}
-
-"""Per-model cost breakdown from tokentally"""
-type ModelCost {
-  model: String!
-  calls: Int!
-  inputTokens: Int!
-  outputTokens: Int!
-  totalTokens: Int!
-  inputUsd: Float!
-  outputUsd: Float!
-  totalUsd: Float!
-}
-
-"""Detailed cost summary with per-model breakdown"""
-type CostSummary {
-  totalUsd: Float!
-  inputUsd: Float!
-  outputUsd: Float!
-  byModel: [ModelCost!]!
-  fetchedAt: String!
-  source: CostSource!
-}
-
 """System resource usage"""
 type SystemResources {
   cpu: Float!
@@ -241,29 +213,6 @@ type EventDensityBucket {
   hasRestart: Boolean!
   epochStart: Int!
 }
-
-# ── Diagnostics ──
-
-enum DiagnosticSeverity {
-  CRITICAL
-  WARNING
-  INFO
-}
-
-type DiagnosticFinding {
-  id: String!
-  severity: DiagnosticSeverity!
-  title: String!
-  detail: String!
-  matchedAt: String!
-}
-
-type DiagnosticsResult {
-  findings: [DiagnosticFinding!]!
-  evaluatedAt: String!
-  snapshotSummary: String!
-}
-
 # ── Root Types ──
 
 type Query {
@@ -274,11 +223,9 @@ type Query {
   metrics(date: String, range: MetricsRange): MetricsSummary!
   cronJobs: [CronJob!]!
   usageCost: UsageCost!
-  costSummary: CostSummary!
   recentLogs(count: Int): [LogEntry!]!
   events(from: Int, to: Int, types: [String!], limit: Int): EventsResult!
   eventDensity: [EventDensityBucket!]!
-  diagnostics: DiagnosticsResult!
   lifetimeStats: LifetimeStats!
 }
 

@@ -1,7 +1,6 @@
 import type { AppContext } from '../../context.js';
 import type { Resolvers } from '../generated/resolver-types.js';
 import { cronResolvers } from './cron.resolver.js';
-import { diagnosticsResolvers } from './diagnostics.resolver.js';
 import { eventsResolvers } from './events.resolver.js';
 import { gatewayResolvers } from './gateway.resolver.js';
 import { lifetimeResolvers } from './lifetime.resolver.js';
@@ -20,7 +19,6 @@ const factories: ResolverFactory[] = [
   eventsResolvers,
   usageResolvers,
   subscriptionResolvers,
-  diagnosticsResolvers,
   lifetimeResolvers,
 ];
 

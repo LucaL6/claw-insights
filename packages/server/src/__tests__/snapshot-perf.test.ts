@@ -26,7 +26,7 @@ describe('snapshot performance', () => {
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
-      getStartedAt: () => '2026-01-01T00:00:00Z',
+      getCompanionDays: async () => 58,
       getTotalConversations: () => 0,
       getRangeMessageCount: () => 0,
     };
@@ -64,7 +64,7 @@ describe('snapshot performance', () => {
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
-      getStartedAt: () => '2026-01-01T00:00:00Z',
+      getCompanionDays: async () => 58,
       getTotalConversations: () => 0,
       getRangeMessageCount: () => 0,
     };
@@ -104,7 +104,7 @@ describe('snapshot performance', () => {
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
-      getStartedAt: () => '2026-01-01T00:00:00Z',
+      getCompanionDays: async () => 58,
       getTotalConversations: () => 0,
       getRangeMessageCount: () => 0,
     };
