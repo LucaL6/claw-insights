@@ -46,26 +46,6 @@ describe('MainLayout', () => {
     expect(container.querySelector('[data-section="metrics"]')).toBeTruthy();
   });
 
-  it('renders banner slot between header and main content', () => {
-    mockMatchMedia(false);
-    renderWithProviders(
-      <MainLayout
-        topBar={<div data-testid="topbar" />}
-        banner={<div data-testid="banner">Gateway Banner</div>}
-        sessions={<div />}
-        metrics={<div />}
-      />,
-    );
-    expect(screen.getByTestId('banner')).toBeDefined();
-    expect(screen.getByText('Gateway Banner')).toBeDefined();
-  });
-
-  it('renders without banner (optional prop)', () => {
-    mockMatchMedia(false);
-    renderWithProviders(<MainLayout topBar={<div data-testid="topbar" />} sessions={<div />} metrics={<div />} />);
-    expect(screen.queryByTestId('banner')).toBeNull();
-  });
-
   // Tab mode tests (< 768px)
   it('renders tab layout below md breakpoint', () => {
     mockMatchMedia(true);

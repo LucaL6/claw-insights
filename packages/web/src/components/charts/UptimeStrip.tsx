@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useI18n } from '../../i18n/context';
 import { buildUptimeOption } from './builders/buildUptimeOption';
 import { BaseChart } from './core/BaseChart';
 
@@ -11,7 +12,9 @@ interface BucketData {
 }
 
 export function UptimeStrip({ data, onCellClick }: { data: BucketData[]; onCellClick?: (index: number) => void }) {
-  const option = useMemo(() => buildUptimeOption(data), [data]);
+  const { t } = useI18n();
+  const chartLabels = useMemo(() => ({ up: t('charts.up'), down: t('charts.down'), restart: t('charts.restart') }), [t]);
+  const option = useMemo(() => buildUptimeOption(data, chartLabels), [data, chartLabels]);
 
   const onEvents = useMemo(
     () =>

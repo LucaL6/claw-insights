@@ -102,7 +102,7 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
       <MetricsValidationWarnings warnings={validationWarnings} />
 
       {/* Row 1: Tokens + Conversations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         <ChartCard accent="tokens">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">

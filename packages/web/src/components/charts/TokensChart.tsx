@@ -22,7 +22,8 @@ interface Props {
 
 export function TokensChart({ data, selectedModel }: Props) {
   const { t } = useI18n();
-  const footer = useMemo(() => getTooltips(t).chartFooter.tokens, [t]);
-  const option = useMemo(() => buildTokensOption(data, selectedModel ?? null, footer), [data, selectedModel, footer]);
+  const footer = useMemo(() => getTooltips(t).chartFooter.tokens(selectedModel), [t, selectedModel]);
+  const chartLabels = useMemo(() => ({ tokens: t('charts.tokens'), total: t('charts.total') }), [t]);
+  const option = useMemo(() => buildTokensOption(data, selectedModel ?? null, footer, chartLabels), [data, selectedModel, footer, chartLabels]);
   return <BaseChart option={option} height={120} testId="tokens-chart" />;
 }

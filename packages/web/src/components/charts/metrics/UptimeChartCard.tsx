@@ -49,7 +49,7 @@ export function UptimeChartCard({
       {preview?.source === 'uptime' && previewEvents && navigate && (
         <PreviewCard
           source="uptime"
-          title="Gateway Restart"
+          title={t('charts.gatewayRestart')}
           timeLabel={buckets[preview.bucketIndex]?.label ?? ''}
           events={previewEvents.events}
           total={previewEvents.total}

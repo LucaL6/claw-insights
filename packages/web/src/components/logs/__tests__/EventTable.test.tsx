@@ -1,47 +1,92 @@
-import { cleanup,render, screen } from '@testing-library/react';
-import { afterEach,describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { EventTable } from '../EventTable';
+import { EventTable, formatGap, type ProcessedEvent } from '../EventTable';
+import { renderWithProviders as render } from '../../../test/render';
 
 afterEach(cleanup);
 
-const events = [
+const events: ProcessedEvent[] = [
   { timestamp: '2026-01-15T10:00:00Z', type: 'error', module: 'gw', message: 'disk full' },
   { timestamp: '2026-01-15T11:00:00Z', type: 'warning', module: 'api', message: 'slow query' },
 ];
 
 describe('EventTable', () => {
   it('renders rows from data array', () => {
-    render(<EventTable events={events} search="" />);
+    render(<EventTable events={events} />);
     expect(screen.getByText('disk full')).toBeTruthy();
     expect(screen.getByText('slow query')).toBeTruthy();
   });
 
-  it('shows empty state when no events match', () => {
-    render(<EventTable events={[]} search="" />);
-    expect(screen.getByText('No events match filters')).toBeTruthy();
+  it('has role="list" container', () => {
+    render(<EventTable events={events} />);
+    expect(screen.getByRole('list')).toBeTruthy();
   });
 
-  it('shows empty state when search filters everything out', () => {
-    render(<EventTable events={events} search="zzzzz" />);
+  it('shows empty state when no events', () => {
+    render(<EventTable events={[]} />);
     expect(screen.getByText('No events match filters')).toBeTruthy();
   });
 
   it('shows loading state', () => {
-    render(<EventTable events={[]} search="" loading />);
-    expect(screen.getByText('Loading events...')).toBeTruthy();
+    render(<EventTable events={[]} loading />);
+    expect(screen.getByText('Loading events…')).toBeTruthy();
   });
 
   it('shows error state', () => {
-    render(<EventTable events={[]} search="" error="oops" />);
+    render(<EventTable events={[]} error="oops" />);
     expect(screen.getByText('Failed to load events')).toBeTruthy();
   });
 
-  it('renders header columns', () => {
-    render(<EventTable events={events} search="" />);
-    expect(screen.getByText('Time')).toBeTruthy();
-    expect(screen.getByText('Level')).toBeTruthy();
-    expect(screen.getByText('Module')).toBeTruthy();
-    expect(screen.getByText('Message')).toBeTruthy();
+  it('renders gap indicator for events with gapBefore', () => {
+    const eventsWithGap: ProcessedEvent[] = [
+      { timestamp: '2026-01-15T10:00:00Z', type: 'error', module: 'gw', message: 'first' },
+      { timestamp: '2026-01-15T10:30:00Z', type: 'error', module: 'gw', message: 'second', gapBefore: 1800 },
+    ];
+    render(<EventTable events={eventsWithGap} />);
+    expect(screen.getByRole('separator')).toBeTruthy();
+    expect(screen.getByText(/30m gap/)).toBeTruthy();
+  });
+
+  it('accordion: only one row expanded at a time', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    // Click first row
+    fireEvent.click(items[0]);
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
+    expect(items[1].getAttribute('aria-expanded')).toBe('false');
+    // Click second row
+    fireEvent.click(items[1]);
+    expect(items[0].getAttribute('aria-expanded')).toBe('false');
+    expect(items[1].getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('collapses expanded row when events change', () => {
+    const { rerender } = render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.click(items[0]);
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
+    // Re-render with new events ref
+    const newEvents = [...events];
+    rerender(<EventTable events={newEvents} />);
+    const updatedItems = screen.getAllByRole('listitem');
+    expect(updatedItems[0].getAttribute('aria-expanded')).toBe('false');
+  });
+});
+
+describe('formatGap', () => {
+  it('formats minutes', () => {
+    expect(formatGap(300)).toBe('5m');
+    expect(formatGap(3540)).toBe('59m');
+  });
+
+  it('formats hours', () => {
+    expect(formatGap(3600)).toBe('1h');
+    expect(formatGap(5400)).toBe('1h 30m');
+  });
+
+  it('formats days', () => {
+    expect(formatGap(86400)).toBe('1d');
+    expect(formatGap(90000)).toBe('1d 1h');
   });
 });

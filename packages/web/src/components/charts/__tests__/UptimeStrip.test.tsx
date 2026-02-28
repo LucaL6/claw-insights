@@ -38,7 +38,7 @@ describe('UptimeStrip', () => {
 
   it('passes data to buildUptimeOption and forwards option to BaseChart', () => {
     renderWithProviders(<UptimeStrip data={data} />);
-    expect(mockBuildUptimeOption).toHaveBeenCalledWith(data);
+    expect(mockBuildUptimeOption).toHaveBeenCalledWith(data, expect.any(Object));
     expect(capturedOption).toEqual({ mockUptimeOption: true });
   });
 

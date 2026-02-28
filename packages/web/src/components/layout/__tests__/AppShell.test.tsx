@@ -59,7 +59,8 @@ describe('App Shell (desktop/mobile integration)', () => {
     expect(screen.getByTestId('desktop-shell')).toBeDefined();
     expect(screen.queryByTestId('mobile-shell')).toBeNull();
     expect(screen.getByRole('navigation')).toBeDefined();
-    expect(screen.getByText('Claw Insights')).toBeDefined();
+    // Clock renders HH:mm in header
+    expect(screen.getByText(/\d{2}:\d{2}/)).toBeDefined();
     expect(screen.getByTestId('main-content')).toBeDefined();
   });
 
@@ -80,10 +81,10 @@ describe('App Shell (desktop/mobile integration)', () => {
     expect(dashLink.getAttribute('aria-current')).toBeNull();
   });
 
-  it('desktop: Sidebar shows brand and version', () => {
+  it('desktop: Sidebar shows clock and version in footer', () => {
     mockViewport(1024);
     renderWithProviders(<AppShell page="dashboard" />);
-    expect(screen.getByText('Claw Insights')).toBeDefined();
-    expect(screen.getByText(/v1\.0\.0/)).toBeDefined();
+    expect(screen.getByText(/\d{2}:\d{2}/)).toBeDefined();
+    expect(screen.getByText(/Claw Insights v1\.0\.0/)).toBeDefined();
   });
 });

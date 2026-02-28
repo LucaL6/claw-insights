@@ -211,6 +211,9 @@ type EventDensityBucket {
   hasError: Boolean!
   hasWarning: Boolean!
   hasRestart: Boolean!
+  errorCount: Int!
+  warningCount: Int!
+  restartCount: Int!
   epochStart: Int!
 }
 # ── Root Types ──
@@ -226,6 +229,7 @@ type Query {
   recentLogs(count: Int): [LogEntry!]!
   events(from: Int, to: Int, types: [String!], limit: Int): EventsResult!
   eventDensity: [EventDensityBucket!]!
+  eventCounts(from: Int, to: Int): EventCounts!
   lifetimeStats: LifetimeStats!
 }
 

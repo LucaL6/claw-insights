@@ -115,6 +115,7 @@
   --sky-dim: rgba(56, 189, 248, 0.1);
   --sky-bg: rgba(56, 189, 248, 0.08);
   --sky-border: rgba(56, 189, 248, 0.12);
+  --sky-glow: rgba(56, 189, 248, 0.3);
 
   --amber: #fbbf24;
   --amber-dim: rgba(251, 191, 36, 0.4);
@@ -259,6 +260,7 @@
   --sky-dim: rgba(2, 132, 199, 0.1);
   --sky-bg: rgba(2, 132, 199, 0.06);
   --sky-border: rgba(2, 132, 199, 0.12);
+  --sky-glow: rgba(2, 132, 199, 0.25);
 
   --amber: #d97706;
   --amber-dim: rgba(217, 119, 6, 0.3);

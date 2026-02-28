@@ -63,7 +63,7 @@ export function ErrorsChartCard({
       {preview?.source === 'errors' && previewEvents && navigate && (
         <PreviewCard
           source="errors"
-          title="Gateway Errors"
+          title={t('charts.gatewayErrors')}
           timeLabel={buckets[preview.bucketIndex]?.label ?? ''}
           events={previewEvents.events}
           total={previewEvents.total}

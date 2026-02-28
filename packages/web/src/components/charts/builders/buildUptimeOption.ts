@@ -11,7 +11,11 @@ interface UptimeBucket {
   restartEvent: boolean;
 }
 
-export function buildUptimeOption(data: UptimeBucket[]): EChartsOption {
+interface UptimeLabels { up: string; down: string; restart: string }
+
+const DEFAULT_UPTIME_LABELS: UptimeLabels = { up: 'UP', down: 'DOWN', restart: 'restart' };
+
+export function buildUptimeOption(data: UptimeBucket[], i18n: UptimeLabels = DEFAULT_UPTIME_LABELS): EChartsOption {
   const labels = data.map((d) => d.label);
   const lastLabel = labels[labels.length - 1] ?? '';
 
@@ -29,8 +33,8 @@ export function buildUptimeOption(data: UptimeBucket[]): EChartsOption {
         const p = (params as Array<{ dataIndex: number; name: string }>)[0];
         const d = data[p.dataIndex];
         if (!d) {return '';} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- defensive: array index
-        const status = d.gatewayUp ? '<b style="color:#34d399">UP</b>' : '<b style="color:#ef4444">DOWN</b>';
-        const extra = d.restartEvent ? '<span style="color:#fbbf24">↻ restart</span>' : undefined;
+        const status = d.gatewayUp ? `<b style="color:#34d399">${i18n.up}</b>` : `<b style="color:#ef4444">${i18n.down}</b>`;
+        const extra = d.restartEvent ? `<span style="color:#fbbf24">↻ ${i18n.restart}</span>` : undefined;
         return tooltipHtml({ title: `${p.name} ${status}`, rows: [], extra });
       },
     },

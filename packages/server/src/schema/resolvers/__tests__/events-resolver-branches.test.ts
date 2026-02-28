@@ -6,10 +6,11 @@ const { mockEvents } = vi.hoisted(() => ({
 vi.mock('../../../db/event-queries', () => ({
   queryEvents: vi.fn().mockReturnValue(mockEvents),
   getEventDensity: vi.fn().mockReturnValue([]),
+  getEventCounts: vi.fn().mockReturnValue({ error: 3, warning: 5, restart: 1 }),
 }));
 
 import type { AppContext } from '../../../context';
-import { queryEvents } from '../../../db/event-queries';
+import { getEventCounts, queryEvents } from '../../../db/event-queries';
 import { eventsResolvers } from '../events.resolver';
 
 function mockCtx(): AppContext {
@@ -69,5 +70,24 @@ describe('eventsResolvers branches', () => {
       },
     );
     expect(result).toEqual(mockEvents);
+  });
+
+  it('eventCounts passes args correctly', async () => {
+    const ctx = mockCtx();
+    const resolvers = eventsResolvers(ctx);
+    const eventCounts = resolvers.Query!.eventCounts!;
+
+    const result = await (eventCounts as Function)({}, { from: 1000, to: 2000 });
+    expect(getEventCounts).toHaveBeenCalledWith({}, { from: 1000, to: 2000 });
+    expect(result).toEqual({ error: 3, warning: 5, restart: 1 });
+  });
+
+  it('eventCounts converts null args to undefined', async () => {
+    const ctx = mockCtx();
+    const resolvers = eventsResolvers(ctx);
+    const eventCounts = resolvers.Query!.eventCounts!;
+
+    await (eventCounts as Function)({}, { from: null, to: null });
+    expect(getEventCounts).toHaveBeenCalledWith({}, { from: undefined, to: undefined });
   });
 });

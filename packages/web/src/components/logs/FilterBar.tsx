@@ -1,4 +1,4 @@
-import { useEffect,useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useI18n } from '../../i18n/context';
 
@@ -14,18 +14,18 @@ interface Props {
   counts: Counts;
   total: number;
   displayed: number;
-  filtered: number;
   search: string;
   onSearchChange: (s: string) => void;
+  searchError?: boolean;
   timeLabel?: string;
   onClearTimeFilter?: () => void;
 }
 
-const PILLS: Array<{ type: string; label: string; countKey: keyof Counts; color: string; bg: string; border: string }> =
+const PILLS: Array<{ type: string; labelKey: string; countKey: keyof Counts; color: string; bg: string; border: string }> =
   [
     {
       type: 'error',
-      label: 'error',
+      labelKey: 'metrics.legendError',
       countKey: 'error',
       color: 'var(--red)',
       bg: 'var(--red-bg)',
@@ -33,7 +33,7 @@ const PILLS: Array<{ type: string; label: string; countKey: keyof Counts; color:
     },
     {
       type: 'warning',
-      label: 'warn',
+      labelKey: 'metrics.legendWarn',
       countKey: 'warning',
       color: 'var(--amber)',
       bg: 'var(--amber-bg)',
@@ -41,7 +41,7 @@ const PILLS: Array<{ type: string; label: string; countKey: keyof Counts; color:
     },
     {
       type: 'gateway_restart',
-      label: 'restart',
+      labelKey: 'metrics.legendRestart',
       countKey: 'restart',
       color: 'var(--orange)',
       bg: 'var(--orange-bg)',
@@ -49,15 +49,23 @@ const PILLS: Array<{ type: string; label: string; countKey: keyof Counts; color:
     },
   ];
 
+const TYPE_LABEL_KEYS: Record<string, string> = {
+  error: 'metrics.legendError',
+  warning: 'metrics.legendWarn',
+  gateway_restart: 'metrics.legendRestart',
+};
+
+const ALL_TYPES = ['error', 'warning', 'gateway_restart'];
+
 export function FilterBar({
   activeTypes,
   onToggleType,
   counts,
   total,
   displayed,
-  filtered,
   search,
   onSearchChange,
+  searchError,
   timeLabel,
   onClearTimeFilter,
 }: Props) {
@@ -68,6 +76,13 @@ export function FilterBar({
     const timer = setTimeout(() => { onSearchChange(localSearch); }, 200);
     return () => { clearTimeout(timer); };
   }, [localSearch, onSearchChange]);
+
+  // Status summary
+  const isAllTypes = activeTypes.length === ALL_TYPES.length || activeTypes.length === 0;
+  const typeSummary = isAllTypes
+    ? t('logs.typeAll')
+    : activeTypes.map((tp) => t(TYPE_LABEL_KEYS[tp] ?? tp)).join('+');
+  const hasSearch = search.length > 0;
 
   return (
     <div className="mb-3 space-y-2">
@@ -81,27 +96,28 @@ export function FilterBar({
             return (
               <button
                 key={p.type}
-                onClick={() => { if (!empty) { onToggleType(p.type); } }}
-                disabled={empty}
-                className={`text-xs mono font-semibold px-2 py-1 rounded-md flex items-center gap-1.5 transition-all ${
-                  empty
-                    ? 'bg-elevated text-fg-dim border border-edge-subtle opacity-30 cursor-default'
-                    : active
-                      ? 'cursor-pointer'
-                      : 'bg-elevated text-fg-dim border border-edge-subtle opacity-50 cursor-pointer'
+                role="checkbox"
+                aria-checked={active}
+                onClick={() => { onToggleType(p.type); }}
+                className={`text-xs mono font-semibold px-2 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                  active
+                    ? ''
+                    : empty
+                      ? 'bg-elevated text-fg-dim border border-edge-subtle opacity-30'
+                      : 'bg-elevated text-fg-dim border border-edge-subtle opacity-50'
                 }`}
                 style={
-                  active && !empty
+                  active
                     ? { backgroundColor: p.bg, color: p.color, border: `1px solid ${p.border}` }
                     : undefined
                 }
               >
                 <span
                   className="w-1.5 h-1.5 rounded-full bg-fg-dim"
-                  style={active && !empty ? { backgroundColor: p.color } : undefined} // inline: dynamic runtime color
+                  style={active ? { backgroundColor: p.color } : undefined}
                 />
-                {p.label}
-                {!empty && <span className="opacity-70">{counts[p.countKey]}</span>}
+                {t(p.labelKey)}
+                <span className={empty ? 'opacity-40' : 'opacity-70'}>{counts[p.countKey]}</span>
               </button>
             );
           })}
@@ -126,7 +142,7 @@ export function FilterBar({
                 onClick={onClearTimeFilter}
                 className="text-xs font-semibold px-2 py-1 rounded-md cursor-pointer transition-colors bg-sky-bg text-sky border border-sky-border"
               >
-                Show All 24h
+                {t('logs.showAll')}
               </button>
             )}
           </div>
@@ -135,28 +151,29 @@ export function FilterBar({
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Count */}
-        <div className="flex items-center gap-1.5">
-          <span className="mono text-xs text-fg-dim">
-            {filtered}
-            {search ? ` / ${displayed}` : ''} of {total}
-          </span>
-          {total > displayed && (
-            <span className="text-xs text-amber opacity-70">
-              (latest {displayed})
-            </span>
-          )}
-        </div>
+        {/* Status summary */}
+        <span className="mono text-xs text-fg-dim">
+          {timeLabel ?? t('logs.last24h')} · {typeSummary} · {hasSearch ? t('logs.eventsFilteredCount', { displayed, total }) : t('logs.eventsCount', { count: displayed })}
+        </span>
       </div>
 
       {/* Row 2: Search */}
-      <input
-        type="text"
-        value={localSearch}
-        onChange={(e) => { setLocalSearch(e.target.value); }}
-        placeholder={t('logs.filterPlaceholder')}
-        className="mono text-xs px-3 py-1.5 rounded-md w-full bg-elevated border border-edge text-fg outline-none"
-      />
+      <div className="relative">
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => { setLocalSearch(e.target.value); }}
+          placeholder={t('logs.filterPlaceholder')}
+          className={`mono text-xs px-3 py-1.5 rounded-md w-full bg-elevated border text-fg outline-none ${
+            searchError ? 'border-red' : 'border-edge'
+          }`}
+        />
+        {searchError && (
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-red">
+            ⚠ {t('logs.invalidRegex')}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

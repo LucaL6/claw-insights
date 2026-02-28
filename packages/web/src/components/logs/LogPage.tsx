@@ -17,12 +17,13 @@ export function LogPage({ route, navigate }: Props) {
     toggleType,
     search,
     setSearch,
-    filteredEvents,
+    processedEvents,
+    searchError,
     density,
+    counts,
     events,
     timeLabel,
     urlFrom,
-    urlTo,
     eventsLoading,
     densityLoading,
     eventsError,
@@ -44,21 +45,18 @@ export function LogPage({ route, navigate }: Props) {
       <FilterBar
         activeTypes={activeTypes}
         onToggleType={toggleType}
-        counts={events?.counts ?? { error: 0, warning: 0, restart: 0 }}
+        counts={counts}
         total={events?.total ?? 0}
-        displayed={events?.events.length ?? 0}
-        filtered={filteredEvents.length}
+        displayed={processedEvents.length}
         search={search}
+        searchError={searchError}
         onSearchChange={setSearch}
         timeLabel={timeLabel}
         onClearTimeFilter={urlFrom ? () => { navigate('#logs'); } : undefined}
       />
 
       <EventTable
-        events={filteredEvents}
-        highlightFrom={urlFrom}
-        highlightTo={urlTo}
-        search={search}
+        events={processedEvents}
         loading={eventsLoading}
         error={eventsError}
       />

@@ -1,34 +1,22 @@
+import React, { useRef } from 'react';
+
+import { useI18n } from '../../i18n/context';
+import { EVENT_TYPE_MAP } from './log-types';
+export type { ProcessedEvent } from './log-types';
+
 interface EventRowProps {
+  id: string;
   timestamp: string;
   type: string;
   module: string;
   message: string;
-  highlighted: boolean;
+  expanded: boolean;
+  tabIndex: number;
+  repeatCount?: number;
+  repeatFirst?: string;
+  onToggle: () => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
 }
-
-const LEVEL_STYLES: Record<string, { bg: string; color: string; border: string; label: string; gutter: string }> = {
-  error: {
-    bg: 'var(--red-bg)',
-    color: 'var(--red)',
-    border: 'var(--red-border)',
-    label: 'ERROR',
-    gutter: 'var(--red)',
-  },
-  warning: {
-    bg: 'var(--amber-bg)',
-    color: 'var(--amber)',
-    border: 'var(--amber-border)',
-    label: 'WARN',
-    gutter: 'var(--amber)',
-  },
-  gateway_restart: {
-    bg: 'var(--orange-bg)',
-    color: 'var(--orange)',
-    border: 'var(--orange-border)',
-    label: 'RESTART',
-    gutter: 'var(--orange)',
-  },
-};
 
 function fmtTime(ts: string): string {
   return new Date(ts).toLocaleTimeString('en-GB', {
@@ -39,42 +27,72 @@ function fmtTime(ts: string): string {
   });
 }
 
-export function EventRow({ timestamp, type, module, message, highlighted }: EventRowProps) {
-  const style = LEVEL_STYLES[type] ?? LEVEL_STYLES.error;
+const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function EventRowInner(
+  { id, timestamp, type, module, message, expanded, tabIndex, repeatCount, repeatFirst, onToggle, onKeyDown },
+  ref,
+) {
+  const { t } = useI18n();
+  const style = EVENT_TYPE_MAP[type] ?? EVENT_TYPE_MAP.error;
+  const detailRef = useRef<HTMLDivElement>(null);
 
   return (
     <div
-      className="grid items-center py-1 px-1"
-      style={{
-        // inline: dynamic highlight layout
-        gridTemplateColumns: '28px 82px 68px 110px 1fr',
-        backgroundColor: highlighted ? style.bg : 'transparent',
-        borderLeft: highlighted ? `2px solid ${style.color}` : '2px solid transparent',
-      }}
+      ref={ref}
+      id={id}
+      role="listitem"
+      aria-expanded={expanded}
+      tabIndex={tabIndex}
+      onClick={onToggle}
+      onKeyDown={onKeyDown}
+      className="cursor-pointer select-none"
+      style={{ borderLeft: `3px solid ${style.color}` }}
     >
-      {/* Gutter */}
-      <div className="flex justify-center">
-        <div style={{ width: 3, height: 16, borderRadius: 1, backgroundColor: style.gutter }} />
+      {/* Compact row */}
+      <div className="flex items-center gap-2 py-1 px-2">
+        <span className="mono text-xs text-fg-muted shrink-0">{fmtTime(timestamp)}</span>
+        <span
+          className="mono text-[10px] font-bold shrink-0"
+          style={{ color: style.color }}
+        >
+          {style.abbr}
+        </span>
+        <span className="mono text-[10px] px-1.5 py-0.5 rounded bg-elevated text-fg-dim border border-edge-subtle shrink-0 truncate max-w-[100px]">
+          {module}
+        </span>
+        <span className="mono text-xs text-fg-secondary min-w-0">
+          {message}
+        </span>
+        {repeatCount && repeatCount >= 2 && (
+          <span className="mono text-[10px] text-fg-muted shrink-0">×{repeatCount}</span>
+        )}
       </div>
-      {/* Time */}
-      <span className={`mono text-xs ${highlighted ? 'text-fg' : 'text-fg-muted'}`}>{fmtTime(timestamp)}</span>
-      {/* Level badge */}
-      <span
-        className="mono text-xs font-semibold px-1.5 py-0.5 rounded text-center"
-        style={{ background: style.bg, color: style.color, border: `1px solid ${style.border}` }}
-      >
-        {style.label}
-      </span>
-      {/* Module pill */}
-      <span
-        className="mono text-xs px-2 py-0.5 rounded truncate text-center bg-elevated text-fg-dim border border-edge-subtle"
-      >
-        {module}
-      </span>
-      {/* Message */}
-      <span className={`mono text-xs truncate pl-2 ${highlighted ? 'text-fg' : 'text-fg-secondary'}`}>
-        {message}
-      </span>
+
+      {/* Expandable detail panel */}
+      {expanded && (
+        <div
+          ref={(el) => {
+            detailRef.current = el;
+            if (el) {el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });}
+          }}
+          role="region"
+          aria-labelledby={id}
+          className="px-4 py-2 bg-elevated border-t border-edge-subtle"
+          style={{
+            animation: 'expand 150ms ease-out',
+          }}
+        >
+          <pre className="mono text-xs text-fg whitespace-pre-wrap break-words m-0">{message}</pre>
+          <div className="flex items-center gap-3 mt-2 text-[10px] text-fg-muted mono">
+            <span>{t('logs.detail.module', { name: module })}</span>
+            <span>{t('logs.detail.time', { time: fmtTime(timestamp) })}</span>
+            {repeatCount && repeatCount >= 2 && repeatFirst && (
+              <span>{t('logs.detail.repeat', { count: repeatCount, from: fmtTime(repeatFirst), to: fmtTime(timestamp) })}</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+});
+
+export const EventRow = React.memo(EventRowInner);

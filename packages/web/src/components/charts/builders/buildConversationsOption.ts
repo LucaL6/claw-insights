@@ -14,10 +14,13 @@ interface ConversationBucket {
   assistantTurns: number;
 }
 
+interface ConversationLabels { user: string; openClaw: string; total: string }
+
 export function buildConversationsOption(
   data: ConversationBucket[],
   footerText: string,
   roleFilter: RoleFilter = 'all',
+  i18n: ConversationLabels = { user: 'User', openClaw: 'OpenClaw', total: 'Total' },
 ): EChartsOption {
   const labels = data.map((d) => d.label);
 
@@ -33,7 +36,7 @@ export function buildConversationsOption(
           const items = params as Array<{ name: string; value: number }>;
           return tooltipHtml({
             title: items[0].name,
-            rows: [{ color: USER_COLOR, label: 'User', value: String(items[0].value) }],
+            rows: [{ color: USER_COLOR, label: i18n.user, value: String(items[0].value) }],
             footer: footerText,
           });
         },
@@ -62,7 +65,7 @@ export function buildConversationsOption(
           const items = params as Array<{ name: string; value: number }>;
           return tooltipHtml({
             title: items[0].name,
-            rows: [{ color: ASSISTANT_COLOR, label: 'OpenClaw', value: String(items[0].value) }],
+            rows: [{ color: ASSISTANT_COLOR, label: i18n.openClaw, value: String(items[0].value) }],
             footer: footerText,
           });
         },
@@ -93,9 +96,9 @@ export function buildConversationsOption(
         return tooltipHtml({
           title: items[0].name,
           rows: [
-            { color: USER_COLOR, label: 'User', value: String(items[0]?.value ?? 0) },
-            { color: ASSISTANT_COLOR, label: 'OpenClaw', value: String(items[1]?.value ?? 0) },
-            { color: '#d1d5db', label: 'Total', value: String(total) },
+            { color: USER_COLOR, label: i18n.user, value: String(items[0]?.value ?? 0) },
+            { color: ASSISTANT_COLOR, label: i18n.openClaw, value: String(items[1]?.value ?? 0) },
+            { color: '#d1d5db', label: i18n.total, value: String(total) },
           ],
           footer: footerText,
         });

@@ -245,6 +245,27 @@ describe('LinuxProcessAdapter', () => {
       expect(await adapter.getUptime(123)).toBe('16m 40s');
     });
 
+    it('formats as seconds only when uptime < 60s (L149)', async () => {
+      (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: Function) => cb(new Error()),
+      );
+      vi.mocked(readFile).mockImplementation((path: any) => {
+        if (path === '/proc/123/stat') {
+          // startTicks = 99950 (ticks), uptime = 1000s, CLK_TCK=100 → startSec=999.5
+          // elapsed = 1000 - 999.5 = 0.5 → floor = 0? No, let's be more precise:
+          // We want elapsed ~45s: uptime=1000, startTicks=95500 → startSec=955 → elapsed=45
+          return Promise.resolve(
+            '123 (node) S 1 123 123 0 -1 4194304 0 0 0 0 0 0 0 0 0 0 0 0 95500 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0',
+          );
+        }
+        if (path === '/proc/uptime') {
+          return Promise.resolve('1000.00 2000.00');
+        }
+        return Promise.reject(new Error('not found'));
+      });
+      expect(await adapter.getUptime(123)).toBe('45s');
+    });
+
     it('returns unknown when elapsed time is negative', async () => {
       (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
         (_cmd: string, _args: string[], _opts: unknown, cb: Function) => cb(new Error()),

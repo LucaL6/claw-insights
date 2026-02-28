@@ -3,7 +3,6 @@ import { Provider } from 'urql';
 
 import type { MetricsRange } from './components/charts/metrics/GranularityPicker';
 import { MetricsSection } from './components/charts/metrics/MetricsSection';
-import { GatewayBanner } from './components/gateway/GatewayBanner';
 import { MainLayout } from './components/layout/MainLayout';
 import { Sidebar } from './components/layout/Sidebar';
 import { LogPage } from './components/logs/LogPage';
@@ -52,7 +51,6 @@ function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: 
   return (
     <MainLayout
       topBar={<TopBar currentPage="dashboard" onNavigate={navigate} metricsRange={range} />}
-      banner={<GatewayBanner />}
       sessions={<SessionPanel onReady={onSessionsReady} />}
       metrics={<MetricsSection range={range} onRangeChange={setRange} navigate={navigate} onReady={onMetricsReady} />}
     />
@@ -82,7 +80,7 @@ function AppInner({ route, navigate }: { route: Route; navigate: (h: string) => 
     ) : (
       <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)' }}>
         <header
-          className="backdrop-blur-sm sticky top-0 z-50 px-5 pt-2 pb-0 flex-shrink-0"
+          className="backdrop-blur-sm sticky top-0 z-50 px-5 h-12 flex items-center flex-shrink-0"
           style={{
             borderBottom: '1px solid var(--border)',
             backgroundColor: 'var(--bg-surface-solid)',
@@ -99,7 +97,7 @@ function AppInner({ route, navigate }: { route: Route; navigate: (h: string) => 
     return (
       <div className="flex h-screen">
         <Sidebar currentPage={route.page} onNavigate={navigate} />
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">{content}</div>
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">{content}</div>
       </div>
     );
   }

@@ -1,9 +1,11 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { getModelColor, MODEL_COLORS,shortModelName } from '../model-utils';
+import { getModelColor, MODEL_COLORS, shortModelName } from '../model-utils';
 
 describe('getModelColor', () => {
-  it('returns sky for opus', () => expect(getModelColor('claude-opus-4')).toBe(MODEL_COLORS.opus));
+  it('returns sky-400 for opus-4-6', () => expect(getModelColor('claude-opus-4-6')).toBe('#38bdf8'));
+  it('returns sky-300 for opus-4-5', () => expect(getModelColor('claude-opus-4-5')).toBe('#7dd3fc'));
+  it('returns sky fallback for generic opus', () => expect(getModelColor('claude-opus-4')).toBe(MODEL_COLORS.opus));
   it('returns violet for sonnet', () => expect(getModelColor('claude-sonnet-3-5')).toBe(MODEL_COLORS.sonnet));
   it('returns emerald for haiku', () => expect(getModelColor('claude-haiku-3')).toBe(MODEL_COLORS.haiku));
   it('returns orange for gpt', () => expect(getModelColor('gpt-4o')).toBe(MODEL_COLORS.gpt));
@@ -19,9 +21,9 @@ describe('getModelColor', () => {
     expect(getModelColor('gpt-5.2-codex')).toBe('#fdba74');
   });
 
-  it('returns emerald for minimax', () => {
+  it('returns teal for minimax', () => {
     expect(getModelColor('MiniMax-M2.5')).toBe(MODEL_COLORS.minimax);
-    expect(getModelColor('MiniMax-M2.5')).toBe('#34d399');
+    expect(getModelColor('MiniMax-M2.5')).toBe('#2dd4bf');
   });
 });
 

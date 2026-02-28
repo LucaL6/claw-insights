@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
 import { createChildLogger } from '../logger.js';
@@ -16,6 +17,10 @@ const DEFAULT_DB_PATH = config.dbPath;
 interface Migration {
   version: number;
   up: string | ((db: DatabaseSync) => void);
+}
+
+function migrationContentHash(timestamp: string, sessionKey: string, role: string): string {
+  return createHash('sha256').update(`${timestamp}|${sessionKey}|${role}`).digest('hex').slice(0, 16);
 }
 
 export const MIGRATIONS: Migration[] = [
@@ -260,6 +265,57 @@ export const MIGRATIONS: Migration[] = [
         value TEXT NOT NULL
       );
     `,
+  },
+  {
+    version: 10,
+    up: (db) => {
+      const beforeCount = (db.prepare('SELECT COUNT(*) as cnt FROM message_events').get() as { cnt: number }).cnt;
+
+      db.exec(`
+        CREATE TABLE message_events_new (
+          id           INTEGER PRIMARY KEY AUTOINCREMENT,
+          timestamp    TEXT NOT NULL,
+          session_key  TEXT NOT NULL,
+          role         TEXT NOT NULL,
+          content_hash TEXT NOT NULL,
+          UNIQUE(content_hash)
+        );
+      `);
+
+      const rows = db
+        .prepare(
+          `SELECT timestamp, session_key, role
+           FROM message_events
+           GROUP BY timestamp, session_key, role`,
+        )
+        .all() as Array<{ timestamp: string; session_key: string; role: string }>;
+
+      const insert = db.prepare(
+        'INSERT OR IGNORE INTO message_events_new (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)',
+      );
+      for (const row of rows) {
+        const hash = migrationContentHash(row.timestamp, row.session_key, row.role);
+        insert.run(row.timestamp, row.session_key, row.role, hash);
+      }
+
+      const afterCount = (db.prepare('SELECT COUNT(*) as cnt FROM message_events_new').get() as { cnt: number }).cnt;
+      const dupsRemoved = beforeCount - afterCount;
+
+      db.exec('DROP TABLE message_events');
+      db.exec('ALTER TABLE message_events_new RENAME TO message_events');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_msg_events_time ON message_events(timestamp)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_msg_events_session ON message_events(session_key, timestamp)');
+
+      // Clear all rows — LifetimeScanner.scanAll() will repopulate with correct
+      // role|lineHash hashes on first startup. Migration-backfilled hashes use
+      // role-only discriminator which is incompatible with runtime dedup key.
+      db.exec('DELETE FROM message_events');
+
+      log.info(
+        { beforeCount, dupsRemoved },
+        'v10: message_events rebuilt with content_hash UNIQUE (cleared for rescan)',
+      );
+    },
   },
 ];
 

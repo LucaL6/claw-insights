@@ -12,13 +12,15 @@ export const COLORS = {
 
 /** Model family → color mapping for stacked charts */
 export const MODEL_COLORS: Record<string, string> = {
-  opus: '#38bdf8', // sky-400
+  'opus-4-6': '#38bdf8', // sky-400 (Opus 4.6)
+  'opus-4-5': '#7dd3fc', // sky-300 (Opus 4.5)
+  opus: '#38bdf8', // sky-400 (generic Opus fallback)
   sonnet: '#a78bfa', // violet-400
   haiku: '#34d399', // emerald-400
   '5.3-codex': '#f97316', // orange-500 (primary GPT)
   '5.2-codex': '#fdba74', // orange-300 (secondary GPT)
   gpt: '#fb923c', // orange-400 (generic GPT fallback)
-  minimax: '#34d399', // emerald-400
+  minimax: '#2dd4bf', // teal-400 (was emerald, conflicted with haiku)
 };
 
 /** Pre-sorted entries: longest key first so specific matches win over generic */
@@ -27,7 +29,9 @@ const COLOR_ENTRIES = Object.entries(MODEL_COLORS).sort((a, b) => b[0].length - 
 export function getModelColor(model: string): string {
   const lower = model.toLowerCase();
   for (const [key, color] of COLOR_ENTRIES) {
-    if (lower.includes(key)) {return color;}
+    if (lower.includes(key)) {
+      return color;
+    }
   }
   return '#71717a'; // zinc-500
 }
@@ -40,6 +44,8 @@ export function shortModelName(model: string): string {
     return `${family} ${version}`;
   }
   const gpt = model.match(/^(?:openai\/)?gpt-([\d.]+)/);
-  if (gpt) {return `GPT ${gpt[1]}`;}
+  if (gpt) {
+    return `GPT ${gpt[1]}`;
+  }
   return model.length > 15 ? model.slice(0, 15) + '…' : model;
 }

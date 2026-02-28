@@ -15,7 +15,8 @@ import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-
  */
 type Documents = {
     "\n  query Events($from: Int, $to: Int, $types: [String!], $limit: Int) {\n    events(from: $from, to: $to, types: $types, limit: $limit) {\n      events {\n        timestamp\n        type\n        module\n        message\n      }\n      total\n      counts {\n        error\n        warning\n        restart\n      }\n    }\n  }\n": typeof types.EventsDocument,
-    "\n  query EventDensity {\n    eventDensity {\n      hour\n      count\n      hasError\n      hasWarning\n      hasRestart\n      epochStart\n    }\n  }\n": typeof types.EventDensityDocument,
+    "\n  query EventDensity {\n    eventDensity {\n      hour\n      count\n      hasError\n      hasWarning\n      hasRestart\n      errorCount\n      warningCount\n      restartCount\n      epochStart\n    }\n  }\n": typeof types.EventDensityDocument,
+    "\n  query EventCounts($from: Int, $to: Int) {\n    eventCounts(from: $from, to: $to) {\n      error\n      warning\n      restart\n    }\n  }\n": typeof types.EventCountsDocument,
     "\n  query Gateway {\n    gateway {\n      running\n      pid\n      version\n      appVersion\n      updateAvailable\n      uptime\n      startedAt\n      connectLatencyMs\n      latestVersion\n      securityCritical\n      securityWarn\n    }\n  }\n": typeof types.GatewayDocument,
     "\n  query Resources {\n    resources {\n      cpu\n      memoryMB\n      diskMB\n      sampledAt\n    }\n  }\n": typeof types.ResourcesDocument,
     "\n  query Channels {\n    channels {\n      provider\n      name\n      connected\n      latencyMs\n    }\n  }\n": typeof types.ChannelsDocument,
@@ -30,7 +31,8 @@ type Documents = {
 };
 const documents: Documents = {
     "\n  query Events($from: Int, $to: Int, $types: [String!], $limit: Int) {\n    events(from: $from, to: $to, types: $types, limit: $limit) {\n      events {\n        timestamp\n        type\n        module\n        message\n      }\n      total\n      counts {\n        error\n        warning\n        restart\n      }\n    }\n  }\n": types.EventsDocument,
-    "\n  query EventDensity {\n    eventDensity {\n      hour\n      count\n      hasError\n      hasWarning\n      hasRestart\n      epochStart\n    }\n  }\n": types.EventDensityDocument,
+    "\n  query EventDensity {\n    eventDensity {\n      hour\n      count\n      hasError\n      hasWarning\n      hasRestart\n      errorCount\n      warningCount\n      restartCount\n      epochStart\n    }\n  }\n": types.EventDensityDocument,
+    "\n  query EventCounts($from: Int, $to: Int) {\n    eventCounts(from: $from, to: $to) {\n      error\n      warning\n      restart\n    }\n  }\n": types.EventCountsDocument,
     "\n  query Gateway {\n    gateway {\n      running\n      pid\n      version\n      appVersion\n      updateAvailable\n      uptime\n      startedAt\n      connectLatencyMs\n      latestVersion\n      securityCritical\n      securityWarn\n    }\n  }\n": types.GatewayDocument,
     "\n  query Resources {\n    resources {\n      cpu\n      memoryMB\n      diskMB\n      sampledAt\n    }\n  }\n": types.ResourcesDocument,
     "\n  query Channels {\n    channels {\n      provider\n      name\n      connected\n      latencyMs\n    }\n  }\n": types.ChannelsDocument,
@@ -65,7 +67,11 @@ export function graphql(source: "\n  query Events($from: Int, $to: Int, $types: 
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  query EventDensity {\n    eventDensity {\n      hour\n      count\n      hasError\n      hasWarning\n      hasRestart\n      epochStart\n    }\n  }\n"): (typeof documents)["\n  query EventDensity {\n    eventDensity {\n      hour\n      count\n      hasError\n      hasWarning\n      hasRestart\n      epochStart\n    }\n  }\n"];
+export function graphql(source: "\n  query EventDensity {\n    eventDensity {\n      hour\n      count\n      hasError\n      hasWarning\n      hasRestart\n      errorCount\n      warningCount\n      restartCount\n      epochStart\n    }\n  }\n"): (typeof documents)["\n  query EventDensity {\n    eventDensity {\n      hour\n      count\n      hasError\n      hasWarning\n      hasRestart\n      errorCount\n      warningCount\n      restartCount\n      epochStart\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query EventCounts($from: Int, $to: Int) {\n    eventCounts(from: $from, to: $to) {\n      error\n      warning\n      restart\n    }\n  }\n"): (typeof documents)["\n  query EventCounts($from: Int, $to: Int) {\n    eventCounts(from: $from, to: $to) {\n      error\n      warning\n      restart\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

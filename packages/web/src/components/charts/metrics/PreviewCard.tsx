@@ -105,7 +105,7 @@ export function PreviewCard({ source, title, timeLabel, events, total, linkHref,
           {t('logs.viewAll')} →
         </button>
         <span className="mono text-xs text-fg-dim">
-          {events.length} of {total}
+          {t('charts.previewCount', { shown: events.length, total })}
         </span>
       </div>
     </div>

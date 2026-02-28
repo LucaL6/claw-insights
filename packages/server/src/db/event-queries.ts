@@ -1,7 +1,7 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
 
 import { EVENT_MAP, mapEvent } from '../sources/events-mapper.js';
-import { bucketExpr,cached } from './query-utils.js';
+import { bucketExpr, cached } from './query-utils.js';
 
 // ── Write ──
 
@@ -83,9 +83,15 @@ export function queryEvents(
 
   const counts = { error: 0, warning: 0, restart: 0 };
   for (const row of rows) {
-    if (row.type === 'error' || row.category === 'severity.error') {counts.error++;}
-    if (row.type === 'warning' || row.category === 'severity.warning') {counts.warning++;}
-    if (row.type === 'gateway_restart' || row.category === 'lifecycle.restart') {counts.restart++;}
+    if (row.type === 'error' || row.category === 'severity.error') {
+      counts.error++;
+    }
+    if (row.type === 'warning' || row.category === 'severity.warning') {
+      counts.warning++;
+    }
+    if (row.type === 'gateway_restart' || row.category === 'lifecycle.restart') {
+      counts.restart++;
+    }
   }
 
   return { events, total, counts };
@@ -133,10 +139,44 @@ export function getEventDensity(db: Database): Array<{
       hasError: (row?.err_cnt ?? 0) > 0,
       hasWarning: (row?.warn_cnt ?? 0) > 0,
       hasRestart: (row?.rst_cnt ?? 0) > 0,
+      errorCount: row?.err_cnt ?? 0,
+      warningCount: row?.warn_cnt ?? 0,
+      restartCount: row?.rst_cnt ?? 0,
       epochStart: bid * 3600,
     });
   }
   return result;
+}
+
+export function getEventCounts(
+  db: Database,
+  opts: { from?: number; to?: number },
+): { error: number; warning: number; restart: number } {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (opts.from !== undefined) {
+    conditions.push(`CAST(strftime('%s', timestamp) AS INTEGER) >= ?`);
+    params.push(opts.from);
+  }
+  if (opts.to !== undefined) {
+    conditions.push(`CAST(strftime('%s', timestamp) AS INTEGER) < ?`);
+    params.push(opts.to);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const row = db
+    .prepare(
+      `SELECT
+         SUM(CASE WHEN type = 'error' OR category = 'severity.error' THEN 1 ELSE 0 END) AS error,
+         SUM(CASE WHEN type = 'warning' OR category = 'severity.warning' THEN 1 ELSE 0 END) AS warning,
+         SUM(CASE WHEN type = 'gateway_restart' OR category = 'lifecycle.restart' THEN 1 ELSE 0 END) AS restart
+       FROM metric_events ${where}`,
+    )
+    .get(...params) as { error: number; warning: number; restart: number } | undefined;
+
+  return { error: row?.error ?? 0, warning: row?.warning ?? 0, restart: row?.restart ?? 0 };
 }
 
 export function getBucketedEventCount(

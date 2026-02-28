@@ -6,6 +6,7 @@ export interface MessageEvent {
   timestamp: string;
   sessionKey: string;
   role: string;
+  lineHash: string;
 }
 
 export type MessageEventHandler = (event: MessageEvent) => void;

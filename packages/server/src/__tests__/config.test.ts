@@ -178,6 +178,18 @@ describe('loadConfigFile', () => {
     spy.mockRestore();
   });
 
+  it('warns on unknown config keys', async () => {
+    writeFileSync(
+      join(testDir, '.claw-insights', 'config.json'),
+      JSON.stringify({ unknownFooBar: true, serverPort: 3000 }),
+    );
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { loadConfigFile } = await import('../config.js');
+    loadConfigFile();
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('Unknown config key'));
+    spy.mockRestore();
+  });
+
   it('warns on loose permissions when apiToken present', async () => {
     const cfgPath = join(testDir, '.claw-insights', 'config.json');
     writeFileSync(cfgPath, JSON.stringify({ apiToken: 'a'.repeat(32) }));

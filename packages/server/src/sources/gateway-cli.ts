@@ -2,6 +2,9 @@ import { open, stat } from 'node:fs/promises';
 
 import { config } from '../config.js';
 import { emitChange } from '../events.js';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('gateway-cli');
 import type { ChannelInfo } from '../platforms/shared/parsers.js';
 import { parseChannels } from '../platforms/shared/parsers.js';
 import type { Platform } from '../ports/types.js';
@@ -16,7 +19,9 @@ interface CachedResult<T> {
 }
 
 const CACHE_TTL = 10_000; // 10s
+const FAIL_CACHE_TTL = 3_000; // 3s — short TTL for failed results to avoid request storms
 const VERSION_CACHE_TTL = 60_000; // 1min
+const VERSION_FAIL_CACHE_TTL = 5_000; // 5s
 
 export interface ParsedStatus {
   running: boolean;
@@ -80,6 +85,7 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
   let statusCache: CachedResult<ParsedStatus> | null = null;
   let versionCache: CachedResult<string> | null = null;
   let statusInFlight: Promise<ParsedStatus> | null = null;
+  let lastStatusJson = ''; // Track last status independently of cache for change detection
 
   async function getVersion(): Promise<string> {
     if (versionCache && Date.now() - versionCache.ts < VERSION_CACHE_TTL) {
@@ -87,7 +93,8 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
     }
     const raw = (await platform.cli.exec(['--version'])).trim();
     const version = raw || 'unknown';
-    versionCache = { data: version, ts: Date.now() };
+    // Short TTL for failed results to allow faster recovery without request storms
+    versionCache = { data: version, ts: Date.now() - (raw ? 0 : VERSION_CACHE_TTL - VERSION_FAIL_CACHE_TTL) };
     return version;
   }
 
@@ -163,10 +170,14 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
     statusInFlight = (async () => {
       try {
         const [raw, version] = await Promise.all([platform.cli.exec(['status', '--json']), getVersion()]);
+        log.info({ rawLen: raw.length, version, rawStart: raw.slice(0, 80) }, 'CLI status result');
         const status = await parseStatusJson(raw, version);
-        const prevJson = statusCache ? JSON.stringify(statusCache.data) : '';
-        statusCache = { data: status, ts: Date.now() };
-        if (JSON.stringify(status) !== prevJson) {
+        const curJson = JSON.stringify(status);
+        // Short TTL for failed results — fast recovery without request storms
+        const ttl = status.running ? CACHE_TTL : FAIL_CACHE_TTL;
+        statusCache = { data: status, ts: Date.now() - (CACHE_TTL - ttl) };
+        if (curJson !== lastStatusJson) {
+          lastStatusJson = curJson;
           emitChange('gateway');
         }
         return status;

@@ -1,8 +1,10 @@
-import { mkdirSync, rmSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { initDatabase } from '../../../db/init';
 import { SessionReader } from '../session-reader';
 
 const tmpDir = join(tmpdir(), 'sr-br-test-' + Date.now());
@@ -242,6 +244,47 @@ describe('SessionReader branches', () => {
     writeSessions({});
     const reader = new SessionReader(tmpFile);
     reader.refreshTurnCounts(); // Should not throw
+    reader.destroy();
+  });
+
+  it('refreshTurnCounts populates turn counts from db (L126-139)', () => {
+    writeSessions({
+      'agent:main:s1': { sessionId: 's1', updatedAt: Date.now(), chatType: 'direct' },
+      'agent:main:s2': { sessionId: 's2', updatedAt: Date.now(), chatType: 'direct' },
+    });
+    const reader = new SessionReader(tmpFile);
+
+    // Create file-based temp DB (initDatabase creates schema with migrations)
+    const dbPath = join(tmpdir(), `sr-test-${Date.now()}.db`);
+    const db = initDatabase(dbPath);
+    const ts = new Date().toISOString();
+    db.prepare('INSERT INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)').run(
+      ts,
+      'agent:main:s1',
+      'user',
+      `h1-${Date.now()}`,
+    );
+    db.prepare('INSERT INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)').run(
+      ts,
+      'agent:main:s1',
+      'assistant',
+      `h2-${Date.now()}`,
+    );
+
+    reader.setDb(db);
+    reader.refreshTurnCounts();
+
+    const sessions = reader.getSessions();
+    const s1 = sessions.find((s) => s.key === 'agent:main:s1');
+    const s2 = sessions.find((s) => s.key === 'agent:main:s2');
+    expect(s1).toBeDefined();
+    expect(s1!.turnCount).toBe(2);
+    expect(s2!.turnCount).toBe(0); // no messages → ?? 0 branch
+
+    db.close();
+    rmSync(dbPath, { force: true });
+    rmSync(dbPath + '-wal', { force: true });
+    rmSync(dbPath + '-shm', { force: true });
     reader.destroy();
   });
 

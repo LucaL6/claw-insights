@@ -229,4 +229,44 @@ describe('DataRetention', () => {
     expect((retention as unknown as Record<string, unknown>).timer).toBeNull();
     cleanup();
   });
+
+  it('interval callback fires runOnce (covers L25)', () => {
+    vi.useFakeTimers();
+    const { retention, cleanup } = setup({ aggregateIntervalMs: 1000 });
+    const spy = vi.spyOn(retention, 'runOnce');
+
+    retention.start();
+    // First call is from start() itself
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    // Advance timer to trigger interval callback (L25)
+    vi.advanceTimersByTime(1000);
+    expect(spy).toHaveBeenCalledTimes(2);
+
+    retention.stop();
+    vi.useRealTimers();
+    cleanup();
+  });
+
+  it('stop() is safe when never started (timer=null)', () => {
+    const { retention, cleanup } = setup();
+    expect(() => retention.stop()).not.toThrow();
+    cleanup();
+  });
+
+  // Note: L115-121 `?? 0` branches are defensive nullish coalescing on SQL aggregate results.
+  // NOT NULL constraints on system_samples columns make these unreachable in practice.
+  // Accepted as pragmatically uncoverable.
+
+  it('skips hourly pruning for non-numeric hourlyRetention string', () => {
+    const { db, retention, cleanup } = setup({ hourlyRetention: 'invalid' });
+    const hour = daysAgoHour(3);
+    insertSamplesForHour(db, hour, 2);
+    retention.runOnce();
+
+    // hourlyRetention='invalid' → parseInt returns NaN → skip hourly prune
+    const rows = db.prepare('SELECT * FROM hourly_system_samples').all();
+    expect(rows.length).toBe(1); // aggregated but not pruned
+    cleanup();
+  });
 });

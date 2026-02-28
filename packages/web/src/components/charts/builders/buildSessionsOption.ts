@@ -9,7 +9,9 @@ interface SessionBucket {
   sessions: number;
 }
 
-export function buildSessionsOption(data: SessionBucket[], footerText: string): EChartsOption {
+interface SessionLabels { sessions: string }
+
+export function buildSessionsOption(data: SessionBucket[], footerText: string, i18n: SessionLabels = { sessions: 'Sessions' }): EChartsOption {
   const labels = data.map((d) => d.label);
 
   return {
@@ -23,7 +25,7 @@ export function buildSessionsOption(data: SessionBucket[], footerText: string): 
         const p = (params as Array<{ name: string; value: number }>)[0];
         return tooltipHtml({
           title: p.name,
-          rows: [{ color: COLORS.emerald, label: 'Sessions', value: String(p.value) }],
+          rows: [{ color: COLORS.emerald, label: i18n.sessions, value: String(p.value) }],
           footer: footerText,
         });
       },

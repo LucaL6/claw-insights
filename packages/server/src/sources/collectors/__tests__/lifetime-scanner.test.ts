@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type MessageEvent, MessageEventBus } from '../../../events/message-event-bus';
 import { TokenEventBus, type TokenUsageEvent } from '../../../events/token-event-bus';
@@ -212,139 +212,52 @@ describe('LifetimeScanner', () => {
 
   // ── Incremental Tests ──
 
-  describe('incremental refresh', () => {
-    // -- Test 8: File append detected
-    it('picks up appended lines on refresh', async () => {
-      const file = join(dir, 'growing.jsonl');
-      writeFileSync(file, [sessionLine(), userMsg(), assistantMsg({ input: 100, output: 50 })].join('\n') + '\n');
+  // ── getFileStates (handoff to TranscriptWatcher) ──
+
+  describe('getFileStates', () => {
+    it('returns populated map after init', async () => {
+      makeTranscript(dir, 'a.jsonl', [userMsg()]);
+      makeTranscript(dir, 'b.jsonl', [userMsg()]);
 
       const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
       await scanner.init();
 
-      let stats = await scanner.getStats();
-      expect(stats.totalUserMessages).toBe(1);
-      expect(stats.totalAssistantMessages).toBe(1);
-
-      // Append more lines (simulate OpenClaw writing)
-      const { appendFileSync } = await import('node:fs');
-      appendFileSync(file, [userMsg(), assistantMsg({ input: 200, output: 100 })].join('\n') + '\n');
-
-      // Force refresh (bypass cooldown for test)
-      (scanner as any).lastRefreshMs = 0;
-      stats = await scanner.getStats();
-
-      expect(stats.totalUserMessages).toBe(2);
-      expect(stats.totalAssistantMessages).toBe(2);
-      expect(stats.totalInputTokens).toBe(300);
-      expect(stats.totalOutputTokens).toBe(150);
+      const states = scanner.getFileStates();
+      expect(states.size).toBe(2);
+      for (const [, state] of states) {
+        expect(state.offset).toBeGreaterThan(0);
+        expect(state.inode).toBeGreaterThan(0);
+        expect(state.birthtimeMs).toBeGreaterThan(0);
+      }
     });
 
-    // -- Test 9: New file appears
-    it('discovers new files on refresh', async () => {
-      makeTranscript(dir, 'first.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
+    it('returns a clone (does not share internal state)', async () => {
+      makeTranscript(dir, 'x.jsonl', [userMsg()]);
 
       const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
       await scanner.init();
 
-      expect((await scanner.getStats()).totalSessions).toBe(1);
+      const states = scanner.getFileStates();
+      states.clear(); // mutate the clone
 
-      // Add new file
-      makeTranscript(dir, 'second.jsonl', [userMsg(), assistantMsg({ input: 200, output: 100 })]);
-
-      (scanner as any).lastRefreshMs = 0;
-      const stats = await scanner.getStats();
-
-      expect(stats.totalSessions).toBe(2);
-      expect(stats.totalInputTokens).toBe(300);
-    });
-
-    // -- Test 10: Partial line handling
-    it('buffers partial lines and completes them next refresh', async () => {
-      const file = join(dir, 'partial.jsonl');
-      const completeLine = userMsg();
-      // Write complete line + half of next line (no trailing \n)
-      const halfLine = '{"type":"message","message":{"role":"assistant","content":"hi"';
-      writeFileSync(file, completeLine + '\n' + halfLine);
-
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      await scanner.init();
-
-      let stats = await scanner.getStats();
-      expect(stats.totalUserMessages).toBe(1);
-      expect(stats.totalAssistantMessages).toBe(0); // partial not counted
-
-      // Complete the line
-      const { appendFileSync } = await import('node:fs');
-      const rest = ',"usage":{"input":100,"output":50}}}\n';
-      appendFileSync(file, rest);
-
-      (scanner as any).lastRefreshMs = 0;
-      stats = await scanner.getStats();
-
-      expect(stats.totalAssistantMessages).toBe(1);
-      expect(stats.totalInputTokens).toBe(100);
-    });
-
-    // -- Test 11: File deleted after scan
-    it('handles file deletion gracefully', async () => {
-      makeTranscript(dir, 'ephemeral.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
-      makeTranscript(dir, 'permanent.jsonl', [userMsg(), assistantMsg({ input: 200, output: 100 })]);
-
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      await scanner.init();
-
-      expect((await scanner.getStats()).totalSessions).toBe(2);
-
-      // Delete one file
-      rmSync(join(dir, 'ephemeral.jsonl'));
-      (scanner as any).lastRefreshMs = 0;
-      const stats = await scanner.getStats();
-
-      // Session count drops, but aggregated tokens remain (documented behavior)
-      expect(stats.totalSessions).toBe(1);
-      // No crash
+      // Internal state should be unaffected
+      expect(scanner.getFileStates().size).toBe(1);
     });
   });
 
-  // ── Usage normalization ──
+  // ── getStats (pure memory read, no I/O) ──
 
-  describe('normalizeUsage', () => {
-    // -- Test 12: Anthropic format
-    it('normalizes Anthropic usage format', async () => {
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      const result = scanner.normalizeUsage({
-        input: 100,
-        output: 50,
-        cacheRead: 10,
-        cacheWrite: 5,
-      });
-      expect(result).toEqual({ input: 100, output: 50, cacheRead: 10, cacheWrite: 5 });
-    });
+  describe('getStats', () => {
+    it('returns instant result without I/O after init', async () => {
+      makeTranscript(dir, 'instant.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
 
-    // -- Test 13: OpenAI format
-    it('normalizes OpenAI usage format', async () => {
       const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      const result = scanner.normalizeUsage({ prompt_tokens: 100, completion_tokens: 50 });
-      expect(result).toEqual({ input: 100, output: 50, cacheRead: 0, cacheWrite: 0 });
-    });
+      await scanner.init();
 
-    // -- Test 14: Anthropic API snake_case format
-    it('normalizes Anthropic API format', async () => {
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      const result = scanner.normalizeUsage({
-        input_tokens: 100,
-        output_tokens: 50,
-        cache_read_input_tokens: 20,
-        cache_creation_input_tokens: 10,
-      });
-      expect(result).toEqual({ input: 100, output: 50, cacheRead: 20, cacheWrite: 10 });
-    });
-
-    // -- Test 15: null/undefined usage
-    it('returns null for null/undefined usage', async () => {
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      expect(scanner.normalizeUsage(null)).toBeNull();
-      expect(scanner.normalizeUsage(undefined)).toBeNull();
+      const stats = await scanner.getStats();
+      expect(stats.totalUserMessages).toBe(1);
+      expect(stats.totalInputTokens).toBe(100);
+      expect(stats.isReady).toBe(true);
     });
   });
 
@@ -379,137 +292,9 @@ describe('LifetimeScanner', () => {
     });
   });
 
-  // ── Concurrency ──
+  // ── createdAt: timestamp from non-first line ──
 
-  describe('concurrency', () => {
-    // -- Test 18: Concurrent getStats() calls
-    it('handles concurrent getStats without double counting', async () => {
-      makeTranscript(dir, 'session.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
-
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      await scanner.init();
-
-      // Force cooldown to 0 so all calls trigger refresh
-      const origCooldown = LifetimeScanner.REFRESH_COOLDOWN_MS;
-      (scanner as any).lastRefreshMs = 0;
-      LifetimeScanner.REFRESH_COOLDOWN_MS = 0;
-
-      // Fire 10 concurrent calls
-      const results = await Promise.all(Array.from({ length: 10 }, () => scanner.getStats()));
-
-      // All results should be identical (no double count)
-      for (const stats of results) {
-        expect(stats.totalInputTokens).toBe(100);
-        expect(stats.totalOutputTokens).toBe(50);
-      }
-
-      // Restore cooldown
-      LifetimeScanner.REFRESH_COOLDOWN_MS = origCooldown;
-    });
-  });
-
-  // ── Staleness guard ──
-
-  describe('staleness guard', () => {
-    // -- Test 19: Second call within cooldown skips refresh
-    it('skips refresh within cooldown period', async () => {
-      makeTranscript(dir, 'session.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
-
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      await scanner.init();
-
-      const stats1 = await scanner.getStats();
-
-      // Append data
-      const { appendFileSync } = await import('node:fs');
-      appendFileSync(join(dir, 'session.jsonl'), userMsg() + '\n');
-
-      // Call again immediately (within 5s cooldown)
-      const stats2 = await scanner.getStats();
-
-      // Should NOT see the new message (refresh was skipped)
-      expect(stats2.totalUserMessages).toBe(stats1.totalUserMessages);
-    });
-  });
-
-  // ── Truncate / Inode change ──
-
-  describe('truncate and inode change', () => {
-    // -- Test 21: File truncated (size shrinks) triggers correct rescan
-    it('calls onBeforeRescan before full rescan on truncation', async () => {
-      const file = join(dir, 'callback.jsonl');
-      writeFileSync(file, [sessionLine(), userMsg(), assistantMsg({ input: 100, output: 50 })].join('\n') + '\n');
-
-      const onBeforeRescan = vi.fn();
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), undefined, undefined, onBeforeRescan);
-      await scanner.init();
-      onBeforeRescan.mockClear();
-
-      writeFileSync(file, [sessionLine(), userMsg()].join('\n') + '\n');
-      (scanner as any).lastRefreshMs = 0;
-      await scanner.getStats();
-
-      expect(onBeforeRescan).toHaveBeenCalledTimes(1);
-    });
-
-    it('handles file truncation without double counting', async () => {
-      const file = join(dir, 'truncated.jsonl');
-      writeFileSync(
-        file,
-        [
-          sessionLine(),
-          userMsg(),
-          assistantMsg({ input: 100, output: 50 }),
-          userMsg(),
-          assistantMsg({ input: 200, output: 100 }),
-        ].join('\n') + '\n',
-      );
-
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      await scanner.init();
-
-      let stats = await scanner.getStats();
-      expect(stats.totalInputTokens).toBe(300); // 100+200
-      expect(stats.totalUserMessages).toBe(2);
-
-      // Truncate: rewrite with less data (same filename, same inode on most OS)
-      writeFileSync(file, [sessionLine(), userMsg(), assistantMsg({ input: 50, output: 25 })].join('\n') + '\n');
-
-      (scanner as any).lastRefreshMs = 0;
-      stats = await scanner.getStats();
-
-      // After rescan, should reflect new file content only — not old + new
-      expect(stats.totalInputTokens).toBe(50);
-      expect(stats.totalOutputTokens).toBe(25);
-      expect(stats.totalUserMessages).toBe(1);
-      expect(stats.totalAssistantMessages).toBe(1);
-    });
-
-    // -- Test 22: File replaced (new inode) triggers correct rescan
-    it('handles inode change (file replace) without double counting', async () => {
-      const filePath = join(dir, 'replaced.jsonl');
-      writeFileSync(filePath, [sessionLine(), userMsg(), assistantMsg({ input: 100, output: 50 })].join('\n') + '\n');
-
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
-      await scanner.init();
-
-      let stats = await scanner.getStats();
-      expect(stats.totalInputTokens).toBe(100);
-
-      // Replace file: delete + create new (new inode)
-      rmSync(filePath);
-      writeFileSync(filePath, [sessionLine(), userMsg(), assistantMsg({ input: 500, output: 250 })].join('\n') + '\n');
-
-      (scanner as any).lastRefreshMs = 0;
-      stats = await scanner.getStats();
-
-      // Should reflect replacement data, not original + replacement
-      expect(stats.totalInputTokens).toBe(500);
-      expect(stats.totalOutputTokens).toBe(250);
-      expect(stats.totalSessions).toBe(1);
-    });
-
-    // -- Test 23: createdAt uses first parseable timestamp (not just first line)
+  describe('createdAt edge cases', () => {
     it('finds timestamp from non-first line', async () => {
       const deviceMs = new Date('2026-01-01T00:00:00Z').getTime();
       const deviceJson = makeDeviceJson(deviceDir, deviceMs);
@@ -602,9 +387,9 @@ describe('LifetimeScanner', () => {
       await scanner.init();
 
       expect(events).toEqual([
-        { timestamp: '2025-06-01T00:00:00Z', sessionKey: 'sess-msg', role: 'user' },
-        { timestamp: '2025-06-01T00:00:01Z', sessionKey: 'sess-msg', role: 'assistant' },
-        { timestamp: '2025-06-01T00:00:02Z', sessionKey: 'sess-msg', role: 'tool' },
+        { timestamp: '2025-06-01T00:00:00Z', sessionKey: 'sess-msg', role: 'user', lineHash: expect.any(String) },
+        { timestamp: '2025-06-01T00:00:01Z', sessionKey: 'sess-msg', role: 'assistant', lineHash: expect.any(String) },
+        { timestamp: '2025-06-01T00:00:02Z', sessionKey: 'sess-msg', role: 'tool', lineHash: expect.any(String) },
       ]);
     });
   });
@@ -643,42 +428,7 @@ describe('LifetimeScanner', () => {
       expect(events[1].inputTokens).toBe(200);
     });
 
-    it('emits events during incremental refresh', async () => {
-      const bus = new TokenEventBus();
-      const events: TokenUsageEvent[] = [];
-      bus.on((e) => events.push(e));
-
-      makeTranscript(dir, 'sess-inc.jsonl', [
-        sessionLine(),
-        userMsg(),
-        assistantMsgWithModel({ input: 100, output: 50 }, 'claude-opus-4-6'),
-      ]);
-
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), bus);
-      await scanner.init();
-
-      events.length = 0; // clear init events
-
-      const { appendFileSync } = await import('node:fs');
-      appendFileSync(
-        join(dir, 'sess-inc.jsonl'),
-        '\n' +
-          userMsg() +
-          '\n' +
-          assistantMsgWithModel({ input: 300, output: 150 }, 'gpt-4o', '2025-06-01T00:03:00Z') +
-          '\n',
-      );
-
-      (scanner as Record<string, unknown>).lastRefreshMs = 0;
-      await scanner.getStats();
-
-      expect(events.length).toBe(1);
-      expect(events[0].inputTokens).toBe(300);
-      expect(events[0].model).toBe('gpt-4o');
-      expect(events[0].sessionKey).toBe('sess-inc');
-    });
-
-    it('skips emit when model is missing', async () => {
+    it('emits with unknown model fallback when model is missing', async () => {
       const bus = new TokenEventBus();
       const events: TokenUsageEvent[] = [];
       bus.on((e) => events.push(e));
@@ -701,8 +451,8 @@ describe('LifetimeScanner', () => {
       const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), bus);
       await scanner.init();
 
-      expect(events.length).toBe(0);
-      // But the message is still counted in stats
+      expect(events.length).toBe(1);
+      expect(events[0].model).toMatch(/^unknown:[0-9a-f]{8}$/);
       const stats = await scanner.getStats();
       expect(stats.totalAssistantMessages).toBe(1);
       expect(stats.totalInputTokens).toBe(100);
@@ -733,7 +483,7 @@ describe('LifetimeScanner', () => {
 
       expect(events.length).toBe(0);
       const stats = await scanner.getStats();
-      expect(stats.totalAssistantMessages).toBe(1);
+      expect(stats.totalAssistantMessages).toBe(0);
     });
 
     it('does not emit for non-assistant messages', async () => {

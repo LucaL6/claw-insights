@@ -19,9 +19,12 @@ describe('Sidebar', () => {
     localStorage.removeItem('ci:sidebar-collapsed');
   });
 
-  it('renders brand name when expanded', () => {
+  it('renders clock in header and version in footer when expanded', () => {
     renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
-    expect(screen.getByText('Claw Insights')).toBeDefined();
+    // Clock: HH:mm format
+    expect(screen.getByText(/\d{2}:\d{2}/)).toBeDefined();
+    // Footer version
+    expect(screen.getByText(/Claw Insights v1\.2\.3/)).toBeDefined();
   });
 
   it('renders navigation items', () => {
@@ -66,7 +69,7 @@ describe('Sidebar', () => {
     fireEvent.click(toggle);
     const expandToggle = screen.getByRole('button', { name: /expand/i });
     fireEvent.click(expandToggle);
-    expect(screen.getByText('Claw Insights')).toBeDefined();
+    expect(screen.getByText(/Claw Insights v1\.2\.3/)).toBeDefined();
   });
 
   it('has accessible nav landmark', () => {
@@ -79,5 +82,28 @@ describe('Sidebar', () => {
     const toggle = screen.getByRole('button', { name: /collapse/i });
     fireEvent.click(toggle);
     expect(localStorage.getItem('ci:sidebar-collapsed')).toBe('true');
+  });
+
+  it('active nav item has left border indicator', () => {
+    renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
+    const dashLink = screen.getByRole('link', { name: /dashboard/i });
+    expect(dashLink.className).toContain('border-l-[3px]');
+    expect(dashLink.className).toContain('border-sky');
+  });
+
+  it('inactive nav item has no left border indicator', () => {
+    renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
+    const logsLink = screen.getByRole('link', { name: /logs/i });
+    expect(logsLink.className).not.toContain('border-l-[3px]');
+    expect(logsLink.className).not.toContain('border-sky');
+  });
+
+  it('collapsed sidebar still shows left border on active item', () => {
+    renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
+    const toggle = screen.getByRole('button', { name: /collapse/i });
+    fireEvent.click(toggle);
+    const dashLink = screen.getByRole('link', { name: /dashboard/i });
+    expect(dashLink.className).toContain('border-l-[3px]');
+    expect(dashLink.className).toContain('border-sky');
   });
 });

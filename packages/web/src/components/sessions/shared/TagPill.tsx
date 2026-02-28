@@ -11,7 +11,7 @@ export function TagPill({ children, variant, size = 'md' }: TagPillProps) {
   const s = TAG_STYLES[variant];
   return (
     <span
-      className={`${sizeClass} rounded`}
+      className={`${sizeClass} rounded whitespace-nowrap flex-shrink-0`}
       style={{ backgroundColor: s.bg, color: s.color, border: `1px solid ${s.border}` }}
     >
       {children}

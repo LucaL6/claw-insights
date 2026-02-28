@@ -11,7 +11,7 @@ describe('health handler', () => {
     });
 
     const json = vi.fn();
-    await handler({ } as unknown as import("express").Request, { json } as unknown as import("express").Response);
+    await handler({} as unknown as import('express').Request, { json } as unknown as import('express').Response);
 
     const body = json.mock.calls[0][0];
     expect(body.status).toBe('ok');
@@ -32,7 +32,7 @@ describe('health handler', () => {
     });
 
     const json = vi.fn();
-    await handler({ } as unknown as import("express").Request, { json } as unknown as import("express").Response);
+    await handler({} as unknown as import('express').Request, { json } as unknown as import('express').Response);
 
     const body = json.mock.calls[0][0];
     expect(body.mode).toBe('server-only');
@@ -49,9 +49,27 @@ describe('health handler', () => {
     });
 
     const json = vi.fn();
-    await handler({ } as unknown as import("express").Request, { json } as unknown as import("express").Response);
+    await handler({} as unknown as import('express').Request, { json } as unknown as import('express').Response);
 
     const body = json.mock.calls[0][0];
     expect(body.db).toBe('error');
+  });
+
+  it('returns gateway disconnected when checkGateway throws (L15 catch)', async () => {
+    const { createHealthHandler } = await import('../health.js');
+    const handler = createHealthHandler({
+      version: '0.1.0',
+      serverOnly: false,
+      checkGateway: async () => {
+        throw new Error('connection refused');
+      },
+      checkDb: () => true,
+    });
+
+    const json = vi.fn();
+    await handler({} as any, { json } as any);
+
+    const body = json.mock.calls[0][0];
+    expect(body.gateway).toBe('disconnected');
   });
 });

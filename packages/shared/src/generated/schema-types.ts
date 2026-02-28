@@ -55,10 +55,13 @@ export type EventCounts = {
 export type EventDensityBucket = {
   count: Scalars['Int']['output'];
   epochStart: Scalars['Int']['output'];
+  errorCount: Scalars['Int']['output'];
   hasError: Scalars['Boolean']['output'];
   hasRestart: Scalars['Boolean']['output'];
   hasWarning: Scalars['Boolean']['output'];
   hour: Scalars['Int']['output'];
+  restartCount: Scalars['Int']['output'];
+  warningCount: Scalars['Int']['output'];
 };
 
 export type EventEntry = {
@@ -190,6 +193,7 @@ export type ModelTokens = {
 export type Query = {
   channels: Array<Channel>;
   cronJobs: Array<CronJob>;
+  eventCounts: EventCounts;
   eventDensity: Array<EventDensityBucket>;
   events: EventsResult;
   gateway: GatewayStatus;
@@ -199,6 +203,12 @@ export type Query = {
   resources: SystemResources;
   sessions: Array<Session>;
   usageCost: UsageCost;
+};
+
+
+export type QueryEventCountsArgs = {
+  from?: InputMaybe<Scalars['Int']['input']>;
+  to?: InputMaybe<Scalars['Int']['input']>;
 };
 
 

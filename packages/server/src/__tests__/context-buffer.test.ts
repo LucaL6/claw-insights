@@ -3,11 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 // Capture event bus callbacks
 const tokenBusCallbacks: Array<(event: unknown) => void> = [];
 const messageBusCallbacks: Array<(event: unknown) => void> = [];
-let lifetimeScannerResetFn: (() => void) | undefined;
 
 const mockInsertTokenBatch = vi.fn();
 const mockInsertMessageBatch = vi.fn();
-const mockDeleteAllMessages = vi.fn();
 const mockInvalidateTurnCounts = vi.fn();
 
 vi.mock('../config.js', () => ({
@@ -122,14 +120,24 @@ vi.mock('../sources/system-info.js', () => ({
 vi.mock('../sources/collectors/log-tailer.js', () => ({ LogTailer: mockClass({ on() {}, destroy() {} }) }));
 vi.mock('../sources/collectors/lifetime-scanner.js', () => ({
   LifetimeScanner: class {
-    constructor(_td: string, _dp: string, _tb: unknown, _mb: unknown, resetFn: () => void) {
-      lifetimeScannerResetFn = resetFn;
-    }
     init() {
       return Promise.resolve();
     }
     destroy() {}
+    getFileStates() {
+      return new Map();
+    }
   },
+}));
+vi.mock('../sources/collectors/transcript-watcher.js', () => ({
+  createTranscriptWatcher: vi.fn(() => ({
+    pollEvery: vi.fn().mockReturnThis(),
+    dirScanEvery: vi.fn().mockReturnThis(),
+    byteBudget: vi.fn().mockReturnThis(),
+    emitTo: vi.fn().mockReturnThis(),
+    onFlush: vi.fn().mockReturnThis(),
+    start: vi.fn(() => ({ destroy: vi.fn() })),
+  })),
 }));
 vi.mock('../sources/readers/spawn-tracker.js', () => ({ SpawnTracker: mockClass({ ingest() {} }) }));
 vi.mock('../sources/aggregator.js', () => ({
@@ -141,7 +149,6 @@ vi.mock('../sources/data-retention.js', () => ({ DataRetention: mockClass({ star
 vi.mock('../db/token-queries.js', () => ({ insertTokenUsageEventBatch: mockInsertTokenBatch }));
 vi.mock('../db/message-queries.js', () => ({
   insertMessageEventBatch: mockInsertMessageBatch,
-  deleteAllMessageEvents: mockDeleteAllMessages,
 }));
 vi.mock('../sources/collectors/log-ingester.js', () => ({ createLogIngester: vi.fn(() => ({ handle: vi.fn() })) }));
 
@@ -218,16 +225,5 @@ describe('context buffer and event bus branches', () => {
       cb({ timestamp: `t${i}`, sessionKey: 's', role: 'user' });
     }
     expect(mockInsertMessageBatch).toHaveBeenCalled();
-  });
-
-  it('lifetimeScanner reset callback clears message events and buffer', async () => {
-    lifetimeScannerResetFn = undefined;
-    mockDeleteAllMessages.mockClear();
-    const { createContext } = await import('../context.js');
-    await createContext();
-
-    expect(lifetimeScannerResetFn).toBeDefined();
-    lifetimeScannerResetFn!();
-    expect(mockDeleteAllMessages).toHaveBeenCalled();
   });
 });

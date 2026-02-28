@@ -24,10 +24,11 @@ describe('initDatabase v8 migration', () => {
     const { db, cleanup } = setup();
 
     const columns = db.prepare('PRAGMA table_info(message_events)').all() as Array<{ name: string; notnull: number }>;
-    expect(columns.map((c) => c.name)).toEqual(['id', 'timestamp', 'session_key', 'role']);
+    expect(columns.map((c) => c.name)).toEqual(['id', 'timestamp', 'session_key', 'role', 'content_hash']);
     expect(columns.find((c) => c.name === 'timestamp')?.notnull).toBe(1);
     expect(columns.find((c) => c.name === 'session_key')?.notnull).toBe(1);
     expect(columns.find((c) => c.name === 'role')?.notnull).toBe(1);
+    expect(columns.find((c) => c.name === 'content_hash')?.notnull).toBe(1);
 
     const indexes = db.prepare("PRAGMA index_list('message_events')").all() as Array<{ name: string }>;
     const indexNames = indexes.map((idx) => idx.name);

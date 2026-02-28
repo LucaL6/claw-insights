@@ -62,10 +62,19 @@ export function getTooltips(t: T) {
 
     // ── Chart data point (ECharts tooltip footer) ──
     chartFooter: {
-      sessions: 'active sessions · peak per bucket',
-      tokens: 'token consumption · from transcript usage',
-      conversations: 'messages · user + OpenClaw per bucket',
-      errors: 'event count · from metric events',
+      sessions: () => t('tooltip.footer.sessions'),
+      tokens: (model?: string | null) =>
+        model ? t('tooltip.footer.tokensFiltered').replaceAll('{model}', model) : t('tooltip.footer.tokens'),
+      conversations: (role?: string) => {
+        if (role === 'user') {
+          return t('tooltip.footer.convUser');
+        }
+        if (role === 'assistant') {
+          return t('tooltip.footer.convAssistant');
+        }
+        return t('tooltip.footer.conversations');
+      },
+      errors: () => t('tooltip.footer.errors'),
     },
   } as const;
 }

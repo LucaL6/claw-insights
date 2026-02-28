@@ -1,4 +1,4 @@
-import { afterEach,describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('logger', () => {
   const originalEnv = { ...process.env };
@@ -37,5 +37,22 @@ describe('logger', () => {
     vi.resetModules();
     const mod = await import('../logger.js');
     expect(mod.logger.level).toBe('info');
+  });
+
+  it('uses JSON stdout in production mode (usePretty=false, L35)', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.LOG_PRETTY;
+    vi.resetModules();
+    const mod = await import('../logger.js');
+    expect(mod.logger).toBeDefined();
+  });
+
+  it('adds file transport when LOG_FILE is set (L40)', async () => {
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    process.env.LOG_FILE = join(tmpdir(), `claw-insights-logger-test-${Date.now()}.log`);
+    vi.resetModules();
+    const mod = await import('../logger.js');
+    expect(mod.logger).toBeDefined();
   });
 });

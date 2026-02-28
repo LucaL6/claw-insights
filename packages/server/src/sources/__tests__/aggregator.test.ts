@@ -100,6 +100,29 @@ describe('Aggregator', () => {
     cleanup();
   });
 
+  it('should group model tokens by bucket (L65-69)', () => {
+    const { agg, db, cleanup } = setup();
+    const now = new Date();
+    const ts1 = new Date(now.getTime() - 2000).toISOString();
+    const ts2 = new Date(now.getTime() - 1000).toISOString();
+
+    // Insert tokens for 2 different models in the same time bucket
+    const insert = db.prepare(
+      'INSERT INTO token_usage_events (timestamp, session_key, model, input_tokens, output_tokens, cache_read, cache_write) VALUES (?, ?, ?, ?, ?, 0, 0)',
+    );
+    insert.run(ts1, 'sess1', 'claude-opus', 1000, 500);
+    insert.run(ts2, 'sess1', 'claude-sonnet', 2000, 1000);
+
+    agg.clearCache();
+    const m = agg.getMetrics() as {
+      buckets: Array<{ tokensByModel?: Array<{ model: string; tokensK: number }> }>;
+    };
+    // At least one bucket should have model token data
+    const withModels = m.buckets.filter((b) => b.tokensByModel && b.tokensByModel.length > 0);
+    expect(withModels.length).toBeGreaterThan(0);
+    cleanup();
+  });
+
   it('should detect gateway restart events', () => {
     const { agg, ingestLog, cleanup } = setup();
     ingestLog({ time: '10:00:00', level: 'INFO', module: 'system', message: 'gateway restart completed' });
@@ -142,6 +165,35 @@ describe('Aggregator', () => {
     expect(m.totalErrors).toBe(0);
     expect(m.totalTokensK).toBe(0);
     expect(m.buckets.length).toBeGreaterThan(0);
+    cleanup();
+  });
+
+  it('should split turns by user and assistant roles', () => {
+    const { agg, db, cleanup } = setup();
+    const now = new Date();
+    const ts1 = new Date(now.getTime() - 2000).toISOString();
+    const ts2 = new Date(now.getTime() - 1000).toISOString();
+    const ts3 = now.toISOString();
+
+    // Insert message_events with different roles
+    const insert = db.prepare(
+      'INSERT INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)',
+    );
+    insert.run(ts1, 'sess1', 'user', `hash-u-${Date.now()}`);
+    insert.run(ts2, 'sess1', 'assistant', `hash-a-${Date.now()}`);
+    insert.run(ts3, 'sess1', 'user', `hash-u2-${Date.now()}`);
+
+    agg.clearCache();
+    const m = agg.getMetrics() as {
+      buckets: Array<{ turns: number; userTurns: number; assistantTurns: number }>;
+    };
+    const totalUserTurns = m.buckets.reduce((s, b) => s + b.userTurns, 0);
+    const totalAssistantTurns = m.buckets.reduce((s, b) => s + b.assistantTurns, 0);
+    const totalTurns = m.buckets.reduce((s, b) => s + b.turns, 0);
+
+    expect(totalUserTurns).toBe(2);
+    expect(totalAssistantTurns).toBe(1);
+    expect(totalTurns).toBe(3);
     cleanup();
   });
 

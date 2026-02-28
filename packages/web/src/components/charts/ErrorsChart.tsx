@@ -15,15 +15,18 @@ interface BucketData {
 
 export function ErrorsChart({ data, onBucketClick }: { data: BucketData[]; onBucketClick?: (index: number) => void }) {
   const { t } = useI18n();
-  const footer = useMemo(() => getTooltips(t).chartFooter.errors, [t]);
-  const option = useMemo(() => buildErrorsOption(data, footer), [data, footer]);
+  const footer = useMemo(() => getTooltips(t).chartFooter.errors(), [t]);
+  const chartLabels = useMemo(() => ({ errors: t('charts.errors'), warnings: t('charts.warnings'), gatewayRestarted: t('charts.gatewayRestarted') }), [t]);
+  const option = useMemo(() => buildErrorsOption(data, footer, chartLabels), [data, footer, chartLabels]);
 
   const onEvents = useMemo(
     () =>
       onBucketClick
         ? {
             click: (params: { dataIndex: number; seriesName: string }) => {
-              if (params.seriesName !== 'Restart') {onBucketClick(params.dataIndex);}
+              if (params.seriesName !== 'Restart') {
+                onBucketClick(params.dataIndex);
+              }
             },
           }
         : undefined,

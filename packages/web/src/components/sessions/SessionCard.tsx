@@ -88,7 +88,7 @@ export function SessionCard({
           )}
           <StatusDot status={status} />
           <span className="text-[15px] font-semibold truncate text-fg">{displayName}</span>
-          {kind === 'cron' && <TagPill variant="cron">CRON</TagPill>}
+          {kind === 'cron' && <TagPill variant="cron">{t('sessions.cron')}</TagPill>}
         </div>
         <span className="text-xs flex-shrink-0 text-fg-muted">{relativeTime(updatedAt, t)}</span>
       </div>
@@ -173,7 +173,7 @@ function CompactCard({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             <StatusDot status={status} size="sm" />
-            <span className={`mono text-[13px] font-medium truncate ${isDone ? 'text-fg-muted' : 'text-fg'}`}>
+            <span className={`mono text-[13px] font-medium truncate min-w-0 ${isDone ? 'text-fg-muted' : 'text-fg'}`}>
               {displayName}
               {completionMark}
             </span>

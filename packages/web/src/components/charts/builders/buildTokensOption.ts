@@ -23,10 +23,13 @@ interface TokenBucket {
   tokensByModel?: ModelTokens[];
 }
 
+interface TokenLabels { tokens: string; total: string }
+
 export function buildTokensOption(
   data: TokenBucket[],
   selectedModel: string | null,
   footerText: string,
+  i18n: TokenLabels = { tokens: 'tokens', total: 'Total' },
 ): EChartsOption {
   const labels = data.map((d) => d.label);
 
@@ -56,7 +59,7 @@ export function buildTokensOption(
           }
           return tooltipHtml({
             title: p.name,
-            rows: [{ color: '#38bdf8', label: 'tokens', value: formatTokensK(p.value) }],
+            rows: [{ color: '#38bdf8', label: i18n.tokens, value: formatTokensK(p.value) }],
             footer: footerText,
           });
         },
@@ -113,7 +116,7 @@ export function buildTokensOption(
             value: formatTokensK(i.value),
           }));
         const total = items.reduce((s, i) => s + i.value, 0);
-        const extra = items.length > 1 ? `Total: <b>${formatTokensK(total)}</b>` : undefined;
+        const extra = items.length > 1 ? `${i18n.total}: <b>${formatTokensK(total)}</b>` : undefined;
         return tooltipHtml({ title: items[0].name, rows, footer: footerText, extra });
       },
     },

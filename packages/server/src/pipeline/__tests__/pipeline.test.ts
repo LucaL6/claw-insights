@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Pipeline } from '../pipeline';
-import type { Managed, Service,Source } from '../types';
+import type { Managed, Service, Source } from '../types';
 
 function mockSource(): Source & EventEmitter {
   const emitter = new EventEmitter();
@@ -36,11 +36,7 @@ describe('Pipeline', () => {
   it('wires source events to processor targets', () => {
     const source = mockSource();
     const processor = vi.fn();
-    new Pipeline()
-      .addSource('src', source)
-      .addProcessor('proc', processor)
-      .wire('src', 'data', ['proc'])
-      .build();
+    new Pipeline().addSource('src', source).addProcessor('proc', processor).wire('src', 'data', ['proc']).build();
     source.emit('data', 'hello');
     expect(processor).toHaveBeenCalledWith('hello');
   });
@@ -63,11 +59,7 @@ describe('Pipeline', () => {
   it('wires to object processor with handle method', () => {
     const source = mockSource();
     const proc = { handle: vi.fn() };
-    new Pipeline()
-      .addSource('src', source)
-      .addProcessor('proc', proc)
-      .wire('src', 'data', ['proc'])
-      .build();
+    new Pipeline().addSource('src', source).addProcessor('proc', proc).wire('src', 'data', ['proc']).build();
     source.emit('data', 'test');
     expect(proc.handle).toHaveBeenCalledWith('test');
   });
@@ -77,10 +69,7 @@ describe('Pipeline', () => {
   it('start() starts all services', () => {
     const svc1 = mockService();
     const svc2 = mockService();
-    const p = new Pipeline()
-      .addService('s1', svc1)
-      .addService('s2', svc2)
-      .build();
+    const p = new Pipeline().addService('s1', svc1).addService('s2', svc2).build();
     p.start();
     expect(svc1.start).toHaveBeenCalled();
     expect(svc2.start).toHaveBeenCalled();
@@ -90,11 +79,7 @@ describe('Pipeline', () => {
     const source = mockSource();
     const managed: Managed = { destroy: vi.fn() };
     const svc = mockService();
-    const p = new Pipeline()
-      .addSource('src', source)
-      .addManaged('res', managed)
-      .addService('svc', svc)
-      .build();
+    const p = new Pipeline().addSource('src', source).addManaged('res', managed).addService('svc', svc).build();
     p.destroy();
     expect(svc.stop).toHaveBeenCalled();
     expect(source.destroy).toHaveBeenCalled();
@@ -137,9 +122,7 @@ describe('Pipeline', () => {
   // ── State guards ──────────────────────────────────────────
 
   it('throws on double build()', () => {
-    const p = new Pipeline()
-      .addSource('src', mockSource())
-      .build();
+    const p = new Pipeline().addSource('src', mockSource()).build();
     expect(() => p.build()).toThrow(/already built/i);
   });
 
@@ -164,10 +147,7 @@ describe('Pipeline', () => {
   });
 
   it('throws on wire() after build()', () => {
-    const p = new Pipeline()
-      .addSource('src', mockSource())
-      .addProcessor('proc', vi.fn())
-      .build();
+    const p = new Pipeline().addSource('src', mockSource()).addProcessor('proc', vi.fn()).build();
     expect(() => p.wire('src', 'data', ['proc'])).toThrow(/after build/i);
   });
 
@@ -182,6 +162,26 @@ describe('Pipeline', () => {
     const source = mockSource();
     const p = new Pipeline().addSource('mySource', source).build();
     expect(p.get('mySource')).toBe(source);
+  });
+
+  it('throws if source removed between wire() and build() (L64)', () => {
+    const p = new Pipeline();
+    const src = mockSource();
+    p.addSource('s1', src);
+    p.addProcessor('p1', vi.fn());
+    p.wire('s1', 'data', ['p1']);
+    (p as any).sources.delete('s1');
+    expect(() => p.build()).toThrow('source "s1" not found');
+  });
+
+  it('throws if processor removed between wire() and build() (L69)', () => {
+    const p = new Pipeline();
+    const src = mockSource();
+    p.addSource('s1', src);
+    p.addProcessor('p1', vi.fn());
+    p.wire('s1', 'data', ['p1']);
+    (p as any).processors.delete('p1');
+    expect(() => p.build()).toThrow('processor "p1" not found');
   });
 
   it('get() retrieves managed resource by name', () => {

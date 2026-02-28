@@ -34,7 +34,7 @@ describe('ErrorsChart', () => {
 
   it('passes data to buildErrorsOption and forwards option to BaseChart', () => {
     renderWithProviders(<ErrorsChart data={data} />);
-    expect(mockBuildErrorsOption).toHaveBeenCalledWith(data, expect.any(String));
+    expect(mockBuildErrorsOption).toHaveBeenCalledWith(data, expect.any(String), expect.any(Object));
     expect(capturedOption).toEqual({ mockOption: true });
   });
 

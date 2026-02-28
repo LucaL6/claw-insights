@@ -1,19 +1,112 @@
-import { useCallback,useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from 'urql';
 
-import { EventDensityQuery,EventsQuery } from '../graphql/events-queries';
+import type { ProcessedEvent } from '../components/logs/EventRow';
+import { EventCountsQuery, EventDensityQuery, EventsQuery } from '../graphql/events-queries';
 import type { Route } from './useHashRoute';
+import { useHashRoute } from './useHashRoute';
 
 const ALL_TYPES = ['error', 'warning', 'gateway_restart'];
 
+// --- Search parser ---
+
+interface ParsedSearch {
+  module?: string;
+  regex?: RegExp | null;
+  regexError?: boolean;
+  text?: string;
+}
+
+export function parseSearch(input: string): ParsedSearch {
+  const trimmed = input.trim();
+  if (!trimmed) {return {};}
+
+  let module: string | undefined;
+  let remaining = trimmed;
+
+  const moduleMatch = remaining.match(/^module:(\S+)\s*/);
+  if (moduleMatch) {
+    module = moduleMatch[1];
+    remaining = remaining.slice(moduleMatch[0].length);
+  }
+
+  if (!remaining) {return { module };}
+
+  const regexMatch = remaining.match(/^\/(.+)\/([gimsuy]*)$/);
+  if (regexMatch) {
+    if (regexMatch[1].length > 200) {
+      // Too long — fallback to plain text search (including slashes)
+      return { module, regexError: true, text: remaining.toLowerCase() };
+    }
+    try {
+      // Strip global/sticky flags to avoid lastIndex mutation across rows
+      const safeFlags = regexMatch[2].replace(/[gy]/g, '');
+      return { module, regex: new RegExp(regexMatch[1], safeFlags) };
+    } catch {
+      // Invalid regex — fallback to plain text search (including slashes)
+      return { module, regexError: true, text: remaining.toLowerCase() };
+    }
+  }
+
+  return { module, text: remaining.toLowerCase() };
+}
+
+// --- Event processing (gap detection + repeat grouping) ---
+
+interface RawEvent {
+  timestamp: string;
+  type: string;
+  module: string;
+  message: string;
+}
+
+export function processEvents(events: RawEvent[]): ProcessedEvent[] {
+  const result: ProcessedEvent[] = [];
+
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    const prev = result[result.length - 1];
+
+    // Gap detection (reverse-chrono: prev.timestamp > ev.timestamp)
+    if (prev) {
+      const gap =
+        (new Date(prev.gapBefore ? prev.timestamp : prev.repeatFirst ?? prev.timestamp).getTime() -
+          new Date(ev.timestamp).getTime()) /
+        1000;
+      if (gap >= 300) {
+        result.push({ ...ev, gapBefore: gap });
+        continue;
+      }
+    }
+
+    // Repeat grouping (consecutive same module+message, no gap on prev)
+    if (prev && !prev.gapBefore && prev.module === ev.module && prev.message === ev.message) {
+      prev.repeatCount = (prev.repeatCount ?? 1) + 1;
+      prev.repeatFirst = ev.timestamp;
+      continue;
+    }
+
+    result.push({ ...ev });
+  }
+  return result;
+}
+
+// --- Hook ---
+
 export function useLogPageData(route: Route) {
+  const { navigate } = useHashRoute();
+
   // Parse URL params
   const urlFrom = route.params.from ? Number(route.params.from) : undefined;
   const urlTo = route.params.to ? Number(route.params.to) : undefined;
-  const urlTypes = route.params.type ? route.params.type.split(',') : undefined;
+
+  // Derive activeTypes from route params (no useState)
+  const activeTypes = useMemo(() => {
+    const urlTypes = route.params.type?.split(',').filter(Boolean);
+    return urlTypes?.length ? urlTypes : ALL_TYPES;
+  }, [route.params.type]);
 
   // State
-  const [activeTypes, setActiveTypes] = useState<string[]>(urlTypes ?? ALL_TYPES);
   const [search, setSearch] = useState('');
 
   // Time range
@@ -27,6 +120,11 @@ export function useLogPageData(route: Route) {
     variables: { from: fromTs, to: toTs, types: activeTypes, limit: 200 },
   });
   const [densityResult] = useQuery({ query: EventDensityQuery });
+  const [countsResult] = useQuery({
+    query: EventCountsQuery,
+    variables: { from: fromTs, to: toTs },
+    requestPolicy: 'cache-and-network',
+  });
 
   const events = eventsResult.data?.events;
   const density = densityResult.data?.eventDensity ?? [];
@@ -34,37 +132,51 @@ export function useLogPageData(route: Route) {
   // Toggle type filter
   const toggleType = useCallback(
     (type: string) => {
-      setActiveTypes((prev) => {
-        const next = prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type];
-        const params = new URLSearchParams();
-        if (urlFrom) {params.set('from', String(urlFrom));}
-        if (urlTo) {params.set('to', String(urlTo));}
-        if (next.length < ALL_TYPES.length) {params.set('type', next.join(','));}
-        const qs = params.toString();
-        window.history.replaceState(null, '', `#logs${qs ? '?' + qs : ''}`);
-        return next.length > 0 ? next : prev;
-      });
+      const next = activeTypes.includes(type)
+        ? activeTypes.filter((t) => t !== type)
+        : [...activeTypes, type];
+      if (next.length === 0) {return;}
+      const params = new URLSearchParams();
+      if (urlFrom) {params.set('from', String(urlFrom));}
+      if (urlTo) {params.set('to', String(urlTo));}
+      if (next.length < ALL_TYPES.length) {params.set('type', next.join(','));}
+      const qs = params.toString();
+      navigate(`#logs${qs ? '?' + qs : ''}`);
     },
-    [urlFrom, urlTo],
+    [activeTypes, urlFrom, urlTo, navigate],
   );
 
-  // Client-side search filter
-  const filteredEvents = useMemo(() => {
+  // Client-side search + processing
+  const parsed = useMemo(() => parseSearch(search), [search]);
+
+  const processedEvents = useMemo(() => {
     if (!events?.events) {return [];}
-    if (!search) {return events.events;}
-    const q = search.toLowerCase();
-    return events.events.filter(
-      (e: { message: string; module: string }) =>
-        e.message.toLowerCase().includes(q) || e.module.toLowerCase().includes(q),
-    );
-  }, [events, search]);
+
+    let filtered = events.events as RawEvent[];
+    if (parsed.module) {
+      const mod = parsed.module;
+      filtered = filtered.filter((e) => e.module === mod);
+    }
+    if (parsed.regex) {
+      const re = parsed.regex;
+      filtered = filtered.filter((e) => re.test(e.message) || re.test(e.module));
+    } else if (parsed.text) {
+      const t = parsed.text;
+      filtered = filtered.filter(
+        (e) => e.message.toLowerCase().includes(t) || e.module.toLowerCase().includes(t),
+      );
+    }
+
+    return processEvents(filtered);
+  }, [events, parsed]);
 
   // Time label
   const timeLabel = useMemo(() => {
     if (!urlFrom || !urlTo) {return undefined;}
     const f = new Date(urlFrom * 1000);
     const t = new Date(urlTo * 1000);
-    const fmt = (d: Date) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const fmt = (d: Date) =>
+      d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
     return `${fmt(f)} → ${fmt(t)}`;
   }, [urlFrom, urlTo]);
 
@@ -73,8 +185,10 @@ export function useLogPageData(route: Route) {
     toggleType,
     search,
     setSearch,
-    filteredEvents,
+    processedEvents,
+    searchError: parsed.regexError,
     density,
+    counts: countsResult.data?.eventCounts ?? { error: 0, warning: 0, restart: 0 },
     events,
     timeLabel,
     urlFrom,

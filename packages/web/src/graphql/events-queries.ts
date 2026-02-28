@@ -27,7 +27,20 @@ export const EventDensityQuery = graphql(/* GraphQL */ `
       hasError
       hasWarning
       hasRestart
+      errorCount
+      warningCount
+      restartCount
       epochStart
+    }
+  }
+`);
+
+export const EventCountsQuery = graphql(/* GraphQL */ `
+  query EventCounts($from: Int, $to: Int) {
+    eventCounts(from: $from, to: $to) {
+      error
+      warning
+      restart
     }
   }
 `);

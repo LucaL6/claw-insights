@@ -11,7 +11,9 @@ interface ErrorBucket {
   restartEvent: boolean;
 }
 
-export function buildErrorsOption(data: ErrorBucket[], footerText: string): EChartsOption {
+interface ErrorLabels { errors: string; warnings: string; gatewayRestarted: string }
+
+export function buildErrorsOption(data: ErrorBucket[], footerText: string, i18n: ErrorLabels = { errors: 'Errors', warnings: 'Warnings', gatewayRestarted: 'Gateway restarted' }): EChartsOption {
   const labels = data.map((d) => d.label);
   const restartPoints = data.filter((d) => d.restartEvent).map((d) => [d.bucket, 0]);
 
@@ -24,11 +26,15 @@ export function buildErrorsOption(data: ErrorBucket[], footerText: string): ECha
       trigger: 'axis',
       formatter: (params: unknown) => {
         const items = params as Array<{ seriesName: string; value: number; name: string; color: string }>;
+        const displayLabels: Record<string, string> = {
+          Warnings: i18n.warnings,
+          Errors: i18n.errors,
+        };
         const rows = items
           .filter((p) => p.seriesName !== 'Restart')
-          .map((p) => ({ color: p.color, label: p.seriesName, value: String(p.value), marker: '●' }));
+          .map((p) => ({ color: p.color, label: displayLabels[p.seriesName] ?? p.seriesName, value: String(p.value), marker: '●' }));
         const hasRestart = data.find((d) => d.label === items[0]?.name && d.restartEvent);
-        const extra = hasRestart ? '<span style="color:#fbbf24">↻</span> Gateway restarted' : undefined;
+        const extra = hasRestart ? `<span style="color:#fbbf24">↻</span> ${i18n.gatewayRestarted}` : undefined;
         return tooltipHtml({ title: items[0]?.name ?? '', rows, footer: footerText, extra });
       },
     },

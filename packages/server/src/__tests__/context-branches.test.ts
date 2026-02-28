@@ -92,8 +92,21 @@ vi.mock('../sources/system-info.js', () => ({
 }));
 vi.mock('../sources/collectors/log-tailer.js', () => ({ LogTailer: mockClass({ on() {}, destroy() {} }) }));
 vi.mock('../sources/collectors/lifetime-scanner.js', () => ({
-  LifetimeScanner: mockClass({ init: () => Promise.resolve(), destroy() {} }),
+  LifetimeScanner: mockClass({ init: () => Promise.resolve(), destroy() {}, getFileStates: () => new Map() }),
 }));
+vi.mock('../sources/collectors/transcript-watcher.js', () => {
+  const mockWatcher = { destroy: vi.fn() };
+  return {
+    createTranscriptWatcher: vi.fn(() => ({
+      pollEvery: vi.fn().mockReturnThis(),
+      dirScanEvery: vi.fn().mockReturnThis(),
+      byteBudget: vi.fn().mockReturnThis(),
+      emitTo: vi.fn().mockReturnThis(),
+      onFlush: vi.fn().mockReturnThis(),
+      start: vi.fn(() => mockWatcher),
+    })),
+  };
+});
 vi.mock('../sources/readers/spawn-tracker.js', () => ({ SpawnTracker: mockClass({ ingest() {} }) }));
 vi.mock('../sources/aggregator.js', () => ({
   Aggregator: mockClass({ ingestLog() {}, getMetrics: () => ({ totalTokensK: 0 }) }),
@@ -102,7 +115,7 @@ vi.mock('../sources/collectors/metrics-collector.js', () => ({ SystemSampler: mo
 vi.mock('../sources/data-validator.js', () => ({ DataValidator: mockClass({ start() {}, stop() {} }) }));
 vi.mock('../sources/data-retention.js', () => ({ DataRetention: mockClass({ start() {}, stop() {} }) }));
 vi.mock('../db/token-queries.js', () => ({ insertTokenUsageEventBatch: vi.fn() }));
-vi.mock('../db/message-queries.js', () => ({ insertMessageEventBatch: vi.fn(), deleteAllMessageEvents: vi.fn() }));
+vi.mock('../db/message-queries.js', () => ({ insertMessageEventBatch: vi.fn() }));
 vi.mock('../sources/collectors/log-ingester.js', () => ({ createLogIngester: vi.fn(() => ({ handle: vi.fn() })) }));
 
 import type { AppContext } from '../context';
@@ -114,7 +127,11 @@ function mockCtx(overrides: Partial<AppContext> = {}): AppContext {
   return {
     db: { close: vi.fn() },
     pipeline: { start: vi.fn(), destroy: vi.fn() },
-    lifetimeScanner: { init: vi.fn().mockResolvedValue(undefined) },
+    lifetimeScanner: { init: vi.fn().mockResolvedValue(undefined), getFileStates: vi.fn(() => new Map()) },
+    transcriptWatcher: null,
+    destroyed: false,
+    tokenBus: { on: vi.fn(), emit: vi.fn(), destroy: vi.fn() },
+    messageBus: { on: vi.fn(), emit: vi.fn(), destroy: vi.fn() },
     flushTokenEvents: vi.fn().mockReturnValue([]),
     flushMessageEvents: vi.fn().mockReturnValue([]),
     ...overrides,

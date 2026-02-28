@@ -4,7 +4,7 @@ import type { LogEntry } from '@claw-insights/shared';
 
 import { config } from './config.js';
 import { initDatabase } from './db/init.js';
-import { deleteAllMessageEvents, insertMessageEventBatch } from './db/message-queries.js';
+import { insertMessageEventBatch } from './db/message-queries.js';
 import { insertTokenUsageEventBatch } from './db/token-queries.js';
 import { type MessageEvent, MessageEventBus } from './events/message-event-bus.js';
 import type { TokenUsageEvent } from './events/token-event-bus.js';
@@ -16,6 +16,7 @@ import { LifetimeScanner } from './sources/collectors/lifetime-scanner.js';
 import { createLogIngester } from './sources/collectors/log-ingester.js';
 import { LogTailer } from './sources/collectors/log-tailer.js';
 import { SystemSampler } from './sources/collectors/metrics-collector.js';
+import { createTranscriptWatcher, type TranscriptWatcher } from './sources/collectors/transcript-watcher.js';
 import { DataRetention } from './sources/data-retention.js';
 import { DataValidator } from './sources/data-validator.js';
 import { createGatewayClient, type GatewayClient } from './sources/gateway-cli.js';
@@ -36,6 +37,10 @@ export interface AppContext {
   dataValidator: DataValidator;
   dataRetention: DataRetention;
   lifetimeScanner: LifetimeScanner;
+  transcriptWatcher: TranscriptWatcher | null;
+  destroyed: boolean;
+  tokenBus: TokenEventBus;
+  messageBus: MessageEventBus;
   flushTokenEvents: () => void;
   flushMessageEvents: () => void;
   gatewayClient: GatewayClient;
@@ -102,16 +107,7 @@ export async function createContext(): Promise<AppContext> {
     aggregateIntervalMs: config.aggregateIntervalMs,
   });
 
-  const lifetimeScanner = new LifetimeScanner(
-    config.transcriptsDir,
-    config.deviceJsonPath,
-    tokenBus,
-    messageBus,
-    () => {
-      deleteAllMessageEvents(db);
-      messageEventBuffer = [];
-    },
-  );
+  const lifetimeScanner = new LifetimeScanner(config.transcriptsDir, config.deviceJsonPath, tokenBus, messageBus);
 
   const pipeline = new Pipeline()
     // Sources — emit events
@@ -149,6 +145,10 @@ export async function createContext(): Promise<AppContext> {
     dataValidator,
     dataRetention,
     lifetimeScanner,
+    transcriptWatcher: null,
+    destroyed: false,
+    tokenBus,
+    messageBus,
     flushTokenEvents,
     flushMessageEvents,
     gatewayClient,
@@ -161,8 +161,22 @@ export function startContext(ctx: AppContext): void {
   ctx.lifetimeScanner
     .init()
     .then(() => {
+      if (ctx.destroyed) {
+        return;
+      }
       ctx.flushTokenEvents();
       ctx.flushMessageEvents();
+
+      const fileStates = ctx.lifetimeScanner.getFileStates();
+      ctx.transcriptWatcher = createTranscriptWatcher(config.transcriptsDir)
+        .pollEvery(10_000)
+        .dirScanEvery(60_000)
+        .emitTo(ctx.tokenBus, ctx.messageBus)
+        .onFlush(() => {
+          ctx.flushTokenEvents();
+          ctx.flushMessageEvents();
+        })
+        .start(fileStates);
     })
     .catch((err: unknown) => {
       console.error('lifetime scanner init failed:', err);
@@ -170,6 +184,8 @@ export function startContext(ctx: AppContext): void {
 }
 
 export function destroyContext(ctx: AppContext): void {
+  ctx.destroyed = true;
+  ctx.transcriptWatcher?.destroy();
   ctx.flushTokenEvents();
   ctx.flushMessageEvents();
   ctx.pipeline.destroy();

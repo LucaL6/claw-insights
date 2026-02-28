@@ -1,16 +1,22 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
 
+import { contentHash } from '../sources/collectors/transcript-parser.js';
 import { bucketExpr, cached } from './query-utils.js';
 
 interface MessageEventRecord {
   timestamp: string;
   sessionKey: string;
   role: string;
+  lineHash: string;
 }
 
 export function insertMessageEvent(db: Database, event: MessageEventRecord): void {
-  const stmt = cached(db, 'INSERT INTO message_events (timestamp, session_key, role) VALUES (?, ?, ?)');
-  stmt.run(event.timestamp, event.sessionKey, event.role);
+  const stmt = cached(
+    db,
+    'INSERT OR IGNORE INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)',
+  );
+  const hash = contentHash(event.timestamp, event.sessionKey, `${event.role}|${event.lineHash}`);
+  stmt.run(event.timestamp, event.sessionKey, event.role, hash);
 }
 
 export function insertMessageEventBatch(db: Database, events: MessageEventRecord[]): void {
@@ -20,9 +26,13 @@ export function insertMessageEventBatch(db: Database, events: MessageEventRecord
 
   db.exec('BEGIN');
   try {
-    const stmt = cached(db, 'INSERT INTO message_events (timestamp, session_key, role) VALUES (?, ?, ?)');
+    const stmt = cached(
+      db,
+      'INSERT OR IGNORE INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)',
+    );
     for (const e of events) {
-      stmt.run(e.timestamp, e.sessionKey, e.role);
+      const hash = contentHash(e.timestamp, e.sessionKey, `${e.role}|${e.lineHash}`);
+      stmt.run(e.timestamp, e.sessionKey, e.role, hash);
     }
     db.exec('COMMIT');
   } catch (err) {
