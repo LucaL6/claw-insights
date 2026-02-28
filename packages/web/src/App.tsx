@@ -5,6 +5,7 @@ import type { MetricsRange } from './components/charts/metrics/GranularityPicker
 import { MetricsSection } from './components/charts/metrics/MetricsSection';
 import { GatewayBanner } from './components/gateway/GatewayBanner';
 import { MainLayout } from './components/layout/MainLayout';
+import { Sidebar } from './components/layout/Sidebar';
 import { LogPage } from './components/logs/LogPage';
 import { SessionPanel } from './components/sessions/SessionPanel';
 import { TopBar } from './components/topbar/TopBar';
@@ -12,6 +13,7 @@ import { AuthErrorScreen } from './components/ui/AuthErrorScreen';
 import { ToastContainer } from './components/ui/Toast';
 import { AuthErrorProvider, useAuthError } from './context/AuthErrorContext';
 import { type Route, useHashRoute } from './hooks/useHashRoute';
+import { useIsBelowMd } from './hooks/useIsBelowMd';
 import { usePreference } from './hooks/usePreference';
 import { I18nProvider } from './i18n/context';
 import { client, setAuthErrorCallback } from './lib/urql-client';
@@ -59,6 +61,7 @@ function Dashboard({ navigate, route }: { navigate: (h: string) => void; route: 
 
 function AppInner({ route, navigate }: { route: Route; navigate: (h: string) => void }) {
   const { authError, setAuthError } = useAuthError();
+  const isMobile = useIsBelowMd();
 
   useEffect(() => {
     setAuthErrorCallback(() => {
@@ -73,27 +76,37 @@ function AppInner({ route, navigate }: { route: Route; navigate: (h: string) => 
     return <AuthErrorScreen />;
   }
 
-  return (
-    <Provider value={client}>
-      {route.page === 'dashboard' ? (
-        <Dashboard navigate={navigate} route={route} />
-      ) : (
-        <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)' }}>
-          <header
-            className="backdrop-blur-sm sticky top-0 z-50 px-5 pt-2 pb-0"
-            style={{
-              borderBottom: '1px solid var(--border)',
-              backgroundColor: 'var(--bg-surface-solid)',
-              opacity: 0.97,
-            }}
-          >
-            <TopBar currentPage="logs" onNavigate={navigate} metricsRange="TWENTY_FOUR_HOUR" />
-          </header>
-          <LogPage route={route} navigate={navigate} />
-        </div>
-      )}
-    </Provider>
-  );
+  const content =
+    route.page === 'dashboard' ? (
+      <Dashboard navigate={navigate} route={route} />
+    ) : (
+      <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+        <header
+          className="backdrop-blur-sm sticky top-0 z-50 px-5 pt-2 pb-0 flex-shrink-0"
+          style={{
+            borderBottom: '1px solid var(--border)',
+            backgroundColor: 'var(--bg-surface-solid)',
+            opacity: 0.97,
+          }}
+        >
+          <TopBar currentPage="logs" onNavigate={navigate} metricsRange="TWENTY_FOUR_HOUR" />
+        </header>
+        <LogPage route={route} navigate={navigate} />
+      </div>
+    );
+
+  if (!isMobile) {
+    return (
+      <div className="flex h-screen">
+        <Sidebar currentPage={route.page} onNavigate={navigate} />
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">{content}</div>
+      </div>
+    );
+  }
+
+  // Mobile: no height-constrained parent, so wrap with min-h-screen
+  // to ensure Logs page fills viewport (Dashboard's MainLayout already has h-screen)
+  return <div className="min-h-screen">{content}</div>;
 }
 
 function App() {
@@ -101,10 +114,12 @@ function App() {
   return (
     <ThemeProvider>
       <I18nProvider>
-        <AuthErrorProvider>
-          <AppInner route={route} navigate={navigate} />
-          <ToastContainer />
-        </AuthErrorProvider>
+        <Provider value={client}>
+          <AuthErrorProvider>
+            <AppInner route={route} navigate={navigate} />
+            <ToastContainer />
+          </AuthErrorProvider>
+        </Provider>
       </I18nProvider>
     </ThemeProvider>
   );

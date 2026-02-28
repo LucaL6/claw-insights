@@ -54,7 +54,6 @@
   "logs.title": "Events",
   "logs.filterPlaceholder": "Filter events...",
   "brand.name": "Claw Insights",
-  "brand.footer": "Claw Insights",
   "tooltip.sections.sessions": "Active session count per bucket",
   "tooltip.sections.tokens": "Token consumption per bucket",
   "tooltip.sections.errors": "Error and warning count per bucket",
@@ -99,5 +98,7 @@
   "metrics.roleUser": "User",
   "metrics.roleAssistant": "OpenClaw",
   "tooltip.sections.conversations": "Message count per bucket",
-  "tooltip.detail.sections.conversations": "Number of messages per bucket, split by role (user sends vs OpenClaw replies)"
+  "tooltip.detail.sections.conversations": "Number of messages per bucket, split by role (user sends vs OpenClaw replies)",
+  "sidebar.collapse": "Collapse sidebar",
+  "sidebar.expand": "Expand sidebar"
 }

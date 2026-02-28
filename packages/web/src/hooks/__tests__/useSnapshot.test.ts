@@ -101,6 +101,52 @@ describe('useSnapshot', () => {
     expect(body.range).toBe('24h');
   });
 
+  it('generates fallback filename when X-Filename header is absent', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      blob: async () => new Blob(['png']),
+      headers: new Headers({}), // no X-Filename
+    } as unknown as Response);
+
+    let capturedDownload = '';
+    const origCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
+      if (String(tagName).toLowerCase() === 'a') {
+        return {
+          click: vi.fn(),
+          href: '',
+          set download(v: string) {
+            capturedDownload = v;
+          },
+          get download() {
+            return capturedDownload;
+          },
+        } as unknown as HTMLAnchorElement;
+      }
+      return origCreate(tagName, options);
+    }) as typeof document.createElement);
+
+    const { result } = renderHook(() => useSnapshot());
+    await act(async () => {
+      await result.current.takeSnapshot({ section: 'dashboard', range: 'ONE_HOUR', theme: 'dark', lang: 'en' });
+    });
+
+    expect(capturedDownload).toMatch(/^claw-insights-standard-1h-dark-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}\.png$/);
+  });
+
+  it('handles non-Error throw', async () => {
+    vi.mocked(globalThis.fetch).mockRejectedValue('string error');
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { result } = renderHook(() => useSnapshot());
+    await act(async () => {
+      await result.current.takeSnapshot({ section: 'dashboard', range: 'ONE_HOUR', theme: 'dark', lang: 'en' });
+    });
+
+    expect(result.current.snapshotting).toBe(false);
+    spy.mockRestore();
+  });
+
   it('handles fetch failure', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue({ ok: false } as Response);
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});

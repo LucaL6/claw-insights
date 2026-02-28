@@ -6,6 +6,7 @@ import type { SnapshotEngine, SnapshotResult } from '../../services/snapshot-eng
 import {
   CollectTimeoutError,
   ErrorCodes,
+  GatewayUnreachableError,
   PayloadTooLargeError,
   QueueFullError,
   QueueTimeoutError,
@@ -169,6 +170,15 @@ describe('createSnapshotHandler', () => {
     await handler({ body: {} } as unknown as Request, res);
     expect(res.status).toHaveBeenCalledWith(413);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.PAYLOAD_TOO_LARGE }));
+  });
+
+  it('returns 502 GATEWAY_UNREACHABLE when gateway is not reachable', async () => {
+    executeMock.mockRejectedValue(new GatewayUnreachableError());
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    expect(res.status).toHaveBeenCalledWith(502);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: ErrorCodes.GATEWAY_UNREACHABLE }));
   });
 
   it('returns 500 RENDER_FAILED on unexpected errors', async () => {

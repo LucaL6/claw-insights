@@ -154,6 +154,97 @@ describe('buildSnapshotData – branch coverage', () => {
     expect(result.sessions![0].name).toBe('fallback-name');
   });
 
+  test('tokensByModel percent rounding correction adds remainder to first model', async () => {
+    // 3 models with 1/3 each → Math.round(33.33) = 33 × 3 = 99, correction adds 1
+    const result = await buildSnapshotData(
+      makeSources({
+        getModelTokenUsage: vi.fn().mockReturnValue([
+          { model: 'a', tokensK: 1 },
+          { model: 'b', tokensK: 1 },
+          { model: 'c', tokensK: 1 },
+        ]),
+      }),
+      { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
+    );
+    const percents = result.tokensByModel.map((m) => m.percent);
+    expect(percents.reduce((s, p) => s + p, 0)).toBe(100);
+  });
+
+  test('negative token trend shows down arrow', async () => {
+    const result = await buildSnapshotData(makeSources({ getTokenTrend: vi.fn().mockReturnValue(-15) }), {
+      detail: 'standard',
+      range: 'TWENTY_FOUR_HOUR',
+    });
+    expect(result.tokensTrend).toContain('↓');
+    expect(result.tokensTrend).toContain('15%');
+  });
+
+  test('large positive trend shows warning prefix', async () => {
+    const result = await buildSnapshotData(makeSources({ getTokenTrend: vi.fn().mockReturnValue(150) }), {
+      detail: 'standard',
+      range: 'TWENTY_FOUR_HOUR',
+    });
+    expect(result.tokensTrend).toContain('⚠️');
+    expect(result.tokensTrend).toContain('↑');
+  });
+
+  test('more than 5 models groups rest into Other', async () => {
+    const models = Array.from({ length: 7 }, (_, i) => ({ model: `model${i}`, tokensK: 10 }));
+    const result = await buildSnapshotData(makeSources({ getModelTokenUsage: vi.fn().mockReturnValue(models) }), {
+      detail: 'compact',
+      range: 'TWENTY_FOUR_HOUR',
+    });
+    expect(result.tokensByModel.length).toBe(6); // 5 + Other
+    expect(result.tokensByModel[5].model).toBe('other');
+  });
+
+  test('zero total model tokens gives 0% to all models', async () => {
+    const result = await buildSnapshotData(
+      makeSources({ getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'x', tokensK: 0 }]) }),
+      { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
+    );
+    expect(result.tokensByModel[0].percent).toBe(0);
+  });
+
+  test('zero token trend shows no trend', async () => {
+    const result = await buildSnapshotData(makeSources({ getTokenTrend: vi.fn().mockReturnValue(0) }), {
+      detail: 'standard',
+      range: 'TWENTY_FOUR_HOUR',
+    });
+    expect(result.tokensTrend).toBeUndefined();
+  });
+
+  test('null token trend shows no trend', async () => {
+    const result = await buildSnapshotData(makeSources({ getTokenTrend: vi.fn().mockReturnValue(null) }), {
+      detail: 'standard',
+      range: 'TWENTY_FOUR_HOUR',
+    });
+    expect(result.tokensTrend).toBeUndefined();
+  });
+
+  test('full detail with session having empty subAgents array', async () => {
+    const result = await buildSnapshotData(
+      makeSources({
+        getSessions: () => [
+          {
+            displayName: 'NoSubs',
+            status: 'active',
+            totalTokens: 100,
+            subAgents: [],
+          },
+        ],
+      }),
+      { detail: 'full', range: 'TWENTY_FOUR_HOUR' },
+    );
+    expect(result.sessions![0].subAgents).toBeUndefined();
+  });
+
+  test('compact detail does not include sessions or buckets', async () => {
+    const result = await buildSnapshotData(makeSources(), { detail: 'compact', range: 'TWENTY_FOUR_HOUR' });
+    expect(result.sessions).toBeUndefined();
+    expect(result.buckets).toBeUndefined();
+  });
+
   test('sub-agent name fallback: uses name when no displayName', async () => {
     const result = await buildSnapshotData(
       makeSources({

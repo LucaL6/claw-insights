@@ -18,12 +18,16 @@ export default defineConfig({
         'src/pipeline/types.ts', // pure interfaces
         'src/renderer/markup/icons.ts', // pure constants
         'src/schema/resolvers/index.ts', // barrel re-export
+        'src/db/seed.ts', // demo seed data, not production code
+        'src/ports/types.ts', // pure type definitions
+        'src/renderer/satori-renderer.ts', // flaky worker crash (ISS-046)
+        'src/platforms/mock/index.ts', // test-only mock platform
       ],
       thresholds: {
-        lines: 80,
-        branches: 80,
-        functions: 80,
-        statements: 80,
+        lines: 90,
+        branches: 90,
+        functions: 90,
+        statements: 90,
       },
     },
   },

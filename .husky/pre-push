@@ -6,6 +6,9 @@ echo "🔍 Running ESLint..."
 npm run -w @claw-insights/server lint
 npm run -w @claw-insights/web lint
 
+echo "🔨 Building (type-check)..."
+npm run build
+
 echo "🧪 Running tests with coverage..."
 npm run -w @claw-insights/server test -- --coverage --exclude "**/satori*"
 npm run -w @claw-insights/web test -- --exclude "**/MetricsSection*"

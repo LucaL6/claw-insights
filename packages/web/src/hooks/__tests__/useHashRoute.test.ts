@@ -1,5 +1,5 @@
-import { act, cleanup,renderHook } from '@testing-library/react';
-import { afterEach,beforeEach, describe, expect, it } from 'vitest';
+import { act, cleanup, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { useHashRoute } from '../useHashRoute';
 
@@ -33,6 +33,12 @@ describe('useHashRoute', () => {
     window.location.hash = '#metrics';
     const { result } = renderHook(() => useHashRoute());
     expect(result.current.route.page).toBe('dashboard');
+  });
+
+  it('handles query param with no value', () => {
+    window.location.hash = '#logs?flag';
+    const { result } = renderHook(() => useHashRoute());
+    expect(result.current.route.params).toEqual({ flag: 'undefined' });
   });
 
   it('navigate sets hash and updates route on hashchange', () => {

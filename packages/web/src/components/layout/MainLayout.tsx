@@ -1,7 +1,6 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode } from 'react';
 
-import { useTopBarData } from '../../hooks/useTopBarData';
-import { useI18n } from '../../i18n/context';
+import { useIsBelowMd } from '../../hooks/useIsBelowMd';
 import { StaleOverlay } from '../gateway/StaleOverlay';
 import { LayoutTabs } from './LayoutTabs';
 
@@ -12,28 +11,8 @@ interface Props {
   metrics: ReactNode;
 }
 
-const MD = 768;
-
-function useIsBelowMd() {
-  const [below, setBelow] = useState(() => typeof window !== 'undefined' && window.innerWidth < MD);
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${MD - 1}px)`);
-    setBelow(mq.matches); // eslint-disable-line react-hooks/set-state-in-effect -- sync initial value from matchMedia
-    const handler = (e: MediaQueryListEvent) => {
-      setBelow(e.matches);
-    };
-    mq.addEventListener('change', handler);
-    return () => {
-      mq.removeEventListener('change', handler);
-    };
-  }, []);
-  return below;
-}
-
 export function MainLayout({ topBar, banner, sessions, metrics }: Props) {
   const tabMode = useIsBelowMd();
-  const { t } = useI18n();
-  const { version } = useTopBarData();
 
   return (
     <div className="h-screen flex flex-col grid-bg bg-base text-fg overflow-hidden">
@@ -65,11 +44,6 @@ export function MainLayout({ topBar, banner, sessions, metrics }: Props) {
           </div>
         )}
       </main>
-      <footer className="py-2 text-center flex-shrink-0 border-t border-edge-subtle">
-        <span className="text-xs text-fg-dim/50">
-          💡 {t('brand.footer')} v{version}
-        </span>
-      </footer>
     </div>
   );
 }
