@@ -5,7 +5,7 @@ import { DataRetention, type RetentionConfig } from '../data-retention.js';
 
 describe('DataRetention branch coverage', () => {
   it('runOnce reentrancy guard prevents double execution', () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const config: RetentionConfig = { rawRetentionDays: 0, hourlyRetention: 'permanent', aggregateIntervalMs: 60_000 };
     const retention = new DataRetention(db, config);
     // Access private isRunning via any
@@ -17,7 +17,7 @@ describe('DataRetention branch coverage', () => {
   });
 
   it('prune deletes old raw data when rawRetentionDays > 0', () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const config: RetentionConfig = { rawRetentionDays: 1, hourlyRetention: 'permanent', aggregateIntervalMs: 60_000 };
     const retention = new DataRetention(db, config);
 
@@ -46,7 +46,7 @@ describe('DataRetention branch coverage', () => {
   });
 
   it('prune deletes old hourly data when hourlyRetention is a valid number', () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const config: RetentionConfig = { rawRetentionDays: 0, hourlyRetention: '1', aggregateIntervalMs: 60_000 };
     const retention = new DataRetention(db, config);
 
@@ -65,7 +65,7 @@ describe('DataRetention branch coverage', () => {
   });
 
   it('prune skips hourly pruning when hourlyRetention is invalid string', () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const config: RetentionConfig = {
       rawRetentionDays: 0,
       hourlyRetention: 'invalid-not-a-number',
@@ -90,7 +90,7 @@ describe('DataRetention branch coverage', () => {
   });
 
   it('prune skips hourly pruning when hourlyRetention parses to 0', () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const config: RetentionConfig = {
       rawRetentionDays: 0,
       hourlyRetention: '0',
@@ -114,7 +114,7 @@ describe('DataRetention branch coverage', () => {
   });
 
   it('prune skips hourly pruning when hourlyRetention is negative', () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const config: RetentionConfig = {
       rawRetentionDays: 0,
       hourlyRetention: '-5',

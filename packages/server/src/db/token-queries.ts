@@ -1,7 +1,6 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
-
 import type { TokenUsageEvent } from '../events/token-event-bus.js';
 import { createChildLogger } from '../logger.js';
+import type { Database } from './database.js';
 import { bucketExpr, cached, timedQuery } from './query-utils.js';
 
 const log = createChildLogger('db:token-queries');
@@ -24,16 +23,14 @@ export function insertTokenUsageEvent(db: Database, event: TokenUsageEvent): voi
   );
 }
 
-export function insertTokenUsageEventBatch(db: Database, events: TokenUsageEvent[], inTransaction = true): void {
+export function insertTokenUsageEventBatch(db: Database, events: TokenUsageEvent[]): void {
   if (events.length === 0) {
     return;
   }
-  if (inTransaction) {
-    db.exec('BEGIN');
-  }
-  try {
+
+  db.transaction((tx) => {
     const stmt = cached(
-      db,
+      tx,
       'INSERT OR IGNORE INTO token_usage_events (timestamp, session_key, model, input_tokens, output_tokens, cache_read, cache_write) VALUES (?, ?, ?, ?, ?, ?, ?)',
     );
     for (const e of events) {
@@ -47,15 +44,7 @@ export function insertTokenUsageEventBatch(db: Database, events: TokenUsageEvent
         e.cacheWriteTokens,
       );
     }
-    if (inTransaction) {
-      db.exec('COMMIT');
-    }
-  } catch (err) {
-    if (inTransaction) {
-      db.exec('ROLLBACK');
-    }
-    throw err;
-  }
+  });
 }
 
 // ── Bucketed Reads ──
@@ -74,7 +63,7 @@ export function getBucketedTokenUsage(
       db,
       `SELECT ${expr} AS bucket, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket HAVING tokensK > 0`,
     );
-    return stmt.all(startTs, endTs) as Array<{ bucket: number; tokensK: number }>;
+    return stmt.all(startTs, endTs);
   });
 }
 
@@ -90,7 +79,7 @@ export function getBucketedModelTokenUsage(
       db,
       `SELECT ${expr} AS bucket, model, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket, model HAVING tokensK > 0`,
     );
-    return stmt.all(startTs, endTs) as Array<{ bucket: number; model: string; tokensK: number }>;
+    return stmt.all(startTs, endTs);
   });
 }
 
@@ -100,7 +89,7 @@ export function getRangeTokenUsageK(db: Database, startTs: string, endTs: string
       db,
       `SELECT COALESCE(${TOKEN_SUM}, 0) AS total FROM token_usage_events WHERE timestamp >= ? AND timestamp < ?`,
     );
-    const row = stmt.get(startTs, endTs) as { total: number } | undefined;
+    const row = stmt.get(startTs, endTs);
     return row?.total ?? 0;
   });
 }
@@ -115,6 +104,6 @@ export function getRangeModelTokenUsage(
       db,
       `SELECT model, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY model HAVING tokensK > 0 ORDER BY tokensK DESC`,
     );
-    return stmt.all(startTs, endTs) as Array<{ model: string; tokensK: number }>;
+    return stmt.all(startTs, endTs);
   });
 }

@@ -1,5 +1,4 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
-
+import type { Database } from '../db/database.js';
 import { insertEvent } from '../db/event-queries.js';
 import { createChildLogger } from '../logger.js';
 

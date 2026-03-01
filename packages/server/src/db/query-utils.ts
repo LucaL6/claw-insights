@@ -1,7 +1,8 @@
 import { performance } from 'node:perf_hooks';
-import type { DatabaseSync as Database } from 'node:sqlite';
 
 import type { Logger } from 'pino';
+
+import type { Database } from './database.js';
 
 // timedQuery helper uses caller-provided logger (no module-level log needed)
 

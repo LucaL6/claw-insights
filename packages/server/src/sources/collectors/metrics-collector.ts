@@ -1,5 +1,4 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
-
+import type { Database } from '../../db/database.js';
 import { insertSystemSample } from '../../db/system-queries.js';
 import { emitChange } from '../../events.js';
 import { createChildLogger } from '../../logger.js';

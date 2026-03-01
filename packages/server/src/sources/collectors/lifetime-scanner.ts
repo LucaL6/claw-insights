@@ -1,6 +1,6 @@
 import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
-import type { DatabaseSync as Database } from 'node:sqlite';
 
+import type { Database } from '../../db/database.js';
 import { insertMessageEventBatch } from '../../db/message-queries.js';
 import { cached } from '../../db/query-utils.js';
 import {
@@ -90,16 +90,11 @@ export function createLifetimeScanner(opts: {
     if (tokenBuf.length === 0 && msgBuf.length === 0 && stateBuf.length === 0) {
       return;
     }
-    db.exec('BEGIN');
-    try {
-      insertTokenUsageEventBatch(db, tokenBuf, false);
-      insertMessageEventBatch(db, msgBuf, false);
-      upsertScanState(db, stateBuf, false);
-      db.exec('COMMIT');
-    } catch (err) {
-      db.exec('ROLLBACK');
-      throw err;
-    }
+    db.transaction((tx) => {
+      insertTokenUsageEventBatch(tx, tokenBuf);
+      insertMessageEventBatch(tx, msgBuf);
+      upsertScanState(tx, stateBuf);
+    });
     tokenBuf = [];
     msgBuf = [];
     stateBuf = [];
@@ -283,9 +278,7 @@ function resolveCreatedAt(db: Database, deviceJsonPath: string): number {
 }
 
 function backfillFirstTimestamps(db: Database): void {
-  const rows = db.prepare('SELECT file_path FROM scan_state WHERE first_timestamp_ms IS NULL').all() as Array<{
-    file_path: string;
-  }>;
+  const rows = db.prepare('SELECT file_path FROM scan_state WHERE first_timestamp_ms IS NULL').all();
   if (rows.length === 0) {
     return;
   }
@@ -300,17 +293,12 @@ function backfillFirstTimestamps(db: Database): void {
   }
 
   if (updates.length > 0) {
-    const stmt = cached(db, 'UPDATE scan_state SET first_timestamp_ms = ? WHERE file_path = ?');
-    db.exec('BEGIN');
-    try {
+    db.transaction((tx) => {
+      const stmt = cached(tx, 'UPDATE scan_state SET first_timestamp_ms = ? WHERE file_path = ?');
       for (const u of updates) {
         stmt.run(u.ts, u.path);
       }
-      db.exec('COMMIT');
-    } catch (err) {
-      db.exec('ROLLBACK');
-      throw err;
-    }
+    });
   }
 }
 

@@ -8,7 +8,7 @@ import { getRangeTokenUsageK } from '../token-queries.js';
 
 function setup() {
   const dbPath = join(tmpdir(), `tq-edge-${Date.now()}-${Math.random()}.db`);
-  const db = initDatabase(dbPath);
+  const db = initDatabase({ dbPath });
   return {
     db,
     cleanup: () => {

@@ -1,11 +1,11 @@
 import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { DatabaseSync } from 'node:sqlite';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { initDatabase } from '../../../db/init';
+import type { Database } from '../../../db/database.js';
+import { initDatabase } from '../../../db/init.js';
 import { type MessageEvent, MessageEventBus } from '../../../events/message-event-bus';
 import { TokenEventBus, type TokenUsageEvent } from '../../../events/token-event-bus';
 import { createLifetimeScanner } from '../lifetime-scanner';
@@ -14,8 +14,8 @@ function tmpDir() {
   return mkdtempSync(join(tmpdir(), 'lifetime-test-'));
 }
 
-function tmpDb(dir: string): DatabaseSync {
-  return initDatabase(join(dir, 'test.db'));
+function tmpDb(dir: string): Database {
+  return initDatabase({ dbPath: join(dir, 'test.db') });
 }
 
 function writeLine(obj: Record<string, unknown>): string {
@@ -74,7 +74,7 @@ const sessionLine = (ts?: string) =>
 describe('LifetimeScanner', () => {
   let dir: string;
   let deviceDir: string;
-  let db: DatabaseSync;
+  let db: Database;
 
   beforeEach(() => {
     dir = tmpDir();

@@ -3,12 +3,12 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
-import { initDatabase } from '../../db/init';
+import { initDatabase } from '../../db/init.js';
 import { DataRetention, type RetentionConfig } from '../data-retention';
 
 function setup(configOverrides: Partial<RetentionConfig> = {}) {
   const dbPath = join(tmpdir(), `dr-${Date.now()}-${Math.random()}.db`);
-  const db = initDatabase(dbPath);
+  const db = initDatabase({ dbPath });
   const config: RetentionConfig = {
     rawRetentionDays: 7,
     hourlyRetention: 'permanent',

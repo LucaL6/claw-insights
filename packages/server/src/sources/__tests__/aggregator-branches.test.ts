@@ -3,12 +3,12 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 
-import { initDatabase } from '../../db/init';
+import { initDatabase } from '../../db/init.js';
 import { Aggregator } from '../aggregator';
 
 function setup() {
   const dbPath = join(tmpdir(), `agg-br-${Date.now()}-${Math.random()}.db`);
-  const db = initDatabase(dbPath);
+  const db = initDatabase({ dbPath });
   const agg = new Aggregator(db);
   return {
     db,

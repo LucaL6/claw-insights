@@ -1,5 +1,4 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
-
+import type { Database } from './database.js';
 import { cached } from './query-utils.js';
 
 export interface ScanStateRow {
@@ -15,15 +14,7 @@ export interface ScanStateRow {
 export function loadScanState(db: Database): Map<string, ScanStateRow> {
   const rows = db
     .prepare('SELECT file_path, byte_offset, inode, mtime_ms, birth_ms, partial, first_timestamp_ms FROM scan_state')
-    .all() as Array<{
-    file_path: string;
-    byte_offset: number;
-    inode: number;
-    mtime_ms: number;
-    birth_ms: number;
-    partial: string;
-    first_timestamp_ms: number | null;
-  }>;
+    .all();
 
   const map = new Map<string, ScanStateRow>();
   for (const r of rows) {
@@ -40,13 +31,14 @@ export function loadScanState(db: Database): Map<string, ScanStateRow> {
   return map;
 }
 
-export function upsertScanState(db: Database, entries: ScanStateRow[], inTransaction = true): void {
+export function upsertScanState(db: Database, entries: ScanStateRow[]): void {
   if (entries.length === 0) {
     return;
   }
-  const run = () => {
+
+  db.transaction((tx) => {
     const stmt = cached(
-      db,
+      tx,
       `INSERT INTO scan_state (file_path, byte_offset, inode, mtime_ms, birth_ms, partial, first_timestamp_ms)
        VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(file_path) DO UPDATE SET
@@ -57,19 +49,7 @@ export function upsertScanState(db: Database, entries: ScanStateRow[], inTransac
     for (const e of entries) {
       stmt.run(e.filePath, e.byteOffset, e.inode, e.mtimeMs, e.birthMs, e.partial, e.firstTimestampMs ?? null);
     }
-  };
-  if (!inTransaction) {
-    run();
-    return;
-  }
-  db.exec('BEGIN');
-  try {
-    run();
-    db.exec('COMMIT');
-  } catch (err) {
-    db.exec('ROLLBACK');
-    throw err;
-  }
+  });
 }
 
 export function deleteScanState(db: Database, filePaths: string[]): void {
@@ -85,7 +65,7 @@ export function deleteScanState(db: Database, filePaths: string[]): void {
 export function queryMinFirstTimestamp(db: Database): number | null {
   const row = db
     .prepare('SELECT MIN(first_timestamp_ms) AS min_ts FROM scan_state WHERE first_timestamp_ms IS NOT NULL')
-    .get() as { min_ts: number | null } | undefined;
+    .get();
   return row?.min_ts ?? null;
 }
 

@@ -5,7 +5,7 @@ import { getCompanionSince, setCompanionSince } from '../system-queries.js';
 
 describe('companion-days queries', () => {
   function freshDb() {
-    return initDatabase(`/tmp/test-companion-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+    return initDatabase({ dbPath: `/tmp/test-companion-${Date.now()}-${Math.random().toString(36).slice(2)}.db` });
   }
 
   it('returns null when no companion_since is stored', () => {

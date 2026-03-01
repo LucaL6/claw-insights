@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import type { DatabaseSync } from 'node:sqlite';
 import { promisify } from 'node:util';
 
+import type { Database } from '../db/database.js';
 import { getCompanionSince, setCompanionSince } from '../db/system-queries.js';
 import { createChildLogger } from '../logger.js';
 
@@ -30,7 +30,7 @@ export interface CompanionOpts {
  * Once resolved, persists to DB so subsequent calls are O(1).
  * Returns null only if ALL sources fail.
  */
-export async function resolveCompanionSince(db: DatabaseSync, opts: CompanionOpts): Promise<string | null> {
+export async function resolveCompanionSince(db: Database, opts: CompanionOpts): Promise<string | null> {
   // 1. Check DB cache — if persisted, return immediately
   const cached = getCompanionSince(db);
   if (cached) {

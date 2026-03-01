@@ -3,7 +3,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 
-import { initDatabase } from '../init';
+import { initDatabase } from '../init.js';
 import {
   deleteAllMessageEvents,
   getRangeTurnCount,
@@ -14,7 +14,7 @@ import {
 
 function setup() {
   const dbPath = join(tmpdir(), `mq-${Date.now()}-${Math.random()}.db`);
-  const db = initDatabase(dbPath);
+  const db = initDatabase({ dbPath });
   return {
     db,
     cleanup: () => {

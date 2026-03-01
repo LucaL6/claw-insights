@@ -1,19 +1,18 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
-
 import { rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import type { Database } from '../database.js';
 import { getBucketedEventCount, insertEvent } from '../event-queries';
-import { initDatabase } from '../init';
+import { initDatabase } from '../init.js';
 import { bucketLabel } from '../query-utils';
 
 const dbPath = join(tmpdir(), `test-metrics-${Date.now()}.db`);
 let db: Database;
 
 beforeEach(() => {
-  db = initDatabase(dbPath);
+  db = initDatabase({ dbPath });
 });
 
 afterEach(() => {
@@ -84,7 +83,7 @@ describe('SQLite DB', () => {
 
 function setup() {
   const p = join(tmpdir(), `test-bucket-${Date.now()}-${Math.random()}.db`);
-  const d = initDatabase(p);
+  const d = initDatabase({ dbPath: p });
   return {
     db: d,
     cleanup: () => {

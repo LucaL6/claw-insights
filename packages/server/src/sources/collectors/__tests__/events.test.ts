@@ -3,7 +3,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 
-import { initDatabase } from '../../../db/init';
+import { initDatabase } from '../../../db/init.js';
 import { dataBus, type DataChangeEvent, emitChange } from '../../../events';
 import { SystemSampler } from '../metrics-collector';
 
@@ -29,7 +29,7 @@ describe('dataBus', () => {
 describe('dataBus integration', () => {
   it('SystemSampler.sampleFast emits metrics signal', () => {
     const dbPath = join(tmpdir(), `evt-${Date.now()}.db`);
-    const db = initDatabase(dbPath);
+    const db = initDatabase({ dbPath });
     const received: string[] = [];
     dataBus.on('change', (e: DataChangeEvent) => received.push(e.source));
 

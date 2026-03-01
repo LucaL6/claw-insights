@@ -25,7 +25,7 @@ describe('SystemSampler branch coverage', () => {
   });
 
   it('start() calls sampleSlow and handles rejection', async () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const sessionReader = {
       getSessions: () => [],
     };
@@ -48,7 +48,7 @@ describe('SystemSampler branch coverage', () => {
   });
 
   it('slowTimer interval catches sampleSlow errors', async () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const getSystemMetrics = vi.fn().mockRejectedValue(new Error('interval fail'));
     const sampler = new SystemSampler(db, { getSessions: () => [] }, getSystemMetrics, undefined, 100_000, 50);
 
@@ -67,7 +67,7 @@ describe('SystemSampler branch coverage', () => {
   });
 
   it('sampleFast with no aggregator processes sessions correctly', () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const sessions = [
       { key: 'a', status: 'ACTIVE' },
       { key: 'b', status: 'IDLE' },

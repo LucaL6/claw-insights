@@ -1,7 +1,6 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
-
 import type { LogEntry } from '@claw-insights/shared';
 
+import type { Database } from '../../db/database.js';
 import { insertEvent } from '../../db/event-queries.js';
 import { createChildLogger } from '../../logger.js';
 

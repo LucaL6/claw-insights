@@ -277,12 +277,12 @@ describe('context', () => {
     expect(ctx.destroyed).toBe(true);
   });
 
-  it('destroyContext handles db without close method', async () => {
+  it('destroyContext calls db.close()', async () => {
     const { createContext, destroyContext } = await import('../context');
     const ctx = await createContext();
-    // Remove close method to test the typeof check
-    delete (ctx.db as unknown as Record<string, unknown>).close;
-    // Should not throw
+    const closeSpy = vi.fn();
+    (ctx.db as unknown as Record<string, unknown>).close = closeSpy;
     destroyContext(ctx);
+    expect(closeSpy).toHaveBeenCalled();
   });
 });

@@ -6,17 +6,17 @@
  * Sessions, channels, cron, and gateway status come from live sources
  * (files / CLI) and are NOT seeded here.
  */
-import { DatabaseSync } from 'node:sqlite';
-
 import { createChildLogger } from '../logger.js';
+import type { Database } from './database.js';
 import { initDatabase } from './init.js';
+import { createSqliteDatabase } from './sqlite-provider.js';
 
 const log = createChildLogger('db-seed');
 
 // ── Seed ──
 
-export function seedTestData(dbPath: string): DatabaseSync {
-  const db = initDatabase(dbPath);
+export function seedTestData(dbPath: string): Database {
+  const db = initDatabase({ dbPath });
 
   const now = Date.now();
   // ── system_samples: 48 rows, every 30 min over 24h ──
@@ -135,7 +135,7 @@ export function seedTestData(dbPath: string): DatabaseSync {
 // ── Clean ──
 
 export function cleanTestData(dbPath: string): void {
-  const db = new DatabaseSync(dbPath);
+  const db = createSqliteDatabase(dbPath);
   const tables = ['metric_events', 'system_samples', 'token_usage_events', 'hourly_system_samples'];
   for (const t of tables) {
     db.exec(`DELETE FROM ${t}`);

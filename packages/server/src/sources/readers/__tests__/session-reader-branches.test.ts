@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { initDatabase } from '../../../db/init';
+import { initDatabase } from '../../../db/init.js';
 import { SessionReader } from '../session-reader';
 
 const tmpDir = join(tmpdir(), 'sr-br-test-' + Date.now());
@@ -256,7 +256,7 @@ describe('SessionReader branches', () => {
 
     // Create file-based temp DB (initDatabase creates schema with migrations)
     const dbPath = join(tmpdir(), `sr-test-${Date.now()}.db`);
-    const db = initDatabase(dbPath);
+    const db = initDatabase({ dbPath });
     // Use a past timestamp to avoid race with refreshTurnCounts' exclusive upper bound (timestamp < endTs)
     const ts = new Date(Date.now() - 1000).toISOString();
     db.prepare('INSERT INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)').run(

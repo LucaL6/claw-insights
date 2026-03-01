@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks';
-import type { DatabaseSync as Database } from 'node:sqlite';
 
 import { config } from '../config.js';
+import type { Database } from '../db/database.js';
 import { getBucketedEventCount, getBucketedGatewayEvents } from '../db/event-queries.js';
 import { getBucketedTurnCountByRole, getRangeTurnCount } from '../db/message-queries.js';
 import { bucketLabel, type MetricsRangeKey, RANGE_CONFIG, rangeStart } from '../db/query-utils.js';

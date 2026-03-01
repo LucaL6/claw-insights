@@ -1,6 +1,5 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
-
 import { createChildLogger } from '../logger.js';
+import type { Database } from './database.js';
 import { bucketExpr, cached, timedQuery } from './query-utils.js';
 
 const log = createChildLogger('db:system-queries');
@@ -30,14 +29,14 @@ export function getBucketedSessions(
         .prepare(
           `SELECT ${hourExpr} AS bucket, MAX(active_sessions_max) AS sessions FROM hourly_system_samples WHERE hour >= ? AND hour < ? GROUP BY bucket`,
         )
-        .all(startTs, endTs) as Array<{ bucket: number; sessions: number }>;
+        .all(startTs, endTs);
     }
     const expr = bucketExpr(bucketMinutes);
     const stmt = cached(
       db,
       `SELECT ${expr} AS bucket, MAX(active_sessions) AS sessions FROM system_samples WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket`,
     );
-    return stmt.all(startTs, endTs) as Array<{ bucket: number; sessions: number }>;
+    return stmt.all(startTs, endTs);
   });
 }
 
@@ -45,9 +44,7 @@ export function getBucketedSessions(
 
 /** Read the persisted companion_since timestamp, or null if not yet stored. */
 export function getCompanionSince(db: Database): string | null {
-  const row = db.prepare('SELECT value FROM kv_meta WHERE key = ?').get('companion_since') as
-    | { value: string }
-    | undefined;
+  const row = db.prepare('SELECT value FROM kv_meta WHERE key = ?').get('companion_since');
   return row?.value ?? null;
 }
 

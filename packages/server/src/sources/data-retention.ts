@@ -1,5 +1,4 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
-
+import type { Database } from '../db/database.js';
 import { createChildLogger } from '../logger.js';
 
 const log = createChildLogger('data-retention');
@@ -62,21 +61,20 @@ export class DataRetention {
       ORDER BY hour
     `,
       )
-      .all(cutoff) as { hour: string }[];
+      .all(cutoff);
 
     if (hours.length === 0) {
       return;
     }
 
-    this.db.exec('BEGIN');
     try {
-      for (const { hour } of hours) {
-        this.aggregateHour(hour);
-      }
-      this.db.exec('COMMIT');
+      this.db.transaction(() => {
+        for (const { hour } of hours) {
+          this.aggregateHour(hour);
+        }
+      });
       log.info({ hours: hours.length }, 'aggregated hours');
     } catch (err) {
-      this.db.exec('ROLLBACK');
       log.error({ err }, 'aggregation failed');
     }
   }

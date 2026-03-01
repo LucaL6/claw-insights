@@ -1,10 +1,9 @@
-import type { DatabaseSync } from 'node:sqlite';
-
 import type { Session, SessionSortBy, SessionStatus } from '@claw-insights/shared';
 import { type FSWatcher, readFileSync, statSync, watch } from 'fs';
 import { basename, dirname } from 'path';
 
 import { config } from '../../config.js';
+import type { Database } from '../../db/database.js';
 import { getRangeTurnCountBySession } from '../../db/message-queries.js';
 import { emitChange } from '../../events.js';
 import { createChildLogger } from '../../logger.js';
@@ -107,14 +106,14 @@ export class SessionReader {
   private rawSessions: Map<string, RawSession> = new Map();
   private attachedChildKeys: Set<string> = new Set();
   private turnCountCache: Map<string, number> = new Map();
-  private db: DatabaseSync | null = null;
+  private db: Database | null = null;
   private watcher: FSWatcher | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private listeners: Array<() => void> = [];
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Inject DB reference for turn count queries */
-  setDb(db: DatabaseSync): void {
+  setDb(db: Database): void {
     this.db = db;
   }
 

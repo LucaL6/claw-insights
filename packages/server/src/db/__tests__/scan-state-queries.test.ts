@@ -1,10 +1,10 @@
 import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import type { Database } from '../database.js';
 import { initDatabase } from '../init.js';
 import {
   deleteScanState,
@@ -14,14 +14,14 @@ import {
   upsertScanState,
 } from '../scan-state-queries.js';
 
-function tmpDb(): DatabaseSync {
+function tmpDb(): Database {
   const dir = join(tmpdir(), `scan-state-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   mkdirSync(dir, { recursive: true });
-  return initDatabase(join(dir, 'test.db'));
+  return initDatabase({ dbPath: join(dir, 'test.db') });
 }
 
 describe('scan-state-queries', () => {
-  let db: DatabaseSync;
+  let db: Database;
 
   beforeEach(() => {
     db = tmpDb();
@@ -211,12 +211,10 @@ describe('scan-state-queries', () => {
     });
   });
 
-  describe('upsertScanState inTransaction=false', () => {
-    it('works inside caller transaction', () => {
-      db.exec('BEGIN');
-      upsertScanState(
-        db,
-        [
+  describe('upsertScanState inside caller transaction', () => {
+    it('works inside caller transaction (re-entrant)', () => {
+      db.transaction(() => {
+        upsertScanState(db, [
           {
             filePath: '/a.jsonl',
             byteOffset: 100,
@@ -226,10 +224,8 @@ describe('scan-state-queries', () => {
             partial: '',
             firstTimestampMs: 5000,
           },
-        ],
-        false,
-      );
-      db.exec('COMMIT');
+        ]);
+      });
       const state = loadScanState(db);
       expect(state.get('/a.jsonl')?.byteOffset).toBe(100);
       expect(state.get('/a.jsonl')?.firstTimestampMs).toBe(5000);

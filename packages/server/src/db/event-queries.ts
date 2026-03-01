@@ -1,7 +1,6 @@
-import type { DatabaseSync as Database, SQLInputValue } from 'node:sqlite';
-
 import { createChildLogger } from '../logger.js';
 import { EVENT_MAP, mapEvent } from '../sources/events-mapper.js';
+import type { Database, SqlParam } from './database.js';
 import { bucketExpr, cached, timedQuery } from './query-utils.js';
 
 const log = createChildLogger('db:event-queries');
@@ -39,7 +38,7 @@ export function queryEvents(
     const { from, to, types = ['error', 'warning', 'gateway_restart'], limit = 200 } = opts;
 
     const conditions: string[] = [];
-    const params: SQLInputValue[] = [];
+    const params: SqlParam[] = [];
 
     if (types.length > 0) {
       const placeholders = types.map(() => '?').join(',');
@@ -59,12 +58,7 @@ export function queryEvents(
 
     const rows = db
       .prepare(`SELECT timestamp, type, category, metadata FROM metric_events ${where} ORDER BY timestamp DESC LIMIT ?`)
-      .all(...params, limit) as Array<{
-      timestamp: string;
-      type: string;
-      category: string | null;
-      metadata: string | null;
-    }>;
+      .all(...params, limit);
 
     const events: EventRow[] = rows.map((r) => {
       const meta = r.metadata ? JSON.parse(r.metadata) : {};
@@ -135,7 +129,7 @@ export function getEventDensity(db: Database): Array<{
     ORDER BY bucket_id
   `,
       )
-      .all(cutoff) as Array<{ bucket_id: number; cnt: number; err_cnt: number; warn_cnt: number; rst_cnt: number }>;
+      .all(cutoff);
 
     const nowBucket = Math.floor(Date.now() / 1000 / 3600);
     const result = [];
@@ -164,7 +158,7 @@ export function getEventCounts(
 ): { error: number; warning: number; restart: number } {
   return timedQuery(log, 'getEventCounts', () => {
     const conditions: string[] = [];
-    const params: SQLInputValue[] = [];
+    const params: SqlParam[] = [];
 
     if (opts.from !== undefined) {
       conditions.push(`CAST(strftime('%s', timestamp) AS INTEGER) >= ?`);
@@ -185,7 +179,7 @@ export function getEventCounts(
          SUM(CASE WHEN type = 'gateway_restart' OR category = 'lifecycle.restart' THEN 1 ELSE 0 END) AS restart
        FROM metric_events ${where}`,
       )
-      .get(...params) as { error: number; warning: number; restart: number } | undefined;
+      .get(...params);
 
     return { error: row?.error ?? 0, warning: row?.warning ?? 0, restart: row?.restart ?? 0 };
   });
@@ -207,14 +201,14 @@ export function getBucketedEventCount(
         db,
         `SELECT ${expr} AS bucket, COUNT(*) AS count FROM metric_events WHERE (type = ? OR category = ?) AND timestamp >= ? AND timestamp < ? GROUP BY bucket`,
       );
-      return stmt.all(type, mapped.category, startTs, endTs) as Array<{ bucket: number; count: number }>;
+      return stmt.all(type, mapped.category, startTs, endTs);
     }
 
     const stmt = cached(
       db,
       `SELECT ${expr} AS bucket, COUNT(*) AS count FROM metric_events WHERE type = ? AND timestamp >= ? AND timestamp < ? GROUP BY bucket`,
     );
-    return stmt.all(type, startTs, endTs) as Array<{ bucket: number; count: number }>;
+    return stmt.all(type, startTs, endTs);
   });
 }
 
@@ -230,6 +224,6 @@ export function getBucketedGatewayEvents(
       db,
       `SELECT ${expr} AS bucket, CASE WHEN type = 'gateway_restart' OR category = 'lifecycle.restart' THEN 'gateway_restart' WHEN type = 'gateway_start' OR category = 'lifecycle.start' THEN 'gateway_start' WHEN type = 'gateway_stop' OR category = 'lifecycle.stop' THEN 'gateway_stop' END AS type FROM metric_events WHERE (type IN ('gateway_start', 'gateway_stop', 'gateway_restart') OR category IN ('lifecycle.start', 'lifecycle.stop', 'lifecycle.restart')) AND timestamp >= ? AND timestamp < ?`,
     );
-    return stmt.all(startTs, endTs) as Array<{ bucket: number; type: string }>;
+    return stmt.all(startTs, endTs);
   });
 }

@@ -1,7 +1,6 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
-
 import { createChildLogger } from '../logger.js';
 import { contentHash } from '../sources/collectors/transcript-parser.js';
+import type { Database } from './database.js';
 import { bucketExpr, cached, timedQuery } from './query-utils.js';
 
 const log = createChildLogger('db:message-queries');
@@ -22,32 +21,21 @@ export function insertMessageEvent(db: Database, event: MessageEventRecord): voi
   stmt.run(event.timestamp, event.sessionKey, event.role, hash);
 }
 
-export function insertMessageEventBatch(db: Database, events: MessageEventRecord[], inTransaction = true): void {
+export function insertMessageEventBatch(db: Database, events: MessageEventRecord[]): void {
   if (events.length === 0) {
     return;
   }
 
-  if (inTransaction) {
-    db.exec('BEGIN');
-  }
-  try {
+  db.transaction((tx) => {
     const stmt = cached(
-      db,
+      tx,
       'INSERT OR IGNORE INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)',
     );
     for (const e of events) {
       const hash = contentHash(e.timestamp, e.sessionKey, `${e.role}|${e.lineHash}`);
       stmt.run(e.timestamp, e.sessionKey, e.role, hash);
     }
-    if (inTransaction) {
-      db.exec('COMMIT');
-    }
-  } catch (err) {
-    if (inTransaction) {
-      db.exec('ROLLBACK');
-    }
-    throw err;
-  }
+  });
 }
 
 export function deleteAllMessageEvents(db: Database): void {
@@ -60,7 +48,7 @@ export function getRangeTurnCount(db: Database, startTs: string, endTs: string):
       db,
       "SELECT COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant')",
     );
-    const row = stmt.get(startTs, endTs) as { turns: number } | undefined;
+    const row = stmt.get(startTs, endTs);
     return row?.turns ?? 0;
   });
 }
@@ -75,7 +63,7 @@ export function getRangeTurnCountBySession(
       db,
       "SELECT session_key AS sessionKey, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY session_key ORDER BY turns DESC",
     );
-    return stmt.all(startTs, endTs) as Array<{ sessionKey: string; turns: number }>;
+    return stmt.all(startTs, endTs);
   });
 }
 
@@ -91,7 +79,7 @@ export function getBucketedTurnCount(
       db,
       `SELECT ${expr} AS bucket, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket`,
     );
-    return stmt.all(startTs, endTs) as Array<{ bucket: number; turns: number }>;
+    return stmt.all(startTs, endTs);
   });
 }
 
@@ -107,6 +95,6 @@ export function getBucketedTurnCountByRole(
       db,
       `SELECT ${expr} AS bucket, role, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket, role`,
     );
-    return stmt.all(startTs, endTs) as Array<{ bucket: number; role: string; turns: number }>;
+    return stmt.all(startTs, endTs);
   });
 }

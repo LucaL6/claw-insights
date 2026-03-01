@@ -3,11 +3,10 @@
  * a seeded in-memory SQLite database.  All external I/O (gateway, system-info,
  * sessions file, cron file, log dir) is stubbed so the tests are hermetic.
  */
-import type { DatabaseSync } from 'node:sqlite';
-
 import express, { type Express } from 'express';
 
 import type { AppContext } from '../../context.js';
+import type { Database } from '../../db/database.js';
 import { insertMessageEventBatch } from '../../db/message-queries.js';
 import { seedTestData } from '../../db/seed.js';
 import { insertTokenUsageEventBatch } from '../../db/token-queries.js';
@@ -59,7 +58,7 @@ function stubSystemInfoService() {
 
 function stubSessionReader() {
   return {
-    setDb(_db: DatabaseSync) {},
+    setDb(_db: Database) {},
     invalidateTurnCounts() {},
     attachSubAgents(_map: Map<string, string[]>) {},
     getSessions(_filter?: unknown) {
@@ -156,7 +155,7 @@ function stubLifetimeScanner() {
 
 export interface TestApp {
   app: Express;
-  db: DatabaseSync;
+  db: Database;
   ctx: AppContext;
   clearAggregatorCache(): void;
   destroy(): void;

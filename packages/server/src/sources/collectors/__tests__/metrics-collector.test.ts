@@ -3,7 +3,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 
-import { initDatabase } from '../../../db/init';
+import { initDatabase } from '../../../db/init.js';
 import { SystemSampler } from '../metrics-collector';
 
 interface SessionLike {
@@ -17,7 +17,7 @@ interface SessionReaderLike {
 
 function setup() {
   const dbPath = join(tmpdir(), `ss-${Date.now()}-${Math.random()}.db`);
-  const db = initDatabase(dbPath);
+  const db = initDatabase({ dbPath });
   return {
     db,
     dbPath,

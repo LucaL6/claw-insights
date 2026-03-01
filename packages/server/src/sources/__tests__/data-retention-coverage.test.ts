@@ -11,7 +11,7 @@ const baseConfig: RetentionConfig = {
 
 describe('DataRetention ?? 0 fallback branches', () => {
   it('aggregateHour with no matching rows hits ?? 0 fallbacks', () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const retention = new DataRetention(db, baseConfig);
 
     // aggregateHour is private — the null ?? 0 path is only reachable when

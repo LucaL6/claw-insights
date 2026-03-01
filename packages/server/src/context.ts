@@ -1,8 +1,7 @@
-import type { DatabaseSync } from 'node:sqlite';
-
 import type { LogEntry } from '@claw-insights/shared';
 
 import { config } from './config.js';
+import type { Database } from './db/database.js';
 import { initDatabase } from './db/init.js';
 import { insertMessageEventBatch } from './db/message-queries.js';
 import { insertTokenUsageEventBatch } from './db/token-queries.js';
@@ -29,7 +28,7 @@ import { createSystemInfoService, type SystemInfoService } from './sources/syste
 const log = createChildLogger('context');
 
 export interface AppContext {
-  db: DatabaseSync;
+  db: Database;
   pipeline: Pipeline;
   sessionReader: SessionReader;
   cronReader: CronReader;
@@ -56,7 +55,7 @@ export async function createContext(): Promise<AppContext> {
   const gatewayClient = createGatewayClient(platform);
   const systemInfoService = createSystemInfoService(platform);
 
-  const db = initDatabase(config.dbPath);
+  const db = initDatabase({ dbPath: config.dbPath });
   const sessionReader = new SessionReader(config.sessionsPath);
   sessionReader.setDb(db);
   const cronReader = new CronReader(config.cronPath);
@@ -213,7 +212,5 @@ export function destroyContext(ctx: AppContext): void {
   ctx.flushTokenEvents();
   ctx.flushMessageEvents();
   ctx.pipeline.destroy();
-  if (typeof (ctx.db as unknown as { close?: () => void }).close === 'function') {
-    (ctx.db as unknown as { close(): void }).close();
-  }
+  ctx.db.close();
 }

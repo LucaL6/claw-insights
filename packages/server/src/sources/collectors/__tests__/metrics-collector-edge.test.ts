@@ -17,7 +17,7 @@ describe('SystemSampler edge branches', () => {
   });
 
   it('stop() when timers are null (never started)', () => {
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const sampler = new SystemSampler(db, { getSessions: () => [] }, () => ({
       cpu: 0,
       memoryMB: 0,
@@ -30,7 +30,7 @@ describe('SystemSampler edge branches', () => {
 
   it('fastTimer interval fires and calls sampleFast', () => {
     vi.useFakeTimers();
-    const db = initDatabase(':memory:');
+    const db = initDatabase({ dbPath: ':memory:' });
     const sampler = new SystemSampler(
       db,
       { getSessions: () => [{ key: 'a', status: 'ACTIVE' }] },

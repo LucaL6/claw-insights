@@ -1,5 +1,5 @@
 import type { LogEntry } from '@claw-insights/shared';
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createLogIngester } from '../log-ingester';
 
@@ -11,7 +11,7 @@ import { insertEvent } from '../../../db/event-queries';
 const mockInsert = vi.mocked(insertEvent);
 
 describe('createLogIngester', () => {
-  const fakeDb = {} as unknown as import("node:sqlite").DatabaseSync;
+  const fakeDb = {} as unknown as import('../../../db/database.js').Database;
   const ingest = createLogIngester(fakeDb);
 
   beforeEach(() => {

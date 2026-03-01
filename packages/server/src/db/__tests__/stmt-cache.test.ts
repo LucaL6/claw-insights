@@ -1,12 +1,11 @@
-import { DatabaseSync } from 'node:sqlite';
-
 import { describe, expect, it, vi } from 'vitest';
 
 import { insertEvent } from '../event-queries';
+import { createSqliteDatabase } from '../sqlite-provider.js';
 
 describe('prepared statement cache', () => {
   it('should reuse statements across calls', () => {
-    const db = new DatabaseSync(':memory:');
+    const db = createSqliteDatabase(':memory:');
     db.exec(`CREATE TABLE metric_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       timestamp TEXT NOT NULL, type TEXT NOT NULL,

@@ -24,7 +24,7 @@ const realExistsSync = realFs.existsSync;
 const realReadFileSync = realFs.readFileSync;
 
 function freshDb() {
-  return initDatabase(`/tmp/test-resolve-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  return initDatabase({ dbPath: `/tmp/test-resolve-${Date.now()}-${Math.random().toString(36).slice(2)}.db` });
 }
 
 function mockStatFail() {

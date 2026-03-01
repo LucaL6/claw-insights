@@ -1,12 +1,12 @@
-import { DatabaseSync as Database } from 'node:sqlite';
-
 import { describe, expect, it } from 'vitest';
 
 import { mapEvent } from '../../sources/events-mapper.js';
+import type { Database } from '../database.js';
 import { getBucketedEventCount, insertEvent, queryEvents } from '../event-queries.js';
+import { createSqliteDatabase } from '../sqlite-provider.js';
 
 function setupDb(): Database {
-  const db = new Database(':memory:');
+  const db = createSqliteDatabase(':memory:');
   db.exec(`
     CREATE TABLE metric_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

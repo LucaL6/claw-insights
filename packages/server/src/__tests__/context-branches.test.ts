@@ -225,9 +225,11 @@ describe('destroyContext', () => {
     expect(callOrder.indexOf('flushMessage')).toBeLessThan(callOrder.indexOf('close'));
   });
 
-  it('handles db without close method', () => {
-    const ctx = mockCtx({ db: {} as any });
-    expect(() => destroyContext(ctx)).not.toThrow();
+  it('calls db.close()', () => {
+    const closeSpy = vi.fn();
+    const ctx = mockCtx({ db: { close: closeSpy } as any });
+    destroyContext(ctx);
+    expect(closeSpy).toHaveBeenCalled();
   });
 });
 
