@@ -2,6 +2,10 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { createChildLogger } from './logger.js';
+
+const log = createChildLogger('config');
+
 const HOME = process.env.HOME ?? '/tmp';
 
 // --- Helpers (exported for testing) ---
@@ -108,9 +112,9 @@ export function loadConfigFile(): Record<string, unknown> {
       try {
         const mode = statSync(configPath).mode & 0o777;
         if (mode > 0o600) {
-          console.warn(
-            `⚠️  Config file ${configPath} contains apiToken but has loose permissions (0${mode.toString(8)}).` +
-              `\n      Run: chmod 600 ${configPath}`,
+          log.warn(
+            { path: configPath, mode: `0${mode.toString(8)}` },
+            'config file contains apiToken but has loose permissions — run chmod 600',
           );
         }
       } catch {
@@ -136,12 +140,12 @@ export function loadConfigFile(): Record<string, unknown> {
     ]);
     for (const key of Object.keys(raw)) {
       if (!knownKeys.has(key)) {
-        console.warn(`⚠️  Unknown config key "${key}" in ${configPath}, ignoring`);
+        log.warn({ key, path: configPath }, 'unknown config key, ignoring');
       }
     }
     return raw;
   } catch {
-    console.warn(`⚠️  Failed to parse ${configPath}, using defaults`);
+    log.warn({ path: configPath }, 'failed to parse config file, using defaults');
     return {};
   }
 }
@@ -250,6 +254,7 @@ export function resolveConfig(): AppConfig {
 // Mutable: index.ts sets apiToken at startup when auto-generating
 
 export const config: AppConfig = resolveConfig();
+log.info({ dbPath: config.dbPath, serverPort: config.serverPort, isDev: config.isDev }, 'config loaded');
 
 /** Set the runtime API token (used for auto-generation at startup). */
 export function setApiToken(token: string): void {

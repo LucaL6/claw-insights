@@ -1,3 +1,7 @@
+import { createChildLogger } from '../../logger.js';
+
+const log = createChildLogger('parsers');
+
 // ── From system-info.ts ─────────────────────────────────────────
 
 export function parseLaunchctlOutput(stdout: string): number | null {
@@ -18,6 +22,7 @@ export function parsePsOutput(stdout: string): { cpu: number; memoryMB: number }
   const rssKB = parseInt(parts[0], 10);
   const cpu = parseFloat(parts[1]);
   if (isNaN(rssKB) || isNaN(cpu)) {
+    log.warn({ raw: trimmed }, 'failed to parse ps output');
     return null;
   }
   return { cpu, memoryMB: Math.round(rssKB / 1024) };

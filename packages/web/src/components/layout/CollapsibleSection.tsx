@@ -1,4 +1,4 @@
-import { type ReactNode,useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -20,7 +20,9 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
   return (
     <section className="mb-4">
       <button
-        onClick={() => { setOpen(!open); }}
+        onClick={() => {
+          setOpen(!open);
+        }}
         className="flex items-center gap-2 w-full text-left transition-colors py-1 text-fg-muted"
       >
         <svg
@@ -36,7 +38,12 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
         )}
         {updatedAt && <span className="text-xs mono text-fg-dim">updated {formatTime(updatedAt)}</span>}
         {headerRight && (
-          <span className="ml-auto" onClick={(e) => { e.stopPropagation(); }}>
+          <span
+            className="ml-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
             {headerRight}
           </span>
         )}
@@ -44,7 +51,7 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
       <div
         className={`grid transition-all duration-200 ${open ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0'}`}
       >
-        <div className={open ? '' : 'overflow-hidden'}>{children}</div>
+        <div className={open ? 'min-w-0' : 'overflow-hidden min-w-0'}>{children}</div>
       </div>
     </section>
   );

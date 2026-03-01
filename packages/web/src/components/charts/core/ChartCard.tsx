@@ -5,7 +5,7 @@ type Accent = 'sessions' | 'tokens' | 'errors' | 'uptime' | 'conversations';
 export function ChartCard({ children, accent }: { children: ReactNode; accent: Accent }) {
   return (
     <div
-      className="rounded-lg px-4 py-3 relative overflow-hidden bg-surface border border-edge shadow-card"
+      className="rounded-lg px-4 py-3 relative overflow-hidden bg-surface border border-edge shadow-card min-w-0"
       style={{
         backgroundImage: `var(--card-bg-${accent})`,
       }}

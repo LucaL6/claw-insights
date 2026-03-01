@@ -44,6 +44,7 @@ export function BaseChart({ option, height = 160, testId, onEvents }: Props) {
         opts={{ renderer: 'canvas' }}
         onEvents={onEvents}
         notMerge
+        autoResize
       />
     </div>
   );

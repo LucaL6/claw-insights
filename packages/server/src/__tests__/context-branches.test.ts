@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Mock logger to capture structured log calls
+const { mockLogError } = vi.hoisted(() => ({ mockLogError: vi.fn() }));
+vi.mock('../logger.js', () => ({
+  createChildLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: mockLogError, debug: vi.fn() }),
+}));
+
 // Mock everything for createContext tests
 vi.mock('../config.js', () => ({
   config: {
@@ -158,18 +164,20 @@ describe('startContext', () => {
   });
 
   it('handles lifetimeScanner.init rejection without throwing', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockLogError.mockClear();
     const initError = new Error('scanner fail');
     const ctx = mockCtx({
       lifetimeScanner: { init: vi.fn().mockRejectedValue(initError) } as any,
     });
     startContext(ctx);
     await vi.advanceTimersByTimeAsync(0);
-    expect(consoleError).toHaveBeenCalledTimes(1);
-    expect(consoleError).toHaveBeenCalledWith('lifetime scanner init failed:', initError);
+    expect(mockLogError).toHaveBeenCalledTimes(1);
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({ err: initError }),
+      'lifetime scanner init failed',
+    );
     // flush should NOT have been called since init rejected
     expect(ctx.flushTokenEvents).not.toHaveBeenCalled();
-    consoleError.mockRestore();
   });
 });
 

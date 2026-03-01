@@ -9,6 +9,7 @@ import { insertTokenUsageEventBatch } from './db/token-queries.js';
 import { type MessageEvent, MessageEventBus } from './events/message-event-bus.js';
 import type { TokenUsageEvent } from './events/token-event-bus.js';
 import { TokenEventBus } from './events/token-event-bus.js';
+import { createChildLogger } from './logger.js';
 import { Pipeline } from './pipeline/index.js';
 import { loadPlatform } from './platforms/index.js';
 import { Aggregator } from './sources/aggregator.js';
@@ -24,6 +25,8 @@ import { CronReader } from './sources/readers/cron-reader.js';
 import { SessionReader } from './sources/readers/session-reader.js';
 import { SpawnTracker } from './sources/readers/spawn-tracker.js';
 import { createSystemInfoService, type SystemInfoService } from './sources/system-info.js';
+
+const log = createChildLogger('context');
 
 export interface AppContext {
   db: DatabaseSync;
@@ -48,6 +51,7 @@ export interface AppContext {
 }
 
 export async function createContext(): Promise<AppContext> {
+  log.info('createContext started');
   const platform = await loadPlatform();
   const gatewayClient = createGatewayClient(platform);
   const systemInfoService = createSystemInfoService(platform);
@@ -133,6 +137,8 @@ export async function createContext(): Promise<AppContext> {
     .wire('logTailer', 'log', ['logIngester', 'spawnTracker'])
     .build();
 
+  log.info('createContext complete');
+
   return {
     db,
     pipeline,
@@ -157,6 +163,7 @@ export async function createContext(): Promise<AppContext> {
 }
 
 export function startContext(ctx: AppContext): void {
+  log.info('startContext: starting pipeline');
   ctx.pipeline.start();
   ctx.lifetimeScanner
     .init()
@@ -166,6 +173,12 @@ export function startContext(ctx: AppContext): void {
       }
       ctx.flushTokenEvents();
       ctx.flushMessageEvents();
+
+      // Warm gateway cache after scanner completes — avoids event-loop
+      // contention that caused false 'gateway down' on startup (ISS-056)
+      ctx.gatewayClient.warmCache().catch((err: unknown) => {
+        log.debug({ err }, 'warmCache failed (non-fatal)');
+      });
 
       const fileStates = ctx.lifetimeScanner.getFileStates();
       ctx.transcriptWatcher = createTranscriptWatcher(config.transcriptsDir)
@@ -179,11 +192,12 @@ export function startContext(ctx: AppContext): void {
         .start(fileStates);
     })
     .catch((err: unknown) => {
-      console.error('lifetime scanner init failed:', err);
+      log.error({ err }, 'lifetime scanner init failed');
     });
 }
 
 export function destroyContext(ctx: AppContext): void {
+  log.info('destroyContext started');
   ctx.destroyed = true;
   ctx.transcriptWatcher?.destroy();
   ctx.flushTokenEvents();

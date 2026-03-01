@@ -82,6 +82,13 @@ describe('MainLayout', () => {
     expect(metricsPanel.classList.contains('hidden')).toBe(false);
   });
 
+  it('marks metrics section as container query context', () => {
+    mockMatchMedia(false);
+    const { container } = renderWithProviders(<MainLayout topBar={<span />} sessions={<span />} metrics={<span />} />);
+    const metricsSection = container.querySelector('[data-section="metrics"]');
+    expect(metricsSection?.className).toContain('@container');
+  });
+
   it('keeps both panels mounted in tab mode', () => {
     mockMatchMedia(true);
     const { getByText } = renderWithProviders(

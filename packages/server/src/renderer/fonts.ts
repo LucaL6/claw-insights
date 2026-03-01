@@ -2,6 +2,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('fonts');
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 interface SatoriFont {
@@ -35,13 +39,16 @@ export function loadFonts(): SatoriFont[] {
   const candidates = [resolve(__dirname, '../../assets/fonts'), resolve(__dirname, '../assets/fonts')];
   const builtinDir = candidates.find((d) => existsSync(d));
   if (!builtinDir && !customDir) {
+    log.warn('font directory not found — set CLAW_INSIGHTS_FONTS_DIR or check installation');
     throw new Error('Font directory not found. Set CLAW_INSIGHTS_FONTS_DIR or check installation.');
   }
   const fontDir = customDir && existsSync(customDir) ? customDir : builtinDir;
   if (!fontDir) {
+    log.warn('no valid font directory resolved');
     throw new Error('No valid font directory found');
   }
 
+  log.info({ fontDir, count: FONT_FILES.length }, 'loading fonts');
   fontCache = FONT_FILES.map(({ file, name, weight }) => ({
     name,
     data: readFileSync(resolve(fontDir, file)),

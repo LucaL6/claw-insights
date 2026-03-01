@@ -8,6 +8,9 @@ import { createUsageNormalizer, parseLine } from './transcript-parser.js';
 
 const log = createChildLogger('lifetime-scanner');
 
+/** Number of files to process before yielding to the event loop. */
+const YIELD_BATCH_SIZE = 30;
+
 // ── Types ──
 
 export interface FileState {
@@ -70,7 +73,10 @@ export class LifetimeScanner {
     }
     const startMs = Date.now();
     try {
-      this.scanAll();
+      await this.scanAll();
+      if (this.destroyed) {
+        return;
+      }
       this.stats.createdAtMs = this.resolveCreatedAt();
       this.initialScanDone = true;
       log.info({ fileCount: this.fileStates.size, durationMs: Date.now() - startMs }, 'lifetime scan complete');
@@ -99,7 +105,7 @@ export class LifetimeScanner {
 
   // ── Internal: full scan ──
 
-  private scanAll(): void {
+  private async scanAll(): Promise<void> {
     if (!existsSync(this.transcriptsDir)) {
       log.warn({ path: this.transcriptsDir }, 'transcripts directory not found');
       return;
@@ -112,8 +118,17 @@ export class LifetimeScanner {
     this.stats.totalSessions = files.length;
     this.fileStates.clear();
 
-    for (const file of files) {
-      this.scanFile(file);
+    for (let i = 0; i < files.length; i++) {
+      this.scanFile(files[i]);
+      // Yield to event loop periodically so other async work (CLI calls, HTTP) can proceed
+      if ((i + 1) % YIELD_BATCH_SIZE === 0) {
+        await new Promise<void>((resolve) => {
+          setImmediate(resolve);
+        });
+        if (this.destroyed) {
+          return;
+        }
+      }
     }
   }
 

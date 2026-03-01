@@ -1,4 +1,7 @@
+import { createChildLogger } from '../logger.js';
 import type { Managed, PipelineConfig, Processor, Service, Source, WiringRule } from './types.js';
+
+const log = createChildLogger('pipeline');
 
 type BoundHandler = { source: Source; event: string; handler: (...args: unknown[]) => void };
 
@@ -79,6 +82,15 @@ export class Pipeline {
       this.boundHandlers.push({ source: src, event: rule.event, handler });
     }
     this.built = true;
+    log.info(
+      {
+        sources: this.sources.size,
+        processors: this.processors.size,
+        services: this.services.size,
+        wiring: this.wiring.length,
+      },
+      'pipeline built',
+    );
     return this;
   }
 
@@ -89,9 +101,11 @@ export class Pipeline {
     for (const svc of this.services.values()) {
       svc.start();
     }
+    log.info({ services: this.services.size }, 'pipeline started');
   }
 
   destroy(): void {
+    log.info('pipeline destroying');
     // Unbind all wired event handlers
     for (const { source, event, handler } of this.boundHandlers) {
       source.off(event, handler);

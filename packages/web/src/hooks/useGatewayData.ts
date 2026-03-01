@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 
 import { ChannelsQuery, GatewayQuery, ResourcesQuery } from '../graphql/queries';
 import { formatUptime } from '../utils/format';
 import { useConnectionStatus } from './useConnectionStatus';
 import { useReactiveQuery } from './useReactiveQuery';
+import { useRetryWithBackoff } from './useRetryWithBackoff';
 
 export type GatewayStatus = 'running' | 'gateway-down' | 'dashboard-offline' | 'connecting';
 
@@ -45,22 +46,8 @@ export function useGatewayData() {
   }
 
   // Fast retry with exponential backoff when gateway appears down
-  const retryCount = useRef(0);
-  useEffect(() => {
-    if (status !== 'gateway-down') {
-      retryCount.current = 0;
-      return;
-    }
-    // 5s → 10s → 20s → 30s (capped)
-    const delay = Math.min(5_000 * Math.pow(2, retryCount.current), 30_000);
-    const id = setTimeout(() => {
-      retryCount.current++;
-      reexecuteGateway({ requestPolicy: 'network-only' });
-    }, delay);
-    return () => {
-      clearTimeout(id);
-    };
-  }, [status, reexecuteGateway]);
+  const retryGateway = useCallback(() => { reexecuteGateway({ requestPolicy: 'network-only' }); }, [reexecuteGateway]);
+  useRetryWithBackoff(status === 'gateway-down', retryGateway);
 
   return { gateway, resources, channels, uptime, status, fetching };
 }

@@ -1,5 +1,9 @@
 import { execFile } from 'node:child_process';
 
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('cli:open-browser');
+
 const COMMANDS: Record<string, string> = {
   darwin: 'open',
   linux: 'xdg-open',
@@ -17,7 +21,11 @@ export function getOpenCommand(platform: string): string | null {
  */
 export function openBrowser(url: string): void {
   const cmd = getOpenCommand(process.platform);
-  if (!cmd) {return;}
+  if (!cmd) {
+    log.warn({ platform: process.platform }, 'no open command for platform');
+    return;
+  }
+  log.debug({ cmd }, 'opening browser');
 
   if (cmd === 'start') {
     // Windows: start requires shell, use cmd /c start "" "url"

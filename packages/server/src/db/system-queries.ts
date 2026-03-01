@@ -1,6 +1,9 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
 
-import { bucketExpr, cached } from './query-utils.js';
+import { createChildLogger } from '../logger.js';
+import { bucketExpr, cached, timedQuery } from './query-utils.js';
+
+const log = createChildLogger('db:system-queries');
 
 export function insertSystemSample(
   db: Database,
@@ -20,20 +23,22 @@ export function getBucketedSessions(
   bucketMinutes: number,
   useHourly = false,
 ): Array<{ bucket: number; sessions: number }> {
-  if (useHourly) {
-    const hourExpr = bucketExpr(bucketMinutes).replace('timestamp', 'hour');
-    return db
-      .prepare(
-        `SELECT ${hourExpr} AS bucket, MAX(active_sessions_max) AS sessions FROM hourly_system_samples WHERE hour >= ? AND hour < ? GROUP BY bucket`,
-      )
-      .all(startTs, endTs) as Array<{ bucket: number; sessions: number }>;
-  }
-  const expr = bucketExpr(bucketMinutes);
-  const stmt = cached(
-    db,
-    `SELECT ${expr} AS bucket, MAX(active_sessions) AS sessions FROM system_samples WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket`,
-  );
-  return stmt.all(startTs, endTs) as Array<{ bucket: number; sessions: number }>;
+  return timedQuery(log, 'getBucketedSessions', () => {
+    if (useHourly) {
+      const hourExpr = bucketExpr(bucketMinutes).replace('timestamp', 'hour');
+      return db
+        .prepare(
+          `SELECT ${hourExpr} AS bucket, MAX(active_sessions_max) AS sessions FROM hourly_system_samples WHERE hour >= ? AND hour < ? GROUP BY bucket`,
+        )
+        .all(startTs, endTs) as Array<{ bucket: number; sessions: number }>;
+    }
+    const expr = bucketExpr(bucketMinutes);
+    const stmt = cached(
+      db,
+      `SELECT ${expr} AS bucket, MAX(active_sessions) AS sessions FROM system_samples WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket`,
+    );
+    return stmt.all(startTs, endTs) as Array<{ bucket: number; sessions: number }>;
+  });
 }
 
 // ── Companion Days ──

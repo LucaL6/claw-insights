@@ -499,4 +499,63 @@ describe('LifetimeScanner', () => {
       expect(events.length).toBe(0);
     });
   });
+
+  describe('event loop yielding', () => {
+    it('should yield to event loop during file scanning, not just before', async () => {
+      // Create 100 small .jsonl files
+      for (let i = 0; i < 100; i++) {
+        makeTranscript(dir, `session-yield-${i}.jsonl`, [sessionLine()]);
+      }
+
+      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+
+      // Schedule a setImmediate AFTER init starts (not before).
+      // If scanAll yields during scanning, this callback will fire
+      // before init resolves. If scanAll blocks, it will fire after.
+      const initPromise = scanner.init();
+
+      // Wait one tick for scanner's own setImmediate to fire and scanAll to start
+      await new Promise<void>((resolve) => {
+        setImmediate(resolve);
+      });
+
+      // Now schedule another setImmediate — this should fire during scan
+      // (between yield batches) if scanAll yields properly
+      let yieldedDuringScan = false;
+      setImmediate(() => {
+        yieldedDuringScan = true;
+      });
+
+      await initPromise;
+
+      expect(yieldedDuringScan).toBe(true);
+
+      const stats = await scanner.getStats();
+      expect(stats.totalSessions).toBe(100);
+    });
+
+    it('should abort scan if destroyed during yield', async () => {
+      // Create enough files to trigger at least one yield
+      for (let i = 0; i < 60; i++) {
+        makeTranscript(dir, `session-abort-${i}.jsonl`, [sessionLine()]);
+      }
+
+      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+
+      // Start init, then destroy during a yield point
+      const initPromise = scanner.init();
+
+      // Wait for scanner's setImmediate + scanAll to start
+      await new Promise<void>((resolve) => {
+        setImmediate(resolve);
+      });
+      // Destroy while scanning (will take effect at next yield check)
+      scanner.destroy();
+
+      await initPromise;
+
+      const stats = await scanner.getStats();
+      expect(stats.isReady).toBe(false);
+    });
+  });
 });

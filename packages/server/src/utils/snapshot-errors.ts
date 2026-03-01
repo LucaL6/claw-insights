@@ -1,3 +1,7 @@
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('snapshot-errors');
+
 // ── Error Response Type ──
 export interface SnapshotErrorResponse {
   error: string;
@@ -11,6 +15,7 @@ export function makeErrorResponse(
   error: string,
   opts?: { retryAfter?: number; suggestion?: string },
 ): SnapshotErrorResponse {
+  log.debug({ code, error }, 'error response created');
   return { error, code, ...opts };
 }
 

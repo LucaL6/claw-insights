@@ -1,3 +1,7 @@
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('rate-limiter');
+
 export class TokenBucketLimiter {
   private tokens: number;
   private lastRefill: number;
@@ -20,6 +24,7 @@ export class TokenBucketLimiter {
     }
     const nextTokenAt = this.lastRefill + this.msPerToken;
     const retryAfterMs = Math.max(1, Math.ceil(nextTokenAt - Date.now()));
+    log.debug({ retryAfterMs }, 'rate limited');
     return { allowed: false, retryAfterMs };
   }
 

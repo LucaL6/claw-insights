@@ -28,6 +28,23 @@ describe('PosixCliAdapter', () => {
     expect(await adapter.exec(['--version'])).toBe('');
   });
 
+  it('exec handles Buffer stderr without crashing', async () => {
+    const err = Object.assign(new Error('fail'), { stderr: Buffer.from('buf error') });
+    (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (_cmd: string, _args: string[], _opts: unknown, cb: Function) => cb(err),
+    );
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    expect(await adapter.exec(['--version'])).toBe('');
+  });
+
+  it('exec handles non-Error throws gracefully', async () => {
+    (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (_cmd: string, _args: string[], _opts: unknown, cb: Function) => cb('string error'),
+    );
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    expect(await adapter.exec(['--version'])).toBe('');
+  });
+
   it('exec passes argv as-is without splitting', async () => {
     (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
       (_cmd: string, args: string[], _opts: unknown, cb: Function) => {

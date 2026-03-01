@@ -1,7 +1,10 @@
- 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('cli:snapshot');
 
 export interface SnapshotCmdArgs {
   format: string;
@@ -133,7 +136,8 @@ export async function runSnapshotCmd(argv: string[]): Promise<void> {
         lang: args.lang,
       }),
     });
-  } catch {
+  } catch (err) {
+    log.error({ err, port: args.port }, 'snapshot fetch failed');
     console.error(`Error: Claw-Insights server is not running on port ${args.port}.`);
     console.error(`  → Run 'claw-insights start' first.`);
     process.exit(1);
@@ -141,6 +145,7 @@ export async function runSnapshotCmd(argv: string[]): Promise<void> {
 
   if (!resp.ok) {
     const body = (await resp.json().catch(() => ({ error: resp.statusText }))) as Record<string, unknown>;
+    log.error({ status: resp.status, body }, 'snapshot API error');
     console.error(`Error: ${body.error}`);
     if (body.suggestion) {
       console.error(`  → ${body.suggestion}`);

@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import type { DatabaseSync as Database } from 'node:sqlite';
 
 import { config } from '../config.js';
@@ -6,12 +7,16 @@ import { getBucketedTurnCountByRole, getRangeTurnCount } from '../db/message-que
 import { bucketLabel, type MetricsRangeKey, RANGE_CONFIG, rangeStart } from '../db/query-utils.js';
 import { getBucketedSessions } from '../db/system-queries.js';
 import { getBucketedModelTokenUsage, getBucketedTokenUsage, getRangeTokenUsageK } from '../db/token-queries.js';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('aggregator');
 
 export class Aggregator {
   private cache: { key: string; data: unknown; ts: number } | null = null;
   constructor(private db: Database) {}
 
   clearCache() {
+    log.debug('cache cleared');
     this.cache = null;
   }
 
@@ -19,8 +24,10 @@ export class Aggregator {
     const day = date ?? new Date().toISOString().split('T')[0];
     const cacheKey = `metrics:${day}:${range}`;
     if (this.cache && this.cache.key === cacheKey && Date.now() - this.cache.ts < 60_000) {
+      log.debug({ cacheKey }, 'getMetrics cache hit');
       return this.cache.data;
     }
+    const start = performance.now();
 
     const rangeConfig = RANGE_CONFIG[range];
     const startTs = rangeStart(range);
@@ -142,6 +149,7 @@ export class Aggregator {
       totalTurns: getRangeTurnCount(this.db, startTs, endTs),
     };
     this.cache = { key: cacheKey, data: summary, ts: Date.now() };
+    log.debug({ cacheKey, ms: Math.round(performance.now() - start), buckets: buckets.length }, 'getMetrics complete');
     return summary;
   }
 }

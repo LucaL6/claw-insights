@@ -17,16 +17,22 @@ export class PosixCliAdapter implements CliAdapter {
 
   async exec(argv: string[]): Promise<string> {
     try {
-      log.info({ cliPath: this.cliPath, argv }, 'CLI exec start');
-      const { stdout, stderr } = await execFileAsync(this.cliPath, argv, {
+      log.debug({ argv }, 'CLI exec');
+      const { stdout, stderr: _stderr } = await execFileAsync(this.cliPath, argv, {
         timeout: 8000,
         encoding: 'utf-8',
         env: this.env,
       });
-      log.info({ argv, stdoutLen: stdout.length, stderrLen: stderr.length }, 'CLI exec done');
-      return stdout;
+      log.debug({ argv, stdoutLen: (stdout ?? '').length }, 'CLI exec done');
+      return stdout ?? '';
     } catch (err) {
-      log.warn({ err: err as Error, argv }, 'CLI call failed');
+      // Safely extract stderr from ExecFileException (may be string, Buffer, or absent)
+      let stderr: string | undefined;
+      if (typeof err === 'object' && err !== null && 'stderr' in err) {
+        const raw = (err as Record<string, unknown>).stderr;
+        if (raw != null) {stderr = String(raw);}
+      }
+      log.warn({ err: err instanceof Error ? err : String(err), argv, stderr }, 'CLI call failed');
       return '';
     }
   }

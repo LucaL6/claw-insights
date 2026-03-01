@@ -1,4 +1,9 @@
+import { performance } from 'node:perf_hooks';
 import type { DatabaseSync as Database } from 'node:sqlite';
+
+import type { Logger } from 'pino';
+
+// timedQuery helper uses caller-provided logger (no module-level log needed)
 
 // ── Statement Cache ──
 
@@ -16,6 +21,24 @@ export function cached(db: Database, sql: string): ReturnType<Database['prepare'
     map.set(sql, stmt);
   }
   return stmt;
+}
+
+// ── Timed Query Helper ──
+
+const SLOW_THRESHOLD_MS = 100;
+
+/**
+ * Execute a synchronous query function and log if it takes longer than SLOW_THRESHOLD_MS.
+ * Uses `debug` level to avoid warn storms in production (debug is off by default).
+ */
+export function timedQuery<T>(queryLog: Logger, name: string, fn: () => T): T {
+  const start = performance.now();
+  const result = fn();
+  const ms = performance.now() - start;
+  if (ms > SLOW_THRESHOLD_MS) {
+    queryLog.debug({ name, ms: Math.round(ms) }, 'slow query');
+  }
+  return result;
 }
 
 // ── Range Config ──

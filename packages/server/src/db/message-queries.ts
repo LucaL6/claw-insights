@@ -1,7 +1,10 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
 
+import { createChildLogger } from '../logger.js';
 import { contentHash } from '../sources/collectors/transcript-parser.js';
-import { bucketExpr, cached } from './query-utils.js';
+import { bucketExpr, cached, timedQuery } from './query-utils.js';
+
+const log = createChildLogger('db:message-queries');
 
 interface MessageEventRecord {
   timestamp: string;
@@ -46,12 +49,14 @@ export function deleteAllMessageEvents(db: Database): void {
 }
 
 export function getRangeTurnCount(db: Database, startTs: string, endTs: string): number {
-  const stmt = cached(
-    db,
-    "SELECT COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant')",
-  );
-  const row = stmt.get(startTs, endTs) as { turns: number } | undefined;
-  return row?.turns ?? 0;
+  return timedQuery(log, 'getRangeTurnCount', () => {
+    const stmt = cached(
+      db,
+      "SELECT COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant')",
+    );
+    const row = stmt.get(startTs, endTs) as { turns: number } | undefined;
+    return row?.turns ?? 0;
+  });
 }
 
 export function getRangeTurnCountBySession(
@@ -59,11 +64,13 @@ export function getRangeTurnCountBySession(
   startTs: string,
   endTs: string,
 ): Array<{ sessionKey: string; turns: number }> {
-  const stmt = cached(
-    db,
-    "SELECT session_key AS sessionKey, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY session_key ORDER BY turns DESC",
-  );
-  return stmt.all(startTs, endTs) as Array<{ sessionKey: string; turns: number }>;
+  return timedQuery(log, 'getRangeTurnCountBySession', () => {
+    const stmt = cached(
+      db,
+      "SELECT session_key AS sessionKey, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY session_key ORDER BY turns DESC",
+    );
+    return stmt.all(startTs, endTs) as Array<{ sessionKey: string; turns: number }>;
+  });
 }
 
 export function getBucketedTurnCount(
@@ -72,12 +79,14 @@ export function getBucketedTurnCount(
   endTs: string,
   bucketMinutes: number,
 ): Array<{ bucket: number; turns: number }> {
-  const expr = bucketExpr(bucketMinutes);
-  const stmt = cached(
-    db,
-    `SELECT ${expr} AS bucket, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket`,
-  );
-  return stmt.all(startTs, endTs) as Array<{ bucket: number; turns: number }>;
+  return timedQuery(log, 'getBucketedTurnCount', () => {
+    const expr = bucketExpr(bucketMinutes);
+    const stmt = cached(
+      db,
+      `SELECT ${expr} AS bucket, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket`,
+    );
+    return stmt.all(startTs, endTs) as Array<{ bucket: number; turns: number }>;
+  });
 }
 
 export function getBucketedTurnCountByRole(
@@ -86,10 +95,12 @@ export function getBucketedTurnCountByRole(
   endTs: string,
   bucketMinutes: number,
 ): Array<{ bucket: number; role: string; turns: number }> {
-  const expr = bucketExpr(bucketMinutes);
-  const stmt = cached(
-    db,
-    `SELECT ${expr} AS bucket, role, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket, role`,
-  );
-  return stmt.all(startTs, endTs) as Array<{ bucket: number; role: string; turns: number }>;
+  return timedQuery(log, 'getBucketedTurnCountByRole', () => {
+    const expr = bucketExpr(bucketMinutes);
+    const stmt = cached(
+      db,
+      `SELECT ${expr} AS bucket, role, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket, role`,
+    );
+    return stmt.all(startTs, endTs) as Array<{ bucket: number; role: string; turns: number }>;
+  });
 }

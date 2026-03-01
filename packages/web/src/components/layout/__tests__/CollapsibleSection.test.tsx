@@ -1,5 +1,5 @@
-import { cleanup,fireEvent, render } from '@testing-library/react';
-import { afterEach,describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { CollapsibleSection } from '../CollapsibleSection';
 
@@ -34,6 +34,13 @@ describe('CollapsibleSection', () => {
       </CollapsibleSection>,
     );
     expect(getByText('42')).toBeDefined();
+  });
+
+  it('content wrapper has min-w-0 to prevent overflow', () => {
+    const { container } = render(<CollapsibleSection title="Test">Content</CollapsibleSection>);
+    const gridWrapper = container.querySelector('.grid');
+    const contentDiv = gridWrapper?.querySelector('div');
+    expect(contentDiv?.className).toContain('min-w-0');
   });
 
   it('starts collapsed when defaultOpen=false', () => {

@@ -1,5 +1,9 @@
 import { parseArgs } from 'node:util';
 
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('cli:parse-args');
+
 const SUBCOMMANDS = ['start', 'stop', 'status', 'logs', 'restart', 'snapshot'] as const;
 type Subcommand = (typeof SUBCOMMANDS)[number];
 
@@ -51,7 +55,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     strict: false,
   });
 
-  return {
+  const result = {
     command,
     port: values.port ? parseInt(values.port as string, 10) : 41041,
     portExplicit: !!values.port,
@@ -66,4 +70,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     help: (values.help as boolean) ?? false,
     version: (values.version as boolean) ?? false,
   };
+
+  log.debug({ command: result.command, port: result.port }, 'parsed CLI args');
+  return result;
 }

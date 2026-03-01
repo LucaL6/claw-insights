@@ -1,4 +1,8 @@
-import { existsSync, renameSync, statSync, unlinkSync,writeFileSync } from 'node:fs';
+import { existsSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('cli:log-rotate');
 
 interface RotateOptions {
   maxBytes: number; // e.g. 10 * 1024 * 1024 (10MB)
@@ -11,10 +15,16 @@ interface RotateOptions {
  * Returns true if rotation occurred.
  */
 export function rotateIfNeeded(logPath: string, opts: RotateOptions): boolean {
-  if (!existsSync(logPath)) {return false;}
+  if (!existsSync(logPath)) {
+    return false;
+  }
 
   const size = statSync(logPath).size;
-  if (size < opts.maxBytes) {return false;}
+  if (size < opts.maxBytes) {
+    return false;
+  }
+
+  log.info({ logPath, sizeBytes: size, maxBytes: opts.maxBytes }, 'log rotation starting');
 
   // Drop the oldest if at capacity
   const oldest = `${logPath}.${opts.maxFiles}`;
@@ -37,6 +47,7 @@ export function rotateIfNeeded(logPath: string, opts: RotateOptions): boolean {
   // Create fresh empty log
   writeFileSync(logPath, '');
 
+  log.info({ logPath }, 'log rotation completed');
   return true;
 }
 

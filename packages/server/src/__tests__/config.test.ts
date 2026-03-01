@@ -4,6 +4,12 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Mock logger so config.ts log.warn calls are captured
+const { mockWarn } = vi.hoisted(() => ({ mockWarn: vi.fn() }));
+vi.mock('../logger.js', () => ({
+  createChildLogger: () => ({ info: vi.fn(), warn: mockWarn, error: vi.fn(), debug: vi.fn() }),
+}));
+
 // Non-dynamic tests for existing exports
 import { CLI_ENV, config } from '../config.js';
 
@@ -31,10 +37,12 @@ describe('config singleton', () => {
     }
   });
 
-  it('source contains no hardcoded ./', async () => {
+  it('source contains no hardcoded ./ paths (except allowed logger import)', async () => {
     const { readFileSync } = await import('fs');
     const src = readFileSync(new URL('../config.ts', import.meta.url), 'utf-8');
-    expect(src).not.toContain('./');
+    // Filter out allowed ./ imports (logger is a sibling module)
+    const filtered = src.replace(/from\s+'\.\/logger\.js'/g, '');
+    expect(filtered).not.toContain('./');
   });
 
   it('should have claw-insights DB path by default', () => {
@@ -171,11 +179,10 @@ describe('loadConfigFile', () => {
 
   it('returns empty object for invalid JSON', async () => {
     writeFileSync(join(testDir, '.claw-insights', 'config.json'), 'not json{{{');
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockWarn.mockClear();
     const { loadConfigFile } = await import('../config.js');
     expect(loadConfigFile()).toEqual({});
-    expect(spy).toHaveBeenCalled();
-    spy.mockRestore();
+    expect(mockWarn).toHaveBeenCalled();
   });
 
   it('warns on unknown config keys', async () => {
@@ -183,21 +190,25 @@ describe('loadConfigFile', () => {
       join(testDir, '.claw-insights', 'config.json'),
       JSON.stringify({ unknownFooBar: true, serverPort: 3000 }),
     );
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockWarn.mockClear();
     const { loadConfigFile } = await import('../config.js');
     loadConfigFile();
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining('Unknown config key'));
-    spy.mockRestore();
+    expect(mockWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'unknownFooBar' }),
+      expect.stringContaining('unknown config key'),
+    );
   });
 
   it('warns on loose permissions when apiToken present', async () => {
     const cfgPath = join(testDir, '.claw-insights', 'config.json');
     writeFileSync(cfgPath, JSON.stringify({ apiToken: 'a'.repeat(32) }));
     chmodSync(cfgPath, 0o644);
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockWarn.mockClear();
     const { loadConfigFile } = await import('../config.js');
     loadConfigFile();
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining('loose permissions'));
-    spy.mockRestore();
+    expect(mockWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ path: expect.stringContaining('config.json') }),
+      expect.stringContaining('loose permissions'),
+    );
   });
 });

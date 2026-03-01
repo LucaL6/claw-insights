@@ -1,5 +1,9 @@
 import type { LogEntry } from '@claw-insights/shared';
 
+import { createChildLogger } from '../../logger.js';
+
+const log = createChildLogger('spawn-tracker');
+
 export class SpawnTracker {
   private runToParent = new Map<string, string>();
   private runToChild = new Map<string, string>();
@@ -24,6 +28,7 @@ export class SpawnTracker {
     const p = this.runToParent.get(runId);
     const c = this.runToChild.get(runId);
     if (p && c) {
+      log.debug({ runId, parent: p, child: c }, 'spawn link detected');
       if (!this.parentToChildren.has(p)) {
         this.parentToChildren.set(p, new Set());
       }
@@ -38,6 +43,7 @@ export class SpawnTracker {
     if (this.runToParent.size <= maxEntries) {
       return;
     }
+    log.debug({ size: this.runToParent.size, maxEntries }, 'pruning spawn tracker');
 
     const keys = [...this.runToParent.keys()];
     for (let i = 0; i < keys.length - maxEntries; i++) {

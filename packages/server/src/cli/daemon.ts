@@ -1,4 +1,3 @@
- 
 import { spawn } from 'node:child_process';
 import {
   createReadStream,
@@ -13,9 +12,12 @@ import {
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
+import { createChildLogger } from '../logger.js';
 import { DEFAULT_ROTATE_OPTIONS, rotateIfNeeded } from './log-rotate.js';
 import type { CliArgs } from './parse-args.js';
 import { PidFile } from './pid.js';
+
+const log = createChildLogger('cli:daemon');
 
 const HOME = process.env.HOME ?? '/tmp';
 
@@ -159,8 +161,10 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
 
   // Write PID file
   try {
+    log.debug({ pid: child.pid, path: paths.pidFile }, 'writing PID file');
     pidFile.write(child.pid);
   } catch (err) {
+    log.error({ err, pid: child.pid }, 'failed to write PID file');
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`❌ Failed to write PID file: ${msg}`);
     try {
@@ -320,6 +324,7 @@ export async function daemonStop(): Promise<void> {
     cleanupAuthToken(paths.dataDir);
     spinner.stop('💡 Claw Insights force-killed.');
   } catch (err) {
+    log.error({ err, pid }, 'daemon stop failed');
     spinner.stop(`❌ Stop failed: ${err instanceof Error ? err.message : String(err)}`);
     throw err;
   }

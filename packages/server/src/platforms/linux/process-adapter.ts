@@ -4,8 +4,10 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { readdir, readFile, readlink } from 'node:fs/promises';
 import { promisify } from 'node:util';
 
+import { createChildLogger } from '../../logger.js';
 import { PosixProcessAdapter } from '../shared/posix-process-adapter.js';
 
+const log = createChildLogger('platform:linux');
 const execFileAsync = promisify(execFile);
 
 /**
@@ -16,7 +18,9 @@ export class LinuxProcessAdapter extends PosixProcessAdapter {
   private clkTck: number | null = null;
 
   private async getClkTck(): Promise<number> {
-    if (this.clkTck !== null) {return this.clkTck;}
+    if (this.clkTck !== null) {
+      return this.clkTck;
+    }
     try {
       const { stdout } = await execFileAsync('getconf', ['CLK_TCK'], {
         timeout: 2000,
@@ -39,6 +43,7 @@ export class LinuxProcessAdapter extends PosixProcessAdapter {
       });
       const pid = parseInt(stdout.trim().split('\n')[0], 10);
       if (!isNaN(pid)) {
+        log.debug({ pid }, 'getPid via pgrep');
         return pid;
       }
     } catch {

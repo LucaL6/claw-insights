@@ -1,7 +1,10 @@
 import type { DatabaseSync as Database } from 'node:sqlite';
 
 import type { TokenUsageEvent } from '../events/token-event-bus.js';
-import { bucketExpr, cached } from './query-utils.js';
+import { createChildLogger } from '../logger.js';
+import { bucketExpr, cached, timedQuery } from './query-utils.js';
+
+const log = createChildLogger('db:token-queries');
 
 // ── Write ──
 
@@ -59,12 +62,14 @@ export function getBucketedTokenUsage(
   endTs: string,
   bucketMinutes: number,
 ): Array<{ bucket: number; tokensK: number }> {
-  const expr = bucketExpr(bucketMinutes);
-  const stmt = cached(
-    db,
-    `SELECT ${expr} AS bucket, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket HAVING tokensK > 0`,
-  );
-  return stmt.all(startTs, endTs) as Array<{ bucket: number; tokensK: number }>;
+  return timedQuery(log, 'getBucketedTokenUsage', () => {
+    const expr = bucketExpr(bucketMinutes);
+    const stmt = cached(
+      db,
+      `SELECT ${expr} AS bucket, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket HAVING tokensK > 0`,
+    );
+    return stmt.all(startTs, endTs) as Array<{ bucket: number; tokensK: number }>;
+  });
 }
 
 export function getBucketedModelTokenUsage(
@@ -73,21 +78,25 @@ export function getBucketedModelTokenUsage(
   endTs: string,
   bucketMinutes: number,
 ): Array<{ bucket: number; model: string; tokensK: number }> {
-  const expr = bucketExpr(bucketMinutes);
-  const stmt = cached(
-    db,
-    `SELECT ${expr} AS bucket, model, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket, model HAVING tokensK > 0`,
-  );
-  return stmt.all(startTs, endTs) as Array<{ bucket: number; model: string; tokensK: number }>;
+  return timedQuery(log, 'getBucketedModelTokenUsage', () => {
+    const expr = bucketExpr(bucketMinutes);
+    const stmt = cached(
+      db,
+      `SELECT ${expr} AS bucket, model, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket, model HAVING tokensK > 0`,
+    );
+    return stmt.all(startTs, endTs) as Array<{ bucket: number; model: string; tokensK: number }>;
+  });
 }
 
 export function getRangeTokenUsageK(db: Database, startTs: string, endTs: string): number {
-  const stmt = cached(
-    db,
-    `SELECT COALESCE(${TOKEN_SUM}, 0) AS total FROM token_usage_events WHERE timestamp >= ? AND timestamp < ?`,
-  );
-  const row = stmt.get(startTs, endTs) as { total: number } | undefined;
-  return row?.total ?? 0;
+  return timedQuery(log, 'getRangeTokenUsageK', () => {
+    const stmt = cached(
+      db,
+      `SELECT COALESCE(${TOKEN_SUM}, 0) AS total FROM token_usage_events WHERE timestamp >= ? AND timestamp < ?`,
+    );
+    const row = stmt.get(startTs, endTs) as { total: number } | undefined;
+    return row?.total ?? 0;
+  });
 }
 
 export function getRangeModelTokenUsage(
@@ -95,9 +104,11 @@ export function getRangeModelTokenUsage(
   startTs: string,
   endTs: string,
 ): Array<{ model: string; tokensK: number }> {
-  const stmt = cached(
-    db,
-    `SELECT model, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY model HAVING tokensK > 0 ORDER BY tokensK DESC`,
-  );
-  return stmt.all(startTs, endTs) as Array<{ model: string; tokensK: number }>;
+  return timedQuery(log, 'getRangeModelTokenUsage', () => {
+    const stmt = cached(
+      db,
+      `SELECT model, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY model HAVING tokensK > 0 ORDER BY tokensK DESC`,
+    );
+    return stmt.all(startTs, endTs) as Array<{ model: string; tokensK: number }>;
+  });
 }

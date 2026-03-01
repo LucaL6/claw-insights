@@ -18,13 +18,14 @@ export function MetricsSummaryRow({ totalTokensK, totalMessages, totalErrors, to
   const TOOLTIPS = useMemo(() => getTooltips(t), [t]);
 
   return (
-    <div className="flex gap-5 mb-3 text-[13px]">
+    <div className="flex flex-wrap gap-x-5 gap-y-1 mb-3 text-[13px]">
       <span className="text-fg-muted">
         {t('summary.tokens')}: <span className="mono font-semibold text-emerald">{formatTokensK(totalTokensK)}</span>
         <InfoTooltip {...TOOLTIPS.summary.summaryTokens} />
       </span>
       <span className="text-fg-muted">
-        {t('summary.messages')}: <span className="mono font-semibold text-violet">{totalMessages.toLocaleString()}</span>
+        {t('summary.messages')}:{' '}
+        <span className="mono font-semibold text-violet">{totalMessages.toLocaleString()}</span>
       </span>
       <span className="text-fg-muted">
         {t('summary.errors')}: <span className="mono font-semibold text-red">{totalErrors}</span>

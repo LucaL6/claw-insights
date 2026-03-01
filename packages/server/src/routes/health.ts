@@ -1,5 +1,8 @@
 import type { Request, Response } from 'express';
 
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('health');
 const startTime = Date.now();
 
 interface HealthOptions {
@@ -15,6 +18,10 @@ export function createHealthHandler(opts: HealthOptions) {
       opts.checkGateway().catch(() => false),
       Promise.resolve(opts.checkDb()),
     ]);
+
+    if (!gatewayOk || !dbOk) {
+      log.warn({ gatewayOk, dbOk }, 'health check degraded');
+    }
 
     res.json({
       status: 'ok',

@@ -1,4 +1,7 @@
+import { createChildLogger } from '../logger.js';
 import { QueueFullError, QueueTimeoutError } from './snapshot-errors.js';
+
+const log = createChildLogger('render-pool');
 
 interface QueueEntry {
   resolve: () => void;
@@ -25,12 +28,16 @@ export class RenderPool {
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
     if (this.running < this.maxConcurrency) {
+      log.debug({ running: this.running }, 'execute: running immediately');
       return this.run(fn);
     }
 
     if (this.queue.length >= this.maxQueueSize) {
+      log.warn({ queueLength: this.queue.length, maxQueueSize: this.maxQueueSize }, 'queue full');
       throw new QueueFullError(this.maxQueueSize);
     }
+
+    log.debug({ queueLength: this.queue.length + 1 }, 'execute: enqueued');
 
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -38,6 +45,7 @@ export class RenderPool {
         if (idx >= 0) {
           this.queue.splice(idx, 1);
         }
+        log.warn({ timeoutMs: this.queueTimeoutMs }, 'queue wait timed out');
         reject(new QueueTimeoutError());
       }, this.queueTimeoutMs);
       timer.unref(); // Don't prevent graceful shutdown

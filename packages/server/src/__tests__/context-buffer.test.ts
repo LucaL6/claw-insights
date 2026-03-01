@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
+// Mock logger
+vi.mock('../logger.js', () => ({
+  createChildLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
+}));
+
 // Capture event bus callbacks
 const tokenBusCallbacks: Array<(event: unknown) => void> = [];
 const messageBusCallbacks: Array<(event: unknown) => void> = [];

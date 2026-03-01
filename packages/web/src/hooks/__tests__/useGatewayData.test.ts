@@ -1,11 +1,12 @@
-import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DashboardConnection } from '../useConnectionStatus';
 
 let mockConnection: DashboardConnection = 'connected';
+const mockReexecuteGateway = vi.fn();
 
-const queryResults: Record<string, [unknown]> = {};
+const queryResults: Record<string, [unknown, ...unknown[]]> = {};
 
 vi.mock('../../graphql/queries', () => ({
   GatewayQuery: 'GatewayQuery',
@@ -22,6 +23,8 @@ vi.mock('../useReactiveQuery', () => ({
     const key = String(opts.query).slice(0, 40);
     for (const [k, v] of Object.entries(queryResults)) {
       if (key.includes(k)) {
+        // Gateway query returns [data, reexecute]
+        if (k === 'Gateway') {return [v[0], mockReexecuteGateway];}
         return v;
       }
     }
@@ -51,6 +54,13 @@ function setDefaultQueryResults() {
 describe('useGatewayData', () => {
   beforeEach(() => {
     mockConnection = 'connected';
+    mockReexecuteGateway.mockReset();
+    vi.useFakeTimers();
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true, configurable: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('returns status=running when gateway.running is true', () => {
@@ -138,4 +148,22 @@ describe('useGatewayData', () => {
     const { result } = renderHook(() => useGatewayData());
     expect(result.current.status).toBe('dashboard-offline');
   });
+
+  // --- Retry + visibility gate tests ---
+
+  it('schedules retry when gateway-down and calls reexecute after delay', () => {
+    queryResults['Gateway'] = [{ data: { gateway: { running: false } }, fetching: false }];
+    queryResults['Resources'] = [{ data: undefined, fetching: false }];
+    queryResults['Channels'] = [{ data: { channels: [] }, fetching: false }];
+
+    renderHook(() => useGatewayData());
+    expect(mockReexecuteGateway).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(mockReexecuteGateway).toHaveBeenCalledWith({ requestPolicy: 'network-only' });
+  });
+
+  // Visibility gating and retry reset tests moved to useRetryWithBackoff.test.ts
 });

@@ -9,13 +9,27 @@ afterEach(cleanup);
 describe('MetricsSummaryRow', () => {
   it('renders formatted values', () => {
     const { container } = renderWithProviders(
-      <MetricsSummaryRow totalTokensK={123.456} totalMessages={723} totalErrors={5} totalWarnings={2} uptimePct={99.123} />,
+      <MetricsSummaryRow
+        totalTokensK={123.456}
+        totalMessages={723}
+        totalErrors={5}
+        totalWarnings={2}
+        uptimePct={99.123}
+      />,
     );
     const text = container.textContent ?? '';
     expect(text).toContain('123.5k');
     expect(text).toContain('5');
     expect(text).toContain('2');
     expect(text).toContain('99.1%');
+  });
+
+  it('summary row has flex-wrap for narrow containers', () => {
+    const { container } = renderWithProviders(
+      <MetricsSummaryRow totalTokensK={100} totalMessages={50} totalErrors={1} totalWarnings={0} uptimePct={99} />,
+    );
+    const row = container.firstElementChild as HTMLElement;
+    expect(row.className).toContain('flex-wrap');
   });
 
   it('handles zero values', () => {

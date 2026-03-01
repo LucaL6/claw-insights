@@ -153,8 +153,7 @@ process.on('SIGINT', () => {
   shutdown();
 });
 
-// Pre-warm gateway status cache for faster first snapshot
-ctx.gatewayClient.warmCache().catch(() => {});
+// Gateway cache warm-up moved to startContext (after scanner init) — ISS-056
 
 const PORT = config.serverPort;
 const server = app.listen(PORT, '127.0.0.1', () => {

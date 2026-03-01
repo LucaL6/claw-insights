@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Platform } from '../../ports/types.js';
 import { createGatewayClient } from '../gateway-cli.js';
@@ -6,6 +6,8 @@ import { createGatewayClient } from '../gateway-cli.js';
 vi.mock('../../events.js', () => ({
   emitChange: vi.fn(),
 }));
+
+import { emitChange } from '../../events.js';
 
 const MOCK_STATUS_JSON = JSON.stringify({
   gateway: { reachable: true, connectLatencyMs: 25 },
@@ -90,5 +92,81 @@ describe('gateway-cli extended fields', () => {
     expect(a).toBe(b);
     // With dedup: 2 calls (status --json + --version), not 4
     expect(callCount).toBeLessThanOrEqual(2);
+  });
+});
+
+const MOCK_FAIL_STATUS_JSON = JSON.stringify({
+  gateway: { reachable: false },
+  gatewayService: { runtimeShort: 'stopped' },
+  channelSummary: [],
+});
+
+describe('cache TTL behavior', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('caches successful status for 10s', async () => {
+    const cliExec = vi.fn((args: string[]) => {
+      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_STATUS_JSON);}
+      return Promise.resolve('2.5.0\n');
+    });
+    const client = createGatewayClient(mockPlatform({ cliExec }));
+
+    await client.getGatewayStatus();
+    expect(cliExec).toHaveBeenCalledTimes(2); // status + version
+
+    // At 9s — still cached
+    vi.advanceTimersByTime(9_000);
+    await client.getGatewayStatus();
+    expect(cliExec).toHaveBeenCalledTimes(2);
+
+    // At 10s+ — expired (version still cached at 60s TTL, so only status re-fetched)
+    vi.advanceTimersByTime(2_000);
+    await client.getGatewayStatus();
+    expect(cliExec).toHaveBeenCalledTimes(3); // re-fetched status only
+  });
+
+  it('caches failed status for 3s', async () => {
+    const cliExec = vi.fn((args: string[]) => {
+      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_FAIL_STATUS_JSON);}
+      return Promise.resolve('2.5.0\n');
+    });
+    const client = createGatewayClient(mockPlatform({ cliExec }));
+
+    await client.getGatewayStatus();
+    expect(cliExec).toHaveBeenCalledTimes(2);
+
+    // At 2s — still cached
+    vi.advanceTimersByTime(2_000);
+    await client.getGatewayStatus();
+    expect(cliExec).toHaveBeenCalledTimes(2);
+
+    // At 3s+ — expired (version still cached)
+    vi.advanceTimersByTime(2_000);
+    await client.getGatewayStatus();
+    expect(cliExec).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not emit change when status is unchanged', async () => {
+    const cliExec = vi.fn((args: string[]) => {
+      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_STATUS_JSON);}
+      return Promise.resolve('2.5.0\n');
+    });
+    const client = createGatewayClient(mockPlatform({ cliExec }));
+
+    await client.getGatewayStatus();
+    expect(emitChange).toHaveBeenCalledTimes(1);
+
+    // Expire cache and re-fetch same status
+    vi.advanceTimersByTime(11_000);
+    await client.getGatewayStatus();
+    // Should NOT emit again since status is identical
+    expect(emitChange).toHaveBeenCalledTimes(1);
   });
 });

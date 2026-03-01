@@ -1,9 +1,12 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 import { parse as parseCookies } from 'cookie';
-import type { NextFunction,Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 import { config } from '../config.js';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('middleware:auth');
 
 const COOKIE_NAME = 'claw_session';
 
@@ -13,25 +16,35 @@ function hashToken(token: string): string {
 
 /** Timing-safe string comparison. Returns false if lengths differ. */
 function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {return false;}
+  if (a.length !== b.length) {
+    return false;
+  }
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
 function parseCookie(cookieHeader: string | undefined, name: string): string | undefined {
-  if (!cookieHeader) {return undefined;}
+  if (!cookieHeader) {
+    return undefined;
+  }
   const cookies = parseCookies(cookieHeader);
   return cookies[name];
 }
 
 function csrfCheck(req: Request): boolean {
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {return true;}
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return true;
+  }
 
   const host = req.headers.host ?? `127.0.0.1:${config.serverPort}`;
   const origin = req.headers.origin;
   const referer = req.headers.referer;
 
-  if (origin) {return origin === `http://${host}`;}
-  if (referer) {return referer.startsWith(`http://${host}/`);}
+  if (origin) {
+    return origin === `http://${host}`;
+  }
+  if (referer) {
+    return referer.startsWith(`http://${host}/`);
+  }
 
   return false;
 }
@@ -47,14 +60,17 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   const header = req.headers.authorization;
   if (header) {
     if (!header.startsWith('Bearer ')) {
+      log.warn({ method: req.method, path: req.path }, 'auth rejected: malformed Authorization header');
       res.status(401).json({ error: 'Missing or invalid Authorization header' });
       return;
     }
     const token = header.slice(7);
     if (safeEqual(token, config.apiToken)) {
+      log.debug({ method: req.method, path: req.path }, 'auth ok via bearer');
       next();
       return;
     }
+    log.warn({ method: req.method, path: req.path }, 'auth rejected: invalid bearer token');
     res.status(403).json({ error: 'Invalid token' });
     return;
   }
@@ -64,13 +80,16 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   if (cookie && safeEqual(cookie, hashToken(config.apiToken))) {
     // 4. CSRF check for state-changing requests
     if (!csrfCheck(req)) {
+      log.warn({ method: req.method, path: req.path }, 'auth rejected: CSRF check failed');
       res.status(403).json({ error: 'CSRF check failed' });
       return;
     }
+    log.debug({ method: req.method, path: req.path }, 'auth ok via cookie');
     next();
     return;
   }
 
   // 5. Reject
+  log.warn({ method: req.method, path: req.path }, 'auth rejected: no valid credentials');
   res.status(401).json({ error: 'Unauthorized' });
 }

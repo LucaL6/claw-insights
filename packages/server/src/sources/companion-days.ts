@@ -4,6 +4,9 @@ import type { DatabaseSync } from 'node:sqlite';
 import { promisify } from 'node:util';
 
 import { getCompanionSince, setCompanionSince } from '../db/system-queries.js';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('companion-days');
 
 const execFileAsync = promisify(execFile);
 
@@ -59,11 +62,13 @@ export async function resolveCompanionSince(db: DatabaseSync, opts: CompanionOpt
 
   // 3. Pick the earliest
   if (candidates.length === 0) {
+    log.warn('no candidate timestamps found for companion_since');
     return null;
   }
 
   const earliest = new Date(Math.min(...candidates)).toISOString();
   setCompanionSince(db, earliest);
+  log.debug({ candidateCount: candidates.length, earliest }, 'companion_since resolved');
   return earliest;
 }
 

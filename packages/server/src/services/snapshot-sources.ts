@@ -5,17 +5,26 @@ import { getRangeTurnCount, getRangeTurnCountBySession } from '../db/message-que
 import { type MetricsRangeKey, RANGE_CONFIG } from '../db/query-utils.js';
 import { getCompanionSince } from '../db/system-queries.js';
 import { getRangeModelTokenUsage, getRangeTokenUsageK } from '../db/token-queries.js';
+import { createChildLogger } from '../logger.js';
 import { resolveCompanionSince } from '../sources/companion-days.js';
 import type { DataSources } from './snapshot-types.js';
 
+const log = createChildLogger('snapshot-sources');
 const VALID_RANGES = new Set<MetricsRangeKey>(Object.keys(RANGE_CONFIG) as MetricsRangeKey[]);
 
 export function createSnapshotSources(ctx: AppContext): DataSources {
   return {
     getGateway: async () => {
-      const s = await ctx.gatewayClient.getGatewayStatus();
-      const sys = await ctx.systemInfoService.getSystemMetrics();
-      return { ...s, cpu: sys.cpu, memoryMB: sys.memoryMB };
+      log.debug('collecting gateway data');
+      try {
+        const s = await ctx.gatewayClient.getGatewayStatus();
+        const sys = await ctx.systemInfoService.getSystemMetrics();
+        log.debug('gateway data collected');
+        return { ...s, cpu: sys.cpu, memoryMB: sys.memoryMB };
+      } catch (err) {
+        log.warn({ err }, 'failed to collect gateway data');
+        throw err;
+      }
     },
     getChannels: async () => (await ctx.gatewayClient.getGatewayStatus()).channels,
     getSessions: () => {

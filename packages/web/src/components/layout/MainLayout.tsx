@@ -25,7 +25,7 @@ export function MainLayout({ topBar, sessions, metrics }: Props) {
             <LayoutTabs sessions={sessions} metrics={metrics} />
           </div>
         ) : (
-          <div className="flex flex-col xl:grid xl:grid-cols-12 gap-0 flex-1 min-h-0 relative">
+          <div className="flex flex-col xl:grid xl:grid-cols-12 gap-0 flex-1 min-h-0 min-w-0 relative">
             <StaleOverlay />
             <div
               data-section="sessions"
@@ -35,7 +35,7 @@ export function MainLayout({ topBar, sessions, metrics }: Props) {
             </div>
             <div
               data-section="metrics"
-              className="xl:col-span-7 flex flex-col gap-2 min-h-0 overflow-y-auto sb xl:pl-3"
+              className="@container xl:col-span-7 flex flex-col gap-2 min-h-0 min-w-0 overflow-y-auto sb xl:pl-3"
             >
               {metrics}
             </div>

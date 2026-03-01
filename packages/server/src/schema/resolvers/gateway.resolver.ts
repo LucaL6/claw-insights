@@ -1,11 +1,15 @@
 import type { AppContext } from '../../context.js';
+import { createChildLogger } from '../../logger.js';
 import { getAppVersion } from '../../version.js';
 import type { ChannelProvider, QueryResolvers, Resolvers } from '../generated/resolver-types.js';
 import { safe } from './utils.js';
 
+const log = createChildLogger('resolver:gateway');
+
 export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
-  const gateway: QueryResolvers['gateway'] = () =>
-    safe(async () => {
+  const gateway: QueryResolvers['gateway'] = async () => {
+    const start = performance.now();
+    const result = await safe(async () => {
       const status = await ctx.gatewayClient.getGatewayStatus();
       return {
         running: status.running,
@@ -21,9 +25,16 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
         securityWarn: status.securitySummary.warn,
       };
     });
+    const ms = performance.now() - start;
+    if (ms > 100) {
+      log.debug({ ms: Math.round(ms) }, 'slow resolve: gateway');
+    }
+    return result;
+  };
 
-  const channels: QueryResolvers['channels'] = () =>
-    safe(async () => {
+  const channels: QueryResolvers['channels'] = async () => {
+    const start = performance.now();
+    const result = await safe(async () => {
       const status = await ctx.gatewayClient.getGatewayStatus();
       return status.channels as Array<{
         provider: ChannelProvider;
@@ -32,8 +43,22 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
         latencyMs: number | null;
       }>;
     });
+    const ms = performance.now() - start;
+    if (ms > 100) {
+      log.debug({ ms: Math.round(ms) }, 'slow resolve: channels');
+    }
+    return result;
+  };
 
-  const resources: QueryResolvers['resources'] = () => safe(async () => ctx.systemInfoService.getSystemMetrics());
+  const resources: QueryResolvers['resources'] = async () => {
+    const start = performance.now();
+    const result = await safe(async () => ctx.systemInfoService.getSystemMetrics());
+    const ms = performance.now() - start;
+    if (ms > 100) {
+      log.debug({ ms: Math.round(ms) }, 'slow resolve: resources');
+    }
+    return result;
+  };
 
   return { Query: { gateway, channels, resources } };
 }

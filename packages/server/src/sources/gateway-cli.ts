@@ -2,9 +2,6 @@ import { open, stat } from 'node:fs/promises';
 
 import { config } from '../config.js';
 import { emitChange } from '../events.js';
-import { createChildLogger } from '../logger.js';
-
-const log = createChildLogger('gateway-cli');
 import type { ChannelInfo } from '../platforms/shared/parsers.js';
 import { parseChannels } from '../platforms/shared/parsers.js';
 import type { Platform } from '../ports/types.js';
@@ -16,6 +13,11 @@ export { formatUptime, parseChannels } from '../platforms/shared/parsers.js';
 interface CachedResult<T> {
   data: T;
   ts: number;
+  ttl: number;
+}
+
+function isCacheValid<T>(cache: CachedResult<T> | null): cache is CachedResult<T> {
+  return cache !== null && Date.now() - cache.ts < cache.ttl;
 }
 
 const CACHE_TTL = 10_000; // 10s
@@ -88,13 +90,12 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
   let lastStatusJson = ''; // Track last status independently of cache for change detection
 
   async function getVersion(): Promise<string> {
-    if (versionCache && Date.now() - versionCache.ts < VERSION_CACHE_TTL) {
+    if (isCacheValid(versionCache)) {
       return versionCache.data;
     }
     const raw = (await platform.cli.exec(['--version'])).trim();
     const version = raw || 'unknown';
-    // Short TTL for failed results to allow faster recovery without request storms
-    versionCache = { data: version, ts: Date.now() - (raw ? 0 : VERSION_CACHE_TTL - VERSION_FAIL_CACHE_TTL) };
+    versionCache = { data: version, ts: Date.now(), ttl: raw ? VERSION_CACHE_TTL : VERSION_FAIL_CACHE_TTL };
     return version;
   }
 
@@ -160,7 +161,7 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
   }
 
   async function getGatewayStatus(): Promise<ParsedStatus> {
-    if (statusCache && Date.now() - statusCache.ts < CACHE_TTL) {
+    if (isCacheValid(statusCache)) {
       return statusCache.data;
     }
     if (statusInFlight) {
@@ -170,12 +171,10 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
     statusInFlight = (async () => {
       try {
         const [raw, version] = await Promise.all([platform.cli.exec(['status', '--json']), getVersion()]);
-        log.info({ rawLen: raw.length, version, rawStart: raw.slice(0, 80) }, 'CLI status result');
         const status = await parseStatusJson(raw, version);
         const curJson = JSON.stringify(status);
-        // Short TTL for failed results — fast recovery without request storms
         const ttl = status.running ? CACHE_TTL : FAIL_CACHE_TTL;
-        statusCache = { data: status, ts: Date.now() - (CACHE_TTL - ttl) };
+        statusCache = { data: status, ts: Date.now(), ttl };
         if (curJson !== lastStatusJson) {
           lastStatusJson = curJson;
           emitChange('gateway');

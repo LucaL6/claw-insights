@@ -1,3 +1,7 @@
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('deadline');
+
 export class Deadline {
   private readonly end: number;
 
@@ -21,6 +25,7 @@ export async function withDeadline<T>(
 ): Promise<T> {
   const ms = deadline.remaining();
   if (ms <= 0) {
+    log.debug('deadline already expired');
     throw new TimeoutError();
   }
 

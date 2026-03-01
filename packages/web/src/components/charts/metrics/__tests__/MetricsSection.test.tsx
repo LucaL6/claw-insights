@@ -76,6 +76,28 @@ describe('MetricsSection', () => {
     expect(getByTestId('uptime-chart')).toBeDefined();
   });
 
+  it('uses container query grid class for chart layout', () => {
+    mockUseMetricsData.mockReturnValue(makeMetricsReturn());
+    const { container } = renderWithProviders(<MetricsSection range="SIX_HOUR" onRangeChange={() => {}} />);
+    const tokensChart = container.querySelector('[data-testid="tokens-chart"]');
+    const gridDiv = tokensChart?.closest('.grid');
+    expect(gridDiv).toBeTruthy();
+    expect(gridDiv?.className).toContain('@xl:grid-cols-2');
+    // Ensure no standalone viewport variant (without @ prefix)
+    const gridClasses = gridDiv?.className.split(/\s+/) ?? [];
+    expect(gridClasses).not.toContain('xl:grid-cols-2');
+  });
+
+  it('skeleton grid uses container query class', () => {
+    mockUseMetricsData.mockReturnValue(makeMetricsReturn({ fetching: true, result: { data: null, fetching: true } }));
+    const { container } = renderWithProviders(<MetricsSection range="ONE_HOUR" onRangeChange={() => {}} />);
+    const grids = container.querySelectorAll('.grid');
+    const skeletonGrid = Array.from(grids).find((el) => el.className.includes('grid-cols'));
+    expect(skeletonGrid?.className).toContain('@xl:grid-cols-2');
+    const skeletonClasses = skeletonGrid?.className.split(/\s+/) ?? [];
+    expect(skeletonClasses).not.toContain('xl:grid-cols-2');
+  });
+
   it('renders summary row when metrics exist', () => {
     mockUseMetricsData.mockReturnValue(
       makeMetricsReturn({ totalTokensK: 42.5, totalMessages: 123, totalErrors: 3, totalWarnings: 1, uptimePct: 98.7 }),
