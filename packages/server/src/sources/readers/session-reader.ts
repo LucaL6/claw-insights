@@ -1,6 +1,6 @@
 import type { Session, SessionSortBy, SessionStatus } from '@claw-insights/shared';
-import { type FSWatcher, readFileSync, statSync, watch } from 'fs';
-import { basename, dirname } from 'path';
+import { type FSWatcher, readdirSync, readFileSync, realpathSync, statSync, watch } from 'fs';
+import { basename, dirname, join, sep } from 'path';
 
 import { config } from '../../config.js';
 import type { Database } from '../../db/database.js';
@@ -312,6 +312,56 @@ export class SessionReader {
       total += session.totalTokens;
     }
     return total / 1000;
+  }
+
+  getTranscriptPath(sessionKey: string): string | null {
+    const raw = this.rawSessions.get(sessionKey);
+    if (!raw?.sessionId) {
+      return null;
+    }
+
+    const sessionId = raw.sessionId;
+
+    // UUID format validation (prevent injection)
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(sessionId)) {
+      return null;
+    }
+
+    const transcriptsDir = dirname(this.filePath);
+
+    let files: string[];
+    try {
+      files = readdirSync(transcriptsDir).filter(
+        (f) => f.startsWith(sessionId) && f.endsWith('.jsonl') && !f.includes('.deleted'),
+      );
+    } catch {
+      return null;
+    }
+
+    if (files.length === 0) {
+      return null;
+    }
+
+    if (files.length > 1) {
+      log.warn({ sessionId, files }, 'multiple transcript files match session');
+    }
+
+    const exactMatch = files.find((f) => f === `${sessionId}.jsonl`);
+    const target = exactMatch ?? files.sort()[0];
+    const fullPath = join(transcriptsDir, target);
+
+    // Path traversal defense
+    try {
+      const realDir = realpathSync(transcriptsDir);
+      const realFile = realpathSync(fullPath);
+      if (!realFile.startsWith(realDir + sep)) {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+
+    return fullPath;
   }
 
   destroy() {

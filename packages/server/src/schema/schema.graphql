@@ -216,6 +216,69 @@ type EventDensityBucket {
   restartCount: Int!
   epochStart: Int!
 }
+# ── Transcript ──
+
+type TranscriptMessage {
+  """ISO timestamp"""
+  timestamp: String!
+  """user | assistant | tool"""
+  role: String!
+  """Message text content (truncated if over limit)"""
+  content: String!
+  """Content was truncated from original"""
+  contentTruncated: Boolean!
+  """Assistant message model id"""
+  model: String
+  """Token usage breakdown (assistant only)"""
+  usage: TranscriptTokenUsage
+  """Tool name, e.g. Read, exec, Edit (tool only)"""
+  toolName: String
+}
+
+type TranscriptTokenUsage {
+  input: Int!
+  output: Int!
+  cacheRead: Int!
+  cacheWrite: Int!
+}
+
+type SessionTranscript {
+  """Session key"""
+  sessionKey: String!
+  """Session display name"""
+  displayName: String!
+  """Model at session start"""
+  model: String!
+  """Channel provider"""
+  channel: String
+  """Session kind: direct / group / cron"""
+  kind: String!
+  """Thinking level at session start"""
+  thinkingLevel: String
+  """Session start ISO timestamp"""
+  startedAt: String!
+  """File size in bytes"""
+  fileSize: Int!
+  """Total tokens consumed (input + output + cache read)"""
+  totalTokens: Int!
+  """Input tokens of the last assistant message (approx context window usage)"""
+  contextTokens: Int!
+  """Session duration in milliseconds"""
+  durationMs: Int!
+  """Whether this is a sub-agent session"""
+  isSubAgent: Boolean!
+  """Parent session display name (sub-agent only)"""
+  parentDisplayName: String
+  """First user message content (sub-agent spawn prompt)"""
+  spawnPrompt: String
+  """Structured messages"""
+  messages: [TranscriptMessage!]!
+  """Total message count in transcript file"""
+  totalMessages: Int!
+  """Whether there are more messages beyond limit"""
+  hasMore: Boolean!
+}
+
 # ── Root Types ──
 
 type Query {
@@ -231,6 +294,8 @@ type Query {
   eventDensity: [EventDensityBucket!]!
   eventCounts(from: Int, to: Int): EventCounts!
   lifetimeStats: LifetimeStats!
+  """Fetch session transcript. Returns null if session/file not found."""
+  sessionTranscript(sessionKey: String!, limit: Int, offset: Int): SessionTranscript
 }
 
 """Lightweight signal emitted when a data source updates"""

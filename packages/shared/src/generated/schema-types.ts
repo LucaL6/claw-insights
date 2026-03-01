@@ -201,6 +201,8 @@ export type Query = {
   metrics: MetricsSummary;
   recentLogs: Array<LogEntry>;
   resources: SystemResources;
+  /** Fetch session transcript. Returns null if session/file not found. */
+  sessionTranscript?: Maybe<SessionTranscript>;
   sessions: Array<Session>;
   usageCost: UsageCost;
 };
@@ -228,6 +230,13 @@ export type QueryMetricsArgs = {
 
 export type QueryRecentLogsArgs = {
   count?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QuerySessionTranscriptArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  sessionKey: Scalars['String']['input'];
 };
 
 
@@ -267,6 +276,43 @@ export type SessionStatus =
   | 'FAILED'
   | 'IDLE';
 
+export type SessionTranscript = {
+  /** Channel provider */
+  channel?: Maybe<Scalars['String']['output']>;
+  /** Input tokens of the last assistant message (approx context window usage) */
+  contextTokens: Scalars['Int']['output'];
+  /** Session display name */
+  displayName: Scalars['String']['output'];
+  /** Session duration in milliseconds */
+  durationMs: Scalars['Int']['output'];
+  /** File size in bytes */
+  fileSize: Scalars['Int']['output'];
+  /** Whether there are more messages beyond limit */
+  hasMore: Scalars['Boolean']['output'];
+  /** Whether this is a sub-agent session */
+  isSubAgent: Scalars['Boolean']['output'];
+  /** Session kind: direct / group / cron */
+  kind: Scalars['String']['output'];
+  /** Structured messages */
+  messages: Array<TranscriptMessage>;
+  /** Model at session start */
+  model: Scalars['String']['output'];
+  /** Parent session display name (sub-agent only) */
+  parentDisplayName?: Maybe<Scalars['String']['output']>;
+  /** Session key */
+  sessionKey: Scalars['String']['output'];
+  /** First user message content (sub-agent spawn prompt) */
+  spawnPrompt?: Maybe<Scalars['String']['output']>;
+  /** Session start ISO timestamp */
+  startedAt: Scalars['String']['output'];
+  /** Thinking level at session start */
+  thinkingLevel?: Maybe<Scalars['String']['output']>;
+  /** Total message count in transcript file */
+  totalMessages: Scalars['Int']['output'];
+  /** Total tokens consumed (input + output + cache read) */
+  totalTokens: Scalars['Int']['output'];
+};
+
 export type Subscription = {
   /** Lightweight signal — client should refetch the relevant query */
   dataChanged: DataChangeSignal;
@@ -284,6 +330,30 @@ export type SystemResources = {
   diskMB: Scalars['Int']['output'];
   memoryMB: Scalars['Int']['output'];
   sampledAt: Scalars['String']['output'];
+};
+
+export type TranscriptMessage = {
+  /** Message text content (truncated if over limit) */
+  content: Scalars['String']['output'];
+  /** Content was truncated from original */
+  contentTruncated: Scalars['Boolean']['output'];
+  /** Assistant message model id */
+  model?: Maybe<Scalars['String']['output']>;
+  /** user | assistant | tool */
+  role: Scalars['String']['output'];
+  /** ISO timestamp */
+  timestamp: Scalars['String']['output'];
+  /** Tool name, e.g. Read, exec, Edit (tool only) */
+  toolName?: Maybe<Scalars['String']['output']>;
+  /** Token usage breakdown (assistant only) */
+  usage?: Maybe<TranscriptTokenUsage>;
+};
+
+export type TranscriptTokenUsage = {
+  cacheRead: Scalars['Int']['output'];
+  cacheWrite: Scalars['Int']['output'];
+  input: Scalars['Int']['output'];
+  output: Scalars['Int']['output'];
 };
 
 /** Usage cost summary from gateway */

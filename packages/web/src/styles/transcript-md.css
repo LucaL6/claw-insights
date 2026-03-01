@@ -1,0 +1,124 @@
+/* Markdown styles for transcript timeline — uses --dr-* drawer tokens */
+.transcript-md {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--dr-fg2);
+  word-break: break-word;
+}
+
+.transcript-md p { margin: 0; }
+.transcript-md p + p { margin-top: 0.4em; }
+
+.transcript-md strong {
+  color: var(--dr-fg);
+  font-weight: 500;
+}
+
+.transcript-md em { font-style: italic; }
+
+.transcript-md code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.9em;
+  padding: 0.5px 3px;
+  border-radius: 2px;
+  background: var(--dr-surface);
+  color: var(--dr-fg);
+}
+
+.transcript-md pre {
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--dr-surface);
+  border: 1px solid var(--dr-border);
+  overflow-x: auto;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.transcript-md pre code {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.transcript-md ul,
+.transcript-md ol {
+  margin: 3px 0;
+  padding-left: 1.3em;
+}
+
+.transcript-md li { margin: 1px 0; }
+.transcript-md li > p { margin: 0; }
+
+.transcript-md blockquote {
+  margin: 3px 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--dr-border);
+  color: var(--dr-dim);
+}
+
+.transcript-md a {
+  color: var(--dr-teal);
+  text-decoration: underline;
+  text-decoration-style: dashed;
+}
+
+.transcript-md h1,
+.transcript-md h2,
+.transcript-md h3,
+.transcript-md h4 {
+  font-weight: 600;
+  color: var(--dr-fg);
+  margin: 6px 0 2px;
+  font-size: 1em;
+}
+
+.transcript-md table {
+  border-collapse: collapse;
+  margin: 4px 0;
+  font-size: 11px;
+}
+
+.transcript-md th,
+.transcript-md td {
+  padding: 2px 6px;
+  border: 1px solid var(--dr-border);
+  text-align: left;
+}
+
+.transcript-md th {
+  background: var(--dr-surface);
+  font-weight: 500;
+}
+
+.transcript-md hr {
+  border: none;
+  border-top: 1px solid var(--dr-border);
+  margin: 6px 0;
+}
+
+/* ── Drawer scrollbar ── */
+.drawer-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.drawer-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.drawer-scroll::-webkit-scrollbar-thumb {
+  background: var(--dr-border);
+  border-radius: 2px;
+}
+
+.drawer-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--dr-dim);
+}
+
+/* Firefox */
+.drawer-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dr-border) transparent;
+}

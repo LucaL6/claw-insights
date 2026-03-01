@@ -24,15 +24,21 @@ export interface ClassifyResult {
   unchanged: Map<string, FileState>;
   toScan: FileToScan[];
   deleted: string[];
+  deferred: FileToScan[];
 }
 
-export function classifyFiles(transcriptsDir: string, cached: Map<string, ScanStateRow>): ClassifyResult {
+export function classifyFiles(
+  transcriptsDir: string,
+  cached: Map<string, ScanStateRow>,
+  mtimeCutoff?: number,
+): ClassifyResult {
   const unchanged = new Map<string, FileState>();
   const toScan: FileToScan[] = [];
   const deleted: string[] = [];
+  const deferred: FileToScan[] = [];
 
   if (!existsSync(transcriptsDir)) {
-    return { unchanged, toScan, deleted };
+    return { unchanged, toScan, deleted: [], deferred: [] };
   }
 
   const diskFiles = readdirSync(transcriptsDir)
@@ -57,6 +63,16 @@ export function classifyFiles(transcriptsDir: string, cached: Map<string, ScanSt
     }
     const prev = cached.get(filePath);
 
+    if (mtimeCutoff !== undefined && st.mtimeMs < mtimeCutoff) {
+      deferred.push({
+        path: filePath,
+        offset: prev ? prev.byteOffset : 0,
+        partial: prev ? prev.partial : '',
+        prevFirstTimestampMs: prev ? prev.firstTimestampMs : null,
+      });
+      continue;
+    }
+
     if (prev && prev.inode === st.ino && prev.mtimeMs === st.mtimeMs && st.size === prev.byteOffset) {
       unchanged.set(filePath, {
         offset: prev.byteOffset,
@@ -76,5 +92,5 @@ export function classifyFiles(transcriptsDir: string, cached: Map<string, ScanSt
     }
   }
 
-  return { unchanged, toScan, deleted };
+  return { unchanged, toScan, deleted, deferred };
 }

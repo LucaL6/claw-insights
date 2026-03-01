@@ -14,7 +14,15 @@ export interface ScanStateRow {
 export function loadScanState(db: Database): Map<string, ScanStateRow> {
   const rows = db
     .prepare('SELECT file_path, byte_offset, inode, mtime_ms, birth_ms, partial, first_timestamp_ms FROM scan_state')
-    .all();
+    .all<{
+      file_path: string;
+      byte_offset: number;
+      inode: number;
+      mtime_ms: number;
+      birth_ms: number;
+      partial: string;
+      first_timestamp_ms: number | null;
+    }>();
 
   const map = new Map<string, ScanStateRow>();
   for (const r of rows) {
@@ -65,7 +73,7 @@ export function deleteScanState(db: Database, filePaths: string[]): void {
 export function queryMinFirstTimestamp(db: Database): number | null {
   const row = db
     .prepare('SELECT MIN(first_timestamp_ms) AS min_ts FROM scan_state WHERE first_timestamp_ms IS NOT NULL')
-    .get();
+    .get<{ min_ts: number | null }>();
   return row?.min_ts ?? null;
 }
 
@@ -86,7 +94,7 @@ export function queryLifetimeAggregates(db: Database): LifetimeAggregates {
             COALESCE(SUM(cache_read), 0) AS cr, COALESCE(SUM(cache_write), 0) AS cw
      FROM token_usage_events`,
     )
-    .get() as { inp: number; out_: number; cr: number; cw: number };
+    .get<{ inp: number; out_: number; cr: number; cw: number }>() ?? { inp: 0, out_: 0, cr: 0, cw: 0 };
 
   const msgs = db
     .prepare(
@@ -95,7 +103,7 @@ export function queryLifetimeAggregates(db: Database): LifetimeAggregates {
             COUNT(DISTINCT session_key) AS sess
      FROM message_events`,
     )
-    .get() as { usr: number; ast: number; sess: number };
+    .get<{ usr: number; ast: number; sess: number }>() ?? { usr: 0, ast: 0, sess: 0 };
 
   return {
     totalInputTokens: tokens.inp,
@@ -106,4 +114,9 @@ export function queryLifetimeAggregates(db: Database): LifetimeAggregates {
     totalAssistantMessages: msgs.ast,
     totalSessions: msgs.sess,
   };
+}
+
+export function queryTotalSessionFiles(db: Database): number {
+  const row = db.prepare('SELECT COUNT(*) AS cnt FROM scan_state').get<{ cnt: number }>();
+  return row?.cnt ?? 0;
 }

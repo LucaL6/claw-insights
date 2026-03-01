@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -72,6 +72,7 @@ describe('classifyFiles', () => {
     });
     expect(result.toScan).toEqual([]);
     expect(result.deleted).toEqual([]);
+    expect(result.deferred).toEqual([]);
   });
 
   it('classifies appended files with prevFirstTimestampMs carried forward', () => {
@@ -156,5 +157,63 @@ describe('classifyFiles', () => {
     const result = classifyFiles(tmpDir, new Map());
     expect(result.toScan).toHaveLength(1);
     expect(result.toScan[0]!.path).toContain('a.jsonl');
+  });
+
+  it('defers files with mtime below cutoff', () => {
+    const old = join(tmpDir, 'old.jsonl');
+    const recent = join(tmpDir, 'recent.jsonl');
+    writeFileSync(old, 'old-data');
+    const threeDaysAgo = Date.now() - 3 * 86_400_000;
+    utimesSync(old, threeDaysAgo / 1000, threeDaysAgo / 1000);
+    writeFileSync(recent, 'new-data');
+
+    const cutoff = Date.now() - 48 * 3_600_000;
+    const result = classifyFiles(tmpDir, new Map(), cutoff);
+
+    expect(result.toScan).toHaveLength(1);
+    expect(result.toScan[0]!.path).toContain('recent.jsonl');
+    expect(result.deferred).toHaveLength(1);
+    expect(result.deferred[0]!.path).toContain('old.jsonl');
+  });
+
+  it('returns empty deferred when no mtimeCutoff provided', () => {
+    const file = join(tmpDir, 'a.jsonl');
+    writeFileSync(file, 'data');
+
+    const result = classifyFiles(tmpDir, new Map());
+    expect(result.deferred).toEqual([]);
+    expect(result.toScan).toHaveLength(1);
+  });
+
+  it('defers unchanged files below cutoff with cached state preserved', () => {
+    const file = join(tmpDir, 'old.jsonl');
+    writeFileSync(file, 'hello');
+
+    const threeDaysAgo = Date.now() - 3 * 86_400_000;
+    utimesSync(file, threeDaysAgo / 1000, threeDaysAgo / 1000);
+    const stOld = statSync(file);
+
+    const cached = new Map<string, ScanStateRow>();
+    cached.set(
+      file,
+      makeScanRow({
+        filePath: file,
+        byteOffset: stOld.size,
+        inode: stOld.ino,
+        mtimeMs: stOld.mtimeMs,
+        birthMs: stOld.birthtimeMs,
+        partial: 'part',
+      }),
+    );
+
+    const cutoff = Date.now() - 48 * 3_600_000;
+    const result = classifyFiles(tmpDir, cached, cutoff);
+
+    expect(result.unchanged.size).toBe(0);
+    expect(result.toScan).toHaveLength(0);
+    expect(result.deferred).toHaveLength(1);
+    expect(result.deferred[0]!.path).toBe(file);
+    expect(result.deferred[0]!.offset).toBe(stOld.size);
+    expect(result.deferred[0]!.partial).toBe('part');
   });
 });

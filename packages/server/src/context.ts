@@ -116,6 +116,7 @@ export async function createContext(): Promise<AppContext> {
     deviceJsonPath: config.deviceJsonPath,
     tokenBus,
     messageBus,
+    scanTiered: config.scanTiered,
   });
 
   const ingestLog = createLogIngester(db);

@@ -29,14 +29,14 @@ export function getBucketedSessions(
         .prepare(
           `SELECT ${hourExpr} AS bucket, MAX(active_sessions_max) AS sessions FROM hourly_system_samples WHERE hour >= ? AND hour < ? GROUP BY bucket`,
         )
-        .all(startTs, endTs);
+        .all<{ bucket: number; sessions: number }>(startTs, endTs);
     }
     const expr = bucketExpr(bucketMinutes);
     const stmt = cached(
       db,
       `SELECT ${expr} AS bucket, MAX(active_sessions) AS sessions FROM system_samples WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket`,
     );
-    return stmt.all(startTs, endTs);
+    return stmt.all<{ bucket: number; sessions: number }>(startTs, endTs);
   });
 }
 
@@ -44,7 +44,7 @@ export function getBucketedSessions(
 
 /** Read the persisted companion_since timestamp, or null if not yet stored. */
 export function getCompanionSince(db: Database): string | null {
-  const row = db.prepare('SELECT value FROM kv_meta WHERE key = ?').get('companion_since');
+  const row = db.prepare('SELECT value FROM kv_meta WHERE key = ?').get<{ value: string }>('companion_since');
   return row?.value ?? null;
 }
 

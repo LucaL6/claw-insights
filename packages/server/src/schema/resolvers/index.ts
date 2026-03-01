@@ -7,6 +7,7 @@ import { lifetimeResolvers } from './lifetime.resolver.js';
 import { metricsResolvers } from './metrics.resolver.js';
 import { sessionsResolvers } from './sessions.resolver.js';
 import { subscriptionResolvers } from './subscriptions.resolver.js';
+import { transcriptResolvers } from './transcript.resolver.js';
 import { usageResolvers } from './usage.resolver.js';
 
 type ResolverFactory = (ctx: AppContext) => Partial<Resolvers>;
@@ -20,6 +21,7 @@ const factories: ResolverFactory[] = [
   usageResolvers,
   subscriptionResolvers,
   lifetimeResolvers,
+  transcriptResolvers,
 ];
 
 export function createResolvers(ctx: AppContext): Resolvers {

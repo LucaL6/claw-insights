@@ -1,4 +1,6 @@
 import './index.css';
+import './styles/transcript-md.css';
+import 'highlight.js/styles/github-dark-dimmed.min.css';
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';

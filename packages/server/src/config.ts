@@ -170,6 +170,7 @@ export interface AppConfig {
   rawRetentionDays: number;
   hourlyRetention: string;
   aggregateIntervalMs: number;
+  scanTiered: boolean;
 }
 
 // --- CLI path detection (BUG-023) ---
@@ -247,6 +248,7 @@ export function resolveConfig(): AppConfig {
     ),
     hourlyRetention: env('HOURLY_RETENTION') ?? 'permanent',
     aggregateIntervalMs: 6 * 60 * 60 * 1000,
+    scanTiered: envBool(env('SCAN_TIERED')) ?? true,
   };
 }
 

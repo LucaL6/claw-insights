@@ -22,6 +22,8 @@ const FONT_FILES = [
   { file: 'Inter-Bold.ttf', name: 'Inter', weight: 700 },
   { file: 'Inter-ExtraBold.ttf', name: 'Inter', weight: 800 },
   { file: 'JetBrainsMono-Regular.ttf', name: 'JetBrains Mono', weight: 400 },
+  // CJK fallback — SIL OFL subset containing only snapshot UI characters (~22KB)
+  { file: 'NotoSansSC-Regular-subset.ttf', name: 'Noto Sans SC', weight: 400 },
 ];
 
 let fontCache: SatoriFont[] | null = null;

@@ -144,6 +144,43 @@ export const RecentLogsQuery = graphql(/* GraphQL */ `
   }
 `);
 
+export const SessionTranscriptQuery = graphql(/* GraphQL */ `
+  query SessionTranscript($sessionKey: String!, $limit: Int, $offset: Int) {
+    sessionTranscript(sessionKey: $sessionKey, limit: $limit, offset: $offset) {
+      sessionKey
+      displayName
+      model
+      channel
+      kind
+      thinkingLevel
+      startedAt
+      fileSize
+      totalTokens
+      contextTokens
+      durationMs
+      isSubAgent
+      parentDisplayName
+      spawnPrompt
+      totalMessages
+      hasMore
+      messages {
+        timestamp
+        role
+        content
+        contentTruncated
+        model
+        usage {
+          input
+          output
+          cacheRead
+          cacheWrite
+        }
+        toolName
+      }
+    }
+  }
+`);
+
 export const LifetimeStatsQuery = graphql(/* GraphQL */ `
   query LifetimeStats {
     lifetimeStats {

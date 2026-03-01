@@ -62,7 +62,7 @@ export function buildMarkup(data: SnapshotData, opts: MarkupOptions): SatoriNode
       flexDirection: 'column',
       width: VIEWPORT_WIDTH[opts.detail],
       backgroundColor: c.bg,
-      fontFamily: 'Inter',
+      fontFamily: 'Inter, Noto Sans SC',
       position: 'relative',
       overflow: 'hidden',
     },

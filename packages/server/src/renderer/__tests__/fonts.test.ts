@@ -5,11 +5,12 @@ import { loadFonts, resetFontCache } from '../fonts.js';
 describe('loadFonts', () => {
   afterEach(() => resetFontCache());
 
-  it('loads 6 built-in fonts', async () => {
+  it('loads 7 built-in fonts', async () => {
     const fonts = await loadFonts();
-    expect(fonts).toHaveLength(6);
+    expect(fonts).toHaveLength(7);
     expect(fonts[0]).toMatchObject({ name: 'Inter', weight: 400, style: 'normal' });
     expect(fonts[5]).toMatchObject({ name: 'JetBrains Mono', weight: 400, style: 'normal' });
+    expect(fonts[6]).toMatchObject({ name: 'Noto Sans SC', weight: 400, style: 'normal' });
     fonts.forEach((f) => expect(f.data).toBeInstanceOf(Buffer));
   });
 
@@ -23,7 +24,7 @@ describe('loadFonts', () => {
     const tmpDir = '/tmp/test-fonts-nonexistent';
     vi.stubEnv('CLAW_INSIGHTS_FONTS_DIR', tmpDir);
     const fonts = await loadFonts();
-    expect(fonts).toHaveLength(6);
+    expect(fonts).toHaveLength(7);
     vi.unstubAllEnvs();
   });
 

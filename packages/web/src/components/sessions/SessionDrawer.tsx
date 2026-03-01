@@ -1,0 +1,500 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from 'urql';
+
+import { SessionTranscriptQuery } from '../../graphql/queries';
+import { useI18n } from '../../i18n/context';
+import { formatModel } from '../../utils/formatModel';
+import { SpawnPromptBox } from './SpawnPromptBox';
+import { TimelineScrubber } from './TimelineScrubber';
+import { type TimelineState, TranscriptTimeline } from './TranscriptTimeline';
+
+interface SessionDrawerProps {
+  sessionKey: string;
+  onClose: () => void;
+  status?: string;
+  displayName?: string;
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(1)}M`;
+  }
+  if (n >= 1_000) {
+    return `${(n / 1_000).toFixed(1)}k`;
+  }
+  return String(n);
+}
+
+function formatDuration(ms: number): string {
+  if (ms <= 0) {
+    return '0s';
+  }
+  const totalSec = Math.floor(ms / 1000);
+  if (totalSec < 60) {
+    return `${totalSec}s`;
+  }
+  const min = Math.floor(totalSec / 60);
+  if (min < 60) {
+    return `${min}m`;
+  }
+  const hr = Math.floor(min / 60);
+  const remainMin = min % 60;
+  return remainMin > 0 ? `${hr}h${remainMin}m` : `${hr}h`;
+}
+
+function formatTime(isoOrEpoch: string | number): string {
+  return new Date(isoOrEpoch).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes}B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(0)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function HeaderSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 animate-pulse">
+      <div className="flex items-center gap-2">
+        <div className="h-3 w-32 rounded" style={{ backgroundColor: 'var(--dr-border)' }} />
+        <div className="h-3 w-16 rounded ml-auto" style={{ backgroundColor: 'var(--dr-border)' }} />
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-2.5 w-24 rounded" style={{ backgroundColor: 'var(--dr-border)' }} />
+        <div className="h-2.5 w-16 rounded" style={{ backgroundColor: 'var(--dr-border)' }} />
+      </div>
+      <div className="flex items-center gap-4 mt-1">
+        <div className="h-5 w-12 rounded" style={{ backgroundColor: 'var(--dr-border)' }} />
+        <div className="h-5 w-12 rounded" style={{ backgroundColor: 'var(--dr-border)' }} />
+        <div className="h-5 w-12 rounded" style={{ backgroundColor: 'var(--dr-border)' }} />
+      </div>
+    </div>
+  );
+}
+
+export function SessionDrawer({ sessionKey, onClose, status, displayName: externalName }: SessionDrawerProps) {
+  const { t } = useI18n();
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [jumpRequest, setJumpRequest] = useState<{ index: number; key: number } | undefined>(undefined);
+  const jumpKeyRef = useRef(0);
+  const [visibleIndex, setVisibleIndex] = useState<number | undefined>(undefined);
+  const scrollTickRef = useRef(false);
+  const jumpCooldownRef = useRef(false);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const PAGE_SIZE = 200;
+  const [currentOffset, setCurrentOffset] = useState(0);
+
+  const [result, reexecute] = useQuery({
+    query: SessionTranscriptQuery,
+    variables: { sessionKey, limit: PAGE_SIZE, offset: currentOffset },
+  });
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => {
+      document.removeEventListener('keydown', handler);
+      clearTimeout(cooldownTimerRef.current);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    triggerRef.current = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => {
+      triggerRef.current?.focus();
+    };
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab') {
+      return;
+    }
+    const panel = panelRef.current;
+    if (!panel) {
+      return;
+    }
+    const focusable = panel.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    if (focusable.length === 0) {
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }, []);
+
+  const transcript = result.data?.sessionTranscript;
+  const resolvedName = externalName || transcript?.displayName || sessionKey.split(':').pop() || sessionKey;
+  const spawnPrompt = transcript?.isSubAgent && transcript.spawnPrompt ? transcript.spawnPrompt : undefined;
+
+  // Accumulate raw transcript pages, derive mapped messages via useMemo
+  type RawPage = NonNullable<typeof transcript>;
+  const [pages] = useState<Map<number, RawPage>>(() => new Map());
+
+  // Store completed page data (only when not fetching to avoid partial data)
+  const lastStoredOffset = useRef(-1);
+  if (transcript && !result.fetching && lastStoredOffset.current !== currentOffset) {
+    // This runs during render but only sets ref + prepares for next useMemo
+    lastStoredOffset.current = currentOffset;
+    pages.set(currentOffset, transcript); // mutate-in-place, useMemo dep on pages.size below
+  }
+
+  const allMessages = useMemo(() => {
+    const sorted = [...pages.entries()].sort(([a], [b]) => a - b);
+    return sorted.flatMap(([, t]) =>
+      t.messages.map((m) => ({
+        timestamp: m.timestamp,
+        role: m.role as 'user' | 'assistant' | 'tool',
+        content: m.content,
+        contentTruncated: m.contentTruncated,
+        model: m.model ?? undefined,
+        usage: m.usage
+          ? {
+              input: m.usage.input,
+              output: m.usage.output,
+              cacheRead: m.usage.cacheRead,
+              cacheWrite: m.usage.cacheWrite,
+            }
+          : undefined,
+        toolName: m.toolName ?? undefined,
+      })),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pages.size, transcript, result.fetching]);
+
+  const loadingMore = currentOffset > 0 && result.fetching;
+
+  const handleLoadMore = useCallback(() => {
+    if (result.fetching || !transcript?.hasMore) {
+      return;
+    }
+    setCurrentOffset((prev) => prev + PAGE_SIZE);
+  }, [result.fetching, transcript?.hasMore, PAGE_SIZE]);
+
+  const timelineState: TimelineState = useMemo(() => {
+    if (result.fetching && allMessages.length === 0) {
+      return { status: 'loading' };
+    }
+    if (result.error) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      const gqlCode = result.error.graphQLErrors?.[0]?.extensions?.code as string | undefined;
+      return {
+        status: 'error',
+        errorCode: gqlCode,
+        retry: () => {
+          reexecute({ requestPolicy: 'network-only' });
+        },
+      };
+    }
+    if (!transcript) {
+      if (result.fetching) {
+        return { status: 'loading' };
+      }
+      return {
+        status: 'error',
+        errorCode: 'NOT_AVAILABLE',
+        retry: () => {
+          reexecute({ requestPolicy: 'network-only' });
+        },
+      };
+    }
+    if (transcript.totalMessages === 0) {
+      return { status: 'empty' };
+    }
+    const hasMore = allMessages.length < transcript.totalMessages;
+    return {
+      status: 'ready',
+      messages: allMessages,
+      totalMessages: transcript.totalMessages,
+      hasMore,
+      loadingMore,
+    };
+  }, [result.fetching, result.error, transcript, reexecute, allMessages, loadingMore]);
+
+  const isLoading = result.fetching && !transcript;
+  const resolvedStatus = status ?? (transcript ? 'DONE' : 'ACTIVE');
+  const statusColor =
+    resolvedStatus === 'ACTIVE' ? 'var(--dr-teal)' : resolvedStatus === 'FAILED' ? 'var(--dr-rose)' : 'var(--dr-dim)';
+
+  // Timestamps for scrubber
+  const timestamps = useMemo(() => {
+    if (timelineState.status !== 'ready') {
+      return [];
+    }
+    return timelineState.messages.map((m) => m.timestamp);
+  }, [timelineState]);
+
+  const handleJump = useCallback((index: number) => {
+    jumpKeyRef.current += 1;
+    setJumpRequest({ index, key: jumpKeyRef.current });
+    setVisibleIndex(index);
+    // Suppress scroll tracking while jump animation settles
+    jumpCooldownRef.current = true;
+    clearTimeout(cooldownTimerRef.current);
+    cooldownTimerRef.current = setTimeout(() => {
+      jumpCooldownRef.current = false;
+    }, 600);
+  }, []);
+
+  // Track visible message on scroll (throttled via rAF)
+  const handleScroll = useCallback(() => {
+    if (scrollTickRef.current || jumpCooldownRef.current) {
+      return;
+    }
+    scrollTickRef.current = true;
+    requestAnimationFrame(() => {
+      scrollTickRef.current = false;
+      const container = scrollRef.current;
+      if (!container) {
+        return;
+      }
+      const containerTop = container.getBoundingClientRect().top;
+      // Find the first data-msg-index element near the top of the visible area
+      const els = container.querySelectorAll('[data-msg-index]');
+      let closest: number | undefined;
+      let closestDist = Infinity;
+      for (const el of els) {
+        const rect = el.getBoundingClientRect();
+        const dist = Math.abs(rect.top - containerTop);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = Number(el.getAttribute('data-msg-index'));
+        }
+        // Early exit once elements are below viewport
+        if (rect.top > containerTop + 200) {
+          break;
+        }
+      }
+      if (closest !== undefined) {
+        setVisibleIndex(closest);
+      }
+    });
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex justify-end"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('drawer.ariaLabel')}
+    >
+      {/* Backdrop */}
+      <div onClick={onClose} className="absolute inset-0 bg-black/40" />
+
+      {/* Panel — warm stone theme via --dr-* tokens */}
+      <div
+        role="document"
+        ref={panelRef}
+        onKeyDown={handleKeyDown}
+        className="relative w-full sm:w-[85vw] md:w-[55vw] lg:w-[680px] lg:max-w-[50vw] h-full overflow-hidden flex flex-col font-mono"
+        style={{
+          backgroundColor: 'var(--dr-bg)',
+          borderLeft: '1px solid var(--dr-border)',
+          color: 'var(--dr-fg)',
+          boxShadow: '-8px 0 32px rgba(0,0,0,0.3)',
+        }}
+      >
+        {/* Header */}
+        <div className="flex-shrink-0 px-5 pt-4 pb-3">
+          {/* Title row */}
+          <div className="flex items-center gap-2.5 mb-2">
+            <button
+              ref={closeRef}
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 text-xs transition-colors"
+              style={{
+                border: '1px solid var(--dr-border)',
+                backgroundColor: 'var(--dr-surface)',
+                color: 'var(--dr-fg2)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--dr-rose-bg)';
+                e.currentTarget.style.color = 'var(--dr-rose)';
+                e.currentTarget.style.borderColor = 'var(--dr-rose)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--dr-surface)';
+                e.currentTarget.style.color = 'var(--dr-fg2)';
+                e.currentTarget.style.borderColor = 'var(--dr-border)';
+              }}
+              aria-label={t('drawer.close')}
+            >
+              ✕
+            </button>
+            <span
+              className="font-semibold text-sm truncate flex-1"
+              style={{ fontFamily: "'Space Grotesk', var(--font-title, sans-serif)", color: 'var(--dr-fg)' }}
+            >
+              {resolvedName}
+            </span>
+            {transcript?.isSubAgent && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded shrink-0 font-medium"
+                style={{
+                  backgroundColor: 'var(--dr-amber-bg)',
+                  color: 'var(--dr-amber)',
+                  border: '1px solid var(--dr-amber-border)',
+                }}
+              >
+                {t('drawer.subAgentBadge')}
+              </span>
+            )}
+            {!isLoading && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{
+                    backgroundColor: statusColor,
+                    boxShadow: resolvedStatus === 'ACTIVE' ? `0 0 4px ${statusColor}` : undefined,
+                  }}
+                />
+                <span className="text-[11px] font-medium" style={{ color: statusColor }}>
+                  {resolvedStatus}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {isLoading ? (
+            <HeaderSkeleton />
+          ) : transcript ? (
+            <>
+              {/* Meta row: model · channel · thinking */}
+              <div className="flex items-center gap-1.5 text-[11px] flex-wrap" style={{ color: 'var(--dr-dim)' }}>
+                <span>{formatModel(transcript.model)}</span>
+                {transcript.channel && (
+                  <>
+                    <span>·</span>
+                    <span>{transcript.channel}</span>
+                  </>
+                )}
+                {transcript.thinkingLevel && (
+                  <>
+                    <span>·</span>
+                    <span>
+                      {t('drawer.meta.thinking')}
+                      {transcript.thinkingLevel}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Parent session for sub-agents */}
+              {transcript.isSubAgent && transcript.parentDisplayName && (
+                <div className="flex items-center gap-1 mt-1 text-[10px]" style={{ color: 'var(--dr-dim)' }}>
+                  <span>↳</span>
+                  <span>{t('drawer.meta.spawnedBy')}</span>
+                  <span style={{ color: 'var(--dr-fg2)' }}>{transcript.parentDisplayName}</span>
+                </div>
+              )}
+
+              {/* Stats row: turns · tokens · context · duration */}
+              <div
+                className="flex items-center gap-4 mt-3 pt-3 text-[11px] flex-wrap"
+                style={{ borderTop: '1px solid var(--dr-border)', color: 'var(--dr-dim)' }}
+              >
+                <div>
+                  {t('drawer.stats.turns')}{' '}
+                  <span
+                    className="font-semibold text-base ml-0.5"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--dr-fg)' }}
+                  >
+                    {transcript.totalMessages}
+                  </span>
+                </div>
+                <div>
+                  {t('drawer.stats.tokens')}{' '}
+                  <span
+                    className="font-semibold text-base ml-0.5"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--dr-fg)' }}
+                  >
+                    {formatTokens(transcript.totalTokens)}
+                  </span>
+                </div>
+                <div>
+                  {t('drawer.stats.context')}{' '}
+                  <span
+                    className="font-semibold text-base ml-0.5"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--dr-fg)' }}
+                  >
+                    {formatTokens(transcript.contextTokens)}
+                  </span>
+                </div>
+                <div>
+                  {t('drawer.stats.duration')}{' '}
+                  <span
+                    className="font-semibold text-base ml-0.5"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--dr-fg)' }}
+                  >
+                    {formatDuration(transcript.durationMs)}
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        {/* Time scrubber — fixed above scroll area */}
+        {timestamps.length >= 2 && (
+          <div className="flex-shrink-0 px-5" style={{ borderTop: '1px solid var(--dr-border)' }}>
+            <TimelineScrubber timestamps={timestamps} activeIndex={visibleIndex} onJump={handleJump} />
+          </div>
+        )}
+
+        {/* Timeline */}
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-5 py-3 drawer-scroll"
+          onScroll={handleScroll}
+          style={timestamps.length < 2 ? { borderTop: '1px solid var(--dr-border)' } : undefined}
+        >
+          {spawnPrompt && (
+            <div className="mb-3">
+              <SpawnPromptBox prompt={spawnPrompt} />
+            </div>
+          )}
+          <TranscriptTimeline
+            state={timelineState}
+            onLoadMore={handleLoadMore}
+            scrollRef={scrollRef}
+            jumpToIndex={jumpRequest?.index}
+            jumpKey={jumpRequest?.key}
+          />
+        </div>
+
+        {/* Footer */}
+        {transcript && (
+          <div
+            className="flex-shrink-0 px-5 py-1.5 text-[10px] flex items-center justify-between"
+            style={{ borderTop: '1px solid var(--dr-border)', color: 'var(--dr-dim)' }}
+          >
+            <span>
+              {t('drawer.footer.started', { time: formatTime(transcript.startedAt) })} ·{' '}
+              {formatFileSize(transcript.fileSize)}
+            </span>
+            <span>{t('drawer.footer.messages', { shown: allMessages.length, total: transcript.totalMessages })}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

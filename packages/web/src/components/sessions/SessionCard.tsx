@@ -27,6 +27,9 @@ interface Props {
   onToggle?: () => void;
   expanded?: boolean;
   hasChildren?: boolean;
+  sessionKey?: string;
+  onSelect?: (key: string) => void;
+  selected?: boolean;
 }
 
 export function SessionCard({
@@ -41,6 +44,9 @@ export function SessionCard({
   variant = 'primary',
   subAgentCount,
   onToggle,
+  sessionKey,
+  onSelect,
+  selected,
   expanded,
   hasChildren,
 }: Props) {
@@ -50,7 +56,21 @@ export function SessionCard({
   if (variant === 'compact') {
     return (
       <CompactCard
-        {...{ displayName, model, channel, totalTokens, usagePercent, status, updatedAt, hovered, setHovered, t }}
+        {...{
+          displayName,
+          model,
+          channel,
+          totalTokens,
+          usagePercent,
+          status,
+          updatedAt,
+          hovered,
+          setHovered,
+          t,
+          sessionKey,
+          onSelect,
+          selected,
+        }}
       />
     );
   }
@@ -63,8 +83,23 @@ export function SessionCard({
   return (
     <div
       className="rounded-xl p-4 transition-all cursor-pointer bg-surface shadow-card"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (sessionKey) {
+            onSelect?.(sessionKey);
+          }
+        }
+      }}
       style={{
-        border: `1px solid ${hovered ? borderInfo.hoverBorder : borderInfo.border}`,
+        border: `1px solid ${selected ? 'var(--violet)' : hovered ? borderInfo.hoverBorder : borderInfo.border}`,
+      }}
+      onClick={() => {
+        if (sessionKey && onSelect) {
+          onSelect(sessionKey);
+        }
       }}
       onMouseEnter={() => {
         setHovered(true);
@@ -123,6 +158,9 @@ interface CompactProps {
   hovered: boolean;
   setHovered: (v: boolean) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
+  sessionKey?: string;
+  onSelect?: (key: string) => void;
+  selected?: boolean;
 }
 
 function CompactCard({
@@ -136,6 +174,9 @@ function CompactCard({
   hovered,
   setHovered,
   t,
+  sessionKey,
+  onSelect,
+  selected,
 }: CompactProps) {
   const isDone = status === 'DONE' || status === 'FAILED';
   const completionMark = status === 'DONE' ? ' ✓' : status === 'FAILED' ? ' ✕' : '';
@@ -144,17 +185,34 @@ function CompactCard({
   return (
     <div
       className={`rounded-lg px-2.5 py-2 transition-all cursor-pointer ${isDone ? 'opacity-60' : ''}`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (sessionKey) {
+            onSelect?.(sessionKey);
+          }
+        }
+      }}
       style={{
         backgroundColor: 'var(--subagent-bg)',
         border: `1px solid ${
-          isDone
-            ? 'var(--border-subtle)'
-            : status === 'FAILED'
-              ? 'var(--session-failed-border)'
-              : hovered
-                ? 'var(--subagent-hover-border)'
-                : 'var(--subagent-border)'
+          selected
+            ? 'var(--violet)'
+            : isDone
+              ? 'var(--border-subtle)'
+              : status === 'FAILED'
+                ? 'var(--session-failed-border)'
+                : hovered
+                  ? 'var(--subagent-hover-border)'
+                  : 'var(--subagent-border)'
         }`,
+      }}
+      onClick={() => {
+        if (sessionKey && onSelect) {
+          onSelect(sessionKey);
+        }
       }}
       onMouseEnter={() => {
         setHovered(true);

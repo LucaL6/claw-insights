@@ -63,7 +63,7 @@ export function getBucketedTokenUsage(
       db,
       `SELECT ${expr} AS bucket, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket HAVING tokensK > 0`,
     );
-    return stmt.all(startTs, endTs);
+    return stmt.all<{ bucket: number; tokensK: number }>(startTs, endTs);
   });
 }
 
@@ -79,7 +79,7 @@ export function getBucketedModelTokenUsage(
       db,
       `SELECT ${expr} AS bucket, model, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY bucket, model HAVING tokensK > 0`,
     );
-    return stmt.all(startTs, endTs);
+    return stmt.all<{ bucket: number; model: string; tokensK: number }>(startTs, endTs);
   });
 }
 
@@ -89,7 +89,7 @@ export function getRangeTokenUsageK(db: Database, startTs: string, endTs: string
       db,
       `SELECT COALESCE(${TOKEN_SUM}, 0) AS total FROM token_usage_events WHERE timestamp >= ? AND timestamp < ?`,
     );
-    const row = stmt.get(startTs, endTs);
+    const row = stmt.get<{ total: number }>(startTs, endTs);
     return row?.total ?? 0;
   });
 }
@@ -104,6 +104,6 @@ export function getRangeModelTokenUsage(
       db,
       `SELECT model, ${TOKEN_SUM} AS tokensK FROM token_usage_events WHERE timestamp >= ? AND timestamp < ? GROUP BY model HAVING tokensK > 0 ORDER BY tokensK DESC`,
     );
-    return stmt.all(startTs, endTs);
+    return stmt.all<{ model: string; tokensK: number }>(startTs, endTs);
   });
 }

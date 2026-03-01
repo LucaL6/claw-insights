@@ -6,7 +6,19 @@ import { SessionCard } from './SessionCard';
 import { TreeConnector } from './shared/TreeConnector';
 import type { SessionData } from './shared/types';
 
-function SubAgentGroup({ prefix, items, totalTokens }: { prefix: string; items: SessionData[]; totalTokens: number }) {
+function SubAgentGroup({
+  prefix,
+  items,
+  totalTokens,
+  onSelect,
+  selectedKey,
+}: {
+  prefix: string;
+  items: SessionData[];
+  totalTokens: number;
+  onSelect?: (key: string) => void;
+  selectedKey?: string | null;
+}) {
   const [expanded, setExpanded] = useState(true);
   return (
     <div>
@@ -34,6 +46,9 @@ function SubAgentGroup({ prefix, items, totalTokens }: { prefix: string; items: 
                 usagePercent={sa.usagePercent}
                 status={sa.status}
                 updatedAt={sa.updatedAt}
+                sessionKey={sa.key}
+                onSelect={onSelect}
+                selected={selectedKey === sa.key}
               />
             </TreeConnector>
           ))}
@@ -43,20 +58,20 @@ function SubAgentGroup({ prefix, items, totalTokens }: { prefix: string; items: 
   );
 }
 
-export function SessionGroup({ session }: { session: SessionData }) {
+interface SessionGroupProps {
+  session: SessionData;
+  onSelect?: (key: string) => void;
+  selectedKey?: string | null;
+}
+
+export function SessionGroup({ session, onSelect, selectedKey }: SessionGroupProps) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = session.subAgents.length > 0;
   const grouped = hasChildren ? groupByPrefix<SessionData>(session.subAgents) : [];
 
   return (
     <div>
-      <div
-        onClick={() => {
-          if (hasChildren) {
-            setExpanded(!expanded);
-          }
-        }}
-      >
+      <div>
         <SessionCard
           displayName={session.displayName}
           kind={session.kind}
@@ -72,13 +87,25 @@ export function SessionGroup({ session }: { session: SessionData }) {
             setExpanded(!expanded);
           }}
           subAgentCount={hasChildren ? session.subAgents.length : undefined}
+          sessionKey={session.key}
+          onSelect={onSelect}
+          selected={selectedKey === session.key}
         />
       </div>
       {hasChildren && expanded && (
         <div className="pl-3 mt-1 space-y-1">
           {grouped.map((g, i) => {
             if (g.type === 'group') {
-              return <SubAgentGroup key={g.prefix} prefix={g.prefix} items={g.items} totalTokens={g.totalTokens} />;
+              return (
+                <SubAgentGroup
+                  key={g.prefix}
+                  prefix={g.prefix}
+                  items={g.items}
+                  totalTokens={g.totalTokens}
+                  onSelect={onSelect}
+                  selectedKey={selectedKey}
+                />
+              );
             }
             const sa = g.item;
             return (
@@ -92,6 +119,9 @@ export function SessionGroup({ session }: { session: SessionData }) {
                   usagePercent={sa.usagePercent}
                   status={sa.status}
                   updatedAt={sa.updatedAt}
+                  sessionKey={sa.key}
+                  onSelect={onSelect}
+                  selected={selectedKey === sa.key}
                 />
               </TreeConnector>
             );

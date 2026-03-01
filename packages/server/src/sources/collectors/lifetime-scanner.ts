@@ -2,12 +2,13 @@ import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs
 
 import type { Database } from '../../db/database.js';
 import { insertMessageEventBatch } from '../../db/message-queries.js';
-import { cached } from '../../db/query-utils.js';
+import { cached, RANGE_CONFIG } from '../../db/query-utils.js';
 import {
   deleteScanState,
   loadScanState,
   queryLifetimeAggregates,
   queryMinFirstTimestamp,
+  queryTotalSessionFiles,
   type ScanStateRow,
   upsertScanState,
 } from '../../db/scan-state-queries.js';
@@ -15,11 +16,15 @@ import { insertTokenUsageEventBatch } from '../../db/token-queries.js';
 import type { MessageEventBus } from '../../events/message-event-bus.js';
 import type { TokenEventBus } from '../../events/token-event-bus.js';
 import { createChildLogger } from '../../logger.js';
-import { classifyFiles, type FileState } from './file-classifier.js';
+import { classifyFiles, type FileState, type FileToScan } from './file-classifier.js';
 import type { ParsedMessageEvent, ParsedTokenEvent } from './transcript-parser.js';
 import { scanFiles, type ScanSink } from './transcript-scanner.js';
 
 const log = createChildLogger('lifetime-scanner');
+
+/** Largest configured range × 2 — dynamic, tracks RANGE_CONFIG changes */
+const MTIME_WINDOW_MS = Math.max(...Object.values(RANGE_CONFIG).map((r) => r.rangeMinutes)) * 2 * 60_000;
+const BACKGROUND_DELAY_MS = 5_000;
 
 // ── Re-exports (keep API surface for external consumers) ──
 
@@ -71,6 +76,7 @@ export function createLifetimeScanner(opts: {
   deviceJsonPath: string;
   tokenBus?: TokenEventBus;
   messageBus?: MessageEventBus;
+  scanTiered?: boolean;
 }): LifetimeScanner {
   const { db, transcriptsDir, deviceJsonPath, tokenBus, messageBus } = opts;
   const fileStates = new Map<string, FileState>();
@@ -78,6 +84,10 @@ export function createLifetimeScanner(opts: {
   let initialScanDone = false;
   let destroyed = false;
   let abortController: AbortController | null = null;
+  // @ts-expect-error intentionally unused — kept for observability
+  let _backgroundScanDone = false;
+  let backgroundTimer: ReturnType<typeof setTimeout> | null = null;
+  let initDoneMs = 0;
 
   // ── Sink with transactional flush ──
   const FLUSH_THRESHOLD = 5000;
@@ -143,16 +153,36 @@ export function createLifetimeScanner(opts: {
     }
 
     const startMs = Date.now();
+    const tiered = opts.scanTiered !== false;
+
     try {
       const cachedState = loadScanState(db);
-      const { unchanged, toScan, deleted } = classifyFiles(transcriptsDir, cachedState);
+
+      // Empty DB → always full scan (no benefit from tiering)
+      const useFullScan = !tiered || cachedState.size === 0;
+      const mtimeCutoff = useFullScan ? undefined : Date.now() - MTIME_WINDOW_MS;
+
+      const { unchanged, toScan, deleted, deferred } = classifyFiles(transcriptsDir, cachedState, mtimeCutoff);
 
       // Restore unchanged file states
       for (const [path, state] of unchanged) {
         fileStates.set(path, state);
       }
 
-      // Scan changed files
+      // Restore deferred file states from DB cache
+      for (const d of deferred) {
+        const prev = cachedState.get(d.path);
+        if (prev) {
+          fileStates.set(d.path, {
+            offset: prev.byteOffset,
+            inode: prev.inode,
+            birthtimeMs: prev.birthMs,
+            partialLine: prev.partial,
+          });
+        }
+      }
+
+      // Scan changed files (recent only in tiered mode)
       if (toScan.length > 0) {
         abortController = new AbortController();
         await scanFiles(toScan, sink, {
@@ -160,7 +190,7 @@ export function createLifetimeScanner(opts: {
           signal: abortController.signal,
         });
         abortController = null;
-        flush(); // final flush for remaining buffered items
+        flush();
       }
       if (destroyed) {
         return;
@@ -178,7 +208,7 @@ export function createLifetimeScanner(opts: {
       const agg = queryLifetimeAggregates(db);
       stats = {
         createdAtMs: resolveCreatedAt(db, deviceJsonPath),
-        totalSessions: fileStates.size,
+        totalSessions: queryTotalSessionFiles(db),
         totalInputTokens: agg.totalInputTokens,
         totalOutputTokens: agg.totalOutputTokens,
         totalCacheReadTokens: agg.totalCacheReadTokens,
@@ -187,9 +217,72 @@ export function createLifetimeScanner(opts: {
         totalAssistantMessages: agg.totalAssistantMessages,
       };
       initialScanDone = true;
-      log.info({ fileCount: fileStates.size, durationMs: Date.now() - startMs }, 'lifetime scan complete');
+      initDoneMs = Date.now();
+
+      const total = unchanged.size + toScan.length + deferred.length + deleted.length;
+      log.info(
+        { scanned: toScan.length, total, deferred: deferred.length, durationMs: initDoneMs - startMs },
+        useFullScan ? 'lifetime scan complete' : 'fast scan complete',
+      );
+
+      // Schedule background scan for deferred files
+      if (deferred.length > 0 && !destroyed) {
+        backgroundTimer = setTimeout(() => {
+          void backgroundScan(deferred);
+        }, BACKGROUND_DELAY_MS);
+      } else if (deferred.length === 0 && !useFullScan) {
+        _backgroundScanDone = true;
+        log.info('background scan skipped: no stale files');
+      }
     } catch (err) {
       log.error({ err }, 'lifetime scan failed');
+    }
+  }
+
+  async function backgroundScan(files: FileToScan[]): Promise<void> {
+    backgroundTimer = null;
+    if (destroyed) {
+      return;
+    }
+
+    const startMs = Date.now();
+    try {
+      abortController = new AbortController();
+      await scanFiles(files, sink, {
+        onError: (file, err) => log.warn({ file, err }, 'scan error'),
+        signal: abortController.signal,
+      });
+      abortController = null;
+      flush();
+
+      if (destroyed) {
+        log.info('background scan aborted');
+        return;
+      }
+
+      // Refresh lifetime stats — full object replacement
+      const agg = queryLifetimeAggregates(db);
+      stats = {
+        createdAtMs: resolveCreatedAt(db, deviceJsonPath),
+        totalSessions: queryTotalSessionFiles(db),
+        totalInputTokens: agg.totalInputTokens,
+        totalOutputTokens: agg.totalOutputTokens,
+        totalCacheReadTokens: agg.totalCacheReadTokens,
+        totalCacheWriteTokens: agg.totalCacheWriteTokens,
+        totalUserMessages: agg.totalUserMessages,
+        totalAssistantMessages: agg.totalAssistantMessages,
+      };
+      _backgroundScanDone = true;
+      log.info(
+        { scanned: files.length, durationMs: Date.now() - startMs, readyToFullMs: Date.now() - initDoneMs },
+        'background scan complete',
+      );
+    } catch (err) {
+      if (destroyed) {
+        log.info('background scan aborted');
+      } else {
+        log.error({ err }, 'background scan failed');
+      }
     }
   }
 
@@ -208,6 +301,10 @@ export function createLifetimeScanner(opts: {
 
   function destroy(): void {
     destroyed = true;
+    if (backgroundTimer) {
+      clearTimeout(backgroundTimer);
+      backgroundTimer = null;
+    }
     if (abortController) {
       abortController.abort();
       abortController = null;
@@ -215,6 +312,8 @@ export function createLifetimeScanner(opts: {
     fileStates.clear();
     stats = emptyStats();
     initialScanDone = false;
+    _backgroundScanDone = false;
+    initDoneMs = 0;
   }
 
   function toResult(): LifetimeStatsResult {
@@ -278,7 +377,9 @@ function resolveCreatedAt(db: Database, deviceJsonPath: string): number {
 }
 
 function backfillFirstTimestamps(db: Database): void {
-  const rows = db.prepare('SELECT file_path FROM scan_state WHERE first_timestamp_ms IS NULL').all();
+  const rows = db
+    .prepare('SELECT file_path FROM scan_state WHERE first_timestamp_ms IS NULL')
+    .all<{ file_path: string }>();
   if (rows.length === 0) {
     return;
   }

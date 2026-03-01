@@ -61,7 +61,7 @@ export class DataRetention {
       ORDER BY hour
     `,
       )
-      .all(cutoff);
+      .all<{ hour: string }>(cutoff);
 
     if (hours.length === 0) {
       return;
@@ -84,9 +84,10 @@ export class DataRetention {
       .toISOString()
       .replace(/:\d{2}\.\d{3}Z/, ':00:00Z');
 
-    const agg = this.db
-      .prepare(
-        `
+    const agg =
+      this.db
+        .prepare(
+          `
       SELECT
         MAX(active_sessions) AS active_sessions_max,
         AVG(active_sessions) AS active_sessions_avg,
@@ -98,8 +99,8 @@ export class DataRetention {
       FROM system_samples
       WHERE timestamp >= ? AND timestamp < ?
     `,
-      )
-      .get(hour, nextHour) as Record<string, number>;
+        )
+        .get<Record<string, number>>(hour, nextHour) ?? {};
 
     this.db
       .prepare(

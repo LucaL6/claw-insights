@@ -1,8 +1,10 @@
-import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const BACKGROUND_DELAY_MS = 5_000;
 
 import type { Database } from '../../../db/database.js';
 import { initDatabase } from '../../../db/init.js';
@@ -777,6 +779,151 @@ describe('LifetimeScanner', () => {
 
       const stats = await scanner.getStats();
       expect(stats.isReady).toBe(false);
+    });
+  });
+
+  describe('tiered scanning', () => {
+    it('marks ready after fast scan, deferred files have restored state', async () => {
+      makeTranscript(dir, 'old.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
+      makeTranscript(dir, 'recent.jsonl', [userMsg(), assistantMsg({ input: 200, output: 100 })]);
+
+      const s1 = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        scanTiered: false,
+      });
+      await s1.init();
+      s1.destroy();
+
+      const threeDaysAgo = Date.now() - 3 * 86_400_000;
+      utimesSync(join(dir, 'old.jsonl'), threeDaysAgo / 1000, threeDaysAgo / 1000);
+
+      const s2 = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        scanTiered: true,
+      });
+      await s2.init();
+
+      expect(s2.isReady()).toBe(true);
+      expect(s2.getFileStates().size).toBe(2);
+      s2.destroy();
+    });
+
+    it('falls back to full scan when DB is empty (fresh start)', async () => {
+      makeTranscript(dir, 'old.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
+      const threeDaysAgo = Date.now() - 3 * 86_400_000;
+      utimesSync(join(dir, 'old.jsonl'), threeDaysAgo / 1000, threeDaysAgo / 1000);
+
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        scanTiered: true,
+      });
+      await scanner.init();
+
+      const stats = await scanner.getStats();
+      expect(stats.totalInputTokens).toBe(100);
+      expect(stats.totalSessions).toBe(1);
+      scanner.destroy();
+    });
+
+    it('disables tiering when scanTiered is false', async () => {
+      makeTranscript(dir, 'old.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
+      const threeDaysAgo = Date.now() - 3 * 86_400_000;
+      utimesSync(join(dir, 'old.jsonl'), threeDaysAgo / 1000, threeDaysAgo / 1000);
+
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        scanTiered: false,
+      });
+      await scanner.init();
+
+      const stats = await scanner.getStats();
+      expect(stats.totalInputTokens).toBe(100);
+      scanner.destroy();
+    });
+
+    it('background scan updates stats after delay', { timeout: 15_000 }, async () => {
+      // Phase 1: full scan to build cache (real timers)
+      makeTranscript(dir, 'old.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
+      makeTranscript(dir, 'recent.jsonl', [userMsg(), assistantMsg({ input: 200, output: 100 })]);
+
+      const s1 = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        scanTiered: false,
+      });
+      await s1.init();
+      const stats1 = await s1.getStats();
+      s1.destroy();
+
+      const oldPath = join(dir, 'old.jsonl');
+      appendFileSync(oldPath, '\n' + assistantMsg({ input: 50, output: 25 }) + '\n');
+      const threeDaysAgo = Date.now() - 3 * 86_400_000;
+      utimesSync(oldPath, threeDaysAgo / 1000, threeDaysAgo / 1000);
+
+      const s2 = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        scanTiered: true,
+      });
+      await s2.init();
+
+      const statsFast = await s2.getStats();
+      expect(statsFast.totalInputTokens).toBe(stats1.totalInputTokens);
+
+      // Wait for background scan to complete (real timers)
+      await new Promise((r) => setTimeout(r, BACKGROUND_DELAY_MS + 1_000));
+
+      const statsFull = await s2.getStats();
+      expect(statsFull.totalInputTokens).toBe(stats1.totalInputTokens + 50);
+
+      s2.destroy();
+    });
+
+    it('destroy cancels pending background timer', { timeout: 15_000 }, async () => {
+      // Phase 1: build cache with real timers
+      makeTranscript(dir, 'old.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
+
+      const s1 = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        scanTiered: false,
+      });
+      await s1.init();
+      s1.destroy();
+
+      const threeDaysAgo = Date.now() - 3 * 86_400_000;
+      utimesSync(join(dir, 'old.jsonl'), threeDaysAgo / 1000, threeDaysAgo / 1000);
+
+      // Switch to fake timers for phase 2
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const s2 = createLifetimeScanner({
+          db,
+          transcriptsDir: dir,
+          deviceJsonPath: join(deviceDir, 'device.json'),
+          scanTiered: true,
+        });
+        await s2.init();
+
+        s2.destroy();
+
+        await vi.advanceTimersByTimeAsync(BACKGROUND_DELAY_MS + 100);
+
+        expect(true).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

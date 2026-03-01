@@ -48,7 +48,7 @@ export function getRangeTurnCount(db: Database, startTs: string, endTs: string):
       db,
       "SELECT COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant')",
     );
-    const row = stmt.get(startTs, endTs);
+    const row = stmt.get<{ turns: number }>(startTs, endTs);
     return row?.turns ?? 0;
   });
 }
@@ -63,7 +63,7 @@ export function getRangeTurnCountBySession(
       db,
       "SELECT session_key AS sessionKey, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY session_key ORDER BY turns DESC",
     );
-    return stmt.all(startTs, endTs);
+    return stmt.all<{ sessionKey: string; turns: number }>(startTs, endTs);
   });
 }
 
@@ -79,7 +79,7 @@ export function getBucketedTurnCount(
       db,
       `SELECT ${expr} AS bucket, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket`,
     );
-    return stmt.all(startTs, endTs);
+    return stmt.all<{ bucket: number; turns: number }>(startTs, endTs);
   });
 }
 
@@ -95,6 +95,6 @@ export function getBucketedTurnCountByRole(
       db,
       `SELECT ${expr} AS bucket, role, COUNT(*) AS turns FROM message_events WHERE timestamp >= ? AND timestamp < ? AND role IN ('user', 'assistant') GROUP BY bucket, role`,
     );
-    return stmt.all(startTs, endTs);
+    return stmt.all<{ bucket: number; role: string; turns: number }>(startTs, endTs);
   });
 }

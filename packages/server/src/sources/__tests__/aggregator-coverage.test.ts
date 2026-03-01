@@ -8,7 +8,7 @@ import { Aggregator } from '../aggregator';
 
 function setup() {
   const dbPath = join(tmpdir(), `agg-cov-${Date.now()}-${Math.random()}.db`);
-  const db = initDatabase(dbPath);
+  const db = initDatabase({ dbPath });
   const agg = new Aggregator(db);
   return {
     db,
