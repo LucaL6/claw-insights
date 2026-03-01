@@ -25,7 +25,7 @@ export interface Managed {
 }
 
 /** A processor handles events. Can be a function or object. */
-export type Processor = ((...args: unknown[]) => void) | { handle: (...args: unknown[]) => void };
+export type Processor = ((entry: unknown) => void) | { handle(entry: unknown): void };
 
 /** A service runs in the background with start/stop lifecycle. */
 export interface Service {

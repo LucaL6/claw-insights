@@ -1,3 +1,5 @@
+import type { MetricsBucket } from './snapshot-formatters.js';
+
 const VALID_DETAILS = ['compact', 'standard', 'full'] as const;
 const VALID_FORMATS = ['png', 'json', 'svg'] as const;
 const VALID_RANGES = ['30m', '1h', '6h', '12h', '24h'] as const;
@@ -68,9 +70,13 @@ export interface DataSources {
     totalErrors: number;
     totalWarnings: number;
     uptimePercent: number;
-    buckets: Record<string, unknown>[];
+    buckets: MetricsBucket[];
   };
-  getRecentErrors: (limit: number) => { timestamp: string; type: string; module: string; message: string }[];
+  getRecentErrors: (limit: number) => {
+    events: { timestamp: string; type: string; module: string; message: string }[];
+    total: number;
+    counts: { error: number; warning: number; restart: number };
+  };
   getModelTokenUsage: (startTs: string, endTs: string) => { model: string; tokensK: number }[];
   getTokenTrend: (rangeMinutes: number, endTs: string) => number | null;
   getTurnCounts: (
@@ -127,7 +133,7 @@ export interface SnapshotData {
   };
   tokensByModel: ModelTokenUsage[];
   tokensTrend?: string;
-  buckets?: Record<string, unknown>[];
+  buckets?: MetricsBucket[];
   sessions?: SnapshotSession[];
   recentErrors?: { timestamp: string; type: string; module: string; message: string }[];
   companionDays: number;

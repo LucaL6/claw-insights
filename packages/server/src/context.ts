@@ -113,6 +113,8 @@ export async function createContext(): Promise<AppContext> {
 
   const lifetimeScanner = new LifetimeScanner(config.transcriptsDir, config.deviceJsonPath, tokenBus, messageBus);
 
+  const ingestLog = createLogIngester(db);
+
   const pipeline = new Pipeline()
     // Sources — emit events
     .addSource('logTailer', logTailer)
@@ -122,7 +124,9 @@ export async function createContext(): Promise<AppContext> {
     .addManaged('sessionReader', sessionReader)
     .addManaged('cronReader', cronReader)
     // Processors — handle events
-    .addProcessor('logIngester', createLogIngester(db))
+    .addProcessor('logIngester', (e: unknown) => {
+      ingestLog(e as LogEntry);
+    })
     .addProcessor('spawnTracker', {
       handle: (entry: unknown) => {
         spawnTracker.ingest(entry as LogEntry);

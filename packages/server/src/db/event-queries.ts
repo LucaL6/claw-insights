@@ -1,4 +1,4 @@
-import type { DatabaseSync as Database } from 'node:sqlite';
+import type { DatabaseSync as Database, SQLInputValue } from 'node:sqlite';
 
 import { createChildLogger } from '../logger.js';
 import { EVENT_MAP, mapEvent } from '../sources/events-mapper.js';
@@ -39,7 +39,7 @@ export function queryEvents(
     const { from, to, types = ['error', 'warning', 'gateway_restart'], limit = 200 } = opts;
 
     const conditions: string[] = [];
-    const params: unknown[] = [];
+    const params: SQLInputValue[] = [];
 
     if (types.length > 0) {
       const placeholders = types.map(() => '?').join(',');
@@ -108,6 +108,9 @@ export function getEventDensity(db: Database): Array<{
   hasError: boolean;
   hasWarning: boolean;
   hasRestart: boolean;
+  errorCount: number;
+  warningCount: number;
+  restartCount: number;
   epochStart: number;
 }> {
   return timedQuery(log, 'getEventDensity', () => {
@@ -161,7 +164,7 @@ export function getEventCounts(
 ): { error: number; warning: number; restart: number } {
   return timedQuery(log, 'getEventCounts', () => {
     const conditions: string[] = [];
-    const params: unknown[] = [];
+    const params: SQLInputValue[] = [];
 
     if (opts.from !== undefined) {
       conditions.push(`CAST(strftime('%s', timestamp) AS INTEGER) >= ?`);

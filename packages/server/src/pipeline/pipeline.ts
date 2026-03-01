@@ -3,7 +3,7 @@ import type { Managed, PipelineConfig, Processor, Service, Source, WiringRule } 
 
 const log = createChildLogger('pipeline');
 
-type BoundHandler = { source: Source; event: string; handler: (...args: unknown[]) => void };
+type BoundHandler = { source: Source; event: string; handler: (entry: unknown) => void };
 
 export class Pipeline {
   private sources = new Map<string, Source>();
@@ -73,9 +73,9 @@ export class Pipeline {
         }
         return typeof proc === 'function' ? proc : proc.handle.bind(proc);
       });
-      const handler = (...args: unknown[]) => {
+      const handler = (entry: unknown) => {
         for (const h of handlers) {
-          h(...args);
+          h(entry);
         }
       };
       src.on(rule.event, handler);

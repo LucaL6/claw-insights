@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
 
-import type { Request, Response } from 'express';
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import type { NextFunction, Request } from 'express';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createMockNext,createMockResponse } from './test-utils.js';
 
 const mockConfig = vi.hoisted(() => ({ apiToken: 'a'.repeat(32), noAuth: false }));
 vi.mock('../config.js', () => ({ config: mockConfig }));
@@ -12,32 +14,22 @@ function mockReq(query: Record<string, string> = {}, path = '/'): Request {
   return { query, path, url: path + '?' + new URLSearchParams(query).toString() } as unknown as Request;
 }
 
-function mockRes() {
-  const res: Record<string, unknown> = { headers: {} };
-  res.status = vi.fn().mockReturnValue(res);
-  res.cookie = vi.fn().mockReturnValue(res);
-  res.set = vi.fn().mockReturnValue(res);
-  res.redirect = vi.fn().mockReturnValue(res);
-  res.send = vi.fn().mockReturnValue(res);
-  return res as Response;
-}
-
 describe('cookieExchangeMiddleware', () => {
-  let next: ReturnType<typeof vi.fn>;
+  let next: NextFunction;
   beforeEach(() => {
-    next = vi.fn();
+    next = createMockNext();
     mockConfig.apiToken = 'a'.repeat(32);
     mockConfig.noAuth = false;
   });
 
   it('calls next() when no token query param', () => {
-    cookieExchangeMiddleware(mockReq({}), mockRes(), next);
+    cookieExchangeMiddleware(mockReq({}), createMockResponse(), next);
     expect(next).toHaveBeenCalled();
   });
 
   it('sets cookie and redirects 303 for valid token', () => {
     const token = 'a'.repeat(32);
-    const res = mockRes();
+    const res = createMockResponse();
     cookieExchangeMiddleware(mockReq({ token }), res, next);
     expect(res.cookie).toHaveBeenCalledWith(
       'claw_session',
@@ -51,7 +43,7 @@ describe('cookieExchangeMiddleware', () => {
   });
 
   it('returns 403 for invalid token', () => {
-    const res = mockRes();
+    const res = createMockResponse();
     cookieExchangeMiddleware(mockReq({ token: 'wrong' }), res, next);
     expect(res.status).toHaveBeenCalledWith(403);
     expect(next).not.toHaveBeenCalled();
@@ -59,7 +51,7 @@ describe('cookieExchangeMiddleware', () => {
 
   it('calls next() when noAuth is true', () => {
     mockConfig.noAuth = true;
-    cookieExchangeMiddleware(mockReq({ token: 'anything' }), mockRes(), next);
+    cookieExchangeMiddleware(mockReq({ token: 'anything' }), createMockResponse(), next);
     expect(next).toHaveBeenCalled();
   });
 });

@@ -7,6 +7,7 @@ function makeEvent(overrides: Partial<MessageEvent> = {}): MessageEvent {
     timestamp: '2026-02-27T00:00:00Z',
     sessionKey: 'session-1',
     role: 'user',
+    lineHash: 'hash-1',
     ...overrides,
   };
 }

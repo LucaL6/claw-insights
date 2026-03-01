@@ -4,7 +4,6 @@ import { useI18n } from '../../i18n/context';
 import { EventRow } from './EventRow';
 import { formatGap, type ProcessedEvent } from './log-types';
 
-// eslint-disable-next-line react-refresh/only-export-components -- re-exports for convenience
 export type { ProcessedEvent } from './log-types';
 // eslint-disable-next-line react-refresh/only-export-components -- re-exports for convenience
 export { formatGap } from './log-types';
@@ -15,7 +14,13 @@ interface Props {
   error?: string;
 }
 
-function GapIndicator({ seconds, t }: { seconds: number; t: (key: string, params?: Record<string, string | number>) => string }) {
+function GapIndicator({
+  seconds,
+  t,
+}: {
+  seconds: number;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
   const label = formatGap(seconds);
   return (
     <div
@@ -41,7 +46,9 @@ export function EventTable({ events, loading, error }: Props) {
   if (prevEvents !== events) {
     setPrevEvents(events);
     effectiveExpandedIdx = null;
-    if (expandedIdx !== null) setExpandedIdx(null);
+    if (expandedIdx !== null) {
+      setExpandedIdx(null);
+    }
   }
 
   const handleKeyDown = useCallback(
@@ -86,7 +93,9 @@ export function EventTable({ events, loading, error }: Props) {
             <div key={`${ev.timestamp}-${i}`}>
               {ev.gapBefore !== undefined && <GapIndicator seconds={ev.gapBefore} t={t} />}
               <EventRow
-                ref={(el: HTMLDivElement | null) => { rowRefs.current[i] = el; }}
+                ref={(el: HTMLDivElement | null) => {
+                  rowRefs.current[i] = el;
+                }}
                 id={`event-${i}`}
                 timestamp={ev.timestamp}
                 type={ev.type}
@@ -96,7 +105,9 @@ export function EventTable({ events, loading, error }: Props) {
                 tabIndex={focusedIdx === i ? 0 : -1}
                 repeatCount={ev.repeatCount}
                 repeatFirst={ev.repeatFirst}
-                onToggle={() => setExpandedIdx((prev) => (prev === i ? null : i))}
+                onToggle={() => {
+                  setExpandedIdx((prev) => (prev === i ? null : i));
+                }}
                 onKeyDown={handleKeyDown(i)}
               />
             </div>

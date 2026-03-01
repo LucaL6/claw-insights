@@ -78,46 +78,53 @@ function createMockCtx(): AppContext {
   } as unknown as AppContext;
 }
 
+// Helper: Query resolvers with all fields required and callable
+type QueryFns = Required<{
+  [K in keyof NonNullable<ReturnType<typeof createResolvers>['Query']>]: (...args: any[]) => unknown;
+}>;
+
 describe('createResolvers', () => {
   let ctx: AppContext;
   let resolvers: ReturnType<typeof createResolvers>;
+  let Query: QueryFns;
 
   beforeEach(() => {
     vi.clearAllMocks();
     ctx = createMockCtx();
     resolvers = createResolvers(ctx);
+    Query = resolvers.Query! as unknown as QueryFns;
   });
 
   describe('sessions', () => {
     it('calls getSessions without filter', () => {
-      const result = resolvers.Query.sessions({}, {});
+      const result = Query.sessions({}, {});
       expect(ctx.sessionReader.attachSubAgents).toHaveBeenCalled();
       expect(ctx.sessionReader.getSessions).toHaveBeenCalledWith(undefined);
       expect(result).toEqual([{ id: 's1', label: 'test', turnCount: 5 }]);
     });
 
     it('calls getSessions with filter', () => {
-      resolvers.Query.sessions({}, { filter: { activeOnly: true, sortBy: 'RECENT' } });
+      Query.sessions({}, { filter: { activeOnly: true, sortBy: 'RECENT' } });
       expect(ctx.sessionReader.getSessions).toHaveBeenCalledWith({ activeOnly: true, sortBy: 'RECENT' });
     });
   });
 
   describe('metrics', () => {
     it('calls aggregator.getMetrics and includes warnings', () => {
-      const result = resolvers.Query.metrics({}, { range: 'ONE_HOUR' });
+      const result = Query.metrics({}, { range: 'ONE_HOUR' });
       expect(ctx.aggregator.getMetrics).toHaveBeenCalledWith(undefined, 'ONE_HOUR');
       expect(result).toMatchObject({ totalTokensK: 100, warnings: ['stale data'] });
     });
 
     it('defaults to TWENTY_FOUR_HOUR for invalid range', () => {
-      resolvers.Query.metrics({}, { range: 'INVALID' });
+      Query.metrics({}, { range: 'INVALID' });
       expect(ctx.aggregator.getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR');
     });
   });
 
   describe('cronJobs', () => {
     it('returns from cronReader', () => {
-      const result = resolvers.Query.cronJobs({}, {});
+      const result = Query.cronJobs({}, {});
       expect(ctx.cronReader.getJobs).toHaveBeenCalled();
       expect(result).toEqual([{ name: 'cleanup', schedule: '0 * * * *' }]);
     });
@@ -126,10 +133,7 @@ describe('createResolvers', () => {
   describe('events', () => {
     it('calls queryEvents with args', async () => {
       const { queryEvents } = await import('../../../db/event-queries');
-      const result = await resolvers.Query.events(
-        {},
-        { from: '2025-01-01', to: '2025-01-02', types: ['error'], limit: 10 },
-      );
+      const result = await Query.events({}, { from: '2025-01-01', to: '2025-01-02', types: ['error'], limit: 10 });
       expect(queryEvents).toHaveBeenCalledWith(ctx.db, {
         from: '2025-01-01',
         to: '2025-01-02',
@@ -142,14 +146,14 @@ describe('createResolvers', () => {
 
   describe('eventDensity', () => {
     it('calls getEventDensity', async () => {
-      const result = await resolvers.Query.eventDensity({}, {});
+      const result = await Query.eventDensity({}, {});
       expect(result).toEqual([{ date: '2025-01-01', count: 5 }]);
     });
   });
 
   describe('usageCost', () => {
     it('calls getUsageCost via ctx', async () => {
-      const result = await resolvers.Query.usageCost({}, {});
+      const result = await Query.usageCost({}, {});
       expect(ctx.systemInfoService.getUsageCost).toHaveBeenCalled();
       expect(result).toMatchObject({ totalCostUsd: 1.5 });
     });
@@ -157,19 +161,19 @@ describe('createResolvers', () => {
 
   describe('recentLogs', () => {
     it('uses default count of 50', () => {
-      resolvers.Query.recentLogs({}, {});
+      Query.recentLogs({}, {});
       expect(ctx.logTailer.getRecentEntries).toHaveBeenCalledWith(50);
     });
 
     it('uses custom count', () => {
-      resolvers.Query.recentLogs({}, { count: 10 });
+      Query.recentLogs({}, { count: 10 });
       expect(ctx.logTailer.getRecentEntries).toHaveBeenCalledWith(10);
     });
   });
 
   describe('gateway', () => {
     it('calls getGatewayStatus via ctx and maps fields', async () => {
-      const result = await resolvers.Query.gateway({}, {});
+      const result = await Query.gateway({}, {});
       expect(ctx.gatewayClient.getGatewayStatus).toHaveBeenCalled();
       expect(result).toMatchObject({
         running: true,
@@ -183,16 +187,16 @@ describe('createResolvers', () => {
 
   describe('channels', () => {
     it('returns status.channels via ctx', async () => {
-      const result = await resolvers.Query.channels({}, {});
+      const result = await Query.channels({}, {});
       expect(ctx.gatewayClient.getGatewayStatus).toHaveBeenCalled();
       expect(result).toHaveLength(1);
-      expect(result[0]).toMatchObject({ provider: 'DISCORD', connected: true });
+      expect((result as unknown[])[0]).toMatchObject({ provider: 'DISCORD', connected: true });
     });
   });
 
   describe('resources', () => {
     it('calls getSystemMetrics via ctx', async () => {
-      const result = await resolvers.Query.resources({}, {});
+      const result = await Query.resources({}, {});
       expect(ctx.systemInfoService.getSystemMetrics).toHaveBeenCalled();
       expect(result).toMatchObject({ cpu: 25, memoryMB: 512 });
     });

@@ -57,7 +57,12 @@ function mockClass(props: Record<string, unknown>) {
     constructor(..._args: unknown[]) {
       Object.assign(
         this,
-        Object.fromEntries(Object.entries(props).map(([k, v]) => [k, typeof v === 'function' ? vi.fn(v) : v])),
+        Object.fromEntries(
+          Object.entries(props).map(([k, v]) => [
+            k,
+            typeof v === 'function' ? vi.fn(v as (...args: unknown[]) => unknown) : v,
+          ]),
+        ),
       );
     }
   };

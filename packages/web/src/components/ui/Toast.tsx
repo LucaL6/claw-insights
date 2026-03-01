@@ -15,7 +15,14 @@ const ICON_SIZE = 'w-4 h-4 flex-shrink-0';
 function ToastIcon({ type }: { type: ToastMessage['type'] }) {
   if (type === 'error') {
     return (
-      <svg className={ICON_SIZE} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <svg
+        className={ICON_SIZE}
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      >
         <circle cx="8" cy="8" r="6.5" />
         <path d="M8 5v3.5M8 10.5v.5" />
       </svg>
@@ -23,7 +30,15 @@ function ToastIcon({ type }: { type: ToastMessage['type'] }) {
   }
   if (type === 'success') {
     return (
-      <svg className={ICON_SIZE} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={ICON_SIZE}
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <circle cx="8" cy="8" r="6.5" />
         <path d="M5.5 8l2 2 3.5-4" />
       </svg>
@@ -52,7 +67,8 @@ export function ToastContainer() {
         }
       } else if (action.kind === 'dismiss') {
         setToasts((prev) => prev.filter((t) => t.id !== action.id));
-      } else if (action.kind === 'replace') {
+      } else {
+        // action.kind === 'replace'
         const { id, msg } = action;
         setToasts((prev) => prev.map((t) => (t.id === id ? msg : t)));
         if (msg.type !== 'loading') {

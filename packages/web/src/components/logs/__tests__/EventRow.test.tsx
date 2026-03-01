@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { EventRow } from '../EventRow';
 import { renderWithProviders as render } from '../../../test/render';
+import { EventRow } from '../EventRow';
 
 afterEach(cleanup);
 
@@ -49,15 +49,7 @@ describe('EventRow', () => {
   });
 
   it('shows repeat stats when expanded with repeatCount', () => {
-    render(
-      <EventRow
-        {...base}
-        type="error"
-        expanded
-        repeatCount={5}
-        repeatFirst="2026-01-15T14:25:00Z"
-      />,
-    );
+    render(<EventRow {...base} type="error" expanded repeatCount={5} repeatFirst="2026-01-15T14:25:00Z" />);
     expect(screen.getAllByText(/×5/).length).toBeGreaterThanOrEqual(1);
   });
 

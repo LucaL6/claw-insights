@@ -70,7 +70,8 @@ describe('createGatewayClient', () => {
     };
     mockStat.mockReturnValue(Promise.resolve({ size: buf.length } as never));
     mockOpen.mockReturnValue(Promise.resolve(mockFileHandle as never));
-    mockFileHandle.read.mockImplementation((target: Buffer) => {
+    mockFileHandle.read.mockImplementation((...args: unknown[]) => {
+      const target = args[0] as Buffer;
       buf.copy(target);
       return Promise.resolve({ bytesRead: buf.length });
     });

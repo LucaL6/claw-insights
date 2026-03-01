@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Pipeline } from '../pipeline';
-import type { Managed, Service, Source } from '../types';
+import type { Managed, Processor, Service, Source } from '../types';
 
 function mockSource(): Source & EventEmitter {
   const emitter = new EventEmitter();
@@ -14,6 +14,10 @@ function mockService(): Service {
   return { start: vi.fn(), stop: vi.fn(), destroy: vi.fn() };
 }
 
+function mockProcessor(): Processor & ReturnType<typeof vi.fn> {
+  return vi.fn<(entry: unknown) => void>();
+}
+
 describe('Pipeline', () => {
   // ── Registration ──────────────────────────────────────────
 
@@ -22,7 +26,7 @@ describe('Pipeline', () => {
     const p = new Pipeline()
       .addSource('src', mockSource())
       .addManaged('res', managed)
-      .addProcessor('proc', vi.fn())
+      .addProcessor('proc', mockProcessor())
       .addService('svc', mockService());
     const config = p.getConfig();
     expect(config.sources.size).toBe(1);
@@ -35,7 +39,7 @@ describe('Pipeline', () => {
 
   it('wires source events to processor targets', () => {
     const source = mockSource();
-    const processor = vi.fn();
+    const processor = mockProcessor();
     new Pipeline().addSource('src', source).addProcessor('proc', processor).wire('src', 'data', ['proc']).build();
     source.emit('data', 'hello');
     expect(processor).toHaveBeenCalledWith('hello');
@@ -43,8 +47,8 @@ describe('Pipeline', () => {
 
   it('wires to multiple processors', () => {
     const source = mockSource();
-    const proc1 = vi.fn();
-    const proc2 = vi.fn();
+    const proc1 = mockProcessor();
+    const proc2 = mockProcessor();
     new Pipeline()
       .addSource('src', source)
       .addProcessor('p1', proc1)
@@ -58,7 +62,7 @@ describe('Pipeline', () => {
 
   it('wires to object processor with handle method', () => {
     const source = mockSource();
-    const proc = { handle: vi.fn() };
+    const proc = { handle: vi.fn<(entry: unknown) => void>() };
     new Pipeline().addSource('src', source).addProcessor('proc', proc).wire('src', 'data', ['proc']).build();
     source.emit('data', 'test');
     expect(proc.handle).toHaveBeenCalledWith('test');
@@ -88,7 +92,7 @@ describe('Pipeline', () => {
 
   it('destroy() unbinds wired event handlers', () => {
     const source = mockSource();
-    const processor = vi.fn();
+    const processor = mockProcessor();
     const p = new Pipeline()
       .addSource('src', source)
       .addProcessor('proc', processor)
@@ -109,7 +113,7 @@ describe('Pipeline', () => {
 
   it('throws on unknown source in wire()', () => {
     expect(() => {
-      new Pipeline().addProcessor('p', vi.fn()).wire('missing', 'evt', ['p']);
+      new Pipeline().addProcessor('p', mockProcessor()).wire('missing', 'evt', ['p']);
     }).toThrow(/unknown source/i);
   });
 
@@ -133,7 +137,7 @@ describe('Pipeline', () => {
 
   it('throws on addProcessor() after build()', () => {
     const p = new Pipeline().build();
-    expect(() => p.addProcessor('proc', vi.fn())).toThrow(/after build/i);
+    expect(() => p.addProcessor('proc', mockProcessor())).toThrow(/after build/i);
   });
 
   it('throws on addService() after build()', () => {
@@ -147,7 +151,7 @@ describe('Pipeline', () => {
   });
 
   it('throws on wire() after build()', () => {
-    const p = new Pipeline().addSource('src', mockSource()).addProcessor('proc', vi.fn()).build();
+    const p = new Pipeline().addSource('src', mockSource()).addProcessor('proc', mockProcessor()).build();
     expect(() => p.wire('src', 'data', ['proc'])).toThrow(/after build/i);
   });
 
@@ -168,7 +172,7 @@ describe('Pipeline', () => {
     const p = new Pipeline();
     const src = mockSource();
     p.addSource('s1', src);
-    p.addProcessor('p1', vi.fn());
+    p.addProcessor('p1', mockProcessor());
     p.wire('s1', 'data', ['p1']);
     (p as any).sources.delete('s1');
     expect(() => p.build()).toThrow('source "s1" not found');
@@ -178,7 +182,7 @@ describe('Pipeline', () => {
     const p = new Pipeline();
     const src = mockSource();
     p.addSource('s1', src);
-    p.addProcessor('p1', vi.fn());
+    p.addProcessor('p1', mockProcessor());
     p.wire('s1', 'data', ['p1']);
     (p as any).processors.delete('p1');
     expect(() => p.build()).toThrow('processor "p1" not found');

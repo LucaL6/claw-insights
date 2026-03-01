@@ -257,7 +257,8 @@ describe('SessionReader branches', () => {
     // Create file-based temp DB (initDatabase creates schema with migrations)
     const dbPath = join(tmpdir(), `sr-test-${Date.now()}.db`);
     const db = initDatabase(dbPath);
-    const ts = new Date().toISOString();
+    // Use a past timestamp to avoid race with refreshTurnCounts' exclusive upper bound (timestamp < endTs)
+    const ts = new Date(Date.now() - 1000).toISOString();
     db.prepare('INSERT INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)').run(
       ts,
       'agent:main:s1',

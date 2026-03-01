@@ -9,7 +9,7 @@ export class TokenBucketLimiter {
 
   constructor(
     private readonly maxTokens: number,
-    private readonly refillIntervalMs: number,
+    refillIntervalMs: number,
   ) {
     this.tokens = maxTokens;
     this.lastRefill = Date.now();

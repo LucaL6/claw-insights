@@ -39,15 +39,15 @@ function mockRes(): Response & { statusCode: number; body: unknown; headers: Rec
     statusCode: 200,
     body: undefined as unknown,
     headers: {} as Record<string, string>,
-    status(code: number) {
+    status(this: { statusCode: number }, code: number) {
       this.statusCode = code;
       return this;
     },
-    json(data: unknown) {
+    json(this: { body: unknown }, data: unknown) {
       this.body = data;
       return this;
     },
-    set(key: string, val: string) {
+    set(this: { headers: Record<string, string> }, key: string, val: string) {
       this.headers[key] = val;
       return this;
     },

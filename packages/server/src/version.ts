@@ -16,5 +16,5 @@ export function getAppVersion(): string {
   } catch {
     _appVersion = '0.0.0';
   }
-  return _appVersion;
+  return _appVersion as string; // guaranteed non-null: set in both try and catch above
 }

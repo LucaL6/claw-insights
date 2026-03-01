@@ -27,26 +27,49 @@ interface Props {
 }
 
 function bucketColor(b: DensityBucket): string {
-  if (b.count === 0) {return 'var(--bg-elevated)';}
-  if (b.hasError) {return 'var(--red)';}
-  if (b.hasRestart) {return 'var(--orange)';}
-  if (b.hasWarning) {return 'var(--amber)';}
+  if (b.count === 0) {
+    return 'var(--bg-elevated)';
+  }
+  if (b.hasError) {
+    return 'var(--red)';
+  }
+  if (b.hasRestart) {
+    return 'var(--orange)';
+  }
+  if (b.hasWarning) {
+    return 'var(--amber)';
+  }
   return 'var(--text-dim)';
 }
 
 function bucketOpacity(count: number): number {
-  if (count === 0) {return 0.2;}
-  if (count <= 5) {return 0.4;}
-  if (count <= 20) {return 0.7;}
+  if (count === 0) {
+    return 0.2;
+  }
+  if (count <= 5) {
+    return 0.4;
+  }
+  if (count <= 20) {
+    return 0.7;
+  }
   return 1;
 }
 
 function buildAriaLabel(b: DensityBucket, t: TFn): string {
   const hour = String(b.hour).padStart(2, '0');
-  let label = t('logs.density.ariaLabel', { hour, events: tp(t, 'logs.density.event', 'logs.density.events', b.count) });
-  if (b.errorCount > 0) label += `, ${tp(t, 'logs.density.error', 'logs.density.errors', b.errorCount)}`;
-  if (b.warningCount > 0) label += `, ${tp(t, 'logs.density.warning', 'logs.density.warnings', b.warningCount)}`;
-  if (b.restartCount > 0) label += `, ${tp(t, 'logs.density.restart', 'logs.density.restarts', b.restartCount)}`;
+  let label = t('logs.density.ariaLabel', {
+    hour,
+    events: tp(t, 'logs.density.event', 'logs.density.events', b.count),
+  });
+  if (b.errorCount > 0) {
+    label += `, ${tp(t, 'logs.density.error', 'logs.density.errors', b.errorCount)}`;
+  }
+  if (b.warningCount > 0) {
+    label += `, ${tp(t, 'logs.density.warning', 'logs.density.warnings', b.warningCount)}`;
+  }
+  if (b.restartCount > 0) {
+    label += `, ${tp(t, 'logs.density.restart', 'logs.density.restarts', b.restartCount)}`;
+  }
   return label;
 }
 
@@ -88,7 +111,9 @@ function BucketTooltip({ bucket, t }: { bucket: DensityBucket; t: TFn }) {
           {tp(t, 'logs.density.restart', 'logs.density.restarts', bucket.restartCount)}
         </div>
       )}
-      <div className="text-fg-muted text-[10px]">{tp(t, 'logs.density.event', 'logs.density.events', bucket.count)}</div>
+      <div className="text-fg-muted text-[10px]">
+        {tp(t, 'logs.density.event', 'logs.density.events', bucket.count)}
+      </div>
     </div>
   );
 }

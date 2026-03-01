@@ -43,13 +43,16 @@ function makeSources(sessionCount = 3): DataSources {
       uptimePercent: 99.5,
       buckets,
     }),
-    getRecentErrors: (limit: number) =>
-      Array.from({ length: limit }, (_, i) => ({
+    getRecentErrors: (limit: number) => ({
+      events: Array.from({ length: limit }, (_, i) => ({
         timestamp: new Date().toISOString(),
         type: 'runtime',
         module: 'core',
         message: `error ${i}`,
       })),
+      total: limit,
+      counts: { error: limit, warning: 0, restart: 0 },
+    }),
     getModelTokenUsage: vi.fn().mockReturnValue([
       { model: 'anthropic/claude-opus-4-6', tokensK: 100 },
       { model: 'openai/gpt-5', tokensK: 50 },

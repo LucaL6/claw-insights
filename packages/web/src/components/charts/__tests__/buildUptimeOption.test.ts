@@ -1,11 +1,11 @@
-import type { BarSeriesOption, TooltipComponentOption,YAXisComponentOption } from 'echarts';
-import { describe, expect,it } from 'vitest';
+import type { BarSeriesOption, TooltipComponentOption, YAXisComponentOption } from 'echarts';
+import { describe, expect, it } from 'vitest';
 
 import { buildUptimeOption } from '../builders/buildUptimeOption';
 
 interface UptimeBarItem {
   value: number;
-  itemStyle: { color: string };
+  itemStyle: { color: string; shadowBlur?: number; shadowColor?: string };
 }
 
 const MOCK_DATA = [
@@ -37,7 +37,28 @@ describe('buildUptimeOption', () => {
   it('colors normal buckets with low-opacity emerald', () => {
     const opt = buildUptimeOption(MOCK_DATA);
     const item = (opt.series as BarSeriesOption[])[0].data![0] as UptimeBarItem;
-    expect(item.itemStyle.color).toBe('rgba(52,211,153,0.25)');
+    expect(item.itemStyle.color).toBe('rgba(52,211,153,0.45)');
+  });
+
+  it('adds glow shadow to down buckets', () => {
+    const opt = buildUptimeOption(MOCK_DATA);
+    const item = (opt.series as BarSeriesOption[])[0].data![1] as UptimeBarItem;
+    expect(item.itemStyle.shadowBlur).toBe(6);
+    expect(item.itemStyle.shadowColor).toBe('rgba(239,68,68,0.3)');
+  });
+
+  it('adds glow shadow to restart buckets', () => {
+    const opt = buildUptimeOption(MOCK_DATA);
+    const item = (opt.series as BarSeriesOption[])[0].data![2] as UptimeBarItem;
+    expect(item.itemStyle.shadowBlur).toBe(6);
+    expect(item.itemStyle.shadowColor).toBe('rgba(251,191,36,0.3)');
+  });
+
+  it('normal buckets have no glow shadow', () => {
+    const opt = buildUptimeOption(MOCK_DATA);
+    const item = (opt.series as BarSeriesOption[])[0].data![0] as UptimeBarItem;
+    expect(item.itemStyle.shadowBlur).toBeUndefined();
+    expect(item.itemStyle.shadowColor).toBeUndefined();
   });
 
   it('hides yAxis', () => {

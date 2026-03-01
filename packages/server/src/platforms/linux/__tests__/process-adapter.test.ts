@@ -195,7 +195,7 @@ describe('LinuxProcessAdapter', () => {
 
     it('uses dynamic CLK_TCK from getconf', async () => {
       (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-        (cmd: string, args: string[], _opts: unknown, cb: Function) => {
+        (cmd: string, _args: string[], _opts: unknown, cb: Function) => {
           if (cmd === 'getconf') {
             cb(null, { stdout: '250\n' });
           } else {

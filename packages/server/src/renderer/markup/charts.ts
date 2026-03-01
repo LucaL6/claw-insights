@@ -1,10 +1,15 @@
+import { uptimeStatus } from '../../services/snapshot-formatters.js';
 import type { Detail, SnapshotData } from '../../services/snapshot-types.js';
 import type { ColorScheme } from './colors.js';
 import type { SatoriNode } from './helpers.js';
 import { div, span, Sparkline, UptimeStrip } from './helpers.js';
 
 export function renderCharts(data: SnapshotData, detail: Detail, c: ColorScheme): SatoriNode {
-  const sp = data.sparklines;
+  const rawBuckets = data.buckets ?? [];
+  const sp = {
+    tokens: rawBuckets.map((b) => b.tokensK ?? b.tokens ?? 0),
+    uptime: rawBuckets.map((b) => uptimeStatus(b.uptimePercent ?? 100)),
+  };
   const height = detail === 'compact' ? 40 : 48;
 
   const rangeHours = parseInt(data.range) || 6;

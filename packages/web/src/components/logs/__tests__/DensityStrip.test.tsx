@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DensityStrip } from '../DensityStrip';
 import { renderWithProviders as render } from '../../../test/render';
+import { DensityStrip } from '../DensityStrip';
 
 afterEach(cleanup);
 
@@ -16,11 +16,23 @@ function makeBucket(
   warningCount = 0,
   restartCount = 0,
 ) {
-  return { hour, count, hasError, hasWarning, hasRestart, errorCount, warningCount, restartCount, epochStart: 1700000000 + hour * 3600 };
+  return {
+    hour,
+    count,
+    hasError,
+    hasWarning,
+    hasRestart,
+    errorCount,
+    warningCount,
+    restartCount,
+    epochStart: 1700000000 + hour * 3600,
+  };
 }
 
 const emptyData = Array.from({ length: 24 }, (_, i) => makeBucket(i));
-const mixedData = emptyData.map((b, i) => (i === 5 ? { ...b, count: 10, hasError: true, errorCount: 7, warningCount: 3 } : b));
+const mixedData = emptyData.map((b, i) =>
+  i === 5 ? { ...b, count: 10, hasError: true, errorCount: 7, warningCount: 3 } : b,
+);
 
 describe('DensityStrip', () => {
   it('renders 24 buckets', () => {
@@ -57,14 +69,18 @@ describe('DensityStrip', () => {
   });
 
   it('renders warning bucket color', () => {
-    const data = Array.from({ length: 24 }, (_, i) => (i === 3 ? makeBucket(i, 5, false, true, false, 0, 5) : makeBucket(i)));
+    const data = Array.from({ length: 24 }, (_, i) =>
+      i === 3 ? makeBucket(i, 5, false, true, false, 0, 5) : makeBucket(i),
+    );
     const { container } = render(<DensityStrip data={data} />);
     const buckets = container.querySelectorAll('.density-bar');
     expect((buckets[3] as HTMLElement).style.backgroundColor).toBe('var(--amber)');
   });
 
   it('renders restart bucket color', () => {
-    const data = Array.from({ length: 24 }, (_, i) => (i === 2 ? makeBucket(i, 3, false, false, true, 0, 0, 3) : makeBucket(i)));
+    const data = Array.from({ length: 24 }, (_, i) =>
+      i === 2 ? makeBucket(i, 3, false, false, true, 0, 0, 3) : makeBucket(i),
+    );
     const { container } = render(<DensityStrip data={data} />);
     const buckets = container.querySelectorAll('.density-bar');
     expect((buckets[2] as HTMLElement).style.backgroundColor).toBe('var(--orange)');

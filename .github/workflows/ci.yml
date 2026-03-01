@@ -30,6 +30,9 @@ jobs:
       - name: ESLint (web)
         run: npm run -w @claw-insights/web lint
 
+      - name: Type Check (server)
+        run: npm run -w @claw-insights/server typecheck
+
       - name: actionlint
         uses: raven-actions/actionlint@v2
 

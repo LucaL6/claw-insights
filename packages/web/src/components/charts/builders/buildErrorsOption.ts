@@ -11,9 +11,17 @@ interface ErrorBucket {
   restartEvent: boolean;
 }
 
-interface ErrorLabels { errors: string; warnings: string; gatewayRestarted: string }
+interface ErrorLabels {
+  errors: string;
+  warnings: string;
+  gatewayRestarted: string;
+}
 
-export function buildErrorsOption(data: ErrorBucket[], footerText: string, i18n: ErrorLabels = { errors: 'Errors', warnings: 'Warnings', gatewayRestarted: 'Gateway restarted' }): EChartsOption {
+export function buildErrorsOption(
+  data: ErrorBucket[],
+  footerText: string,
+  i18n: ErrorLabels = { errors: 'Errors', warnings: 'Warnings', gatewayRestarted: 'Gateway restarted' },
+): EChartsOption {
   const labels = data.map((d) => d.label);
   const restartPoints = data.filter((d) => d.restartEvent).map((d) => [d.bucket, 0]);
 
@@ -32,7 +40,12 @@ export function buildErrorsOption(data: ErrorBucket[], footerText: string, i18n:
         };
         const rows = items
           .filter((p) => p.seriesName !== 'Restart')
-          .map((p) => ({ color: p.color, label: displayLabels[p.seriesName] ?? p.seriesName, value: String(p.value), marker: '●' }));
+          .map((p) => ({
+            color: p.color,
+            label: displayLabels[p.seriesName] ?? p.seriesName,
+            value: String(p.value),
+            marker: '●',
+          }));
         const hasRestart = data.find((d) => d.label === items[0]?.name && d.restartEvent);
         const extra = hasRestart ? `<span style="color:#fbbf24">↻</span> ${i18n.gatewayRestarted}` : undefined;
         return tooltipHtml({ title: items[0]?.name ?? '', rows, footer: footerText, extra });
@@ -44,14 +57,14 @@ export function buildErrorsOption(data: ErrorBucket[], footerText: string, i18n:
         type: 'bar',
         stack: 'errors',
         data: data.map((d) => d.warnings),
-        itemStyle: { color: 'rgba(249,115,22,0.4)', borderRadius: [0, 0, 0, 0] },
+        itemStyle: { color: 'rgba(249,115,22,0.65)', borderRadius: [0, 0, 0, 0] },
       },
       {
         name: 'Errors',
         type: 'bar',
         stack: 'errors',
         data: data.map((d) => d.errors),
-        itemStyle: { color: 'rgba(239,68,68,0.6)', borderRadius: [2, 2, 0, 0] },
+        itemStyle: { color: 'rgba(239,68,68,0.85)', borderRadius: [2, 2, 0, 0] },
       },
       {
         name: 'Restart',

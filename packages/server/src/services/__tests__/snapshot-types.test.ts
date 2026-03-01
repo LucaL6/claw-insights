@@ -113,6 +113,7 @@ describe('snapshot type compatibility', () => {
         errors: 0,
         warnings: 0,
         uptimePercent: 100,
+        totalMessages: 0,
       },
       tokensByModel: [
         { model: 'anthropic/claude-opus-4-6', modelDisplay: 'Claude Opus 4.6', tokensK: 100, percent: 100 },
@@ -133,7 +134,7 @@ describe('snapshot type compatibility', () => {
       getChannels: async () => [],
       getSessions: () => [],
       getMetrics: () => ({ totalTokensK: 0, totalErrors: 0, totalWarnings: 0, uptimePercent: 100, buckets: [] }),
-      getRecentErrors: () => [],
+      getRecentErrors: () => ({ events: [], total: 0, counts: { error: 0, warning: 0, restart: 0 } }),
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),

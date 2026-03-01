@@ -25,8 +25,8 @@ describe('subscriptionResolvers', () => {
     const ctx = makeCtx();
     const resolvers = subscriptionResolvers(ctx);
     expect(resolvers.Subscription).toBeDefined();
-    expect(resolvers.Subscription.logs).toBeDefined();
-    expect(resolvers.Subscription.dataChanged).toBeDefined();
+    expect(resolvers.Subscription!.logs).toBeDefined();
+    expect(resolvers.Subscription!.dataChanged).toBeDefined();
   });
 
   it('logs subscribe returns async iterable', () => {
@@ -52,7 +52,7 @@ describe('subscriptionResolvers', () => {
     // Wait for executor to register handler
     await new Promise((r) => setTimeout(r, 50));
 
-    const handler = ctx.logTailer.on.mock.calls[0]?.[1];
+    const handler = (ctx.logTailer.on as ReturnType<typeof vi.fn>).mock.calls[0]?.[1];
     expect(handler).toBeTypeOf('function');
 
     handler({ level: 'INFO', module: 'test', time: '10:00', message: 'hello' });
@@ -71,7 +71,7 @@ describe('subscriptionResolvers', () => {
     const nextPromise = iter.next();
     await new Promise((r) => setTimeout(r, 50));
 
-    const handler = ctx.logTailer.on.mock.calls[0][1];
+    const handler = (ctx.logTailer.on as ReturnType<typeof vi.fn>).mock.calls[0][1];
     handler({ level: 'DEBUG', module: 'test', time: '1', message: 'skip' });
     handler({ level: 'WARN', module: 'test', time: '2', message: 'keep' });
 
@@ -90,7 +90,7 @@ describe('subscriptionResolvers', () => {
     const nextPromise = iter.next();
     await new Promise((r) => setTimeout(r, 50));
 
-    const handler = ctx.logTailer.on.mock.calls[0][1];
+    const handler = (ctx.logTailer.on as ReturnType<typeof vi.fn>).mock.calls[0][1];
     handler({ level: 'INFO', module: 'sessions', time: '1', message: 'wrong' });
     handler({ level: 'INFO', module: 'gateway', time: '2', message: 'right' });
 

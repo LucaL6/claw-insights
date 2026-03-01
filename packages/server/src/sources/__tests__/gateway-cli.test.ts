@@ -18,7 +18,7 @@ const MOCK_STATUS_JSON = JSON.stringify({
   sessions: { defaults: { model: 'opus', contextTokens: 200000 } },
 });
 
-function mockPlatform(overrides?: Partial<{ cliExec: (...args: unknown[]) => Promise<string> }>): Platform {
+function mockPlatform(overrides?: Partial<{ cliExec: (args: string[]) => Promise<string> }>): Platform {
   const cliExec =
     overrides?.cliExec ??
     vi.fn((args: string[]) => {
@@ -113,7 +113,9 @@ describe('cache TTL behavior', () => {
 
   it('caches successful status for 10s', async () => {
     const cliExec = vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_STATUS_JSON);}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
       return Promise.resolve('2.5.0\n');
     });
     const client = createGatewayClient(mockPlatform({ cliExec }));
@@ -134,7 +136,9 @@ describe('cache TTL behavior', () => {
 
   it('caches failed status for 3s', async () => {
     const cliExec = vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_FAIL_STATUS_JSON);}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(MOCK_FAIL_STATUS_JSON);
+      }
       return Promise.resolve('2.5.0\n');
     });
     const client = createGatewayClient(mockPlatform({ cliExec }));
@@ -155,7 +159,9 @@ describe('cache TTL behavior', () => {
 
   it('does not emit change when status is unchanged', async () => {
     const cliExec = vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_STATUS_JSON);}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
       return Promise.resolve('2.5.0\n');
     });
     const client = createGatewayClient(mockPlatform({ cliExec }));

@@ -11,7 +11,11 @@ interface UptimeBucket {
   restartEvent: boolean;
 }
 
-interface UptimeLabels { up: string; down: string; restart: string }
+interface UptimeLabels {
+  up: string;
+  down: string;
+  restart: string;
+}
 
 const DEFAULT_UPTIME_LABELS: UptimeLabels = { up: 'UP', down: 'DOWN', restart: 'restart' };
 
@@ -32,8 +36,13 @@ export function buildUptimeOption(data: UptimeBucket[], i18n: UptimeLabels = DEF
       formatter: (params: unknown) => {
         const p = (params as Array<{ dataIndex: number; name: string }>)[0];
         const d = data[p.dataIndex];
-        if (!d) {return '';} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- defensive: array index
-        const status = d.gatewayUp ? `<b style="color:#34d399">${i18n.up}</b>` : `<b style="color:#ef4444">${i18n.down}</b>`;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: array index
+        if (!d) {
+          return '';
+        }
+        const status = d.gatewayUp
+          ? `<b style="color:#34d399">${i18n.up}</b>`
+          : `<b style="color:#ef4444">${i18n.down}</b>`;
         const extra = d.restartEvent ? `<span style="color:#fbbf24">↻ ${i18n.restart}</span>` : undefined;
         return tooltipHtml({ title: `${p.name} ${status}`, rows: [], extra });
       },
@@ -44,10 +53,15 @@ export function buildUptimeOption(data: UptimeBucket[], i18n: UptimeLabels = DEF
         data: data.map((d) => ({
           value: 1,
           itemStyle: {
-            color: !d.gatewayUp ? COLORS.red : d.restartEvent ? COLORS.amber : 'rgba(52,211,153,0.25)',
+            color: !d.gatewayUp ? COLORS.red : d.restartEvent ? COLORS.amber : 'rgba(52,211,153,0.45)',
             borderColor: !d.gatewayUp ? COLORS.red : d.restartEvent ? COLORS.amber : 'transparent',
             borderWidth: d.gatewayUp && !d.restartEvent ? 0 : 1,
             borderRadius: 2,
+            ...(!d.gatewayUp
+              ? { shadowBlur: 6, shadowColor: 'rgba(239,68,68,0.3)' }
+              : d.restartEvent
+                ? { shadowBlur: 6, shadowColor: 'rgba(251,191,36,0.3)' }
+                : {}),
           },
         })),
         barWidth: '90%',

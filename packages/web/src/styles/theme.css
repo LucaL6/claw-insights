@@ -148,17 +148,17 @@
   --chart-tooltip-text: #d4d4d8;
   --chart-tooltip-dim: #71717a;
 
-  /* Card accent bars (invisible in dark) */
-  --card-accent-sessions: transparent;
-  --card-accent-tokens: transparent;
-  --card-accent-errors: transparent;
-  --card-accent-uptime: transparent;
-  --card-accent-conversations: transparent;
-  --card-bg-sessions: transparent;
-  --card-bg-tokens: transparent;
-  --card-bg-errors: transparent;
-  --card-bg-uptime: transparent;
-  --card-bg-conversations: transparent;
+  /* Card accent bars */
+  --card-accent-sessions: linear-gradient(to right, #059669, #34d399);
+  --card-accent-tokens: linear-gradient(to right, #0284c7, #38bdf8);
+  --card-accent-errors: linear-gradient(to right, #dc2626, #ef4444, #f87171);
+  --card-accent-uptime: linear-gradient(to right, #059669, #34d399, #6ee7b7);
+  --card-accent-conversations: linear-gradient(to right, #7c3aed, #a78bfa);
+  --card-bg-sessions: linear-gradient(to bottom, rgba(5, 150, 105, 0.06), transparent);
+  --card-bg-tokens: linear-gradient(to bottom, rgba(2, 132, 199, 0.06), transparent);
+  --card-bg-errors: linear-gradient(to bottom, rgba(220, 38, 38, 0.06), transparent);
+  --card-bg-uptime: linear-gradient(to bottom, rgba(5, 150, 105, 0.07), transparent);
+  --card-bg-conversations: linear-gradient(to bottom, rgba(139, 92, 246, 0.06), transparent);
 
   /* Progress bar track */
   --progress-track: #27272a;
@@ -296,13 +296,13 @@
   /* Card accent bars (visible in light) */
   --card-accent-sessions: linear-gradient(to right, #34d399, #6ee7b7);
   --card-accent-tokens: linear-gradient(to right, #38bdf8, #7dd3fc);
-  --card-accent-errors: linear-gradient(to right, #f87171, #fca5a5);
-  --card-accent-uptime: linear-gradient(to right, #34d399, #5eead4);
+  --card-accent-errors: linear-gradient(to right, #dc2626, #ef4444, #f87171);
+  --card-accent-uptime: linear-gradient(to right, #059669, #34d399, #6ee7b7);
   --card-accent-conversations: linear-gradient(to right, #a78bfa, #c4b5fd);
   --card-bg-sessions: linear-gradient(to bottom, rgba(5, 150, 105, 0.04), transparent);
   --card-bg-tokens: linear-gradient(to bottom, rgba(2, 132, 199, 0.04), transparent);
-  --card-bg-errors: linear-gradient(to bottom, rgba(220, 38, 38, 0.03), transparent);
-  --card-bg-uptime: linear-gradient(to bottom, rgba(5, 150, 105, 0.03), transparent);
+  --card-bg-errors: linear-gradient(to bottom, rgba(220, 38, 38, 0.06), transparent);
+  --card-bg-uptime: linear-gradient(to bottom, rgba(5, 150, 105, 0.07), transparent);
   --card-bg-conversations: linear-gradient(to bottom, rgba(139, 92, 246, 0.04), transparent);
 
   /* Progress bar track */

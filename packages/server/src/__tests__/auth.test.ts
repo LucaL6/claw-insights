@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
 
-import type { Request, Response } from 'express';
+import type { NextFunction, Request } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createMockNext,createMockResponse } from './test-utils.js';
 
 const mockConfig = vi.hoisted(() => ({ apiToken: '', noAuth: false, serverPort: 41041 }));
 vi.mock('../config.js', () => ({ config: mockConfig }));
@@ -20,20 +22,13 @@ function mockReq(
   } as unknown as Request;
 }
 
-function mockRes() {
-  const res: Record<string, unknown> = {};
-  res.status = vi.fn().mockReturnValue(res);
-  res.json = vi.fn().mockReturnValue(res);
-  return res as Response & { status: ReturnType<typeof vi.fn>; json: ReturnType<typeof vi.fn> };
-}
-
 describe('authMiddleware', () => {
-  let next: ReturnType<typeof vi.fn>;
+  let next: NextFunction;
   const TOKEN = 'a'.repeat(32);
   const COOKIE_HASH = createHash('sha256').update(TOKEN).digest('hex');
 
   beforeEach(() => {
-    next = vi.fn();
+    next = createMockNext();
     mockConfig.apiToken = TOKEN;
     mockConfig.noAuth = false;
     mockConfig.serverPort = 41041;
@@ -42,37 +37,41 @@ describe('authMiddleware', () => {
   // --- noAuth mode ---
   it('passes through when noAuth is true', () => {
     mockConfig.noAuth = true;
-    authMiddleware(mockReq(), mockRes(), next);
+    authMiddleware(mockReq(), createMockResponse(), next);
     expect(next).toHaveBeenCalled();
   });
 
   // --- Bearer auth ---
   it('passes through with correct Bearer token', () => {
-    authMiddleware(mockReq({ headers: { authorization: `Bearer ${TOKEN}` } }), mockRes(), next);
+    authMiddleware(mockReq({ headers: { authorization: `Bearer ${TOKEN}` } }), createMockResponse(), next);
     expect(next).toHaveBeenCalled();
   });
 
   it('returns 403 for wrong Bearer token', () => {
-    const res = mockRes();
+    const res = createMockResponse();
     authMiddleware(mockReq({ headers: { authorization: 'Bearer wrong' } }), res, next);
     expect(res.status).toHaveBeenCalledWith(403);
     expect(next).not.toHaveBeenCalled();
   });
 
   it('returns 401 for malformed auth header', () => {
-    const res = mockRes();
+    const res = createMockResponse();
     authMiddleware(mockReq({ headers: { authorization: 'Basic secret' } }), res, next);
     expect(res.status).toHaveBeenCalledWith(401);
   });
 
   // --- Cookie auth ---
   it('passes through with valid cookie (GET)', () => {
-    authMiddleware(mockReq({ headers: { cookie: `claw_session=${COOKIE_HASH}` }, method: 'GET' }), mockRes(), next);
+    authMiddleware(
+      mockReq({ headers: { cookie: `claw_session=${COOKIE_HASH}` }, method: 'GET' }),
+      createMockResponse(),
+      next,
+    );
     expect(next).toHaveBeenCalled();
   });
 
   it('returns 401 with invalid cookie', () => {
-    const res = mockRes();
+    const res = createMockResponse();
     authMiddleware(mockReq({ headers: { cookie: 'claw_session=invalid' }, method: 'GET' }), res, next);
     expect(res.status).toHaveBeenCalledWith(401);
   });
@@ -88,14 +87,14 @@ describe('authMiddleware', () => {
         },
         method: 'POST',
       }),
-      mockRes(),
+      createMockResponse(),
       next,
     );
     expect(next).toHaveBeenCalled();
   });
 
   it('fails CSRF check with wrong Origin on POST', () => {
-    const res = mockRes();
+    const res = createMockResponse();
     authMiddleware(
       mockReq({
         headers: {
@@ -113,7 +112,7 @@ describe('authMiddleware', () => {
   });
 
   it('fails CSRF check with no Origin/Referer on POST', () => {
-    const res = mockRes();
+    const res = createMockResponse();
     authMiddleware(
       mockReq({
         headers: { cookie: `claw_session=${COOKIE_HASH}`, host: '127.0.0.1:41041' },
@@ -135,7 +134,7 @@ describe('authMiddleware', () => {
         },
         method: 'POST',
       }),
-      mockRes(),
+      createMockResponse(),
       next,
     );
     expect(next).toHaveBeenCalled();
@@ -143,7 +142,7 @@ describe('authMiddleware', () => {
 
   // --- No credentials at all ---
   it('returns 401 with no auth at all', () => {
-    const res = mockRes();
+    const res = createMockResponse();
     authMiddleware(mockReq(), res, next);
     expect(res.status).toHaveBeenCalledWith(401);
   });

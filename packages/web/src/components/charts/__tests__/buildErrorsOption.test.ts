@@ -1,5 +1,5 @@
 import type { BarSeriesOption, ScatterSeriesOption, TooltipComponentOption } from 'echarts';
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { buildErrorsOption } from '../builders/buildErrorsOption';
 
@@ -32,6 +32,18 @@ describe('buildErrorsOption', () => {
     const series = opt.series as BarSeriesOption[];
     expect(series[0].stack).toBe('errors');
     expect(series[1].stack).toBe('errors');
+  });
+
+  it('uses correct color for warnings bar', () => {
+    const opt = buildErrorsOption(MOCK_DATA, 'footer');
+    const warnings = (opt.series as BarSeriesOption[])[0];
+    expect((warnings.itemStyle as { color: string }).color).toBe('rgba(249,115,22,0.65)');
+  });
+
+  it('uses correct color for errors bar', () => {
+    const opt = buildErrorsOption(MOCK_DATA, 'footer');
+    const errors = (opt.series as BarSeriesOption[])[1];
+    expect((errors.itemStyle as { color: string }).color).toBe('rgba(239,68,68,0.85)');
   });
 
   it('handles empty input', () => {

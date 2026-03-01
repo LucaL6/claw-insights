@@ -39,7 +39,9 @@ describe('insertMessageEventBatch branches', () => {
     db.exec('DROP TABLE message_events');
 
     expect(() =>
-      insertMessageEventBatch(db, [{ timestamp: '2026-02-27T10:00:00Z', sessionKey: 'sess-1', role: 'user' }]),
+      insertMessageEventBatch(db, [
+        { timestamp: '2026-02-27T10:00:00Z', sessionKey: 'sess-1', role: 'user', lineHash: 'h1' },
+      ]),
     ).toThrow();
     cleanup();
   });
@@ -58,9 +60,9 @@ describe('getBucketedTurnCount', () => {
   it('returns bucketed turn counts', () => {
     const { db, cleanup } = setup();
     insertMessageEventBatch(db, [
-      { timestamp: '2026-02-27T10:01:00Z', sessionKey: 'sess-1', role: 'user' },
-      { timestamp: '2026-02-27T10:02:00Z', sessionKey: 'sess-1', role: 'assistant' },
-      { timestamp: '2026-02-27T10:03:00Z', sessionKey: 'sess-1', role: 'tool' },
+      { timestamp: '2026-02-27T10:01:00Z', sessionKey: 'sess-1', role: 'user', lineHash: 'h1' },
+      { timestamp: '2026-02-27T10:02:00Z', sessionKey: 'sess-1', role: 'assistant', lineHash: 'h2' },
+      { timestamp: '2026-02-27T10:03:00Z', sessionKey: 'sess-1', role: 'tool', lineHash: 'h3' },
     ]);
     const result = getBucketedTurnCount(db, '2026-02-27T10:00:00Z', '2026-02-27T10:05:00Z', 5);
     expect(result.length).toBe(1);
@@ -73,9 +75,9 @@ describe('getBucketedTurnCountByRole', () => {
   it('returns bucketed turn counts by role', () => {
     const { db, cleanup } = setup();
     insertMessageEventBatch(db, [
-      { timestamp: '2026-02-27T10:01:00Z', sessionKey: 'sess-1', role: 'user' },
-      { timestamp: '2026-02-27T10:02:00Z', sessionKey: 'sess-1', role: 'assistant' },
-      { timestamp: '2026-02-27T10:03:00Z', sessionKey: 'sess-1', role: 'assistant' },
+      { timestamp: '2026-02-27T10:01:00Z', sessionKey: 'sess-1', role: 'user', lineHash: 'h1' },
+      { timestamp: '2026-02-27T10:02:00Z', sessionKey: 'sess-1', role: 'assistant', lineHash: 'h2' },
+      { timestamp: '2026-02-27T10:03:00Z', sessionKey: 'sess-1', role: 'assistant', lineHash: 'h3' },
     ]);
     const result = getBucketedTurnCountByRole(db, '2026-02-27T10:00:00Z', '2026-02-27T10:05:00Z', 5);
     expect(result.length).toBe(2);

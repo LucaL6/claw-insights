@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { registerMcp } from '../routes/mcp.js';
 import { registerSnapshot } from '../routes/snapshot.js';
 import { SnapshotEngine } from '../services/snapshot-engine.js';
-import type { DataSources, SnapshotData } from '../services/snapshot-types.js';
+import type { DataSources } from '../services/snapshot-types.js';
 
 // ── Mock config to disable auth ──
 vi.mock('../config.js', () => ({
@@ -20,39 +20,6 @@ vi.mock('../config.js', () => ({
 }));
 
 // ── Mock Data Sources ──
-const _mockSnapshotData: SnapshotData = {
-  gateway: { status: 'up', version: 'v1.0.0', uptime: '1d 2h', cpu: 3.2, memoryMB: 187 },
-  channels: [{ name: 'telegram', provider: 'telegram', connected: true, latencyMs: 45 }],
-  timestamp: '2026-02-26T12:00:00Z',
-  range: '6h',
-  time: '2026-02-26 12:00',
-  summary: {
-    activeSessions: 2,
-    totalSessions: 4,
-    tokens: 128400,
-    tokensDisplay: '128.4k',
-    errors: 1,
-    warnings: 0,
-    uptimePercent: 99.8,
-  },
-  tokensByModel: [{ model: 'claude-opus-4', modelDisplay: 'opus-4', tokensK: 128.4, percent: 100 }],
-  sessions: [
-    {
-      name: 'main',
-      status: 'active',
-      model: 'claude-opus-4',
-      modelDisplay: 'opus-4',
-      channel: 'telegram',
-      totalTokens: 42100,
-      totalTokensDisplay: '42.1k',
-      usagePercent: 68,
-      updatedAt: '2m ago',
-      turnCount: 4,
-      subAgentCount: 0,
-    },
-  ],
-  recentErrors: [{ timestamp: '14:32', type: 'error', module: 'gateway', message: 'WebSocket timeout' }],
-};
 
 const mockSources: DataSources = {
   getGateway: async () => ({ running: true, version: 'v1.0.0', uptime: '1d 2h', cpu: 3.2, memoryMB: 187 }),
@@ -65,7 +32,11 @@ const mockSources: DataSources = {
     uptimePercent: 99.8,
     buckets: [],
   }),
-  getRecentErrors: () => [{ timestamp: '14:32', type: 'error', module: 'gateway', message: 'WebSocket timeout' }],
+  getRecentErrors: () => ({
+    events: [{ timestamp: '14:32', type: 'error', module: 'gateway', message: 'WebSocket timeout' }],
+    total: 1,
+    counts: { error: 1, warning: 0, restart: 0 },
+  }),
   getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'claude-opus-4', tokensK: 128.4 }]),
   getTokenTrend: vi.fn().mockReturnValue(10),
   getTurnCounts: vi.fn().mockReturnValue({ total: 4, bySession: [] }),

@@ -26,7 +26,11 @@ function makeSources(overrides: Partial<DataSources> = {}): DataSources {
       uptimePercent: 100,
       buckets: Array.from({ length: 12 }, () => ({ sessions: 1, tokensK: 1, errors: 0, uptimePercent: 100 })),
     }),
-    getRecentErrors: () => [{ timestamp: new Date().toISOString(), type: 'error', module: 'core', message: 'fail' }],
+    getRecentErrors: () => ({
+      events: [{ timestamp: new Date().toISOString(), type: 'error', module: 'core', message: 'fail' }],
+      total: 1,
+      counts: { error: 1, warning: 0, restart: 0 },
+    }),
     getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'claude', tokensK: 10 }]),
     getTokenTrend: vi.fn().mockReturnValue(5),
     getTurnCounts: vi.fn().mockReturnValue({ total: 1, bySession: [{ sessionKey: 'S1', turns: 1 }] }),
@@ -106,7 +110,7 @@ describe('buildSnapshotData – branch coverage', () => {
     const events = [{ timestamp: new Date().toISOString(), type: 'error', module: 'gw', message: 'boom' }];
     const result = await buildSnapshotData(
       makeSources({
-        getRecentErrors: (() => ({ events })) as unknown as DataSources['getRecentErrors'],
+        getRecentErrors: () => ({ events, total: events.length, counts: { error: 1, warning: 0, restart: 0 } }),
       }),
       { detail: 'full', range: 'TWENTY_FOUR_HOUR' },
     );
@@ -116,7 +120,7 @@ describe('buildSnapshotData – branch coverage', () => {
   test('full: getRecentErrors returning {events} with no events falls back to empty', async () => {
     const result = await buildSnapshotData(
       makeSources({
-        getRecentErrors: (() => ({})) as unknown as DataSources['getRecentErrors'],
+        getRecentErrors: () => ({ events: [], total: 0, counts: { error: 0, warning: 0, restart: 0 } }),
       }),
       { detail: 'full', range: 'TWENTY_FOUR_HOUR' },
     );

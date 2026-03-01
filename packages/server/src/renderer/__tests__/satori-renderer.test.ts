@@ -35,13 +35,12 @@ const mockData: SnapshotData = {
     errors: 1,
     warnings: 0,
     uptimePercent: 99.8,
+    totalMessages: 42,
   },
-  sparklines: {
-    sessions: Array(24).fill(2),
-    tokens: Array(24).fill(100),
-    errors: Array(24).fill(0),
-    uptime: Array(24).fill('up') as ('up' | 'degraded' | 'down')[],
-  },
+  companionDays: 15,
+  hostname: 'test-host',
+  totalConversations: 50,
+  tokensByModel: [{ model: 'claude-opus-4', modelDisplay: 'opus-4', tokensK: 128.4, percent: 100 }],
   sessions: [
     {
       name: 'main',
@@ -53,6 +52,7 @@ const mockData: SnapshotData = {
       totalTokensDisplay: '42.1k',
       usagePercent: 68,
       updatedAt: '2m ago',
+      turnCount: 4,
       subAgentCount: 0,
     },
   ],
@@ -97,7 +97,7 @@ describe('renderSnapshot', () => {
   });
 
   it('handles long session names without crash', async () => {
-    const longName = { ...mockData, sessions: [{ ...mockData.sessions[0], name: 'a'.repeat(200) }] };
+    const longName = { ...mockData, sessions: [{ ...mockData.sessions![0], name: 'a'.repeat(200) }] };
     const buf = await renderSnapshot(longName, { detail: 'standard', theme: 'dark', lang: 'en' });
     expect(buf.subarray(0, 8)).toEqual(PNG_HEADER);
   });

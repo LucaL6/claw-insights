@@ -43,7 +43,11 @@ function makeData(): SnapshotData {
       errors: 0,
       warnings: 0,
       uptimePercent: 99.9,
+      totalMessages: 100,
     },
+    companionDays: 15,
+    hostname: 'test-host',
+    totalConversations: 50,
     tokensByModel: [
       { model: 'gpt-4o', modelDisplay: 'GPT-4o', tokensK: 6.2, percent: 50 },
       { model: 'claude', modelDisplay: 'Claude', tokensK: 3.7, percent: 30 },

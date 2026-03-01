@@ -19,7 +19,9 @@ interface ParsedSearch {
 
 export function parseSearch(input: string): ParsedSearch {
   const trimmed = input.trim();
-  if (!trimmed) {return {};}
+  if (!trimmed) {
+    return {};
+  }
 
   let module: string | undefined;
   let remaining = trimmed;
@@ -30,7 +32,9 @@ export function parseSearch(input: string): ParsedSearch {
     remaining = remaining.slice(moduleMatch[0].length);
   }
 
-  if (!remaining) {return { module };}
+  if (!remaining) {
+    return { module };
+  }
 
   const regexMatch = remaining.match(/^\/(.+)\/([gimsuy]*)$/);
   if (regexMatch) {
@@ -68,9 +72,10 @@ export function processEvents(events: RawEvent[]): ProcessedEvent[] {
     const prev = result[result.length - 1];
 
     // Gap detection (reverse-chrono: prev.timestamp > ev.timestamp)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- prev can be undefined on first iteration
     if (prev) {
       const gap =
-        (new Date(prev.gapBefore ? prev.timestamp : prev.repeatFirst ?? prev.timestamp).getTime() -
+        (new Date(prev.gapBefore ? prev.timestamp : (prev.repeatFirst ?? prev.timestamp)).getTime() -
           new Date(ev.timestamp).getTime()) /
         1000;
       if (gap >= 300) {
@@ -80,6 +85,7 @@ export function processEvents(events: RawEvent[]): ProcessedEvent[] {
     }
 
     // Repeat grouping (consecutive same module+message, no gap on prev)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- prev can be undefined
     if (prev && !prev.gapBefore && prev.module === ev.module && prev.message === ev.message) {
       prev.repeatCount = (prev.repeatCount ?? 1) + 1;
       prev.repeatFirst = ev.timestamp;
@@ -102,8 +108,10 @@ export function useLogPageData(route: Route) {
 
   // Derive activeTypes from route params (no useState)
   const activeTypes = useMemo(() => {
+    /* eslint-disable @typescript-eslint/no-unnecessary-condition -- type can be undefined at runtime despite index signature */
     const urlTypes = route.params.type?.split(',').filter(Boolean);
-    return urlTypes?.length ? urlTypes : ALL_TYPES;
+    return urlTypes && urlTypes.length > 0 ? urlTypes : ALL_TYPES;
+    /* eslint-enable @typescript-eslint/no-unnecessary-condition */
   }, [route.params.type]);
 
   // State
@@ -132,14 +140,20 @@ export function useLogPageData(route: Route) {
   // Toggle type filter
   const toggleType = useCallback(
     (type: string) => {
-      const next = activeTypes.includes(type)
-        ? activeTypes.filter((t) => t !== type)
-        : [...activeTypes, type];
-      if (next.length === 0) {return;}
+      const next = activeTypes.includes(type) ? activeTypes.filter((t) => t !== type) : [...activeTypes, type];
+      if (next.length === 0) {
+        return;
+      }
       const params = new URLSearchParams();
-      if (urlFrom) {params.set('from', String(urlFrom));}
-      if (urlTo) {params.set('to', String(urlTo));}
-      if (next.length < ALL_TYPES.length) {params.set('type', next.join(','));}
+      if (urlFrom) {
+        params.set('from', String(urlFrom));
+      }
+      if (urlTo) {
+        params.set('to', String(urlTo));
+      }
+      if (next.length < ALL_TYPES.length) {
+        params.set('type', next.join(','));
+      }
       const qs = params.toString();
       navigate(`#logs${qs ? '?' + qs : ''}`);
     },
@@ -150,7 +164,9 @@ export function useLogPageData(route: Route) {
   const parsed = useMemo(() => parseSearch(search), [search]);
 
   const processedEvents = useMemo(() => {
-    if (!events?.events) {return [];}
+    if (!events?.events) {
+      return [];
+    }
 
     let filtered = events.events as RawEvent[];
     if (parsed.module) {
@@ -162,9 +178,7 @@ export function useLogPageData(route: Route) {
       filtered = filtered.filter((e) => re.test(e.message) || re.test(e.module));
     } else if (parsed.text) {
       const t = parsed.text;
-      filtered = filtered.filter(
-        (e) => e.message.toLowerCase().includes(t) || e.module.toLowerCase().includes(t),
-      );
+      filtered = filtered.filter((e) => e.message.toLowerCase().includes(t) || e.module.toLowerCase().includes(t));
     }
 
     return processEvents(filtered);
@@ -172,11 +186,12 @@ export function useLogPageData(route: Route) {
 
   // Time label
   const timeLabel = useMemo(() => {
-    if (!urlFrom || !urlTo) {return undefined;}
+    if (!urlFrom || !urlTo) {
+      return undefined;
+    }
     const f = new Date(urlFrom * 1000);
     const t = new Date(urlTo * 1000);
-    const fmt = (d: Date) =>
-      d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const fmt = (d: Date) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
     return `${fmt(f)} → ${fmt(t)}`;
   }, [urlFrom, urlTo]);
 

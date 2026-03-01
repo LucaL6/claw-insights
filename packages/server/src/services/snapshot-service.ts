@@ -3,7 +3,7 @@ import { hostname as osHostname } from 'node:os';
 import { RANGE_CONFIG } from '../db/query-utils.js';
 import { createChildLogger } from '../logger.js';
 import { getAppVersion } from '../version.js';
-import { formatTokens, friendlyModel, type MetricsBucket, relativeTime } from './snapshot-formatters.js';
+import { formatTokens, friendlyModel, relativeTime } from './snapshot-formatters.js';
 import type {
   DataSources,
   Detail,
@@ -57,7 +57,9 @@ function buildSession(
     totalTokens,
     totalTokensDisplay: formatTokens(totalTokens),
     usagePercent: (s.usagePercent as number) ?? 0,
-    updatedAt: relativeTime(s.updatedAt ?? new Date().toISOString()),
+    updatedAt: relativeTime(
+      typeof s.updatedAt === 'string' || typeof s.updatedAt === 'number' ? s.updatedAt : new Date().toISOString(),
+    ),
     turnCount: turnCountMap?.get(lookupKey) ?? 0,
     subAgentCount: subs.length,
   };
@@ -66,7 +68,9 @@ function buildSession(
       name: (a.displayName as string) ?? (a.name as string) ?? '',
       status: (a.status as string) ?? '',
       completed: (a.completed as boolean) ?? false,
-      updatedAt: relativeTime(a.updatedAt ?? new Date().toISOString()),
+      updatedAt: relativeTime(
+        typeof a.updatedAt === 'string' || typeof a.updatedAt === 'number' ? a.updatedAt : new Date().toISOString(),
+      ),
     }));
   }
   return session;
@@ -112,7 +116,7 @@ export async function buildSnapshotData(
   };
 
   // 4. Buckets and range timestamps
-  const buckets = metrics.buckets as MetricsBucket[];
+  const buckets = metrics.buckets;
   const endTs = new Date().toISOString();
   const rangeConfig = RANGE_CONFIG[range];
   const startTs = new Date(Date.now() - rangeConfig.rangeMinutes * 60_000).toISOString();
@@ -196,17 +200,13 @@ export async function buildSnapshotData(
   if (detail === 'standard') {
     result.sessions = activeSorted.slice(0, 8).map((s) => buildSession(s, false, turnBySession));
     const errResult = sources.getRecentErrors(3);
-    result.recentErrors = Array.isArray(errResult)
-      ? errResult
-      : ((errResult as unknown as { events: typeof result.recentErrors }).events ?? []);
+    result.recentErrors = errResult.events;
   }
 
   if (detail === 'full') {
     result.sessions = activeSorted.slice(0, 20).map((s) => buildSession(s, true, turnBySession));
     const errResult = sources.getRecentErrors(5);
-    result.recentErrors = Array.isArray(errResult)
-      ? errResult
-      : ((errResult as unknown as { events: typeof result.recentErrors }).events ?? []);
+    result.recentErrors = errResult.events;
   }
 
   return result;

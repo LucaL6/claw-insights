@@ -44,7 +44,7 @@ describe('runSnapshotCmd', () => {
   it('--dry-run prints parameters and returns', async () => {
     await runSnapshotCmd(['--dry-run']);
 
-    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c: string[]) => c.join(' ')).join('\n');
     expect(output).toContain('Snapshot parameters:');
     expect(output).toContain('format: png');
     expect(output).toContain('detail: standard');
@@ -57,7 +57,7 @@ describe('runSnapshotCmd', () => {
   it('--dry-run with --quick shows compact + mobile', async () => {
     await runSnapshotCmd(['--dry-run', '--quick']);
 
-    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c: string[]) => c.join(' ')).join('\n');
     expect(output).toContain('detail: compact');
     expect(output).toContain('layout: mobile');
   });
@@ -69,7 +69,7 @@ describe('runSnapshotCmd', () => {
 
     await expect(runSnapshotCmd([])).rejects.toThrow(ExitError);
 
-    const errOutput = errorSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    const errOutput = errorSpy.mock.calls.map((c: string[]) => c.join(' ')).join('\n');
     expect(errOutput).toContain('not running');
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
@@ -85,7 +85,7 @@ describe('runSnapshotCmd', () => {
 
     await expect(runSnapshotCmd([])).rejects.toThrow(ExitError);
 
-    const errOutput = errorSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    const errOutput = errorSpy.mock.calls.map((c: string[]) => c.join(' ')).join('\n');
     expect(errOutput).toContain('snapshot failed');
     expect(errOutput).toContain('check logs');
   });
@@ -101,7 +101,7 @@ describe('runSnapshotCmd', () => {
 
     await expect(runSnapshotCmd([])).rejects.toThrow(ExitError);
 
-    const errOutput = errorSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    const errOutput = errorSpy.mock.calls.map((c: string[]) => c.join(' ')).join('\n');
     expect(errOutput).toContain('Bad Gateway');
   });
 

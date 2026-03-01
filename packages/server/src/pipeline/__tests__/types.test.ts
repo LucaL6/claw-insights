@@ -16,14 +16,18 @@ describe('Pipeline types', () => {
   });
 
   it('Processor accepts a plain function', () => {
-    const processor: Processor = vi.fn();
-    if (typeof processor === 'function') {processor('data');}
+    const processor: Processor = vi.fn<(entry: unknown) => void>();
+    if (typeof processor === 'function') {
+      processor('data');
+    }
     expect(processor).toHaveBeenCalledWith('data');
   });
 
   it('Processor accepts an object with handle method', () => {
     const processor: Processor = { handle: vi.fn() };
-    if (typeof processor !== 'function') {processor.handle('data');}
+    if (typeof processor !== 'function') {
+      processor.handle('data');
+    }
     expect((processor as unknown as Record<string, unknown>).handle).toHaveBeenCalledWith('data');
   });
 

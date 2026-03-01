@@ -45,15 +45,15 @@ function mockRes(): Response & { statusCode: number; body: unknown; headers: Rec
     statusCode: 200,
     body: undefined as unknown,
     headers: {} as Record<string, string>,
-    status(code: number) {
+    status(this: { statusCode: number }, code: number) {
       this.statusCode = code;
       return this;
     },
-    json(data: unknown) {
+    json(this: { body: unknown }, data: unknown) {
       this.body = data;
       return this;
     },
-    set(key: string, val: string) {
+    set(this: { headers: Record<string, string> }, key: string, val: string) {
       this.headers[key] = val;
       return this;
     },
@@ -195,16 +195,16 @@ describe('MCP snapshot tool error branches', () => {
 
   const errorCases: Array<{ name: string; error: Error; expectedMessage: string }> = [
     { name: 'RateLimitedError', error: new RateLimitedError(5000), expectedMessage: 'Rate limited' },
-    { name: 'QueueFullError', error: new QueueFullError(), expectedMessage: 'Server is busy' },
-    { name: 'QueueTimeoutError', error: new QueueTimeoutError(1000), expectedMessage: 'Server is busy' },
-    { name: 'CollectTimeoutError', error: new CollectTimeoutError(1000), expectedMessage: 'Data collection timed out' },
+    { name: 'QueueFullError', error: new QueueFullError(10), expectedMessage: 'Server is busy' },
+    { name: 'QueueTimeoutError', error: new QueueTimeoutError(), expectedMessage: 'Server is busy' },
+    { name: 'CollectTimeoutError', error: new CollectTimeoutError(), expectedMessage: 'Data collection timed out' },
     {
       name: 'GatewayUnreachableError',
       error: new GatewayUnreachableError(),
       expectedMessage: 'Gateway is not reachable',
     },
-    { name: 'TotalTimeoutError', error: new TotalTimeoutError(1000), expectedMessage: 'Snapshot timeout' },
-    { name: 'PayloadTooLargeError', error: new PayloadTooLargeError(1000, 500), expectedMessage: 'Output too large' },
+    { name: 'TotalTimeoutError', error: new TotalTimeoutError(), expectedMessage: 'Snapshot timeout' },
+    { name: 'PayloadTooLargeError', error: new PayloadTooLargeError(), expectedMessage: 'Output too large' },
     { name: 'generic Error', error: new Error('unknown'), expectedMessage: 'Snapshot generation failed' },
   ];
 

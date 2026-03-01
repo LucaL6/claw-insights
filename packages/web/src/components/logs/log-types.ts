@@ -6,10 +6,14 @@ export const EVENT_TYPE_MAP: Record<string, { abbr: string; color: string; bg: s
 
 export function formatGap(seconds: number): string {
   const m = Math.floor(seconds / 60);
-  if (m < 60) return `${m}m`;
+  if (m < 60) {
+    return `${m}m`;
+  }
   const h = Math.floor(m / 60);
   const rm = m % 60;
-  if (h < 24) return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
+  if (h < 24) {
+    return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
+  }
   const d = Math.floor(h / 24);
   const rh = h % 24;
   return rh > 0 ? `${d}d ${rh}h` : `${d}d`;
