@@ -1,9 +1,10 @@
 import type { Detail, SnapshotData, SnapshotSession } from '../../services/snapshot-types.js';
+import { t } from '../i18n/index.js';
 import type { ColorScheme } from './colors.js';
 import type { SatoriNode } from './helpers.js';
 import { div, span, Tag } from './helpers.js';
 
-function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
+function renderSessionCard(sess: SnapshotSession, c: ColorScheme, locale: string = 'en'): SatoriNode {
   const pct = sess.usagePercent != null ? Math.round(sess.usagePercent) : 0;
 
   const tags: SatoriNode[] = [
@@ -11,7 +12,14 @@ function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
     Tag(sess.channel, c.tagChannel.bg, c.tagChannel.color, c.tagChannel.border),
   ];
   if (sess.subAgentCount > 0) {
-    tags.push(Tag(`${sess.subAgentCount} sub`, c.tagSub.bg, c.tagSub.color, c.tagSub.border));
+    tags.push(
+      Tag(
+        t('sessions.sub', locale, { count: String(sess.subAgentCount) }),
+        c.tagSub.bg,
+        c.tagSub.color,
+        c.tagSub.border,
+      ),
+    );
   }
 
   return div(
@@ -67,7 +75,12 @@ function renderSessionCard(sess: SnapshotSession, c: ColorScheme): SatoriNode {
   );
 }
 
-export function renderSessions(data: SnapshotData, detail: Detail, c: ColorScheme): SatoriNode | null {
+export function renderSessions(
+  data: SnapshotData,
+  detail: Detail,
+  c: ColorScheme,
+  locale: string = 'en',
+): SatoriNode | null {
   if (detail === 'compact') {
     return null;
   }
@@ -81,9 +94,12 @@ export function renderSessions(data: SnapshotData, detail: Detail, c: ColorSchem
 
   return div({ flexDirection: 'column', gap: 6, padding: '0 16px 12px' }, [
     div({ justifyContent: 'space-between', marginBottom: 2 }, [
-      span({ color: c.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }, 'SESSIONS'),
-      span({ color: c.textDim, fontSize: 11 }, `${activeCount} active · ${sessions.length} total`),
+      span({ color: c.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }, t('sessions.title', locale)),
+      span(
+        { color: c.textDim, fontSize: 11 },
+        t('sessions.summary', locale, { active: String(activeCount), total: String(sessions.length) }),
+      ),
     ]),
-    ...sessions.map((s) => renderSessionCard(s, c)),
+    ...sessions.map((s) => renderSessionCard(s, c, locale)),
   ]);
 }

@@ -60,6 +60,9 @@ export function createSnapshotHandler(engine: SnapshotEngine) {
       // JSON format
       if (result.format === 'json') {
         res.set('X-Snapshot-Duration', String(result.durationMs));
+        if (result.degradedSources.length > 0) {
+          res.set('X-Snapshot-Degraded-Sources', result.degradedSources.join(','));
+        }
         res.json(result.output);
         return;
       }
@@ -79,6 +82,9 @@ export function createSnapshotHandler(engine: SnapshotEngine) {
       res.set('X-Filename', filename);
       res.set('X-Snapshot-Duration', String(result.durationMs));
       res.set('Cache-Control', 'no-store');
+      if (result.degradedSources.length > 0) {
+        res.set('X-Snapshot-Degraded-Sources', result.degradedSources.join(','));
+      }
       if (result.degraded) {
         res.set('X-Snapshot-Degraded', `detail=${result.detail} (requested ${params.detail}, exceeded 2MB limit)`);
       }

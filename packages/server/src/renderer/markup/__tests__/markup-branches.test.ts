@@ -47,7 +47,7 @@ describe('renderErrors branches', () => {
 
 describe('StatusBadge branches', () => {
   it('renders DOWN state with red colors when isUp=false', () => {
-    const badge = StatusBadge(false, { emerald: c.emerald, emeraldBg: c.emeraldBg, red: c.red, redBg: c.redBg });
+    const badge = StatusBadge(false, { emerald: c.emerald, emeraldBg: c.emeraldBg, red: c.red, redBg: c.redBg }, 'en');
     const json = JSON.stringify(badge);
     expect(json).toContain('DOWN');
     expect(json).toContain(c.red);

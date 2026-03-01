@@ -172,6 +172,14 @@ describe('DensityStrip', () => {
     expect(bar.getAttribute('role')).toBe('img');
   });
 
+  it('tooltip opens downward (top: 100%) to avoid topbar overlap', () => {
+    const { container } = render(<DensityStrip data={mixedData} />);
+    const tooltip = container.querySelectorAll('.density-tooltip')[5] as HTMLElement;
+    expect(tooltip.style.top).toBe('100%');
+    expect(tooltip.style.bottom).not.toBe('100%');
+    expect(tooltip.style.marginTop).toBe('4px');
+  });
+
   it('ARIA label for empty bucket has no type breakdown', () => {
     render(<DensityStrip data={emptyData} />);
     const bar = screen.getByLabelText('00:00 – 0 events');

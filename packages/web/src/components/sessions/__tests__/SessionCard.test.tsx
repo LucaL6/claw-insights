@@ -1,5 +1,5 @@
-import { cleanup } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SessionCard } from '../SessionCard';
 import { renderWithI18n } from './testUtils';
@@ -105,5 +105,73 @@ describe('SessionCard (compact)', () => {
   it('shows channel pill', () => {
     const { getByText } = renderWithI18n(<SessionCard {...baseProps} />);
     expect(getByText('webchat')).toBeDefined();
+  });
+
+  it('hides channel pill when channel is null', () => {
+    const { queryByText } = renderWithI18n(<SessionCard {...baseProps} channel={null} />);
+    expect(queryByText('webchat')).toBeNull();
+  });
+});
+
+describe('SessionCard (primary) - interactions', () => {
+  const baseProps = {
+    displayName: 'test-session',
+    model: 'claude-opus-4-6',
+    channel: 'webchat' as string | null,
+    totalTokens: 50000,
+    usagePercent: 25,
+    status: 'ACTIVE',
+    kind: 'direct',
+    updatedAt: Date.now() - 300_000,
+  };
+
+  it('renders expand button when hasChildren', () => {
+    const onToggle = vi.fn();
+    const { container } = renderWithI18n(
+      <SessionCard {...baseProps} hasChildren onToggle={onToggle} expanded={false} />,
+    );
+    const btn = container.querySelector('button');
+    expect(btn).toBeDefined();
+    fireEvent.click(btn!);
+    expect(onToggle).toHaveBeenCalledOnce();
+  });
+
+  it('does not render expand button without hasChildren', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} />);
+    // Only buttons should be none (no chevron)
+    const buttons = container.querySelectorAll('button');
+    expect(buttons.length).toBe(0);
+  });
+
+  it('applies warn border when ACTIVE and usage > 80%', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} usagePercent={90} />);
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.style.border).toBeTruthy();
+  });
+
+  it('handles hover events without error', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} />);
+    const card = container.firstElementChild as HTMLElement;
+    // Should not throw on hover cycle
+    fireEvent.mouseEnter(card);
+    fireEvent.mouseLeave(card);
+    expect(card).toBeDefined();
+  });
+
+  it('handles compact hover events without error', () => {
+    const { container } = renderWithI18n(
+      <SessionCard {...baseProps} variant="compact" status="ACTIVE" totalTokens={5000} />,
+    );
+    const card = container.firstElementChild as HTMLElement;
+    fireEvent.mouseEnter(card);
+    fireEvent.mouseLeave(card);
+    expect(card).toBeDefined();
+  });
+
+  it('shows null channel in compact variant', () => {
+    const { queryByText } = renderWithI18n(
+      <SessionCard {...baseProps} variant="compact" channel={null} totalTokens={5000} />,
+    );
+    expect(queryByText('webchat')).toBeNull();
   });
 });

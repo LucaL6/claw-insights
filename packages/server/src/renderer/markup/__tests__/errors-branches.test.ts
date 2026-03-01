@@ -6,14 +6,25 @@ import { renderErrors } from '../errors.js';
 import type { SatoriNode } from '../helpers.js';
 
 function collectText(node: SatoriNode | string | unknown): string[] {
-  if (typeof node === 'string') {return [node];}
-  if (typeof node === 'number') {return [String(node)];}
-  if (!node || typeof node !== 'object') {return [];}
+  if (typeof node === 'string') {
+    return [node];
+  }
+  if (typeof node === 'number') {
+    return [String(node)];
+  }
+  if (!node || typeof node !== 'object') {
+    return [];
+  }
   const n = node as SatoriNode;
   const results: string[] = [];
   const children = n.props?.children;
-  if (typeof children === 'string') {results.push(children);}
-  else if (Array.isArray(children)) {for (const c of children) {results.push(...collectText(c));}}
+  if (typeof children === 'string') {
+    results.push(children);
+  } else if (Array.isArray(children)) {
+    for (const c of children) {
+      results.push(...collectText(c));
+    }
+  }
   return results;
 }
 
@@ -52,6 +63,16 @@ describe('renderErrors branches', () => {
     const texts = collectText(tree);
     const errorTexts = texts.filter((t) => t.startsWith('error '));
     expect(errorTexts.length).toBe(5);
+  });
+
+  it('renders Chinese labels when locale is zh', () => {
+    const data = {
+      recentErrors: [{ timestamp: '2026-01-01T12:00:00Z', type: 'error', module: 'x', message: 'test' }],
+    } as unknown as SnapshotData;
+    const tree = renderErrors(data, DARK, 'zh')!;
+    const texts = collectText(tree);
+    expect(texts).toContain('近期事件');
+    expect(texts).toContain('错误');
   });
 
   it('handles error type fallback to "error" when type is empty', () => {

@@ -7,13 +7,11 @@ describe('parseSnapshotRequest', () => {
   test('returns defaults for empty body', () => {
     const req = parseSnapshotRequest({});
     expect(req).toEqual({
-      layout: 'desktop',
       detail: 'standard',
       format: 'png',
       range: '24h',
       theme: 'dark',
       lang: 'en',
-      section: 'dashboard',
     });
   });
 
@@ -51,32 +49,24 @@ describe('parseSnapshotRequest', () => {
     expect(req.range).toBe('30m');
   });
 
-  test('should accept layout=mobile', () => {
-    const req = parseSnapshotRequest({ layout: 'mobile' });
-    expect(req.layout).toBe('mobile');
+  test('normalizes zh-CN to zh', () => {
+    const req = parseSnapshotRequest({ lang: 'zh-CN' });
+    expect(req.lang).toBe('zh');
   });
 
-  test('should default layout to desktop', () => {
-    const req = parseSnapshotRequest({});
-    expect(req.layout).toBe('desktop');
+  test('falls back to en for unsupported lang', () => {
+    const req = parseSnapshotRequest({ lang: 'fr' });
+    expect(req.lang).toBe('en');
   });
 
-  test('should accept section=logs', () => {
-    const req = parseSnapshotRequest({ section: 'logs' });
-    expect(req.section).toBe('logs');
+  test('accepts zh directly', () => {
+    const req = parseSnapshotRequest({ lang: 'zh' });
+    expect(req.lang).toBe('zh');
   });
 
-  test('should default section to dashboard', () => {
-    const req = parseSnapshotRequest({});
-    expect(req.section).toBe('dashboard');
-  });
-
-  test('throws on invalid layout', () => {
-    expect(() => parseSnapshotRequest({ layout: 'tablet' })).toThrow('Invalid layout');
-  });
-
-  test('throws on invalid section', () => {
-    expect(() => parseSnapshotRequest({ section: 'metrics' })).toThrow('Invalid section');
+  test('falls back to en for non-string lang', () => {
+    const req = parseSnapshotRequest({ lang: 123 });
+    expect(req.lang).toBe('en');
   });
 });
 
@@ -126,6 +116,24 @@ describe('snapshot type compatibility', () => {
 
     expect(data.tokensByModel).toHaveLength(1);
     expect(data.tokensTrend).toBe('↑12%');
+  });
+
+  test('SnapshotData allows null fields', () => {
+    const data: SnapshotData = {
+      gateway: null,
+      channels: null,
+      timestamp: new Date().toISOString(),
+      range: '24h',
+      time: '12:34',
+      summary: null,
+      tokensByModel: null,
+      companionDays: null,
+      hostname: 'test-host',
+      totalConversations: null,
+      _meta: { degradedSources: ['gateway'] },
+    };
+    expect(data.gateway).toBeNull();
+    expect(data._meta?.degradedSources).toEqual(['gateway']);
   });
 
   test('DataSources requires token and turn methods', () => {

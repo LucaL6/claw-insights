@@ -64,6 +64,7 @@ function createMockEngine(overrides: Partial<SnapshotEngine> = {}): SnapshotEngi
       contentType: 'image/png',
       detail: 'standard',
       degraded: false,
+      degradedSources: [],
       durationMs: 42,
     } satisfies SnapshotResult),
     stats: { renderConcurrency: 0, renderQueueLength: 0 },

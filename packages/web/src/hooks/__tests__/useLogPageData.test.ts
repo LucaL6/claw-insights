@@ -4,6 +4,7 @@ import { type Client, Provider } from 'urql';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fromValue, never } from 'wonka';
 
+import { I18nProvider } from '../../i18n/context';
 import type { Route } from '../useHashRoute';
 import { parseSearch, processEvents, useLogPageData } from '../useLogPageData';
 
@@ -30,7 +31,7 @@ function createMockClient(data: Record<string, unknown> = {}) {
 
 function wrapper(client: Client) {
   return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(Provider, { value: client }, children);
+    React.createElement(I18nProvider, null, React.createElement(Provider, { value: client }, children));
 }
 
 // --- parseSearch unit tests ---
@@ -250,9 +251,7 @@ describe('useLogPageData', () => {
     act(() => {
       result.current.toggleType('warning');
     });
-    expect(mockNavigate).toHaveBeenCalledWith(
-      expect.stringContaining('#logs'),
-    );
+    expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('#logs'));
   });
 
   it('toggleType prevents empty selection', () => {
@@ -292,8 +291,7 @@ describe('useLogPageData', () => {
 
   it('reports eventsError from query', () => {
     const client = {
-      executeQuery: () =>
-        fromValue({ data: null, error: { message: 'Network error' }, stale: false, hasNext: false }),
+      executeQuery: () => fromValue({ data: null, error: { message: 'Network error' }, stale: false, hasNext: false }),
       executeMutation: () => never,
       executeSubscription: () => never,
     } as unknown as Client;

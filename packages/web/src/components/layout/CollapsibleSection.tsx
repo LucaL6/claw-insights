@@ -1,8 +1,10 @@
 import { type ReactNode, useState } from 'react';
 
-function formatTime(ts: number): string {
+import { useI18n } from '../../i18n/context';
+
+function formatTime(ts: number, locale: string): string {
   const d = new Date(ts);
-  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
 interface Props {
@@ -15,6 +17,8 @@ interface Props {
 }
 
 export function CollapsibleSection({ title, defaultOpen = true, children, badge, headerRight, updatedAt }: Props) {
+  const { t, lang } = useI18n();
+  const locale = lang === 'zh' ? 'zh-CN' : 'en-GB';
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -23,7 +27,7 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
         onClick={() => {
           setOpen(!open);
         }}
-        className="flex items-center gap-2 w-full text-left transition-colors py-1 text-fg-muted"
+        className="flex items-center gap-2 w-full text-left transition-colors py-1 min-h-[32px] text-fg-muted"
       >
         <svg
           className={`w-3 h-3 transition-transform ${open ? 'rotate-90' : ''}`}
@@ -36,7 +40,11 @@ export function CollapsibleSection({ title, defaultOpen = true, children, badge,
         {badge !== undefined && (
           <span className="text-xs px-1.5 py-0.5 rounded bg-emerald/15 text-emerald font-medium">{badge}</span>
         )}
-        {updatedAt && <span className="text-xs mono text-fg-dim">updated {formatTime(updatedAt)}</span>}
+        {updatedAt && (
+          <span className="text-xs mono text-fg-dim">
+            {t('summary.updated')} {formatTime(updatedAt, locale)}
+          </span>
+        )}
         {headerRight && (
           <span
             className="ml-auto"

@@ -28,6 +28,7 @@ packages/web/src/generated/
 
 # Test / coverage
 test-results/
+coverage/
 packages/*/coverage/
 playwright-report/
 blob-report/

@@ -24,11 +24,13 @@ export function insertTokenUsageEvent(db: Database, event: TokenUsageEvent): voi
   );
 }
 
-export function insertTokenUsageEventBatch(db: Database, events: TokenUsageEvent[]): void {
+export function insertTokenUsageEventBatch(db: Database, events: TokenUsageEvent[], inTransaction = true): void {
   if (events.length === 0) {
     return;
   }
-  db.exec('BEGIN');
+  if (inTransaction) {
+    db.exec('BEGIN');
+  }
   try {
     const stmt = cached(
       db,
@@ -45,9 +47,13 @@ export function insertTokenUsageEventBatch(db: Database, events: TokenUsageEvent
         e.cacheWriteTokens,
       );
     }
-    db.exec('COMMIT');
+    if (inTransaction) {
+      db.exec('COMMIT');
+    }
   } catch (err) {
-    db.exec('ROLLBACK');
+    if (inTransaction) {
+      db.exec('ROLLBACK');
+    }
     throw err;
   }
 }

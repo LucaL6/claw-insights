@@ -129,15 +129,12 @@ vi.mock('../sources/system-info.js', () => ({
 }));
 vi.mock('../sources/collectors/log-tailer.js', () => ({ LogTailer: mockClass({ on() {}, destroy() {} }) }));
 vi.mock('../sources/collectors/lifetime-scanner.js', () => ({
-  LifetimeScanner: class {
-    init() {
-      return Promise.resolve();
-    }
-    destroy() {}
-    getFileStates() {
-      return new Map();
-    }
-  },
+  createLifetimeScanner: () => ({
+    init: () => Promise.resolve(),
+    destroy() {},
+    getFileStates: () => new Map(),
+    isReady: () => false,
+  }),
 }));
 vi.mock('../sources/collectors/transcript-watcher.js', () => ({
   createTranscriptWatcher: vi.fn(() => ({

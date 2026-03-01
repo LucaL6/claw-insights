@@ -85,13 +85,13 @@ describe('renderSnapshot', () => {
   });
 
   it('handles zero sessions', async () => {
-    const empty = { ...mockData, sessions: [], summary: { ...mockData.summary, activeSessions: 0, totalSessions: 0 } };
+    const empty = { ...mockData, sessions: [], summary: { ...mockData.summary!, activeSessions: 0, totalSessions: 0 } };
     const buf = await renderSnapshot(empty, { detail: 'standard', theme: 'dark', lang: 'en' });
     expect(buf.subarray(0, 8)).toEqual(PNG_HEADER);
   });
 
   it('handles zero errors', async () => {
-    const noErrors = { ...mockData, recentErrors: [], summary: { ...mockData.summary, errors: 0 } };
+    const noErrors = { ...mockData, recentErrors: [], summary: { ...mockData.summary!, errors: 0 } };
     const buf = await renderSnapshot(noErrors, { detail: 'full', theme: 'dark', lang: 'en' });
     expect(buf.subarray(0, 8)).toEqual(PNG_HEADER);
   });
@@ -103,7 +103,7 @@ describe('renderSnapshot', () => {
   });
 
   it('handles extreme token values', async () => {
-    const extreme = { ...mockData, summary: { ...mockData.summary, tokens: 999_999_999, tokensDisplay: '999.9M' } };
+    const extreme = { ...mockData, summary: { ...mockData.summary!, tokens: 999_999_999, tokensDisplay: '999.9M' } };
     const buf = await renderSnapshot(extreme, { detail: 'compact', theme: 'dark', lang: 'en' });
     expect(buf.subarray(0, 8)).toEqual(PNG_HEADER);
   });

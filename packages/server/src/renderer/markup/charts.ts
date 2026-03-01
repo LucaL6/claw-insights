@@ -1,10 +1,11 @@
 import { uptimeStatus } from '../../services/snapshot-formatters.js';
 import type { Detail, SnapshotData } from '../../services/snapshot-types.js';
+import { t } from '../i18n/index.js';
 import type { ColorScheme } from './colors.js';
 import type { SatoriNode } from './helpers.js';
 import { div, span, Sparkline, UptimeStrip } from './helpers.js';
 
-export function renderCharts(data: SnapshotData, detail: Detail, c: ColorScheme): SatoriNode {
+export function renderCharts(data: SnapshotData, detail: Detail, c: ColorScheme, locale: string = 'en'): SatoriNode {
   const rawBuckets = data.buckets ?? [];
   const sp = {
     tokens: rawBuckets.map((b) => b.tokensK ?? b.tokens ?? 0),
@@ -37,7 +38,7 @@ export function renderCharts(data: SnapshotData, detail: Detail, c: ColorScheme)
         padding: 12,
       },
       [
-        span({ color: c.textMuted, fontSize: 10, fontWeight: 500, marginBottom: 8 }, 'Token Usage'),
+        span({ color: c.textMuted, fontSize: 10, fontWeight: 500, marginBottom: 8 }, t('charts.tokenUsage', locale)),
         Sparkline(sp.tokens, c.emerald, height),
         timeAxis(),
       ],
@@ -53,7 +54,7 @@ export function renderCharts(data: SnapshotData, detail: Detail, c: ColorScheme)
         padding: 12,
       },
       [
-        span({ color: c.textMuted, fontSize: 10, fontWeight: 500, marginBottom: 8 }, 'Uptime'),
+        span({ color: c.textMuted, fontSize: 10, fontWeight: 500, marginBottom: 8 }, t('charts.uptime', locale)),
         UptimeStrip(sp.uptime, c.uptimeMap, height),
         timeAxis(),
       ],

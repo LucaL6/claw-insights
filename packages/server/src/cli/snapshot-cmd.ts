@@ -12,7 +12,6 @@ export interface SnapshotCmdArgs {
   range: string;
   theme: string;
   lang: string;
-  layout: string;
   output: string | undefined;
   quick: boolean;
   dryRun: boolean;
@@ -29,7 +28,6 @@ export function parseSnapshotArgs(argv: string[]): SnapshotCmdArgs {
       range: { type: 'string', default: '6h' },
       theme: { type: 'string', default: 'dark' },
       lang: { type: 'string', default: 'en' },
-      layout: { type: 'string', default: 'desktop' },
       output: { type: 'string', short: 'o' },
       quick: { type: 'boolean', default: false },
       'dry-run': { type: 'boolean', default: false },
@@ -46,7 +44,6 @@ export function parseSnapshotArgs(argv: string[]): SnapshotCmdArgs {
     range: values.range as string,
     theme: values.theme as string,
     lang: values.lang as string,
-    layout: quick ? 'mobile' : (values.layout as string),
     output: values.output as string | undefined,
     quick,
     dryRun: values['dry-run'] as boolean,
@@ -64,7 +61,6 @@ Options:
   --range <1h|6h|12h|24h>   Time range (default: 6h)
   --theme <dark|light>       Color theme (default: dark)
   --lang <en|zh>             Language (default: en)
-  --layout <desktop|mobile>  Layout mode (default: desktop)
   -o, --output <path>        Save to file
   -t, --token <token>        API auth token
   --port <number>            Server port (default: 41041)
@@ -95,7 +91,6 @@ export async function runSnapshotCmd(argv: string[]): Promise<void> {
       range: args.range,
       theme: args.theme,
       lang: args.lang,
-      layout: args.layout,
     };
     for (const [k, v] of Object.entries(display)) {
       console.log(`  ${k}: ${v}`);
@@ -128,7 +123,6 @@ export async function runSnapshotCmd(argv: string[]): Promise<void> {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        layout: args.layout,
         detail: args.detail,
         format: args.format,
         range: args.range,

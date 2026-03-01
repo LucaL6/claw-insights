@@ -20,13 +20,11 @@ vi.mock('../../logger.js', () => ({
 const mockSources: DataSources = {} as DataSources;
 
 const defaultParams: SnapshotRequest = {
-  layout: 'desktop',
   detail: 'standard',
   format: 'json',
   range: '6h',
   theme: 'dark',
   lang: 'en',
-  section: 'dashboard',
 };
 
 describe('SnapshotEngine collectData branches', () => {

@@ -103,7 +103,7 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
 
       {/* Row 1: Tokens + Conversations */}
       <div className="grid grid-cols-1 @xl:grid-cols-2 gap-3">
-        <ChartCard accent="tokens">
+        <ChartCard>
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <span className="text-[13px] font-semibold text-fg-muted">
@@ -115,7 +115,7 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
           </div>
           <TokensChart data={buckets} selectedModel={selectedModel} />
         </ChartCard>
-        <ChartCard accent="conversations">
+        <ChartCard>
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <span className="text-[13px] font-semibold text-fg-muted">
@@ -131,7 +131,7 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
 
       {/* Row 2: Sessions (full width) */}
       <div className="mt-3">
-        <ChartCard accent="sessions">
+        <ChartCard>
           <div className="flex items-center justify-between mb-1">
             <span className="text-[13px] font-semibold text-fg-muted">
               {t('metrics.sessions')}

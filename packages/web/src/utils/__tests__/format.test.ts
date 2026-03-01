@@ -1,6 +1,6 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { channelShortName,formatLatency, formatUptime } from '../format';
+import { channelShortName, formatLatency, formatMemoryMB, formatUptime } from '../format';
 
 describe('formatUptime', () => {
   it('returns empty string for null/undefined', () => {
@@ -61,5 +61,25 @@ describe('channelShortName', () => {
 
   it('truncates unknown channels to 6 chars', () => {
     expect(channelShortName('CustomChannel')).toBe('Custom');
+  });
+});
+
+describe('formatMemoryMB', () => {
+  it('shows MB for values below 1024', () => {
+    expect(formatMemoryMB(142)).toBe('142 MB');
+    expect(formatMemoryMB(0)).toBe('0 MB');
+    expect(formatMemoryMB(1023)).toBe('1023 MB');
+  });
+
+  it('shows GB with 2 decimals for values >= 1024', () => {
+    expect(formatMemoryMB(1024)).toBe('1.00 GB');
+    expect(formatMemoryMB(1536)).toBe('1.50 GB');
+    expect(formatMemoryMB(2048)).toBe('2.00 GB');
+    expect(formatMemoryMB(1234)).toBe('1.21 GB');
+  });
+
+  it('rounds MB to nearest integer', () => {
+    expect(formatMemoryMB(142.7)).toBe('143 MB');
+    expect(formatMemoryMB(512.3)).toBe('512 MB');
   });
 });

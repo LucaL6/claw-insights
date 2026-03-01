@@ -7,7 +7,7 @@ import { ChartCard } from '../core/ChartCard';
 import { ErrorsChart } from '../ErrorsChart';
 import { getTooltips } from './metricsTooltips';
 import { PreviewCard } from './PreviewCard';
-import type { PreviewEvents,PreviewState } from './types';
+import type { PreviewEvents, PreviewState } from './types';
 
 interface Props {
   buckets: BucketData[];
@@ -35,7 +35,7 @@ export function ErrorsChartCard({
 
   return (
     <>
-      <ChartCard accent="errors">
+      <ChartCard>
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-semibold text-red">

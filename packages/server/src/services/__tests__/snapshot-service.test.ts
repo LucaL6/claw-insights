@@ -73,7 +73,7 @@ describe('buildSnapshotData', () => {
     const result = await buildSnapshotData(makeSources(), { detail: 'compact', range: 'TWENTY_FOUR_HOUR' });
     expect(result.summary).toBeDefined();
     expect(Array.isArray(result.tokensByModel)).toBe(true);
-    expect(result.tokensByModel.length).toBe(2);
+    expect(result.tokensByModel!.length).toBe(2);
     expect(result.tokensTrend).toBe('↑12%');
     expect(result).not.toHaveProperty('sparklines');
     expect(result.sessions).toBeUndefined();
@@ -156,7 +156,7 @@ describe('buildSnapshotData', () => {
 
   test('summary tokens is integer', async () => {
     const result = await buildSnapshotData(makeSources(), { detail: 'compact', range: 'TWENTY_FOUR_HOUR' });
-    expect(Number.isInteger(result.summary.tokens)).toBe(true);
+    expect(Number.isInteger(result.summary!.tokens)).toBe(true);
   });
 
   test('result includes time field', async () => {
@@ -166,7 +166,7 @@ describe('buildSnapshotData', () => {
 
   test('channels use shortnames', async () => {
     const result = await buildSnapshotData(makeSources(), { detail: 'compact', range: 'TWENTY_FOUR_HOUR' });
-    expect(result.channels[0].name).toBe('Discord');
+    expect(result.channels![0].name).toBe('Discord');
   });
 
   test('groups models after top 5 into Other and keeps percentages at 100', async () => {
@@ -183,8 +183,8 @@ describe('buildSnapshotData', () => {
 
     const result = await buildSnapshotData(sources, { detail: 'compact', range: 'ONE_HOUR' });
     expect(result.tokensByModel).toHaveLength(6);
-    expect(result.tokensByModel[5]).toMatchObject({ model: 'other', modelDisplay: 'Other', tokensK: 10 });
-    expect(result.tokensByModel.reduce((sum, m) => sum + m.percent, 0)).toBe(100);
+    expect(result.tokensByModel![5]).toMatchObject({ model: 'other', modelDisplay: 'Other', tokensK: 10 });
+    expect(result.tokensByModel!.reduce((sum, m) => sum + m.percent, 0)).toBe(100);
   });
 
   test('adds ⚠️ prefix for trend >100%', async () => {
@@ -206,6 +206,6 @@ describe('buildSnapshotData', () => {
     sources.getSessions = () =>
       (origGetSessions() as { status: string }[]).map((s) => ({ ...s, status: s.status.toUpperCase() }));
     const result = await buildSnapshotData(sources, { detail: 'compact', range: 'TWENTY_FOUR_HOUR' });
-    expect(result.summary.activeSessions).toBe(1);
+    expect(result.summary!.activeSessions).toBe(1);
   });
 });

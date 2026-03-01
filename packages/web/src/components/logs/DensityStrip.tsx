@@ -80,10 +80,10 @@ function BucketTooltip({ bucket, t }: { bucket: DensityBucket; t: TFn }) {
       className="density-tooltip mono"
       style={{
         position: 'absolute',
-        bottom: '100%',
+        top: '100%',
         left: '50%',
         transform: 'translateX(-50%)',
-        marginBottom: 4,
+        marginTop: 4,
         padding: '4px 8px',
         background: 'var(--bg-surface-solid)',
         border: '1px solid var(--border)',

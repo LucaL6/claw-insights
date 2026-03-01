@@ -202,7 +202,7 @@ describe('Snapshot Integration', () => {
   });
 
   // ── 10. Shared rate limiter across /api/snapshot and /mcp ──
-  it('rate limiter is shared: exhaust via /api/snapshot, /mcp also limited', async () => {
+  it('rate limiter enforces 30 req/min on /api/snapshot', async () => {
     const sharedApp = createTestApp();
 
     // Exhaust 30 requests via /api/snapshot
@@ -226,7 +226,56 @@ describe('Snapshot Integration', () => {
     expect(successes.length).toBe(5);
   });
 
-  // ── 12. /api/snapshot rejects non-local Host in no-auth mode ──
+  // ── 12. theme param: dark (default) and light ──
+  it('POST /api/snapshot theme=dark → 200', async () => {
+    const res = await request(app).post('/api/snapshot').send({ format: 'json', theme: 'dark' });
+    expect(res.status).toBe(200);
+  });
+
+  it('POST /api/snapshot theme=light → 200', async () => {
+    const res = await request(app).post('/api/snapshot').send({ format: 'json', theme: 'light' });
+    expect(res.status).toBe(200);
+  });
+
+  it('POST /api/snapshot theme=invalid → 400', async () => {
+    const res = await request(app).post('/api/snapshot').send({ format: 'json', theme: 'neon' });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('code', 'INVALID_PARAM');
+  });
+
+  // ── 13. lang param ──
+  it('POST /api/snapshot lang=en → 200', async () => {
+    const res = await request(app).post('/api/snapshot').send({ format: 'json', lang: 'en' });
+    expect(res.status).toBe(200);
+  });
+
+  it('POST /api/snapshot lang=zh → 200', async () => {
+    const res = await request(app).post('/api/snapshot').send({ format: 'json', lang: 'zh' });
+    expect(res.status).toBe(200);
+  });
+
+  // ── 14. range param variations ──
+  it.each(['30m', '1h', '6h', '12h', '24h'] as const)('POST /api/snapshot range=%s → 200', async (range) => {
+    const res = await request(app).post('/api/snapshot').send({ format: 'json', range });
+    expect(res.status).toBe(200);
+  });
+
+  it('POST /api/snapshot range=invalid → 400', async () => {
+    const res = await request(app).post('/api/snapshot').send({ format: 'json', range: '99h' });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('code', 'INVALID_PARAM');
+  });
+
+  // ── 15. combined params: theme + lang + range + format ──
+  it('POST /api/snapshot with all params combined → 200 PNG', async () => {
+    const res = await request(app)
+      .post('/api/snapshot')
+      .send({ format: 'png', detail: 'compact', range: '1h', theme: 'light', lang: 'zh' });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/image\/png/);
+  });
+
+  // ── 16. /api/snapshot rejects non-local Host in no-auth mode ──
   it('/api/snapshot rejects non-local Host with 403', async () => {
     const res = await request(app).post('/api/snapshot').set('Host', 'evil.com').send({ format: 'json' });
 

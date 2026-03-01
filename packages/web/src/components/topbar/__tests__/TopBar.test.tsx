@@ -10,7 +10,7 @@ vi.mock('../../../hooks/useSnapshot', () => ({
 
 interface MockGwData {
   status: GatewayStatus;
-  gateway: { running: boolean; startedAt?: string } | undefined;
+  gateway: { running: boolean; startedAt?: string; appVersion?: string } | undefined;
   resources: { cpu: number; memoryMB: number } | null;
   channels: Array<{ provider: string; name: string; connected: boolean; latencyMs: number | null }>;
   uptime: string | undefined;
@@ -19,7 +19,7 @@ interface MockGwData {
 
 const mockGw: MockGwData = {
   status: 'running',
-  gateway: { running: true, startedAt: new Date(Date.now() - 3600_000).toISOString() },
+  gateway: { running: true, startedAt: new Date(Date.now() - 3600_000).toISOString(), appVersion: '1.2.3' },
   resources: { cpu: 3.2, memoryMB: 142 },
   channels: [
     { provider: 'telegram', name: 'Telegram', connected: true, latencyMs: 12 },
@@ -31,7 +31,7 @@ const mockGw: MockGwData = {
 
 function resetGwMock() {
   mockGw.status = 'running';
-  mockGw.gateway = { running: true, startedAt: new Date(Date.now() - 3600_000).toISOString() };
+  mockGw.gateway = { running: true, startedAt: new Date(Date.now() - 3600_000).toISOString(), appVersion: '1.2.3' };
   mockGw.resources = { cpu: 3.2, memoryMB: 142 };
   mockGw.channels = [
     { provider: 'telegram', name: 'Telegram', connected: true, latencyMs: 12 },
@@ -93,7 +93,7 @@ describe('TopBar', () => {
   it('renders snapshot button', () => {
     mockViewport(1024);
     renderWithProviders(<TopBar />);
-    expect(screen.getByTitle(/snapshot/i)).toBeDefined();
+    expect(screen.getByRole('button', { name: /snapshot/i })).toBeDefined();
   });
 
   it('renders channels on desktop', () => {
@@ -109,7 +109,7 @@ describe('TopBar', () => {
     expect(screen.getByText('CPU')).toBeDefined();
     expect(screen.getByText('3.2%')).toBeDefined();
     expect(screen.getByText('MEM')).toBeDefined();
-    expect(screen.getByText('142M')).toBeDefined();
+    expect(screen.getByText('142 MB')).toBeDefined();
   });
 
   it('dims channels and resources when gateway is down', () => {
@@ -167,5 +167,68 @@ describe('TopBar', () => {
     mockGw.uptime = undefined;
     renderWithProviders(<TopBar />);
     expect(screen.getByText('Reconnecting…')).toBeDefined();
+  });
+
+  it('shows status tooltip on desktop', () => {
+    mockViewport(1024);
+    renderWithProviders(<TopBar />);
+    expect(screen.getByText(/OpenClaw is running/i)).toBeDefined();
+  });
+
+  it('shows channel tooltip with full name', () => {
+    mockViewport(1024);
+    renderWithProviders(<TopBar />);
+    expect(screen.getByText(/Telegram · Connected/i)).toBeDefined();
+  });
+
+  it('shows CPU tooltip', () => {
+    mockViewport(1024);
+    renderWithProviders(<TopBar />);
+    expect(screen.getByText(/gateway CPU usage/i)).toBeDefined();
+  });
+
+  it('shows MEM tooltip', () => {
+    mockViewport(1024);
+    renderWithProviders(<TopBar />);
+    expect(screen.getByText(/gateway memory usage/i)).toBeDefined();
+  });
+
+  it('shows uptime tooltip', () => {
+    mockViewport(1024);
+    renderWithProviders(<TopBar />);
+    expect(screen.getByText(/uptime since start/i)).toBeDefined();
+  });
+
+  it('shows down status tooltip when gateway is down', () => {
+    mockViewport(1024);
+    mockGw.status = 'gateway-down';
+    mockGw.gateway = { running: false };
+    mockGw.resources = null;
+    mockGw.uptime = undefined;
+    renderWithProviders(<TopBar />);
+    expect(screen.getByText(/gateway is down/i)).toBeDefined();
+  });
+
+  it('shows snapshot tooltip instead of native title', () => {
+    mockViewport(1024);
+    renderWithProviders(<TopBar />);
+    const snapshotBtn = screen.getByRole('button', { name: /snapshot/i });
+    expect(snapshotBtn.getAttribute('title')).toBeNull();
+    // Tooltip text + button text both render "Snapshot"
+    expect(screen.getAllByText('Snapshot').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('shows theme toggle tooltip instead of native title', () => {
+    mockViewport(1024);
+    renderWithProviders(<TopBar />);
+    const themeBtn = screen.getByRole('button', { name: /switch to light/i });
+    expect(themeBtn.getAttribute('title')).toBeNull();
+  });
+
+  it('shows lang toggle tooltip instead of native title', () => {
+    mockViewport(1024);
+    renderWithProviders(<TopBar />);
+    const langBtn = screen.getByRole('button', { name: /switch to 中文/i });
+    expect(langBtn.getAttribute('title')).toBeNull();
   });
 });

@@ -37,6 +37,18 @@ const CHANNEL_SHORT: Record<string, string> = {
   imessage: 'iMsg',
 };
 
+// ─── Safe Collect Helper ─────────────────────────────────────────
+
+async function safeCollect<T>(name: string, fn: () => T | Promise<T>, degraded: string[]): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (err) {
+    log.warn({ err, source: name }, 'snapshot source failed, using fallback');
+    degraded.push(name);
+    return null;
+  }
+}
+
 // ─── Session Builder ─────────────────────────────────────────────
 
 function buildSession(
@@ -83,131 +95,174 @@ export async function buildSnapshotData(
   opts: { detail: Detail; range: InternalRange },
 ): Promise<SnapshotData> {
   const { detail, range } = opts;
-
-  // 1. Fetch raw data (parallel)
+  const degraded: string[] = [];
   const t0 = performance.now();
-  const [gw, channels] = await Promise.all([sources.getGateway(), sources.getChannels()]);
-  const t1 = performance.now();
-  log.debug({ fetchMs: Math.round(t1 - t0) }, 'snapshot data fetch');
-  const rawSessions = sources.getSessions() as Record<string, unknown>[];
-  const metrics = sources.getMetrics(range);
 
-  // 2. Gateway
-  const gateway: SnapshotData['gateway'] = {
-    status: gw.running ? 'up' : 'down',
-    version: getAppVersion(),
-    uptime: gw.uptime,
-    cpu: (gw.cpu as number) ?? 0,
-    memoryMB: (gw.memoryMB as number) ?? 0,
-  };
+  // 1. Gateway (if fails, channels also null — cascade)
+  const gw = await safeCollect('gateway', () => sources.getGateway(), degraded);
+  let channels: Awaited<ReturnType<typeof sources.getChannels>> | null = null;
+  if (gw) {
+    channels = await safeCollect('channels', () => sources.getChannels(), degraded);
+  } else {
+    degraded.push('channels'); // cascade: gateway down → channels unavailable
+  }
 
-  // 3. Summary
-  const tokensRaw = metrics.totalTokensK * 1000;
-  const activeSessions = rawSessions.filter((s) => (s.status as string)?.toLowerCase() === 'active').length;
-  const summary: SnapshotData['summary'] = {
-    activeSessions,
-    totalSessions: rawSessions.length,
-    tokens: Math.round(tokensRaw),
-    tokensDisplay: formatTokens(tokensRaw),
-    errors: metrics.totalErrors,
-    warnings: metrics.totalWarnings,
-    uptimePercent: metrics.uptimePercent,
-    totalMessages: 0, // populated after range timestamps are known
-  };
+  // 2. Gateway data
+  const gateway: SnapshotData['gateway'] = gw
+    ? {
+        status: gw.running ? 'up' : 'down',
+        version: getAppVersion(),
+        uptime: gw.uptime,
+        cpu: (gw.cpu as number) ?? 0,
+        memoryMB: (gw.memoryMB as number) ?? 0,
+      }
+    : null;
 
-  // 4. Buckets and range timestamps
-  const buckets = metrics.buckets;
+  // 3. Metrics
+  const metrics = await safeCollect('metrics', () => sources.getMetrics(range), degraded);
+
+  // 4. Sessions
+  const rawSessions = await safeCollect('sessions', () => sources.getSessions() as Record<string, unknown>[], degraded);
+
+  // 5. Summary (depends on metrics + sessions)
+  let summary: SnapshotData['summary'] = null;
+  if (metrics) {
+    const tokensRaw = metrics.totalTokensK * 1000;
+    const activeSessions = rawSessions
+      ? rawSessions.filter((s) => (s.status as string)?.toLowerCase() === 'active').length
+      : 0;
+    summary = {
+      activeSessions,
+      totalSessions: rawSessions?.length ?? 0,
+      tokens: Math.round(tokensRaw),
+      tokensDisplay: formatTokens(tokensRaw),
+      errors: metrics.totalErrors,
+      warnings: metrics.totalWarnings,
+      uptimePercent: metrics.uptimePercent,
+      totalMessages: 0,
+    };
+  }
+
+  // 6. Buckets and range timestamps
+  const buckets = metrics?.buckets ?? null;
   const endTs = new Date().toISOString();
   const rangeConfig = RANGE_CONFIG[range];
   const startTs = new Date(Date.now() - rangeConfig.rangeMinutes * 60_000).toISOString();
 
-  // 4b. Range-scoped message count
-  summary.totalMessages = sources.getRangeMessageCount(startTs, endTs);
-
-  // 5. Per-model token usage
-  const rawModelTokens = sources.getModelTokenUsage(startTs, endTs);
-  const totalModelK = rawModelTokens.reduce((s, m) => s + m.tokensK, 0);
-  const top5 = rawModelTokens.slice(0, 5);
-  const rest = rawModelTokens.slice(5);
-  const tokensByModel: ModelTokenUsage[] = top5.map((m) => ({
-    model: m.model,
-    modelDisplay: friendlyModel(m.model),
-    tokensK: m.tokensK,
-    percent: totalModelK > 0 ? Math.round((m.tokensK / totalModelK) * 100) : 0,
-  }));
-
-  if (rest.length > 0) {
-    const otherK = rest.reduce((s, m) => s + m.tokensK, 0);
-    tokensByModel.push({
-      model: 'other',
-      modelDisplay: 'Other',
-      tokensK: otherK,
-      percent: totalModelK > 0 ? Math.round((otherK / totalModelK) * 100) : 0,
-    });
+  // 6b. Range-scoped message count
+  if (summary) {
+    summary.totalMessages =
+      (await safeCollect('messageCount', () => sources.getRangeMessageCount(startTs, endTs), degraded)) ?? 0;
   }
 
-  const pctSum = tokensByModel.reduce((s, m) => s + m.percent, 0);
-  if (pctSum !== 100 && tokensByModel.length > 0 && totalModelK > 0) {
-    tokensByModel[0].percent += 100 - pctSum;
-  }
+  // 7. Per-model token usage
+  const tokensByModel = await safeCollect(
+    'tokensByModel',
+    () => {
+      const rawModelTokens = sources.getModelTokenUsage(startTs, endTs);
+      const totalModelK = rawModelTokens.reduce((s, m) => s + m.tokensK, 0);
+      const top5 = rawModelTokens.slice(0, 5);
+      const rest = rawModelTokens.slice(5);
+      const result: ModelTokenUsage[] = top5.map((m) => ({
+        model: m.model,
+        modelDisplay: friendlyModel(m.model),
+        tokensK: m.tokensK,
+        percent: totalModelK > 0 ? Math.round((m.tokensK / totalModelK) * 100) : 0,
+      }));
 
-  // 6. Token trend
-  const trendPercent = sources.getTokenTrend(rangeConfig.rangeMinutes, endTs);
+      if (rest.length > 0) {
+        const otherK = rest.reduce((s, m) => s + m.tokensK, 0);
+        result.push({
+          model: 'other',
+          modelDisplay: 'Other',
+          tokensK: otherK,
+          percent: totalModelK > 0 ? Math.round((otherK / totalModelK) * 100) : 0,
+        });
+      }
+
+      const pctSum = result.reduce((s, m) => s + m.percent, 0);
+      if (pctSum !== 100 && result.length > 0 && totalModelK > 0) {
+        result[0].percent += 100 - pctSum;
+      }
+      return result;
+    },
+    degraded,
+  );
+
+  // 8. Token trend
+  const trendPercent = await safeCollect(
+    'tokenTrend',
+    () => sources.getTokenTrend(rangeConfig.rangeMinutes, endTs),
+    degraded,
+  );
   let tokensTrend: string | undefined;
-  if (trendPercent !== null && trendPercent !== 0) {
+  if (trendPercent != null && trendPercent !== 0) {
     const arrow = trendPercent > 0 ? '↑' : '↓';
     const prefix = Math.abs(trendPercent) > 100 ? '⚠️ ' : '';
     tokensTrend = `${prefix}${arrow}${Math.abs(trendPercent)}%`;
   }
 
-  // 7. Turn counts
-  const turnData = sources.getTurnCounts(startTs, endTs);
-  const turnBySession = new Map(turnData.bySession.map((r) => [r.sessionKey, r.turns]));
+  // 9. Turn counts
+  const turnData = await safeCollect('turnCounts', () => sources.getTurnCounts(startTs, endTs), degraded);
+  const turnBySession = turnData
+    ? new Map(turnData.bySession.map((r) => [r.sessionKey, r.turns]))
+    : new Map<string, number>();
 
-  // 8. Companion days + total conversations
-  const companionDays = await sources.getCompanionDays();
-  const totalConversations = sources.getTotalConversations();
+  // 10. Companion days + total conversations
+  const companionDays = await safeCollect('companionDays', () => sources.getCompanionDays(), degraded);
+  const totalConversations = await safeCollect('totalConversations', () => sources.getTotalConversations(), degraded);
 
-  // 9. Base result (compact)
+  // 11. Base result
   const result: SnapshotData = {
     gateway,
-    channels: channels.map((c) => ({
-      name: CHANNEL_SHORT[c.provider?.toLowerCase()] ?? c.name,
-      provider: c.provider,
-      connected: c.connected,
-      latencyMs: c.latencyMs,
-    })),
+    channels: channels
+      ? channels.map((c) => ({
+          name: CHANNEL_SHORT[c.provider?.toLowerCase()] ?? c.name,
+          provider: c.provider,
+          connected: c.connected,
+          latencyMs: c.latencyMs,
+        }))
+      : null,
     timestamp: new Date().toISOString(),
     range: RANGE_DISPLAY[range] ?? range,
     time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
     summary,
-    tokensByModel,
+    tokensByModel: tokensByModel ?? null,
     tokensTrend,
-    companionDays,
+    companionDays: companionDays ?? null,
     hostname: osHostname(),
-    totalConversations,
+    totalConversations: totalConversations ?? null,
+    _meta: { degradedSources: degraded },
   };
 
-  // 9. Detail augmentation
+  // 12. Detail augmentation
   if (detail === 'standard' || detail === 'full') {
     result.buckets = buckets;
   }
 
-  const activeSorted = [...rawSessions]
-    .filter((s) => (s.status as string)?.toLowerCase() === 'active')
-    .sort((a, b) => ((b.totalTokens as number) ?? 0) - ((a.totalTokens as number) ?? 0));
+  if (rawSessions) {
+    const activeSorted = [...rawSessions]
+      .filter((s) => (s.status as string)?.toLowerCase() === 'active')
+      .sort((a, b) => ((b.totalTokens as number) ?? 0) - ((a.totalTokens as number) ?? 0));
 
-  if (detail === 'standard') {
-    result.sessions = activeSorted.slice(0, 8).map((s) => buildSession(s, false, turnBySession));
-    const errResult = sources.getRecentErrors(3);
-    result.recentErrors = errResult.events;
+    if (detail === 'standard') {
+      result.sessions = activeSorted.slice(0, 8).map((s) => buildSession(s, false, turnBySession));
+      const errResult = await safeCollect('recentErrors', () => sources.getRecentErrors(3), degraded);
+      result.recentErrors = errResult?.events ?? null;
+    }
+
+    if (detail === 'full') {
+      result.sessions = activeSorted.slice(0, 20).map((s) => buildSession(s, true, turnBySession));
+      const errResult = await safeCollect('recentErrors', () => sources.getRecentErrors(5), degraded);
+      result.recentErrors = errResult?.events ?? null;
+    }
+  } else {
+    result.sessions = null;
+    result.recentErrors = null;
   }
 
-  if (detail === 'full') {
-    result.sessions = activeSorted.slice(0, 20).map((s) => buildSession(s, true, turnBySession));
-    const errResult = sources.getRecentErrors(5);
-    result.recentErrors = errResult.events;
-  }
+  const totalMs = Math.round(performance.now() - t0);
+  log.debug({ totalMs, degradedSources: degraded }, 'snapshot data built');
 
   return result;
 }

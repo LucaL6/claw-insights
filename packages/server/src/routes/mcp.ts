@@ -70,13 +70,11 @@ function registerSnapshotTool(server: McpServer, engine: SnapshotEngine): void {
     {
       description: 'Generate a visual status snapshot of the OpenClaw infrastructure.',
       inputSchema: {
-        layout: z.enum(['desktop', 'mobile']).default('desktop'),
         detail: z.enum(['compact', 'standard', 'full']).default('standard'),
         format: z.enum(['png', 'json', 'svg']).default('png'),
         range: z.enum(['1h', '6h', '12h', '24h']).default('6h'),
         theme: z.enum(['dark', 'light']).default('dark'),
         lang: z.enum(['en', 'zh']).default('en'),
-        section: z.enum(['dashboard', 'logs']).default('dashboard'),
       },
     },
     async (params) => {

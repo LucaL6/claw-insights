@@ -64,27 +64,28 @@ describe('Tooltip', () => {
     expect(tooltip?.textContent).toContain('Help text');
   });
 
-  it('links wrapper to tooltip via aria-describedby', () => {
+  it('links trigger element (not wrapper) to tooltip via aria-describedby', () => {
     const { container } = renderWithProviders(
       <Tooltip text="Accessible">
         <button>Btn</button>
       </Tooltip>,
     );
-    const wrapper = container.querySelector('[aria-describedby]');
+    const trigger = container.querySelector('[aria-describedby]');
     const tooltip = container.querySelector('[role="tooltip"]');
-    expect(wrapper).toBeTruthy();
+    expect(trigger).toBeTruthy();
+    expect(trigger?.tagName).toBe('BUTTON'); // aria-describedby is on the focusable child
     expect(tooltip).toBeTruthy();
-    expect(wrapper?.getAttribute('aria-describedby')).toBe(tooltip?.getAttribute('id'));
+    expect(trigger?.getAttribute('aria-describedby')).toBe(tooltip?.getAttribute('id'));
   });
 
-  it('includes focus-within visibility class for keyboard access', () => {
+  it('includes focus-visible visibility class for keyboard access', () => {
     const { container } = renderWithProviders(
       <Tooltip text="Focus">
         <button>Btn</button>
       </Tooltip>,
     );
     const tooltip = container.querySelector('[role="tooltip"]');
-    expect(tooltip?.className).toContain('group-focus-within/tip:visible');
+    expect(tooltip?.className).toContain('group-has-[:focus-visible]/tip:visible');
   });
 
   it('includes motion-reduce class', () => {
@@ -97,17 +98,63 @@ describe('Tooltip', () => {
     expect(tooltip?.className).toContain('motion-reduce:transition-none');
   });
 
+  it('positions tooltip to the right when position="right"', () => {
+    const { container } = renderWithProviders(
+      <Tooltip text="hint" position="right">
+        <button>Btn</button>
+      </Tooltip>,
+    );
+    const bubble = container.querySelector('[role="tooltip"]');
+    expect(bubble?.className).toContain('left-full');
+    expect(bubble?.className).toContain('ml-1.5');
+    expect(bubble?.className).not.toContain('top-full');
+  });
+
+  it('defaults to bottom position', () => {
+    const { container } = renderWithProviders(
+      <Tooltip text="hint">
+        <button>Btn</button>
+      </Tooltip>,
+    );
+    const bubble = container.querySelector('[role="tooltip"]');
+    expect(bubble?.className).toContain('top-full');
+    expect(bubble?.className).toContain('mt-1.5');
+  });
+
+  it('renders as div when as="div"', () => {
+    const { container } = renderWithProviders(
+      <Tooltip text="hint" as="div">
+        <button>Btn</button>
+      </Tooltip>,
+    );
+    // Wrapper is the element containing both the trigger and the tooltip bubble
+    const tooltip = container.querySelector('[role="tooltip"]');
+    const wrapper = tooltip?.parentElement;
+    expect(wrapper?.tagName).toBe('DIV');
+  });
+
+  it('renders as span by default', () => {
+    const { container } = renderWithProviders(
+      <Tooltip text="hint">
+        <button>Btn</button>
+      </Tooltip>,
+    );
+    const tooltip = container.querySelector('[role="tooltip"]');
+    const wrapper = tooltip?.parentElement;
+    expect(wrapper?.tagName).toBe('SPAN');
+  });
+
   it('tooltip remains hoverable via wrapper when button is disabled', () => {
     const { container } = renderWithProviders(
       <Tooltip text="Disabled hint">
         <button disabled>Disabled</button>
       </Tooltip>,
     );
-    const wrapper = container.querySelector('[aria-describedby]') as HTMLElement;
+    const tooltip = container.querySelector('[role="tooltip"]');
+    const wrapper = tooltip?.parentElement as HTMLElement;
     // Wrapper span should still exist and contain the tooltip
     expect(wrapper).toBeTruthy();
     fireEvent.mouseEnter(wrapper);
-    const tooltip = container.querySelector('[role="tooltip"]');
     expect(tooltip).toBeTruthy();
   });
 });

@@ -122,11 +122,12 @@ vi.mock('../sources/collectors/log-tailer.js', () => ({
 }));
 
 vi.mock('../sources/collectors/lifetime-scanner.js', () => ({
-  LifetimeScanner: mockClass({
+  createLifetimeScanner: () => ({
     init: () => Promise.resolve(),
     destroy() {},
     getStats: () => ({}),
     getFileStates: () => new Map(),
+    isReady: () => false,
   }),
 }));
 

@@ -8,8 +8,10 @@ let proc: ChildProcess;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const PORT = process.env.CLAW_INSIGHTS_SERVER_PORT || '41041';
+
 const GQL = (query: string, variables?: Record<string, unknown>) =>
-  fetch('http://127.0.0.1:41041/graphql', {
+  fetch(`http://127.0.0.1:${PORT}/graphql`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables }),

@@ -1,29 +1,23 @@
+import { resolveLocale } from '../renderer/i18n/index.js';
 import type { MetricsBucket } from './snapshot-formatters.js';
 
 const VALID_DETAILS = ['compact', 'standard', 'full'] as const;
 const VALID_FORMATS = ['png', 'json', 'svg'] as const;
 const VALID_RANGES = ['30m', '1h', '6h', '12h', '24h'] as const;
 const VALID_THEMES = ['dark', 'light'] as const;
-const VALID_LANGS = ['en', 'zh'] as const;
-const VALID_LAYOUTS = ['desktop', 'mobile'] as const;
-const VALID_SECTIONS = ['dashboard', 'logs'] as const;
 
 export type Detail = (typeof VALID_DETAILS)[number];
 export type Format = (typeof VALID_FORMATS)[number];
 export type Range = (typeof VALID_RANGES)[number];
 export type Theme = (typeof VALID_THEMES)[number];
-export type Lang = (typeof VALID_LANGS)[number];
-export type Layout = (typeof VALID_LAYOUTS)[number];
-export type Section = (typeof VALID_SECTIONS)[number];
+export type Lang = 'en' | 'zh';
 
 export interface SnapshotRequest {
-  layout: Layout;
   detail: Detail;
   format: Format;
   range: Range;
   theme: Theme;
   lang: Lang;
-  section: Section;
 }
 
 /** Internal range keys used by MetricsAggregator / query-utils */
@@ -47,15 +41,23 @@ function validate<T extends string>(value: unknown, valid: readonly T[], field: 
   return value as T;
 }
 
+function normalizeLang(value: unknown): Lang {
+  if (value === undefined || value === null) {
+    return 'en';
+  }
+  if (typeof value !== 'string') {
+    return 'en';
+  }
+  return resolveLocale(value) as Lang;
+}
+
 export function parseSnapshotRequest(body: Record<string, unknown>): SnapshotRequest {
   return {
-    layout: validate(body.layout, VALID_LAYOUTS, 'layout', 'desktop'),
     detail: validate(body.detail, VALID_DETAILS, 'detail', 'standard'),
     format: validate(body.format, VALID_FORMATS, 'format', 'png'),
     range: validate(body.range, VALID_RANGES, 'range', '24h'),
     theme: validate(body.theme, VALID_THEMES, 'theme', 'dark'),
-    lang: validate(body.lang, VALID_LANGS, 'lang', 'en'),
-    section: validate(body.section, VALID_SECTIONS, 'section', 'dashboard'),
+    lang: normalizeLang(body.lang),
   };
 }
 
@@ -116,8 +118,14 @@ export interface SnapshotSession {
 }
 
 export interface SnapshotData {
-  gateway: { status: 'up' | 'down' | 'connecting'; version: string; uptime: string; cpu: number; memoryMB: number };
-  channels: { name: string; provider: string; connected: boolean; latencyMs: number | null }[];
+  gateway: {
+    status: 'up' | 'down' | 'connecting';
+    version: string;
+    uptime: string;
+    cpu: number;
+    memoryMB: number;
+  } | null;
+  channels: { name: string; provider: string; connected: boolean; latencyMs: number | null }[] | null;
   timestamp: string;
   range: string;
   time: string;
@@ -130,13 +138,14 @@ export interface SnapshotData {
     warnings: number;
     uptimePercent: number;
     totalMessages: number;
-  };
-  tokensByModel: ModelTokenUsage[];
+  } | null;
+  tokensByModel: ModelTokenUsage[] | null;
   tokensTrend?: string;
-  buckets?: MetricsBucket[];
-  sessions?: SnapshotSession[];
-  recentErrors?: { timestamp: string; type: string; module: string; message: string }[];
-  companionDays: number;
+  buckets?: MetricsBucket[] | null;
+  sessions?: SnapshotSession[] | null;
+  recentErrors?: { timestamp: string; type: string; module: string; message: string }[] | null;
+  companionDays: number | null;
   hostname: string;
-  totalConversations: number;
+  totalConversations: number | null;
+  _meta?: { degradedSources: string[] };
 }

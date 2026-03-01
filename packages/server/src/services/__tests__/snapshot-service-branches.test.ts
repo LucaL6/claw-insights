@@ -47,9 +47,9 @@ describe('buildSnapshotData – branch coverage', () => {
       makeSources({ getGateway: async () => ({ running: false, version: '1.0.0', uptime: '0' }) }),
       { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
     );
-    expect(result.gateway.status).toBe('down');
-    expect(result.gateway.cpu).toBe(0); // cpu ?? 0 fallback
-    expect(result.gateway.memoryMB).toBe(0); // memoryMB ?? 0 fallback
+    expect(result.gateway!.status).toBe('down');
+    expect(result.gateway!.cpu).toBe(0); // cpu ?? 0 fallback
+    expect(result.gateway!.memoryMB).toBe(0); // memoryMB ?? 0 fallback
   });
 
   test('includes tokensByModel payload in compact result', async () => {
@@ -59,7 +59,7 @@ describe('buildSnapshotData – branch coverage', () => {
       }),
       { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
     );
-    expect(result.tokensByModel.length).toBe(1);
+    expect(result.tokensByModel!.length).toBe(1);
     expect(result).not.toHaveProperty('sparklines');
   });
 
@@ -70,7 +70,7 @@ describe('buildSnapshotData – branch coverage', () => {
       }),
       { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
     );
-    expect(result.channels[0].name).toBe('my-room');
+    expect(result.channels![0].name).toBe('my-room');
   });
 
   test('known range maps to display string', async () => {
@@ -103,7 +103,7 @@ describe('buildSnapshotData – branch coverage', () => {
     );
     // undefined status → won't match 'active' filter
     expect(result.sessions!.length).toBe(0);
-    expect(result.summary.activeSessions).toBe(0);
+    expect(result.summary!.activeSessions).toBe(0);
   });
 
   test('full: getRecentErrors returning {events} object', async () => {
@@ -170,7 +170,7 @@ describe('buildSnapshotData – branch coverage', () => {
       }),
       { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
     );
-    const percents = result.tokensByModel.map((m) => m.percent);
+    const percents = result.tokensByModel!.map((m) => m.percent);
     expect(percents.reduce((s, p) => s + p, 0)).toBe(100);
   });
 
@@ -198,8 +198,8 @@ describe('buildSnapshotData – branch coverage', () => {
       detail: 'compact',
       range: 'TWENTY_FOUR_HOUR',
     });
-    expect(result.tokensByModel.length).toBe(6); // 5 + Other
-    expect(result.tokensByModel[5].model).toBe('other');
+    expect(result.tokensByModel!.length).toBe(6); // 5 + Other
+    expect(result.tokensByModel![5].model).toBe('other');
   });
 
   test('zero total model tokens gives 0% to all models', async () => {
@@ -207,7 +207,7 @@ describe('buildSnapshotData – branch coverage', () => {
       makeSources({ getModelTokenUsage: vi.fn().mockReturnValue([{ model: 'x', tokensK: 0 }]) }),
       { detail: 'compact', range: 'TWENTY_FOUR_HOUR' },
     );
-    expect(result.tokensByModel[0].percent).toBe(0);
+    expect(result.tokensByModel![0].percent).toBe(0);
   });
 
   test('zero token trend shows no trend', async () => {

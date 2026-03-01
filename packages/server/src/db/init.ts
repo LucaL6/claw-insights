@@ -317,6 +317,27 @@ export const MIGRATIONS: Migration[] = [
       );
     },
   },
+  {
+    version: 11,
+    up: `
+      CREATE TABLE IF NOT EXISTS scan_state (
+        file_path   TEXT PRIMARY KEY,
+        byte_offset INTEGER NOT NULL DEFAULT 0,
+        inode       INTEGER NOT NULL,
+        mtime_ms    REAL NOT NULL,
+        birth_ms    REAL NOT NULL DEFAULT 0,
+        partial     TEXT NOT NULL DEFAULT ''
+      );
+    `,
+  },
+  {
+    version: 12,
+    up: (db) => {
+      if (!hasColumn(db, 'scan_state', 'first_timestamp_ms')) {
+        db.exec('ALTER TABLE scan_state ADD COLUMN first_timestamp_ms REAL');
+      }
+    },
+  },
 ];
 
 // ── Helpers ──

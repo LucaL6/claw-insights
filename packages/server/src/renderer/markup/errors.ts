@@ -1,9 +1,10 @@
 import type { SnapshotData } from '../../services/snapshot-types.js';
+import { t as i18n } from '../i18n/index.js';
 import type { ColorScheme } from './colors.js';
 import type { SatoriNode } from './helpers.js';
 import { div, span } from './helpers.js';
 
-function errorBadge(type: string, c: ColorScheme): SatoriNode {
+function errorBadge(type: string, c: ColorScheme, locale: string = 'en'): SatoriNode {
   const isError = type === 'error';
   return span(
     {
@@ -15,11 +16,15 @@ function errorBadge(type: string, c: ColorScheme): SatoriNode {
       backgroundColor: isError ? 'rgba(239,68,68,0.12)' : 'rgba(234,179,8,0.12)',
       color: isError ? '#f87171' : c.amber,
     },
-    type.toUpperCase(),
+    type === 'error'
+      ? i18n('errors.error', locale)
+      : type === 'warning'
+        ? i18n('errors.warning', locale)
+        : type.toUpperCase(),
   );
 }
 
-export function renderErrors(data: SnapshotData, c: ColorScheme): SatoriNode | null {
+export function renderErrors(data: SnapshotData, c: ColorScheme, locale: string = 'en'): SatoriNode | null {
   const errors = data.recentErrors;
   if (!errors || errors.length === 0) {
     return null;
@@ -30,7 +35,7 @@ export function renderErrors(data: SnapshotData, c: ColorScheme): SatoriNode | n
   return div({ flexDirection: 'column', gap: 4, padding: '0 16px 12px' }, [
     span(
       { color: c.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', marginBottom: 2 },
-      'RECENT EVENTS',
+      i18n('errors.title', locale),
     ),
     ...displayed.map((e) => {
       const t = e.timestamp
@@ -51,7 +56,7 @@ export function renderErrors(data: SnapshotData, c: ColorScheme): SatoriNode | n
         },
         [
           span({ color: c.textDim, fontSize: 11, fontFamily: 'JetBrains Mono', flexShrink: 0, lineHeight: 1 }, t),
-          errorBadge(e.type || 'error', c),
+          errorBadge(e.type || 'error', c, locale),
           span(
             { color: c.textSecondary, fontSize: 12, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis' },
             msg,

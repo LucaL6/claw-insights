@@ -13,31 +13,58 @@ const log = createChildLogger('snapshot-sources');
 const VALID_RANGES = new Set<MetricsRangeKey>(Object.keys(RANGE_CONFIG) as MetricsRangeKey[]);
 
 export function createSnapshotSources(ctx: AppContext): DataSources {
+  // Channels are embedded in getGatewayStatus() response — cache to avoid duplicate CLI fork
+  let cachedChannels: Awaited<ReturnType<DataSources['getChannels']>> | null | undefined;
   return {
     getGateway: async () => {
-      log.debug('collecting gateway data');
+      const t0 = performance.now();
       try {
         const s = await ctx.gatewayClient.getGatewayStatus();
         const sys = await ctx.systemInfoService.getSystemMetrics();
-        log.debug('gateway data collected');
+        log.debug({ source: 'gateway', ms: Math.round(performance.now() - t0) }, 'collected');
+        // Stash channels from the same request so getChannels() doesn't re-fetch
+        cachedChannels = s.channels ?? [];
         return { ...s, cpu: sys.cpu, memoryMB: sys.memoryMB };
       } catch (err) {
         log.warn({ err }, 'failed to collect gateway data');
+        cachedChannels = null;
         throw err;
       }
     },
-    getChannels: async () => (await ctx.gatewayClient.getGatewayStatus()).channels,
+    getChannels: async () => {
+      // Reuse channels already fetched by getGateway() — avoids duplicate CLI fork
+      if (cachedChannels !== undefined) {
+        const result = cachedChannels;
+        cachedChannels = undefined; // one-shot
+        return result ?? [];
+      }
+      const t0 = performance.now();
+      const channels = (await ctx.gatewayClient.getGatewayStatus()).channels;
+      log.debug({ source: 'channels', ms: Math.round(performance.now() - t0) }, 'collected');
+      return channels;
+    },
     getSessions: () => {
+      const t0 = performance.now();
       ctx.sessionReader.attachSubAgents(ctx.spawnTracker.getParentChildMap());
-      return ctx.sessionReader.getSessions();
+      const result = ctx.sessionReader.getSessions();
+      log.debug({ source: 'sessions', ms: Math.round(performance.now() - t0) }, 'collected');
+      return result;
     },
     getMetrics: (range: string) => {
+      const t0 = performance.now();
       const validated: MetricsRangeKey = VALID_RANGES.has(range as MetricsRangeKey)
         ? (range as MetricsRangeKey)
         : 'TWENTY_FOUR_HOUR';
-      return ctx.aggregator.getMetrics(undefined, validated) as ReturnType<DataSources['getMetrics']>;
+      const result = ctx.aggregator.getMetrics(undefined, validated) as ReturnType<DataSources['getMetrics']>;
+      log.debug({ source: 'metrics', ms: Math.round(performance.now() - t0) }, 'collected');
+      return result;
     },
-    getRecentErrors: (limit: number) => queryEvents(ctx.db, { types: ['error', 'warning'], limit }),
+    getRecentErrors: (limit: number) => {
+      const t0 = performance.now();
+      const result = queryEvents(ctx.db, { types: ['error', 'warning'], limit });
+      log.debug({ source: 'recentErrors', ms: Math.round(performance.now() - t0) }, 'collected');
+      return result;
+    },
     getModelTokenUsage: (startTs: string, endTs: string) => getRangeModelTokenUsage(ctx.db, startTs, endTs),
     getTokenTrend: (rangeMinutes: number, endTs: string) => {
       const endMs = new Date(endTs).getTime();

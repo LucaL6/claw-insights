@@ -66,6 +66,12 @@ describe('renderFooter', () => {
     expect(texts.join(' ')).toContain('2026-02-26 14:30');
   });
 
+  it('renders Chinese version when locale is zh', () => {
+    const tree = renderFooter(makeData(), c, 'zh');
+    const texts = collectText(tree);
+    expect(texts.join(' ')).toContain('Claw Insights v');
+  });
+
   it('does not render Uptime', () => {
     const tree = renderFooter(makeData(), c);
     const texts = collectText(tree);

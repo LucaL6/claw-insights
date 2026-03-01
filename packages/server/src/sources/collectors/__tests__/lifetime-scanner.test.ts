@@ -1,15 +1,21 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { DatabaseSync } from 'node:sqlite';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { initDatabase } from '../../../db/init';
 import { type MessageEvent, MessageEventBus } from '../../../events/message-event-bus';
 import { TokenEventBus, type TokenUsageEvent } from '../../../events/token-event-bus';
-import { LifetimeScanner } from '../lifetime-scanner';
+import { createLifetimeScanner } from '../lifetime-scanner';
 
 function tmpDir() {
   return mkdtempSync(join(tmpdir(), 'lifetime-test-'));
+}
+
+function tmpDb(dir: string): DatabaseSync {
+  return initDatabase(join(dir, 'test.db'));
 }
 
 function writeLine(obj: Record<string, unknown>): string {
@@ -28,12 +34,15 @@ function makeDeviceJson(dir: string, createdAtMs: number): string {
   return file;
 }
 
+// Unique counter to avoid content_hash collisions in DB
+let msgSeq = 0;
+
 // Helper to build transcript lines
 const userMsg = (ts?: string) =>
   writeLine({
     type: 'message',
     timestamp: ts ?? '2025-06-01T00:00:00Z',
-    message: { role: 'user', content: 'hello' },
+    message: { role: 'user', content: `hello-${++msgSeq}` },
   });
 
 const assistantMsg = (usage?: Record<string, number>, ts?: string) =>
@@ -65,20 +74,23 @@ const sessionLine = (ts?: string) =>
 describe('LifetimeScanner', () => {
   let dir: string;
   let deviceDir: string;
+  let db: DatabaseSync;
 
   beforeEach(() => {
     dir = tmpDir();
     deviceDir = tmpDir();
+    db = tmpDb(dir);
   });
 
   afterEach(() => {
+    db.close();
     rmSync(dir, { recursive: true, force: true });
     rmSync(deviceDir, { recursive: true, force: true });
   });
 
   // -- Test 1: Empty directory
   it('returns zeros for empty directory', async () => {
-    const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+    const scanner = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: join(deviceDir, 'device.json') });
     await scanner.init();
     const stats = await scanner.getStats();
     expect(stats.isReady).toBe(true);
@@ -90,7 +102,11 @@ describe('LifetimeScanner', () => {
 
   // -- Test 2: Non-existent directory
   it('handles non-existent directory gracefully', async () => {
-    const scanner = new LifetimeScanner('/nonexistent/path', join(deviceDir, 'device.json'));
+    const scanner = createLifetimeScanner({
+      db,
+      transcriptsDir: '/nonexistent/path',
+      deviceJsonPath: join(deviceDir, 'device.json'),
+    });
     await scanner.init();
     const stats = await scanner.getStats();
     expect(stats.isReady).toBe(true);
@@ -121,7 +137,7 @@ describe('LifetimeScanner', () => {
       assistantMsg({ input: 50, output: 25, cacheRead: 5, cacheWrite: 2 }),
     ]);
 
-    const scanner = new LifetimeScanner(dir, deviceJson);
+    const scanner = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: deviceJson });
     await scanner.init();
     const stats = await scanner.getStats();
 
@@ -146,7 +162,7 @@ describe('LifetimeScanner', () => {
       userMsg(),
     ]);
 
-    const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+    const scanner = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: join(deviceDir, 'device.json') });
     await scanner.init();
     const stats = await scanner.getStats();
 
@@ -170,7 +186,7 @@ describe('LifetimeScanner', () => {
       assistantMsg({ input: 50, output: 25 }),
     ]);
 
-    const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+    const scanner = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: join(deviceDir, 'device.json') });
     await scanner.init();
     const stats = await scanner.getStats();
 
@@ -189,7 +205,7 @@ describe('LifetimeScanner', () => {
       assistantMsg({ input: 100, output: 50 }),
     ]);
 
-    const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+    const scanner = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: join(deviceDir, 'device.json') });
     await scanner.init();
     const stats = await scanner.getStats();
 
@@ -202,7 +218,7 @@ describe('LifetimeScanner', () => {
     writeFileSync(join(dir, 'empty.jsonl'), '');
     makeTranscript(dir, 'valid.jsonl', [userMsg(), assistantMsg({ input: 10, output: 5 })]);
 
-    const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+    const scanner = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: join(deviceDir, 'device.json') });
     await scanner.init();
     const stats = await scanner.getStats();
 
@@ -219,7 +235,11 @@ describe('LifetimeScanner', () => {
       makeTranscript(dir, 'a.jsonl', [userMsg()]);
       makeTranscript(dir, 'b.jsonl', [userMsg()]);
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+      });
       await scanner.init();
 
       const states = scanner.getFileStates();
@@ -234,7 +254,11 @@ describe('LifetimeScanner', () => {
     it('returns a clone (does not share internal state)', async () => {
       makeTranscript(dir, 'x.jsonl', [userMsg()]);
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+      });
       await scanner.init();
 
       const states = scanner.getFileStates();
@@ -251,7 +275,11 @@ describe('LifetimeScanner', () => {
     it('returns instant result without I/O after init', async () => {
       makeTranscript(dir, 'instant.jsonl', [userMsg(), assistantMsg({ input: 100, output: 50 })]);
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+      });
       await scanner.init();
 
       const stats = await scanner.getStats();
@@ -272,7 +300,7 @@ describe('LifetimeScanner', () => {
 
       makeTranscript(dir, 'old.jsonl', [writeLine({ type: 'session', timestamp: olderTs }), userMsg(olderTs)]);
 
-      const scanner = new LifetimeScanner(dir, deviceJson);
+      const scanner = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: deviceJson });
       await scanner.init();
       const stats = await scanner.getStats();
 
@@ -284,7 +312,7 @@ describe('LifetimeScanner', () => {
       const deviceMs = new Date('2025-03-15T00:00:00Z').getTime();
       const deviceJson = makeDeviceJson(deviceDir, deviceMs);
 
-      const scanner = new LifetimeScanner(dir, deviceJson);
+      const scanner = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: deviceJson });
       await scanner.init();
       const stats = await scanner.getStats();
 
@@ -306,7 +334,7 @@ describe('LifetimeScanner', () => {
         writeLine({ type: 'message', timestamp: earlyTs, message: { role: 'user', content: 'hi' } }),
       ]);
 
-      const scanner = new LifetimeScanner(dir, deviceJson);
+      const scanner = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: deviceJson });
       await scanner.init();
       const stats = await scanner.getStats();
 
@@ -335,13 +363,13 @@ describe('LifetimeScanner', () => {
       const deviceJson = makeDeviceJson(deviceDir, new Date('2025-01-01T00:00:00Z').getTime());
 
       // First scan
-      const scanner1 = new LifetimeScanner(dir, deviceJson);
+      const scanner1 = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: deviceJson });
       await scanner1.init();
       const stats1 = await scanner1.getStats();
       scanner1.destroy();
 
-      // "Restart" — new instance, same data
-      const scanner2 = new LifetimeScanner(dir, deviceJson);
+      // "Restart" — new instance, same data & same DB
+      const scanner2 = createLifetimeScanner({ db, transcriptsDir: dir, deviceJsonPath: deviceJson });
       await scanner2.init();
       const stats2 = await scanner2.getStats();
       scanner2.destroy();
@@ -383,7 +411,12 @@ describe('LifetimeScanner', () => {
         }),
       ]);
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), undefined, bus);
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        messageBus: bus,
+      });
       await scanner.init();
 
       expect(events).toEqual([
@@ -414,7 +447,12 @@ describe('LifetimeScanner', () => {
         assistantMsgWithModel({ input: 200, output: 80 }, 'claude-opus-4-6', '2025-06-01T00:02:00Z'),
       ]);
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), bus);
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        tokenBus: bus,
+      });
       await scanner.init();
 
       expect(events.length).toBe(2);
@@ -448,7 +486,12 @@ describe('LifetimeScanner', () => {
         }),
       ]);
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), bus);
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        tokenBus: bus,
+      });
       await scanner.init();
 
       expect(events.length).toBe(1);
@@ -478,7 +521,12 @@ describe('LifetimeScanner', () => {
         }),
       ]);
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), bus);
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        tokenBus: bus,
+      });
       await scanner.init();
 
       expect(events.length).toBe(0);
@@ -493,10 +541,184 @@ describe('LifetimeScanner', () => {
 
       makeTranscript(dir, 'sess-user.jsonl', [sessionLine(), userMsg(), userMsg(), userMsg()]);
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'), bus);
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+        tokenBus: bus,
+      });
       await scanner.init();
 
       expect(events.length).toBe(0);
+    });
+  });
+
+  describe('incremental scan (warm restart)', () => {
+    it('skips unchanged files on second init', async () => {
+      const d = tmpDir();
+      const dd = tmpDir();
+      const ddb = tmpDb(d);
+      const deviceJson = makeDeviceJson(dd, Date.now());
+
+      makeTranscript(d, 'sess.jsonl', [sessionLine(), userMsg(), assistantMsg({ input: 100, output: 50 })]);
+
+      const s1 = createLifetimeScanner({ db: ddb, transcriptsDir: d, deviceJsonPath: deviceJson });
+      await s1.init();
+      const stats1 = await s1.getStats();
+      expect(stats1.totalUserMessages).toBe(1);
+      s1.destroy();
+
+      const t0 = performance.now();
+      const s2 = createLifetimeScanner({ db: ddb, transcriptsDir: d, deviceJsonPath: deviceJson });
+      await s2.init();
+      const elapsed = performance.now() - t0;
+      const stats2 = await s2.getStats();
+
+      expect(stats2.totalUserMessages).toBe(1);
+      expect(stats2.totalInputTokens).toBe(100);
+      expect(elapsed).toBeLessThan(500);
+      s2.destroy();
+
+      ddb.close();
+      rmSync(d, { recursive: true, force: true });
+      rmSync(dd, { recursive: true, force: true });
+    });
+
+    it('picks up appended content on restart', async () => {
+      const d = tmpDir();
+      const dd = tmpDir();
+      const ddb = tmpDb(d);
+      const deviceJson = makeDeviceJson(dd, Date.now());
+
+      const file = makeTranscript(d, 'sess.jsonl', [
+        sessionLine(),
+        userMsg('2025-06-01T00:00:00Z'),
+        assistantMsg({ input: 100, output: 50 }),
+      ]);
+
+      const s1 = createLifetimeScanner({ db: ddb, transcriptsDir: d, deviceJsonPath: deviceJson });
+      await s1.init();
+      expect((await s1.getStats()).totalUserMessages).toBe(1);
+      s1.destroy();
+
+      // Append new content
+      appendFileSync(file, userMsg('2025-06-01T00:02:00Z') + '\n');
+      appendFileSync(file, assistantMsg({ input: 200, output: 80 }, '2025-06-01T00:03:00Z') + '\n');
+
+      const s2 = createLifetimeScanner({ db: ddb, transcriptsDir: d, deviceJsonPath: deviceJson });
+      await s2.init();
+      const stats2 = await s2.getStats();
+
+      expect(stats2.totalUserMessages).toBe(2);
+      expect(stats2.totalInputTokens).toBe(300);
+      s2.destroy();
+
+      ddb.close();
+      rmSync(d, { recursive: true, force: true });
+      rmSync(dd, { recursive: true, force: true });
+    });
+
+    it('handles deleted files gracefully', async () => {
+      const d = tmpDir();
+      const dd = tmpDir();
+      const ddb = tmpDb(d);
+      const deviceJson = makeDeviceJson(dd, Date.now());
+
+      const file = makeTranscript(d, 'sess.jsonl', [
+        sessionLine(),
+        userMsg(),
+        assistantMsg({ input: 100, output: 50 }),
+      ]);
+
+      const s1 = createLifetimeScanner({ db: ddb, transcriptsDir: d, deviceJsonPath: deviceJson });
+      await s1.init();
+      expect((await s1.getStats()).totalUserMessages).toBe(1);
+      s1.destroy();
+
+      // Delete the file
+      rmSync(file);
+
+      const s2 = createLifetimeScanner({ db: ddb, transcriptsDir: d, deviceJsonPath: deviceJson });
+      await s2.init();
+      const stats2 = await s2.getStats();
+
+      // Events persist in DB
+      expect(stats2.totalUserMessages).toBe(1);
+      expect(stats2.totalInputTokens).toBe(100);
+      s2.destroy();
+
+      ddb.close();
+      rmSync(d, { recursive: true, force: true });
+      rmSync(dd, { recursive: true, force: true });
+    });
+
+    it('rescans replaced file (different inode)', async () => {
+      const d = tmpDir();
+      const dd = tmpDir();
+      const ddb = tmpDb(d);
+      const deviceJson = makeDeviceJson(dd, Date.now());
+
+      makeTranscript(d, 'sess.jsonl', [
+        sessionLine(),
+        userMsg('2025-06-01T00:00:00Z'),
+        assistantMsg({ input: 100, output: 50 }, '2025-06-01T00:01:00Z'),
+      ]);
+
+      const s1 = createLifetimeScanner({ db: ddb, transcriptsDir: d, deviceJsonPath: deviceJson });
+      await s1.init();
+      expect((await s1.getStats()).totalUserMessages).toBe(1);
+      s1.destroy();
+
+      // Replace file (rm + recreate = different inode)
+      rmSync(join(d, 'sess.jsonl'));
+      makeTranscript(d, 'sess.jsonl', [
+        sessionLine(),
+        userMsg('2025-06-02T00:00:00Z'),
+        assistantMsg({ input: 500, output: 200 }, '2025-06-02T00:01:00Z'),
+        userMsg('2025-06-02T00:02:00Z'),
+        assistantMsg({ input: 300, output: 100 }, '2025-06-02T00:03:00Z'),
+      ]);
+
+      const s2 = createLifetimeScanner({ db: ddb, transcriptsDir: d, deviceJsonPath: deviceJson });
+      await s2.init();
+      const stats2 = await s2.getStats();
+
+      // 1 from original scan + 2 from replaced file (old events persist in DB)
+      expect(stats2.totalUserMessages).toBe(3);
+      expect(stats2.totalInputTokens).toBe(900); // 100 + 500 + 300
+      s2.destroy();
+
+      ddb.close();
+      rmSync(d, { recursive: true, force: true });
+      rmSync(dd, { recursive: true, force: true });
+    });
+
+    it('falls back to main thread when worker fails (>10 files cold start)', async () => {
+      const d = tmpDir();
+      const dd = tmpDir();
+      const ddb = tmpDb(d);
+      const deviceJson = makeDeviceJson(dd, Date.now());
+
+      for (let i = 0; i < 15; i++) {
+        makeTranscript(d, `session-${i}.jsonl`, [
+          sessionLine(`2025-06-${String(i + 1).padStart(2, '0')}T00:00:00Z`),
+          userMsg(`2025-06-${String(i + 1).padStart(2, '0')}T00:00:01Z`),
+          assistantMsg({ input: 10, output: 5 }, `2025-06-${String(i + 1).padStart(2, '0')}T00:00:02Z`),
+        ]);
+      }
+
+      const scanner = createLifetimeScanner({ db: ddb, transcriptsDir: d, deviceJsonPath: deviceJson });
+      await scanner.init();
+      const stats = await scanner.getStats();
+
+      expect(stats.totalSessions).toBe(15);
+      expect(stats.totalUserMessages).toBe(15);
+      expect(stats.totalInputTokens).toBe(150);
+      scanner.destroy();
+
+      ddb.close();
+      rmSync(d, { recursive: true, force: true });
+      rmSync(dd, { recursive: true, force: true });
     });
   });
 
@@ -507,20 +729,18 @@ describe('LifetimeScanner', () => {
         makeTranscript(dir, `session-yield-${i}.jsonl`, [sessionLine()]);
       }
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+      });
 
-      // Schedule a setImmediate AFTER init starts (not before).
-      // If scanAll yields during scanning, this callback will fire
-      // before init resolves. If scanAll blocks, it will fire after.
       const initPromise = scanner.init();
 
-      // Wait one tick for scanner's own setImmediate to fire and scanAll to start
       await new Promise<void>((resolve) => {
         setImmediate(resolve);
       });
 
-      // Now schedule another setImmediate — this should fire during scan
-      // (between yield batches) if scanAll yields properly
       let yieldedDuringScan = false;
       setImmediate(() => {
         yieldedDuringScan = true;
@@ -540,16 +760,17 @@ describe('LifetimeScanner', () => {
         makeTranscript(dir, `session-abort-${i}.jsonl`, [sessionLine()]);
       }
 
-      const scanner = new LifetimeScanner(dir, join(deviceDir, 'device.json'));
+      const scanner = createLifetimeScanner({
+        db,
+        transcriptsDir: dir,
+        deviceJsonPath: join(deviceDir, 'device.json'),
+      });
 
-      // Start init, then destroy during a yield point
       const initPromise = scanner.init();
 
-      // Wait for scanner's setImmediate + scanAll to start
       await new Promise<void>((resolve) => {
         setImmediate(resolve);
       });
-      // Destroy while scanning (will take effect at next yield check)
       scanner.destroy();
 
       await initPromise;

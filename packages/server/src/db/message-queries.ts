@@ -22,12 +22,14 @@ export function insertMessageEvent(db: Database, event: MessageEventRecord): voi
   stmt.run(event.timestamp, event.sessionKey, event.role, hash);
 }
 
-export function insertMessageEventBatch(db: Database, events: MessageEventRecord[]): void {
+export function insertMessageEventBatch(db: Database, events: MessageEventRecord[], inTransaction = true): void {
   if (events.length === 0) {
     return;
   }
 
-  db.exec('BEGIN');
+  if (inTransaction) {
+    db.exec('BEGIN');
+  }
   try {
     const stmt = cached(
       db,
@@ -37,9 +39,13 @@ export function insertMessageEventBatch(db: Database, events: MessageEventRecord
       const hash = contentHash(e.timestamp, e.sessionKey, `${e.role}|${e.lineHash}`);
       stmt.run(e.timestamp, e.sessionKey, e.role, hash);
     }
-    db.exec('COMMIT');
+    if (inTransaction) {
+      db.exec('COMMIT');
+    }
   } catch (err) {
-    db.exec('ROLLBACK');
+    if (inTransaction) {
+      db.exec('ROLLBACK');
+    }
     throw err;
   }
 }

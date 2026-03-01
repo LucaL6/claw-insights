@@ -94,6 +94,7 @@ app.get(
         return false;
       }
     },
+    checkReady: () => ctx.lifetimeScanner.isReady(),
   }),
 );
 

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# E2E mock OpenClaw CLI — returns deterministic fixture data.
+# Responds to: status --json, gateway status, gateway usage-cost, --version
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+CMD="${1:-}"
+shift || true
+
+case "$CMD" in
+  status)
+    JSON_FLAG=false
+    for arg in "$@"; do
+      [ "$arg" = "--json" ] && JSON_FLAG=true
+    done
+    if [ "$JSON_FLAG" = true ]; then
+      cat "$SCRIPT_DIR/openclaw-status.json"
+    else
+      echo "OpenClaw gateway is running (e2e-mock)"
+    fi
+    ;;
+  gateway)
+    SUB="${1:-}"
+    case "$SUB" in
+      status)
+        echo "Gateway is running (e2e-mock)"
+        ;;
+      usage-cost)
+        cat <<'EOF'
+Latest day: 2026-03-01  $0.50 · 0.10m tokens
+Total: $10.00 · 2.00m tokens
+EOF
+        ;;
+      *)
+        echo "e2e-mock: gateway $SUB not implemented" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  --version|-v)
+    echo "2026.3.1-0 (e2e-mock)"
+    ;;
+  *)
+    echo "e2e-mock: command '$CMD' not implemented" >&2
+    exit 1
+    ;;
+esac

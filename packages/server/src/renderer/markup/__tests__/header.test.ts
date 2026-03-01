@@ -55,14 +55,14 @@ describe('renderHeader', () => {
   const c = DARK;
 
   it('renders OpenClaw brand name', () => {
-    const tree = renderHeader(makeData(), 'standard', c);
+    const tree = renderHeader(makeData(), 'standard', c, 'en');
     const texts = collectText(tree);
     expect(texts).toContain('OpenClaw');
     expect(texts.join(' ')).not.toContain('Claw Insights');
   });
 
   it('shows Online when gateway is up', () => {
-    const tree = renderHeader(makeData(), 'standard', c);
+    const tree = renderHeader(makeData(), 'standard', c, 'en');
     const texts = collectText(tree);
     expect(texts).toContain('Online');
   });
@@ -72,14 +72,38 @@ describe('renderHeader', () => {
       makeData({ gateway: { status: 'down', version: '0.1.0', uptime: '0', cpu: 0, memoryMB: 0 } }),
       'standard',
       c,
+      'en',
     );
     const texts = collectText(tree);
     expect(texts).toContain('Offline');
   });
 
-  it('shows range in subtitle', () => {
-    const tree = renderHeader(makeData(), 'standard', c);
+  it('shows English subtitle with expanded range', () => {
+    const tree = renderHeader(makeData(), 'standard', c, 'en');
     const texts = collectText(tree);
-    expect(texts.join(' ')).toContain('Past 6h Stats');
+    expect(texts.join(' ')).toContain('Last 6 Hours');
+  });
+
+  it('shows Chinese subtitle', () => {
+    const tree = renderHeader(makeData(), 'standard', c, 'zh');
+    const texts = collectText(tree);
+    expect(texts.join(' ')).toContain('最近 6 小时');
+  });
+
+  it('shows Chinese Online status', () => {
+    const tree = renderHeader(makeData(), 'standard', c, 'zh');
+    const texts = collectText(tree);
+    expect(texts).toContain('在线');
+  });
+
+  it('shows Chinese Offline status', () => {
+    const tree = renderHeader(
+      makeData({ gateway: { status: 'down', version: '0.1.0', uptime: '0', cpu: 0, memoryMB: 0 } }),
+      'standard',
+      c,
+      'zh',
+    );
+    const texts = collectText(tree);
+    expect(texts).toContain('离线');
   });
 });

@@ -8,6 +8,7 @@ describe('health handler', () => {
       serverOnly: false,
       checkGateway: async () => true,
       checkDb: () => true,
+      checkReady: () => true,
     });
 
     const json = vi.fn();
@@ -29,6 +30,7 @@ describe('health handler', () => {
       serverOnly: true,
       checkGateway: async () => false,
       checkDb: () => true,
+      checkReady: () => true,
     });
 
     const json = vi.fn();
@@ -46,6 +48,7 @@ describe('health handler', () => {
       serverOnly: false,
       checkGateway: async () => true,
       checkDb: () => false,
+      checkReady: () => true,
     });
 
     const json = vi.fn();
@@ -53,6 +56,27 @@ describe('health handler', () => {
 
     const body = json.mock.calls[0][0];
     expect(body.db).toBe('error');
+  });
+
+  it('returns starting status when not ready (skips gateway check)', async () => {
+    const { createHealthHandler } = await import('../health.js');
+    const checkGateway = vi.fn(async () => true);
+    const handler = createHealthHandler({
+      version: '0.1.0',
+      serverOnly: false,
+      checkGateway,
+      checkDb: () => true,
+      checkReady: () => false,
+    });
+
+    const json = vi.fn();
+    await handler({} as unknown as import('express').Request, { json } as unknown as import('express').Response);
+
+    const body = json.mock.calls[0][0];
+    expect(body.status).toBe('starting');
+    expect(body.gateway).toBe('pending');
+    expect(body.db).toBe('ok');
+    expect(checkGateway).not.toHaveBeenCalled();
   });
 
   it('returns gateway disconnected when checkGateway throws (L15 catch)', async () => {
@@ -64,6 +88,7 @@ describe('health handler', () => {
         throw new Error('connection refused');
       },
       checkDb: () => true,
+      checkReady: () => true,
     });
 
     const json = vi.fn();

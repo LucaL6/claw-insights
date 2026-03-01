@@ -3,6 +3,7 @@ import { useQuery } from 'urql';
 
 import type { ProcessedEvent } from '../components/logs/EventRow';
 import { EventCountsQuery, EventDensityQuery, EventsQuery } from '../graphql/events-queries';
+import { useI18n } from '../i18n/context';
 import type { Route } from './useHashRoute';
 import { useHashRoute } from './useHashRoute';
 
@@ -101,6 +102,8 @@ export function processEvents(events: RawEvent[]): ProcessedEvent[] {
 
 export function useLogPageData(route: Route) {
   const { navigate } = useHashRoute();
+  const { lang } = useI18n();
+  const locale = lang === 'zh' ? 'zh-CN' : 'en-GB';
 
   // Parse URL params
   const urlFrom = route.params.from ? Number(route.params.from) : undefined;
@@ -184,16 +187,30 @@ export function useLogPageData(route: Route) {
     return processEvents(filtered);
   }, [events, parsed]);
 
-  // Time label
+  // Time label — includes date when range spans across days
   const timeLabel = useMemo(() => {
     if (!urlFrom || !urlTo) {
       return undefined;
     }
     const f = new Date(urlFrom * 1000);
     const t = new Date(urlTo * 1000);
-    const fmt = (d: Date) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-    return `${fmt(f)} → ${fmt(t)}`;
-  }, [urlFrom, urlTo]);
+    const now = new Date();
+    const fmtTime = (d: Date) => d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
+    const fmtDate = (d: Date) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+
+    const isToday = (d: Date) =>
+      d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+
+    const sameDay = f.getFullYear() === t.getFullYear() && f.getMonth() === t.getMonth() && f.getDate() === t.getDate();
+
+    if (sameDay && isToday(f)) {
+      return `${fmtTime(f)} → ${fmtTime(t)}`;
+    }
+    if (sameDay) {
+      return `${fmtDate(f)} ${fmtTime(f)} → ${fmtTime(t)}`;
+    }
+    return `${fmtDate(f)} ${fmtTime(f)} → ${fmtDate(t)} ${fmtTime(t)}`;
+  }, [urlFrom, urlTo, locale]);
 
   return {
     activeTypes,

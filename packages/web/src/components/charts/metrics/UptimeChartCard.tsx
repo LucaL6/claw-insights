@@ -7,7 +7,7 @@ import { ChartCard } from '../core/ChartCard';
 import { UptimeStrip } from '../UptimeStrip';
 import { getTooltips } from './metricsTooltips';
 import { PreviewCard } from './PreviewCard';
-import type { PreviewEvents,PreviewState } from './types';
+import type { PreviewEvents, PreviewState } from './types';
 
 interface Props {
   buckets: BucketData[];
@@ -33,7 +33,7 @@ export function UptimeChartCard({
 
   return (
     <>
-      <ChartCard accent="uptime">
+      <ChartCard>
         <div className="flex items-center justify-between mb-2">
           <span className="text-[13px] font-semibold text-fg-muted">
             {t('metrics.uptime')}

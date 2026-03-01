@@ -6,14 +6,25 @@ import type { SatoriNode } from '../helpers.js';
 import { renderSessions } from '../sessions.js';
 
 function collectText(node: SatoriNode | string | unknown): string[] {
-  if (typeof node === 'string') {return [node];}
-  if (typeof node === 'number') {return [String(node)];}
-  if (!node || typeof node !== 'object') {return [];}
+  if (typeof node === 'string') {
+    return [node];
+  }
+  if (typeof node === 'number') {
+    return [String(node)];
+  }
+  if (!node || typeof node !== 'object') {
+    return [];
+  }
   const n = node as SatoriNode;
   const results: string[] = [];
   const children = n.props?.children;
-  if (typeof children === 'string') {results.push(children);}
-  else if (Array.isArray(children)) {for (const c of children) {results.push(...collectText(c));}}
+  if (typeof children === 'string') {
+    results.push(children);
+  } else if (Array.isArray(children)) {
+    for (const c of children) {
+      results.push(...collectText(c));
+    }
+  }
   return results;
 }
 
@@ -76,6 +87,30 @@ describe('renderSessions branches', () => {
     const tree = renderSessions(data, 'standard', DARK)!;
     const texts = collectText(tree);
     expect(texts).toContain('3 sub');
+  });
+
+  it('renders Chinese labels when locale is zh', () => {
+    const data = {
+      sessions: [
+        {
+          name: 'main',
+          status: 'active',
+          model: 'claude',
+          modelDisplay: 'Claude',
+          channel: 'telegram',
+          totalTokens: 1000,
+          totalTokensDisplay: '1k',
+          usagePercent: 50,
+          updatedAt: '2m ago',
+          subAgentCount: 0,
+          turnCount: 0,
+        },
+      ],
+    } as unknown as SnapshotData;
+    const tree = renderSessions(data, 'standard', DARK, 'zh')!;
+    const texts = collectText(tree);
+    expect(texts).toContain('会话');
+    expect(texts.join(' ')).toContain('活跃');
   });
 
   it('uses model name when modelDisplay is empty', () => {

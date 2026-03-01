@@ -55,13 +55,11 @@ const mockSources: DataSources = {
 };
 
 const defaultParams: SnapshotRequest = {
-  layout: 'desktop',
   detail: 'standard',
   format: 'png',
   range: '6h',
   theme: 'dark',
   lang: 'en',
-  section: 'dashboard',
 };
 
 afterEach(() => {

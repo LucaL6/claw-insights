@@ -17,7 +17,7 @@ vi.mock('node:fs', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs')>();
   return {
     ...original,
-    writeFileSync: vi.fn(original.writeFileSync),
+    writeFileSync: vi.fn(),
   };
 });
 
@@ -51,15 +51,13 @@ describe('runSnapshotCmd', () => {
     expect(output).toContain('range: 6h');
     expect(output).toContain('theme: dark');
     expect(output).toContain('lang: en');
-    expect(output).toContain('layout: desktop');
   });
 
-  it('--dry-run with --quick shows compact + mobile', async () => {
+  it('--dry-run with --quick shows compact', async () => {
     await runSnapshotCmd(['--dry-run', '--quick']);
 
     const output = logSpy.mock.calls.map((c: string[]) => c.join(' ')).join('\n');
     expect(output).toContain('detail: compact');
-    expect(output).toContain('layout: mobile');
   });
 
   // ── fetch error (server not running) ──

@@ -96,9 +96,15 @@ describe('renderTokenUsage', () => {
     expect(texts).not.toContain('undefined');
   });
 
+  it('renders Chinese title when locale is zh', () => {
+    const tree = renderTokenUsage(makeData(), 'standard', DARK, 'zh');
+    const texts = collectText(tree);
+    expect(texts).toContain('TOKEN 用量');
+  });
+
   it('handles tokensDisplay without unit suffix', () => {
     const data = makeData();
-    data.summary.tokensDisplay = '500';
+    data.summary!.tokensDisplay = '500';
     const tree = renderTokenUsage(data, 'standard', DARK);
     const texts = collectText(tree);
     expect(texts).toContain('500');

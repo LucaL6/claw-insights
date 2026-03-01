@@ -322,8 +322,13 @@ describe('SessionReader branches', () => {
       'agent:main:new': { sessionId: 'n', updatedAt: Date.now(), chatType: 'direct' },
     });
 
-    // Wait for debounced reload (watcher + 300ms debounce + margin)
-    await new Promise((r) => setTimeout(r, 1500));
+    // Wait for fs.watch + 300ms debounce; retry for poll fallback (5s interval)
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      if (reader.getSessions().length === 2) {
+        break;
+      }
+    }
     expect(reader.getSessions().length).toBe(2);
     reader.destroy();
   });

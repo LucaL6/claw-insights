@@ -13,7 +13,7 @@ import { createChildLogger } from './logger.js';
 import { Pipeline } from './pipeline/index.js';
 import { loadPlatform } from './platforms/index.js';
 import { Aggregator } from './sources/aggregator.js';
-import { LifetimeScanner } from './sources/collectors/lifetime-scanner.js';
+import { createLifetimeScanner, type LifetimeScanner } from './sources/collectors/lifetime-scanner.js';
 import { createLogIngester } from './sources/collectors/log-ingester.js';
 import { LogTailer } from './sources/collectors/log-tailer.js';
 import { SystemSampler } from './sources/collectors/metrics-collector.js';
@@ -111,7 +111,13 @@ export async function createContext(): Promise<AppContext> {
     aggregateIntervalMs: config.aggregateIntervalMs,
   });
 
-  const lifetimeScanner = new LifetimeScanner(config.transcriptsDir, config.deviceJsonPath, tokenBus, messageBus);
+  const lifetimeScanner = createLifetimeScanner({
+    db,
+    transcriptsDir: config.transcriptsDir,
+    deviceJsonPath: config.deviceJsonPath,
+    tokenBus,
+    messageBus,
+  });
 
   const ingestLog = createLogIngester(db);
 

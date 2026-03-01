@@ -36,6 +36,7 @@ const BASE_RESULT: SnapshotResult = {
   contentType: 'image/png',
   detail: 'standard',
   degraded: false,
+  degradedSources: [],
   durationMs: 42,
 };
 
@@ -110,11 +111,45 @@ describe('createSnapshotHandler', () => {
       ...BASE_RESULT,
       detail: 'compact',
       degraded: true,
+      degradedSources: [],
     });
     const handler = createSnapshotHandler(engine);
     const res = mockRes();
     await handler({ body: { detail: 'full' } } as unknown as Request, res);
     expect(res.set).toHaveBeenCalledWith('X-Snapshot-Degraded', expect.stringContaining('compact'));
+  });
+
+  it('sets X-Snapshot-Degraded-Sources header when sources degraded (PNG)', async () => {
+    executeMock.mockResolvedValue({
+      ...BASE_RESULT,
+      degradedSources: ['gateway', 'channels'],
+    });
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    expect(res.set).toHaveBeenCalledWith('X-Snapshot-Degraded-Sources', 'gateway,channels');
+  });
+
+  it('sets X-Snapshot-Degraded-Sources header when sources degraded (JSON)', async () => {
+    executeMock.mockResolvedValue({
+      ...BASE_RESULT,
+      format: 'json',
+      output: { gateway: null },
+      contentType: 'application/json',
+      degradedSources: ['gateway', 'companionDays'],
+    });
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: { format: 'json' } } as unknown as Request, res);
+    expect(res.set).toHaveBeenCalledWith('X-Snapshot-Degraded-Sources', 'gateway,companionDays');
+  });
+
+  it('omits X-Snapshot-Degraded-Sources header when no degradation', async () => {
+    const handler = createSnapshotHandler(engine);
+    const res = mockRes();
+    await handler({ body: {} } as unknown as Request, res);
+    const degradedCall = (res.set as Mock).mock.calls.find((c: string[]) => c[0] === 'X-Snapshot-Degraded-Sources');
+    expect(degradedCall).toBeUndefined();
   });
 
   it('returns 429 with Retry-After when rate limited', async () => {

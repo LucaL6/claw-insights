@@ -41,17 +41,12 @@ describe('snapshot performance', () => {
     expect(elapsed).toBeLessThan(500);
   });
 
-  it('gateway + channels run concurrently, not sequentially', async () => {
-    const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  it('gateway failure makes channels null', async () => {
     const mockSources = {
-      getGateway: vi.fn().mockImplementation(async () => {
-        await delay(100);
-        return { running: true, version: '1.0.0', uptime: '1d', cpu: 5, memoryMB: 128 };
-      }),
-      getChannels: vi.fn().mockImplementation(async () => {
-        await delay(100);
-        return [];
-      }),
+      getGateway: vi.fn().mockRejectedValue(new Error('connection refused')),
+      getChannels: vi
+        .fn()
+        .mockResolvedValue([{ provider: 'discord', name: 'Discord', connected: true, latencyMs: 10 }]),
       getSessions: vi.fn().mockReturnValue([]),
       getMetrics: vi.fn().mockReturnValue({
         totalTokensK: 0,
@@ -60,7 +55,7 @@ describe('snapshot performance', () => {
         uptimePercent: 100,
         buckets: [],
       }),
-      getRecentErrors: vi.fn().mockReturnValue([]),
+      getRecentErrors: vi.fn().mockReturnValue({ events: [], total: 0, counts: { error: 0, warning: 0, restart: 0 } }),
       getModelTokenUsage: vi.fn().mockReturnValue([]),
       getTokenTrend: vi.fn().mockReturnValue(null),
       getTurnCounts: vi.fn().mockReturnValue({ total: 0, bySession: [] }),
@@ -69,17 +64,17 @@ describe('snapshot performance', () => {
       getRangeMessageCount: () => 0,
     };
 
-    const start = performance.now();
-    await buildSnapshotData(mockSources as unknown as import('../services/snapshot-types.js').DataSources, {
-      detail: 'compact',
-      range: 'ONE_HOUR',
-    });
-    const elapsed = performance.now() - start;
+    const result = await buildSnapshotData(
+      mockSources as unknown as import('../services/snapshot-types.js').DataSources,
+      {
+        detail: 'compact',
+        range: 'ONE_HOUR',
+      },
+    );
 
-    // If parallel: ~100ms. If sequential: ~200ms. Allow margin.
-    expect(elapsed).toBeLessThan(180);
-    expect(mockSources.getGateway).toHaveBeenCalledOnce();
-    expect(mockSources.getChannels).toHaveBeenCalledOnce();
+    expect(result.gateway).toBeNull();
+    expect(result.channels).toBeNull();
+    expect(mockSources.getChannels).not.toHaveBeenCalled();
   });
 
   it('snapshot uses app version, not gateway CLI version', async () => {
@@ -115,7 +110,7 @@ describe('snapshot performance', () => {
     );
 
     // Should use Claw-Insights app version, not mocked gateway version
-    expect(result.gateway.version).toBe(getAppVersion());
-    expect(result.gateway.version).not.toBe('99.99.99');
+    expect(result.gateway!.version).toBe(getAppVersion());
+    expect(result.gateway!.version).not.toBe('99.99.99');
   });
 });

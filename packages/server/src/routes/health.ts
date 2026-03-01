@@ -10,10 +10,28 @@ interface HealthOptions {
   serverOnly: boolean;
   checkGateway: () => Promise<boolean>;
   checkDb: () => boolean;
+  checkReady: () => boolean;
 }
 
 export function createHealthHandler(opts: HealthOptions) {
   return async (_req: Request, res: Response) => {
+    const ready = opts.checkReady();
+
+    // During startup: respond immediately without slow gateway check
+    // so the CLI spinner doesn't stall waiting for event-loop-blocked I/O
+    if (!ready) {
+      const dbOk = opts.checkDb();
+      res.json({
+        status: 'starting',
+        version: opts.version,
+        uptime: Math.floor((Date.now() - startTime) / 1000),
+        mode: opts.serverOnly ? 'server-only' : 'full',
+        gateway: 'pending',
+        db: dbOk ? 'ok' : 'error',
+      });
+      return;
+    }
+
     const [gatewayOk, dbOk] = await Promise.all([
       opts.checkGateway().catch(() => false),
       Promise.resolve(opts.checkDb()),

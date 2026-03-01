@@ -4,7 +4,11 @@ import { Sparkline, StatusBadge, Tag, UptimeStrip } from '../helpers.js';
 
 describe('helpers branches', () => {
   it('StatusBadge renders UP when isUp=true', () => {
-    const badge = StatusBadge(true, { emerald: '#10b981', emeraldBg: '#10b98120', red: '#ef4444', redBg: '#ef444420' });
+    const badge = StatusBadge(
+      true,
+      { emerald: '#10b981', emeraldBg: '#10b98120', red: '#ef4444', redBg: '#ef444420' },
+      'en',
+    );
     const json = JSON.stringify(badge);
     expect(json).toContain('UP');
     expect(json).toContain('#10b981');

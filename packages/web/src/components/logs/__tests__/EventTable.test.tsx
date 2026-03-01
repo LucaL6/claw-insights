@@ -74,6 +74,62 @@ describe('EventTable', () => {
   });
 });
 
+describe('EventTable keyboard navigation', () => {
+  it('expands row on Enter key', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.keyDown(items[0], { key: 'Enter' });
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('expands row on Space key', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.keyDown(items[0], { key: ' ' });
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('collapses expanded row on Escape', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.keyDown(items[0], { key: 'Enter' });
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
+    fireEvent.keyDown(items[0], { key: 'Escape' });
+    expect(items[0].getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('moves focus down with ArrowDown', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.keyDown(items[0], { key: 'ArrowDown' });
+    // Second row should now have tabIndex=0
+    expect(items[1].getAttribute('tabindex')).toBe('0');
+  });
+
+  it('moves focus up with ArrowUp', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    // First move down then up
+    fireEvent.keyDown(items[0], { key: 'ArrowDown' });
+    fireEvent.keyDown(items[1], { key: 'ArrowUp' });
+    expect(items[0].getAttribute('tabindex')).toBe('0');
+  });
+
+  it('clamps ArrowDown at last item', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.keyDown(items[1], { key: 'ArrowDown' });
+    expect(items[1].getAttribute('tabindex')).toBe('0');
+  });
+
+  it('clamps ArrowUp at first item', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.keyDown(items[0], { key: 'ArrowUp' });
+    expect(items[0].getAttribute('tabindex')).toBe('0');
+  });
+});
+
 describe('formatGap', () => {
   it('formats minutes', () => {
     expect(formatGap(300)).toBe('5m');

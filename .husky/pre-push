@@ -1,16 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
-trap 'echo "❌ Checks failed. Push blocked."' ERR
+trap 'echo "❌ Pre-push checks failed. Push blocked."' ERR
 
-echo "🔍 Running ESLint..."
+# ── Mirror CI: lint job ──
+echo "🔍 ESLint (server)..."
 npm run -w @claw-insights/server lint
+
+echo "🔍 ESLint (web)..."
 npm run -w @claw-insights/web lint
 
-echo "🔨 Building (type-check)..."
+echo "🔍 Type Check (server)..."
+npm run -w @claw-insights/server typecheck
+
+# ── Mirror CI: test job ──
+echo "🔨 Build (codegen + all workspaces)..."
 npm run build
 
-echo "🧪 Running tests with coverage..."
-npm run -w @claw-insights/server test -- --coverage --exclude "**/satori*"
-npm run -w @claw-insights/web test -- --exclude "**/MetricsSection*"
+echo "🧪 Unit Tests with Coverage (server)..."
+npm run -w @claw-insights/server test -- --coverage
+
+echo "🧪 Unit Tests with Coverage (web)..."
+npm run -w @claw-insights/web test -- --coverage
 
 echo "✅ All checks passed."

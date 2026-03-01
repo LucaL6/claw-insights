@@ -18,20 +18,30 @@ interface EventRowProps {
   onKeyDown: (e: React.KeyboardEvent) => void;
 }
 
-function fmtTime(ts: string): string {
-  return new Date(ts).toLocaleTimeString('en-GB', {
+function fmtTime(ts: string, locale: string): string {
+  const d = new Date(ts);
+  const now = new Date();
+  const time = d.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
   });
+  const sameDay =
+    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  if (sameDay) {
+    return time;
+  }
+  const date = d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  return `${date} ${time}`;
 }
 
 const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function EventRowInner(
   { id, timestamp, type, module, message, expanded, tabIndex, repeatCount, repeatFirst, onToggle, onKeyDown },
   ref,
 ) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const locale = lang === 'zh' ? 'zh-CN' : 'en-GB';
   const style = EVENT_TYPE_MAP[type] ?? EVENT_TYPE_MAP.error;
   const detailRef = useRef<HTMLDivElement>(null);
 
@@ -49,19 +59,14 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
     >
       {/* Compact row */}
       <div className="flex items-center gap-2 py-1 px-2">
-        <span className="mono text-xs text-fg-muted shrink-0">{fmtTime(timestamp)}</span>
-        <span
-          className="mono text-[10px] font-bold shrink-0"
-          style={{ color: style.color }}
-        >
+        <span className="mono text-xs text-fg-muted shrink-0">{fmtTime(timestamp, locale)}</span>
+        <span className="mono text-[10px] font-bold shrink-0" style={{ color: style.color }}>
           {style.abbr}
         </span>
         <span className="mono text-[10px] px-1.5 py-0.5 rounded bg-elevated text-fg-dim border border-edge-subtle shrink-0 truncate max-w-[100px]">
           {module}
         </span>
-        <span className="mono text-xs text-fg-secondary min-w-0">
-          {message}
-        </span>
+        <span className="mono text-xs text-fg-secondary min-w-0">{message}</span>
         {repeatCount && repeatCount >= 2 && (
           <span className="mono text-[10px] text-fg-muted shrink-0">×{repeatCount}</span>
         )}
@@ -72,7 +77,9 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
         <div
           ref={(el) => {
             detailRef.current = el;
-            if (el) {el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });}
+            if (el) {
+              el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
           }}
           role="region"
           aria-labelledby={id}
@@ -84,9 +91,15 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
           <pre className="mono text-xs text-fg whitespace-pre-wrap break-words m-0">{message}</pre>
           <div className="flex items-center gap-3 mt-2 text-[10px] text-fg-muted mono">
             <span>{t('logs.detail.module', { name: module })}</span>
-            <span>{t('logs.detail.time', { time: fmtTime(timestamp) })}</span>
+            <span>{t('logs.detail.time', { time: fmtTime(timestamp, locale) })}</span>
             {repeatCount && repeatCount >= 2 && repeatFirst && (
-              <span>{t('logs.detail.repeat', { count: repeatCount, from: fmtTime(repeatFirst), to: fmtTime(timestamp) })}</span>
+              <span>
+                {t('logs.detail.repeat', {
+                  count: repeatCount,
+                  from: fmtTime(repeatFirst, locale),
+                  to: fmtTime(timestamp, locale),
+                })}
+              </span>
             )}
           </div>
         </div>

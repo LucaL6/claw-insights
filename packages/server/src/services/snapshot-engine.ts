@@ -32,6 +32,7 @@ export interface SnapshotResult {
   contentType: string;
   detail: Detail;
   degraded: boolean;
+  degradedSources: string[];
   durationMs: number;
 }
 
@@ -122,6 +123,7 @@ export class SnapshotEngine {
         contentType: 'application/json',
         detail: params.detail,
         degraded: false,
+        degradedSources: data._meta?.degradedSources ?? [],
         durationMs: Math.round(performance.now() - t0),
       };
     }
@@ -167,6 +169,7 @@ export class SnapshotEngine {
         contentType: rendered.contentType,
         detail,
         degraded,
+        degradedSources: data._meta?.degradedSources ?? [],
         durationMs: Math.round(performance.now() - t0),
       };
     });

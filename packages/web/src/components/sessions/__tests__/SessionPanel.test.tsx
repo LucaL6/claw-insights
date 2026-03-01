@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionData } from '../shared/types';
@@ -86,5 +86,41 @@ describe('SessionPanel', () => {
     // Active/All toggle buttons
     expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
     expect(screen.getAllByText('All').length).toBeGreaterThan(0);
+  });
+
+  it('switches view mode when "All" is clicked', () => {
+    const sessions = [makeSession()];
+    mockUseReactiveQuery.mockReturnValue([{ data: { sessions }, fetching: false, error: undefined }, vi.fn()]);
+
+    renderWithI18n(<SessionPanel />);
+    const allBtn = screen.getAllByText('All')[0];
+    fireEvent.click(allBtn);
+    // After clicking All, the query should be re-invoked with activeOnly=false
+    const lastCall = mockUseReactiveQuery.mock.calls.at(-1)?.[0];
+    expect(lastCall?.variables?.filter?.activeOnly).toBe(false);
+  });
+
+  it('switches sort mode when sort button is clicked', () => {
+    const sessions = [makeSession()];
+    mockUseReactiveQuery.mockReturnValue([{ data: { sessions }, fetching: false, error: undefined }, vi.fn()]);
+
+    renderWithI18n(<SessionPanel />);
+    // Click "Token" sort button (may appear multiple times due to re-render)
+    const tokenBtn = screen.getAllByText('Token')[0];
+    fireEvent.click(tokenBtn);
+    const lastCall = mockUseReactiveQuery.mock.calls.at(-1)?.[0];
+    expect(lastCall?.variables?.filter?.sortBy).toBe('TOKENS_DESC');
+  });
+
+  it('switches back to active view', () => {
+    const sessions = [makeSession()];
+    mockUseReactiveQuery.mockReturnValue([{ data: { sessions }, fetching: false, error: undefined }, vi.fn()]);
+
+    renderWithI18n(<SessionPanel />);
+    // Click All then Active
+    fireEvent.click(screen.getAllByText('All')[0]);
+    fireEvent.click(screen.getAllByText('Active')[0]);
+    const lastCall = mockUseReactiveQuery.mock.calls.at(-1)?.[0];
+    expect(lastCall?.variables?.filter?.activeOnly).toBe(true);
   });
 });

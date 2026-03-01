@@ -1,24 +1,32 @@
-import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
+import type { DatabaseSync as Database } from 'node:sqlite';
 
+import { insertMessageEventBatch } from '../../db/message-queries.js';
+import { cached } from '../../db/query-utils.js';
+import {
+  deleteScanState,
+  loadScanState,
+  queryLifetimeAggregates,
+  queryMinFirstTimestamp,
+  type ScanStateRow,
+  upsertScanState,
+} from '../../db/scan-state-queries.js';
+import { insertTokenUsageEventBatch } from '../../db/token-queries.js';
 import type { MessageEventBus } from '../../events/message-event-bus.js';
 import type { TokenEventBus } from '../../events/token-event-bus.js';
 import { createChildLogger } from '../../logger.js';
-import { createUsageNormalizer, parseLine } from './transcript-parser.js';
+import { classifyFiles, type FileState } from './file-classifier.js';
+import type { ParsedMessageEvent, ParsedTokenEvent } from './transcript-parser.js';
+import { scanFiles, type ScanSink } from './transcript-scanner.js';
 
 const log = createChildLogger('lifetime-scanner');
 
-/** Number of files to process before yielding to the event loop. */
-const YIELD_BATCH_SIZE = 30;
+// ── Re-exports (keep API surface for external consumers) ──
+
+export type { FileState } from './file-classifier.js';
+export type { ClassifyResult, FileToScan } from './file-classifier.js';
 
 // ── Types ──
-
-export interface FileState {
-  offset: number;
-  inode: number;
-  birthtimeMs: number;
-  partialLine: string;
-}
 
 export interface AggregatedStats {
   createdAtMs: number;
@@ -45,175 +53,181 @@ export interface LifetimeStatsResult {
   totalAssistantMessages: number;
 }
 
-// ── Scanner ──
+// ── Scanner interface ──
 
-export class LifetimeScanner {
-  private fileStates = new Map<string, FileState>();
-  private stats: AggregatedStats = LifetimeScanner.emptyStats();
-  private initialScanDone = false;
-  private destroyed = false;
-  private normalize = createUsageNormalizer();
+export interface LifetimeScanner {
+  init(): Promise<void>;
+  getStats(): Promise<LifetimeStatsResult>;
+  getFileStates(): Map<string, FileState>;
+  isReady(): boolean;
+  destroy(): void;
+}
 
-  constructor(
-    private transcriptsDir: string,
-    private deviceJsonPath: string,
-    private tokenBus?: TokenEventBus,
-    private messageBus?: MessageEventBus,
-  ) {}
+// ── Factory ──
 
-  // ── Lifecycle ──
+export function createLifetimeScanner(opts: {
+  db: Database;
+  transcriptsDir: string;
+  deviceJsonPath: string;
+  tokenBus?: TokenEventBus;
+  messageBus?: MessageEventBus;
+}): LifetimeScanner {
+  const { db, transcriptsDir, deviceJsonPath, tokenBus, messageBus } = opts;
+  const fileStates = new Map<string, FileState>();
+  let stats: AggregatedStats = emptyStats();
+  let initialScanDone = false;
+  let destroyed = false;
+  let abortController: AbortController | null = null;
 
-  async init(): Promise<void> {
-    // Yield to event loop so server startup isn't blocked by synchronous I/O
+  // ── Sink with transactional flush ──
+  const FLUSH_THRESHOLD = 5000;
+  const STATE_FLUSH_THRESHOLD = 50;
+  let tokenBuf: ParsedTokenEvent[] = [];
+  let msgBuf: ParsedMessageEvent[] = [];
+  let stateBuf: ScanStateRow[] = [];
+
+  function flush(): void {
+    if (tokenBuf.length === 0 && msgBuf.length === 0 && stateBuf.length === 0) {
+      return;
+    }
+    db.exec('BEGIN');
+    try {
+      insertTokenUsageEventBatch(db, tokenBuf, false);
+      insertMessageEventBatch(db, msgBuf, false);
+      upsertScanState(db, stateBuf, false);
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+    tokenBuf = [];
+    msgBuf = [];
+    stateBuf = [];
+  }
+
+  const sink: ScanSink = {
+    onToken(e) {
+      tokenBuf.push(e);
+      if (tokenBus) {
+        tokenBus.emit(e);
+      }
+      if (tokenBuf.length >= FLUSH_THRESHOLD) {
+        flush();
+      }
+    },
+    onMessage(e) {
+      msgBuf.push(e);
+      if (messageBus) {
+        messageBus.emit(e);
+      }
+      if (msgBuf.length >= FLUSH_THRESHOLD) {
+        flush();
+      }
+    },
+    onFileComplete(s) {
+      fileStates.set(s.filePath, {
+        offset: s.byteOffset,
+        inode: s.inode,
+        birthtimeMs: s.birthMs,
+        partialLine: s.partial,
+      });
+      stateBuf.push(s);
+      if (stateBuf.length >= STATE_FLUSH_THRESHOLD) {
+        flush();
+      }
+    },
+  };
+
+  // ── init ──
+  async function init(): Promise<void> {
     await new Promise<void>((resolve) => {
       setImmediate(resolve);
     });
-    if (this.destroyed) {
+    if (destroyed) {
       return;
     }
+
     const startMs = Date.now();
     try {
-      await this.scanAll();
-      if (this.destroyed) {
+      const cachedState = loadScanState(db);
+      const { unchanged, toScan, deleted } = classifyFiles(transcriptsDir, cachedState);
+
+      // Restore unchanged file states
+      for (const [path, state] of unchanged) {
+        fileStates.set(path, state);
+      }
+
+      // Scan changed files
+      if (toScan.length > 0) {
+        abortController = new AbortController();
+        await scanFiles(toScan, sink, {
+          onError: (file, err) => log.warn({ file, err }, 'scan error'),
+          signal: abortController.signal,
+        });
+        abortController = null;
+        flush(); // final flush for remaining buffered items
+      }
+      if (destroyed) {
         return;
       }
-      this.stats.createdAtMs = this.resolveCreatedAt();
-      this.initialScanDone = true;
-      log.info({ fileCount: this.fileStates.size, durationMs: Date.now() - startMs }, 'lifetime scan complete');
+
+      // Clean up deleted
+      if (deleted.length > 0) {
+        deleteScanState(db, deleted);
+      }
+
+      // Backfill first_timestamp_ms for legacy rows
+      backfillFirstTimestamps(db);
+
+      // Compute stats from DB
+      const agg = queryLifetimeAggregates(db);
+      stats = {
+        createdAtMs: resolveCreatedAt(db, deviceJsonPath),
+        totalSessions: fileStates.size,
+        totalInputTokens: agg.totalInputTokens,
+        totalOutputTokens: agg.totalOutputTokens,
+        totalCacheReadTokens: agg.totalCacheReadTokens,
+        totalCacheWriteTokens: agg.totalCacheWriteTokens,
+        totalUserMessages: agg.totalUserMessages,
+        totalAssistantMessages: agg.totalAssistantMessages,
+      };
+      initialScanDone = true;
+      log.info({ fileCount: fileStates.size, durationMs: Date.now() - startMs }, 'lifetime scan complete');
     } catch (err) {
       log.error({ err }, 'lifetime scan failed');
     }
   }
 
-  // Keep async for API compatibility — callers await this.
   // eslint-disable-next-line @typescript-eslint/require-await
-  async getStats(): Promise<LifetimeStatsResult> {
-    return this.toResult();
+  async function getStats(): Promise<LifetimeStatsResult> {
+    return toResult();
   }
 
-  /** Returns a snapshot of file states for handoff to TranscriptWatcher. */
-  getFileStates(): Map<string, FileState> {
-    return new Map(this.fileStates);
+  function getFileStates(): Map<string, FileState> {
+    return new Map(fileStates);
   }
 
-  destroy(): void {
-    this.destroyed = true;
-    this.fileStates.clear();
-    this.stats = LifetimeScanner.emptyStats();
-    this.initialScanDone = false;
+  function isReady(): boolean {
+    return initialScanDone;
   }
 
-  // ── Internal: full scan ──
-
-  private async scanAll(): Promise<void> {
-    if (!existsSync(this.transcriptsDir)) {
-      log.warn({ path: this.transcriptsDir }, 'transcripts directory not found');
-      return;
+  function destroy(): void {
+    destroyed = true;
+    if (abortController) {
+      abortController.abort();
+      abortController = null;
     }
-    const files = readdirSync(this.transcriptsDir)
-      .filter((f) => f.endsWith('.jsonl'))
-      .map((f) => join(this.transcriptsDir, f));
-
-    this.stats = LifetimeScanner.emptyStats();
-    this.stats.totalSessions = files.length;
-    this.fileStates.clear();
-
-    for (let i = 0; i < files.length; i++) {
-      this.scanFile(files[i]);
-      // Yield to event loop periodically so other async work (CLI calls, HTTP) can proceed
-      if ((i + 1) % YIELD_BATCH_SIZE === 0) {
-        await new Promise<void>((resolve) => {
-          setImmediate(resolve);
-        });
-        if (this.destroyed) {
-          return;
-        }
-      }
-    }
+    fileStates.clear();
+    stats = emptyStats();
+    initialScanDone = false;
   }
 
-  private scanFile(file: string): void {
-    try {
-      const st = statSync(file);
-      const content = readFileSync(file, 'utf-8');
-      const lines = content.split('\n');
-      // Last element after split: '' if file ends with \n, or partial line
-      const partial = content.endsWith('\n') ? '' : (lines.pop() ?? '');
-      const sessionKey = basename(file, '.jsonl');
-      for (const line of lines) {
-        if (!line.trim()) {
-          continue;
-        }
-
-        const result = parseLine(line, sessionKey, this.normalize);
-        if (!result) {
-          continue;
-        }
-
-        if (result.userMessages) {
-          this.stats.totalUserMessages += result.userMessages;
-        }
-        if (result.assistantMessages) {
-          this.stats.totalAssistantMessages += result.assistantMessages;
-        }
-        if (result.usage) {
-          this.stats.totalInputTokens += result.usage.input;
-          this.stats.totalOutputTokens += result.usage.output;
-          this.stats.totalCacheReadTokens += result.usage.cacheRead;
-          this.stats.totalCacheWriteTokens += result.usage.cacheWrite;
-        }
-        if (result.token && this.tokenBus) {
-          this.tokenBus.emit(result.token);
-        }
-        if (result.message && this.messageBus) {
-          this.messageBus.emit(result.message);
-        }
-      }
-      // offset = end of file (we store partial separately for incremental join)
-      this.fileStates.set(file, { offset: st.size, inode: st.ino, birthtimeMs: st.birthtimeMs, partialLine: partial });
-    } catch (err) {
-      log.warn({ file, err }, 'failed to scan transcript file');
-    }
-  }
-
-  // ── Internal: createdAt ──
-
-  private resolveCreatedAt(): number {
-    let deviceMs = Infinity;
-    try {
-      if (existsSync(this.deviceJsonPath)) {
-        const device = JSON.parse(readFileSync(this.deviceJsonPath, 'utf-8'));
-        deviceMs = typeof device.createdAtMs === 'number' ? device.createdAtMs : Infinity;
-      }
-    } catch {
-      log.warn('failed to read device.json for createdAt');
-    }
-
-    let earliestMs = Infinity;
-    for (const file of this.fileStates.keys()) {
-      const ts = readFirstTimestamp(file);
-      if (ts !== null && ts > 0 && ts < Date.now() + 86_400_000) {
-        earliestMs = Math.min(earliestMs, ts);
-      }
-    }
-
-    if (earliestMs < Infinity) {
-      return Math.min(deviceMs, earliestMs);
-    }
-    if (deviceMs < Infinity) {
-      return deviceMs;
-    }
-    return Date.now();
-  }
-
-  // ── Internal: output ──
-
-  private toResult(): LifetimeStatsResult {
-    const s = this.stats;
+  function toResult(): LifetimeStatsResult {
+    const s = stats;
     const now = Date.now();
     const createdMs = s.createdAtMs || now;
     return {
-      isReady: this.initialScanDone,
+      isReady: initialScanDone,
       createdAt: new Date(createdMs).toISOString(),
       daysSinceCreation: Math.floor((now - createdMs) / 86_400_000),
       totalSessions: s.totalSessions,
@@ -227,26 +241,79 @@ export class LifetimeScanner {
     };
   }
 
-  static emptyStats(): AggregatedStats {
-    return {
-      createdAtMs: 0,
-      totalSessions: 0,
-      totalInputTokens: 0,
-      totalOutputTokens: 0,
-      totalCacheReadTokens: 0,
-      totalCacheWriteTokens: 0,
-      totalUserMessages: 0,
-      totalAssistantMessages: 0,
-    };
+  return { init, getStats, getFileStates, isReady, destroy };
+}
+
+// ── Module-level helpers ──
+
+function emptyStats(): AggregatedStats {
+  return {
+    createdAtMs: 0,
+    totalSessions: 0,
+    totalInputTokens: 0,
+    totalOutputTokens: 0,
+    totalCacheReadTokens: 0,
+    totalCacheWriteTokens: 0,
+    totalUserMessages: 0,
+    totalAssistantMessages: 0,
+  };
+}
+
+function resolveCreatedAt(db: Database, deviceJsonPath: string): number {
+  let deviceMs = Infinity;
+  try {
+    if (existsSync(deviceJsonPath)) {
+      const device = JSON.parse(readFileSync(deviceJsonPath, 'utf-8'));
+      deviceMs = typeof device.createdAtMs === 'number' ? device.createdAtMs : Infinity;
+    }
+  } catch {
+    log.warn('failed to read device.json for createdAt');
+  }
+
+  const dbMin = queryMinFirstTimestamp(db);
+  const earliestMs = dbMin !== null && dbMin > 0 ? dbMin : Infinity;
+
+  if (earliestMs < Infinity) {
+    return Math.min(deviceMs, earliestMs);
+  }
+  if (deviceMs < Infinity) {
+    return deviceMs;
+  }
+  return Date.now();
+}
+
+function backfillFirstTimestamps(db: Database): void {
+  const rows = db.prepare('SELECT file_path FROM scan_state WHERE first_timestamp_ms IS NULL').all() as Array<{
+    file_path: string;
+  }>;
+  if (rows.length === 0) {
+    return;
+  }
+
+  log.info({ count: rows.length }, 'backfilling first_timestamp_ms');
+  const updates: Array<{ path: string; ts: number }> = [];
+  for (const row of rows) {
+    const ts = readFirstTimestamp(row.file_path);
+    if (ts !== null) {
+      updates.push({ path: row.file_path, ts });
+    }
+  }
+
+  if (updates.length > 0) {
+    const stmt = cached(db, 'UPDATE scan_state SET first_timestamp_ms = ? WHERE file_path = ?');
+    db.exec('BEGIN');
+    try {
+      for (const u of updates) {
+        stmt.run(u.ts, u.path);
+      }
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
   }
 }
 
-// ── Helpers ──
-
-/**
- * Scan up to MAX_LINES lines in a file searching for the first parseable timestamp.
- * Returns epoch ms or null if none found.
- */
 function readFirstTimestamp(filePath: string, maxLines = 10): number | null {
   const BUF_SIZE = 8192;
   const buf = Buffer.alloc(BUF_SIZE);
@@ -278,7 +345,7 @@ function readFirstTimestamp(filePath: string, maxLines = 10): number | null {
           }
         }
       } catch {
-        /* skip unparseable line */
+        /* skip */
       }
     }
     return null;

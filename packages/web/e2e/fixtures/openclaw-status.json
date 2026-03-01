@@ -1,0 +1,57 @@
+{
+  "heartbeat": {
+    "defaultAgentId": "main",
+    "agents": [
+      {
+        "agentId": "main",
+        "enabled": true,
+        "every": "30m",
+        "everyMs": 1800000
+      }
+    ]
+  },
+  "channelSummary": [
+    "Telegram: configured",
+    "  - default (token:config)",
+    "Slack: configured",
+    "  - default (bot:config)"
+  ],
+  "queuedSystemEvents": [],
+  "sessions": {
+    "paths": ["/tmp/e2e-mock/sessions.json"],
+    "count": 3,
+    "defaults": {
+      "model": "claude-sonnet-4-20250514",
+      "contextTokens": 200000
+    },
+    "recent": []
+  },
+  "gateway": {
+    "reachable": true,
+    "version": "2026.3.1-0",
+    "uptime": "2h 15m",
+    "uptimeMs": 8100000,
+    "pid": 99999,
+    "port": 18789,
+    "platform": "darwin",
+    "nodeVersion": "v22.22.0",
+    "connectLatencyMs": 12,
+    "memory": {
+      "rss": 105906176,
+      "heapUsed": 62914560,
+      "heapTotal": 83886080
+    },
+    "cpu": {
+      "user": 3500000,
+      "system": 800000
+    },
+    "config": {
+      "heartbeatEvery": "30m",
+      "model": "claude-sonnet-4-20250514",
+      "channels": ["telegram", "slack"]
+    }
+  },
+  "gatewayService": {
+    "runtimeShort": "running · pid 99999 · 2h 15m"
+  }
+}

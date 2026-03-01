@@ -26,6 +26,7 @@ export function MetricsSummaryRow({ totalTokensK, totalMessages, totalErrors, to
       <span className="text-fg-muted">
         {t('summary.messages')}:{' '}
         <span className="mono font-semibold text-violet">{totalMessages.toLocaleString()}</span>
+        <InfoTooltip {...TOOLTIPS.summary.summaryMessages} />
       </span>
       <span className="text-fg-muted">
         {t('summary.errors')}: <span className="mono font-semibold text-red">{totalErrors}</span>

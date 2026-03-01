@@ -341,29 +341,64 @@ function cleanupAuthToken(dataDir: string): void {
   }
 }
 
+interface HealthResponse {
+  status: string;
+  [key: string]: unknown;
+}
+
 async function waitForHealth(port: number, timeoutMs: number, earlyExit?: () => boolean): Promise<boolean> {
   const spinner = createSpinner('Starting server...');
   const startTime = Date.now();
   const deadline = startTime + timeoutMs;
   try {
+    // Phase 1: wait for HTTP to respond (server process up)
     while (Date.now() < deadline) {
       if (earlyExit?.()) {
         spinner.stop('❌ Server exited unexpectedly.');
         return false;
       }
-      spinner.update(`Waiting for server to be ready... (${((Date.now() - startTime) / 1000).toFixed(1)}s)`);
+      spinner.update(`Starting server... (${((Date.now() - startTime) / 1000).toFixed(1)}s)`);
       try {
         const res = await fetch(`http://127.0.0.1:${port}/health`);
         if (res.ok) {
-          spinner.stop('✅ Server is ready.');
-          return true;
+          const body = (await res.json()) as HealthResponse;
+          if (body.status === 'ok') {
+            spinner.stop('✅ Server is ready.');
+            return true;
+          }
+          // status === 'starting': server is up but still initializing
+          break;
         }
       } catch {
         // not ready yet
       }
       await new Promise((r) => setTimeout(r, 200));
     }
-    spinner.stop('⚠️  Health check timed out.');
+
+    // Phase 2: server responded but still initializing (scanning transcripts)
+    const initDeadline = Date.now() + 120_000; // generous 2 min for large transcript dirs
+    while (Date.now() < initDeadline) {
+      if (earlyExit?.()) {
+        spinner.stop('❌ Server exited unexpectedly.');
+        return false;
+      }
+      spinner.update(`Initializing... (${((Date.now() - startTime) / 1000).toFixed(1)}s)`);
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/health`);
+        if (res.ok) {
+          const body = (await res.json()) as HealthResponse;
+          if (body.status === 'ok') {
+            spinner.stop('✅ Server is ready.');
+            return true;
+          }
+        }
+      } catch {
+        // transient failure
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
+
+    spinner.stop('⚠️  Server started but initialization timed out.');
     return false;
   } catch (err) {
     spinner.stop(`❌ Health check failed: ${err instanceof Error ? err.message : String(err)}`);

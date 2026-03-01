@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '../../../test/render';
 import { ToastContainer } from '../Toast';
-import { showToast } from '../toast-store';
+import { dismissToast, replaceToast, showToast } from '../toast-store';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -56,5 +56,76 @@ describe('ToastContainer', () => {
     });
     expect(screen.getByText(/First/)).toBeDefined();
     expect(screen.getByText(/Second/)).toBeDefined();
+  });
+
+  it('shows loading toast and does NOT auto-dismiss', () => {
+    renderWithProviders(<ToastContainer />);
+    act(() => {
+      showToast('Loading…', 'loading');
+    });
+    expect(screen.getByText(/Loading…/)).toBeDefined();
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    // Still visible after 10s — loading toasts persist
+    expect(screen.getByText(/Loading…/)).toBeDefined();
+  });
+
+  it('dismisses toast via dismissToast', () => {
+    renderWithProviders(<ToastContainer />);
+    let id: number;
+    act(() => {
+      id = showToast('Dismissable', 'loading');
+    });
+    expect(screen.getByText(/Dismissable/)).toBeDefined();
+    act(() => {
+      dismissToast(id);
+    });
+    expect(screen.queryByText(/Dismissable/)).toBeNull();
+  });
+
+  it('replaces toast via replaceToast', () => {
+    renderWithProviders(<ToastContainer />);
+    let id: number;
+    act(() => {
+      id = showToast('Loading…', 'loading');
+    });
+    expect(screen.getByText(/Loading…/)).toBeDefined();
+    act(() => {
+      replaceToast(id, 'Done!', 'success');
+    });
+    expect(screen.queryByText(/Loading…/)).toBeNull();
+    expect(screen.getByText(/Done!/)).toBeDefined();
+  });
+
+  it('auto-dismisses replaced toast when type is not loading', () => {
+    renderWithProviders(<ToastContainer />);
+    let id: number;
+    act(() => {
+      id = showToast('Wait…', 'loading');
+    });
+    act(() => {
+      replaceToast(id, 'Finished', 'success');
+    });
+    expect(screen.getByText(/Finished/)).toBeDefined();
+    act(() => {
+      vi.advanceTimersByTime(4100);
+    });
+    expect(screen.queryByText(/Finished/)).toBeNull();
+  });
+
+  it('does NOT auto-dismiss replaced toast when type is loading', () => {
+    renderWithProviders(<ToastContainer />);
+    let id: number;
+    act(() => {
+      id = showToast('Step 1', 'loading');
+    });
+    act(() => {
+      replaceToast(id, 'Step 2', 'loading');
+    });
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(screen.getByText(/Step 2/)).toBeDefined();
   });
 });

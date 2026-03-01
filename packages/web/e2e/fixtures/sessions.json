@@ -1,0 +1,43 @@
+{
+  "agent:main:main": {
+    "sessionId": "e2e-sess-0001-0001-0001-000000000001",
+    "updatedAt": 1740364020000,
+    "chatType": "direct",
+    "model": "claude-sonnet-4-20250514",
+    "modelProvider": "anthropic",
+    "totalTokens": 50000,
+    "contextTokens": 200000,
+    "inputTokens": 30000,
+    "outputTokens": 20000,
+    "origin": { "provider": "telegram", "label": "Telegram" },
+    "label": "E2E Test Session",
+    "lastChannel": "telegram"
+  },
+  "agent:main:subagent:sa-e2e-test": {
+    "sessionId": "e2e-sess-0002-0002-0002-000000000002",
+    "updatedAt": 1740363720000,
+    "chatType": null,
+    "model": "claude-sonnet-4-20250514",
+    "modelProvider": "anthropic",
+    "totalTokens": 12000,
+    "contextTokens": 200000,
+    "inputTokens": 8000,
+    "outputTokens": 4000,
+    "label": "Sub-agent: E2E",
+    "lastChannel": null
+  },
+  "agent:main:discord-chat": {
+    "sessionId": "e2e-sess-0003-0003-0003-000000000003",
+    "updatedAt": 1740362400000,
+    "chatType": "group",
+    "model": "claude-sonnet-4-20250514",
+    "modelProvider": "anthropic",
+    "totalTokens": 85000,
+    "contextTokens": 200000,
+    "inputTokens": 55000,
+    "outputTokens": 30000,
+    "origin": { "provider": "slack", "label": "Slack" },
+    "label": "Team Chat",
+    "lastChannel": "slack"
+  }
+}

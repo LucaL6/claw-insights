@@ -1,3 +1,5 @@
+import { t } from '../i18n/index.js';
+
 export type SatoriNode = {
   type: string;
   props: { style?: Record<string, unknown>; children?: unknown; [key: string]: unknown };
@@ -29,6 +31,7 @@ export function Tag(text: string, bg: string, color: string, borderColor: string
 export function StatusBadge(
   isUp: boolean,
   colors: { emerald: string; emeraldBg: string; red: string; redBg: string },
+  locale: string = 'en',
 ): SatoriNode {
   return div(
     {
@@ -43,7 +46,7 @@ export function StatusBadge(
     },
     [
       div({ width: 6, height: 6, borderRadius: '50%', backgroundColor: isUp ? colors.emerald : colors.red }),
-      span({}, isUp ? 'UP' : 'DOWN'),
+      span({}, isUp ? t('status.up', locale) : t('status.down', locale)),
     ],
   );
 }

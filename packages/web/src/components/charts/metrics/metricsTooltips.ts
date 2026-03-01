@@ -50,6 +50,10 @@ export function getTooltips(t: T) {
         label: t('tooltip.summary.summaryTokens'),
         detail: t('tooltip.detail.summary.summaryTokens'),
       },
+      summaryMessages: {
+        label: t('tooltip.summary.summaryMessages'),
+        detail: t('tooltip.detail.summary.summaryMessages'),
+      },
       summaryErrors: {
         label: t('tooltip.summary.summaryErrors'),
         detail: t('tooltip.detail.summary.summaryErrors'),

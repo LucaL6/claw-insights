@@ -59,8 +59,10 @@ describe('Sidebar', () => {
     fireEvent.click(toggle);
     expect(screen.queryByText('Claw Insights')).toBeNull();
     expect(screen.queryByText(/v1\.2\.3/)).toBeNull();
-    expect(screen.queryByText('Dashboard')).toBeNull();
-    expect(screen.getByRole('link', { name: /dashboard/i })).toBeDefined();
+    // Nav label span is hidden; "Dashboard" still exists in tooltip text
+    const dashLink = screen.getByRole('link', { name: /dashboard/i });
+    expect(dashLink.querySelector('span')).toBeNull();
+    expect(dashLink).toBeDefined();
   });
 
   it('expands when toggle button is clicked in collapsed state', () => {
@@ -96,6 +98,20 @@ describe('Sidebar', () => {
     const logsLink = screen.getByRole('link', { name: /logs/i });
     expect(logsLink.className).not.toContain('border-l-[3px]');
     expect(logsLink.className).not.toContain('border-sky');
+  });
+
+  it('does not have native title on nav items when expanded', () => {
+    renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
+    const dashLink = screen.getByRole('link', { name: /dashboard/i });
+    expect(dashLink.getAttribute('title')).toBeNull();
+  });
+
+  it('does not have native title on nav items when collapsed', () => {
+    renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
+    const toggle = screen.getByRole('button', { name: /collapse/i });
+    fireEvent.click(toggle);
+    const dashLink = screen.getByRole('link', { name: /dashboard/i });
+    expect(dashLink.getAttribute('title')).toBeNull();
   });
 
   it('collapsed sidebar still shows left border on active item', () => {

@@ -10,7 +10,6 @@ describe('parseSnapshotArgs', () => {
     expect(args.range).toBe('6h');
     expect(args.theme).toBe('dark');
     expect(args.lang).toBe('en');
-    expect(args.layout).toBe('desktop');
     expect(args.port).toBe(41041);
     expect(args.quick).toBe(false);
     expect(args.dryRun).toBe(false);
@@ -31,7 +30,6 @@ describe('parseSnapshotArgs', () => {
   it('parses --quick shorthand', () => {
     const args = parseSnapshotArgs(['--quick']);
     expect(args.detail).toBe('compact');
-    expect(args.layout).toBe('mobile');
     expect(args.format).toBe('png');
     expect(args.range).toBe('6h');
   });
@@ -68,10 +66,9 @@ describe('parseSnapshotArgs', () => {
     expect(args.theme).toBe('light');
   });
 
-  it('--quick overrides --detail and --layout', () => {
-    const args = parseSnapshotArgs(['--quick', '--detail', 'full', '--layout', 'desktop']);
+  it('--quick overrides --detail', () => {
+    const args = parseSnapshotArgs(['--quick', '--detail', 'full']);
     expect(args.detail).toBe('compact');
-    expect(args.layout).toBe('mobile');
   });
 });
 

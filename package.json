@@ -19,7 +19,8 @@
     "test:server": "npm run -w @claw-insights/server test",
     "test:web": "npm run -w @claw-insights/web test",
     "test:coverage": "npm run -w @claw-insights/server test -- --coverage && npm run -w @claw-insights/web test -- --coverage",
-    "test:e2e": "npx playwright test --config packages/web/e2e/playwright.config.ts",
+    "test:integration": "npm run -w @claw-insights/server test:integration",
+    "test:e2e": "npm run -w @claw-insights/web test:e2e",
     "prepare": "husky",
     "build": "npm run codegen && npm run --workspaces build",
     "start": "npm run build && node bin/claw-insights.mjs start",
@@ -29,7 +30,8 @@
     "logs": "node bin/claw-insights.mjs logs",
     "restart": "npm run build && node bin/claw-insights.mjs restart",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:all": "npm run test && npm run test:integration && npm run test:e2e"
   },
   "lint-staged": {
     "*.{json,md,yml,yaml}": [

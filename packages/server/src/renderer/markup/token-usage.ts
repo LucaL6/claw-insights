@@ -1,4 +1,5 @@
 import type { Detail, SnapshotData } from '../../services/snapshot-types.js';
+import { t } from '../i18n/index.js';
 import type { ColorScheme } from './colors.js';
 import type { SatoriNode } from './helpers.js';
 import { div, span } from './helpers.js';
@@ -11,7 +12,15 @@ function formatModelTokens(tokensK: number): string {
   return `${tokensK.toFixed(1)}k`;
 }
 
-export function renderTokenUsage(data: SnapshotData, _detail: Detail, c: ColorScheme): SatoriNode {
+export function renderTokenUsage(
+  data: SnapshotData,
+  _detail: Detail,
+  c: ColorScheme,
+  locale: string = 'en',
+): SatoriNode | null {
+  if (!data.tokensByModel || !data.summary) {
+    return null;
+  }
   const models = data.tokensByModel ?? [];
 
   // Split tokensDisplay into number + unit (e.g. "12.3k" → "12.3" + "K")
@@ -22,7 +31,7 @@ export function renderTokenUsage(data: SnapshotData, _detail: Detail, c: ColorSc
 
   return div({ flexDirection: 'column', gap: 10, padding: '0 16px 12px' }, [
     // Label
-    span({ color: c.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }, 'TOKEN USED'),
+    span({ color: c.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }, t('tokens.title', locale)),
 
     // Big number
     div({ alignItems: 'center', gap: 2 }, [

@@ -87,10 +87,19 @@ describe('renderStatusStrip', () => {
     expect(texts).toContain('errors');
   });
 
+  it('renders Chinese labels when locale is zh', () => {
+    const tree = renderStatusStrip(makeData(), 'standard', c, 'zh')!;
+    const texts = collectText(tree);
+    expect(texts).toContain('消息');
+    expect(texts).toContain('会话');
+    expect(texts).toContain('在线率');
+    expect(texts).toContain('错误');
+  });
+
   it('renders CPU and MEM', () => {
     const tree = renderStatusStrip(makeData(), 'standard', c)!;
     const texts = collectText(tree);
     expect(texts.join(' ')).toContain('CPU 12%');
-    expect(texts.join(' ')).toContain('MEM 256M');
+    expect(texts.join(' ')).toContain('MEM 256 MB');
   });
 });

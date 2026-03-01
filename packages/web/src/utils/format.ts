@@ -47,6 +47,17 @@ export function formatTokensRaw(value: number): string {
   return formatTokensK(value / 1000);
 }
 
+/**
+ * Format memory in MB to human-readable string.
+ * < 1024 MB → "512 MB", ≥ 1024 MB → "1.23 GB" (2 decimal places)
+ */
+export function formatMemoryMB(mb: number): string {
+  if (mb >= 1024) {
+    return `${(mb / 1024).toFixed(2)} GB`;
+  }
+  return `${Math.round(mb)} MB`;
+}
+
 export function channelShortName(name: string): string {
   const lower = name.toLowerCase();
   if (lower.includes('telegram')) {
