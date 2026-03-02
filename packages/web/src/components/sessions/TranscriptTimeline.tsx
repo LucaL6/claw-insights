@@ -45,6 +45,14 @@ const ROLE_CONFIG = {
   tool: { label: 'TOOL', color: 'var(--dr-rose)', dotSize: 5 },
 } as const;
 
+/** Shorten model id: "anthropic/claude-opus-4-6" → "opus-4-6", "openai/gpt-4o" → "gpt-4o" */
+function formatModelShort(model: string): string {
+  // Strip provider prefix
+  const name = model.includes('/') ? model.split('/').slice(1).join('/') : model;
+  // Common Claude shortenings
+  return name.replace(/^claude-/, '').replace(/^models\//, '');
+}
+
 function formatTime(iso: string): string {
   try {
     const d = new Date(iso);
@@ -98,6 +106,15 @@ function TimelineRow({ msg, isLast, index }: { msg: Message; isLast: boolean; in
           <span className="shrink-0 font-mono text-[10px]" style={{ color: 'var(--dr-dim)' }}>
             {formatTime(msg.timestamp)}
           </span>
+          {msg.role === 'assistant' && msg.model && (
+            <span
+              className="shrink-0 font-mono text-[10px] cursor-default"
+              style={{ color: 'var(--dr-dim)', opacity: 0.7 }}
+              title={msg.model}
+            >
+              {formatModelShort(msg.model)}
+            </span>
+          )}
           {msg.role === 'assistant' && msg.usage && (
             <span
               className="font-mono text-[10px] ml-auto cursor-default"
@@ -309,7 +326,6 @@ function VirtualizedTimeline({
     </div>
   );
 }
- 
 
 function PlainTimeline({
   messages,

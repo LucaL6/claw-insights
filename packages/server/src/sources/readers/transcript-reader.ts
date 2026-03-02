@@ -172,7 +172,7 @@ export async function readTranscript(
         kind = parsed.group;
       }
     } else if (type === 'model_change') {
-      if (!model && parsed.modelId) {
+      if (parsed.modelId) {
         model = parsed.modelId;
       }
     } else if (type === 'thinking_level_change') {
@@ -200,7 +200,7 @@ export async function readTranscript(
         if (!startedAt && ts) {
           startedAt = ts;
         }
-        if (!model && role === 'assistant' && inner.model) {
+        if (role === 'assistant' && inner.model) {
           model = inner.model;
         }
 
