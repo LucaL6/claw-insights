@@ -10,11 +10,11 @@ export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' |
 export type RequireFields<T, K extends keyof T> = Omit<T, K> & { [P in K]-?: NonNullable<T[P]> };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
-  ID: { input: string; output: string };
-  String: { input: string; output: string };
-  Boolean: { input: boolean; output: boolean };
-  Int: { input: number; output: number };
-  Float: { input: number; output: number };
+  ID: { input: string; output: string; }
+  String: { input: string; output: string; }
+  Boolean: { input: boolean; output: boolean; }
+  Int: { input: number; output: number; }
+  Float: { input: number; output: number; }
 };
 
 /** Channel connectivity */
@@ -25,7 +25,13 @@ export type Channel = {
   provider: ChannelProvider;
 };
 
-export type ChannelProvider = 'discord' | 'signal' | 'slack' | 'telegram' | 'webchat' | 'whatsapp';
+export type ChannelProvider =
+  | 'discord'
+  | 'signal'
+  | 'slack'
+  | 'telegram'
+  | 'webchat'
+  | 'whatsapp';
 
 export type CronJob = {
   enabled: Scalars['Boolean']['output'];
@@ -136,7 +142,11 @@ export type LogFilter = {
   module?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type LogLevel = 'DEBUG' | 'ERROR' | 'INFO' | 'WARN';
+export type LogLevel =
+  | 'DEBUG'
+  | 'ERROR'
+  | 'INFO'
+  | 'WARN';
 
 export type MetricsBucket = {
   apiCalls: Scalars['Int']['output'];
@@ -156,7 +166,12 @@ export type MetricsBucket = {
   warnings: Scalars['Int']['output'];
 };
 
-export type MetricsRange = 'ONE_HOUR' | 'SIX_HOUR' | 'THIRTY_MIN' | 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR';
+export type MetricsRange =
+  | 'ONE_HOUR'
+  | 'SIX_HOUR'
+  | 'THIRTY_MIN'
+  | 'TWELVE_HOUR'
+  | 'TWENTY_FOUR_HOUR';
 
 export type MetricsSummary = {
   bucketMinutes: Scalars['Int']['output'];
@@ -195,10 +210,12 @@ export type Query = {
   usageCost: UsageCost;
 };
 
+
 export type QueryEventCountsArgs = {
   from?: InputMaybe<Scalars['Int']['input']>;
   to?: InputMaybe<Scalars['Int']['input']>;
 };
+
 
 export type QueryEventsArgs = {
   from?: InputMaybe<Scalars['Int']['input']>;
@@ -207,20 +224,24 @@ export type QueryEventsArgs = {
   types?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+
 export type QueryMetricsArgs = {
   date?: InputMaybe<Scalars['String']['input']>;
   range?: InputMaybe<MetricsRange>;
 };
 
+
 export type QueryRecentLogsArgs = {
   count?: InputMaybe<Scalars['Int']['input']>;
 };
+
 
 export type QuerySessionTranscriptArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   sessionKey: Scalars['String']['input'];
 };
+
 
 export type QuerySessionsArgs = {
   filter?: InputMaybe<SessionFilter>;
@@ -247,9 +268,16 @@ export type SessionFilter = {
   sortBy?: InputMaybe<SessionSortBy>;
 };
 
-export type SessionSortBy = 'NAME' | 'TOKENS_DESC' | 'UPDATED_AT';
+export type SessionSortBy =
+  | 'NAME'
+  | 'TOKENS_DESC'
+  | 'UPDATED_AT';
 
-export type SessionStatus = 'ACTIVE' | 'DONE' | 'FAILED' | 'IDLE';
+export type SessionStatus =
+  | 'ACTIVE'
+  | 'DONE'
+  | 'FAILED'
+  | 'IDLE';
 
 export type SessionTranscript = {
   /** Channel provider */
@@ -293,6 +321,7 @@ export type Subscription = {
   dataChanged: DataChangeSignal;
   logs: LogBatch;
 };
+
 
 export type SubscriptionLogsArgs = {
   filter?: InputMaybe<LogFilter>;
@@ -344,35 +373,31 @@ export type ResolversObject<TObject> = WithIndex<TObject>;
 
 export type ResolverTypeWrapper<T> = Promise<T> | T;
 
+
 export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
   resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
 };
-export type Resolver<
-  TResult,
-  TParent = Record<PropertyKey, never>,
-  TContext = Record<PropertyKey, never>,
-  TArgs = Record<PropertyKey, never>,
-> = ResolverFn<TResult, TParent, TContext, TArgs> | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
+export type Resolver<TResult, TParent = Record<PropertyKey, never>, TContext = Record<PropertyKey, never>, TArgs = Record<PropertyKey, never>> = ResolverFn<TResult, TParent, TContext, TArgs> | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
 
 export type ResolverFn<TResult, TParent, TContext, TArgs> = (
   parent: TParent,
   args: TArgs,
   context: TContext,
-  info: GraphQLResolveInfo,
+  info: GraphQLResolveInfo
 ) => Promise<TResult> | TResult;
 
 export type SubscriptionSubscribeFn<TResult, TParent, TContext, TArgs> = (
   parent: TParent,
   args: TArgs,
   context: TContext,
-  info: GraphQLResolveInfo,
+  info: GraphQLResolveInfo
 ) => AsyncIterable<TResult> | Promise<AsyncIterable<TResult>>;
 
 export type SubscriptionResolveFn<TResult, TParent, TContext, TArgs> = (
   parent: TParent,
   args: TArgs,
   context: TContext,
-  info: GraphQLResolveInfo,
+  info: GraphQLResolveInfo
 ) => TResult | Promise<TResult>;
 
 export interface SubscriptionSubscriberObject<TResult, TKey extends string, TParent, TContext, TArgs> {
@@ -389,42 +414,31 @@ export type SubscriptionObject<TResult, TKey extends string, TParent, TContext, 
   | SubscriptionSubscriberObject<TResult, TKey, TParent, TContext, TArgs>
   | SubscriptionResolverObject<TResult, TParent, TContext, TArgs>;
 
-export type SubscriptionResolver<
-  TResult,
-  TKey extends string,
-  TParent = Record<PropertyKey, never>,
-  TContext = Record<PropertyKey, never>,
-  TArgs = Record<PropertyKey, never>,
-> =
+export type SubscriptionResolver<TResult, TKey extends string, TParent = Record<PropertyKey, never>, TContext = Record<PropertyKey, never>, TArgs = Record<PropertyKey, never>> =
   | ((...args: any[]) => SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>)
   | SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>;
 
 export type TypeResolveFn<TTypes, TParent = Record<PropertyKey, never>, TContext = Record<PropertyKey, never>> = (
   parent: TParent,
   context: TContext,
-  info: GraphQLResolveInfo,
+  info: GraphQLResolveInfo
 ) => Maybe<TTypes> | Promise<Maybe<TTypes>>;
 
-export type IsTypeOfResolverFn<T = Record<PropertyKey, never>, TContext = Record<PropertyKey, never>> = (
-  obj: T,
-  context: TContext,
-  info: GraphQLResolveInfo,
-) => boolean | Promise<boolean>;
+export type IsTypeOfResolverFn<T = Record<PropertyKey, never>, TContext = Record<PropertyKey, never>> = (obj: T, context: TContext, info: GraphQLResolveInfo) => boolean | Promise<boolean>;
 
 export type NextResolverFn<T> = () => Promise<T>;
 
-export type DirectiveResolverFn<
-  TResult = Record<PropertyKey, never>,
-  TParent = Record<PropertyKey, never>,
-  TContext = Record<PropertyKey, never>,
-  TArgs = Record<PropertyKey, never>,
-> = (
+export type DirectiveResolverFn<TResult = Record<PropertyKey, never>, TParent = Record<PropertyKey, never>, TContext = Record<PropertyKey, never>, TArgs = Record<PropertyKey, never>> = (
   next: NextResolverFn<TResult>,
   parent: TParent,
   args: TArgs,
   context: TContext,
-  info: GraphQLResolveInfo,
+  info: GraphQLResolveInfo
 ) => TResult | Promise<TResult>;
+
+
+
+
 
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = ResolversObject<{
@@ -497,20 +511,14 @@ export type ResolversParentTypes = ResolversObject<{
   UsageCost: UsageCost;
 }>;
 
-export type ChannelResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['Channel'] = ResolversParentTypes['Channel'],
-> = ResolversObject<{
+export type ChannelResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['Channel'] = ResolversParentTypes['Channel']> = ResolversObject<{
   connected?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   latencyMs?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   provider?: Resolver<ResolversTypes['ChannelProvider'], ParentType, ContextType>;
 }>;
 
-export type CronJobResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['CronJob'] = ResolversParentTypes['CronJob'],
-> = ResolversObject<{
+export type CronJobResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['CronJob'] = ResolversParentTypes['CronJob']> = ResolversObject<{
   enabled?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   lastRunAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -520,27 +528,18 @@ export type CronJobResolvers<
   schedule?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
 
-export type DataChangeSignalResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['DataChangeSignal'] = ResolversParentTypes['DataChangeSignal'],
-> = ResolversObject<{
+export type DataChangeSignalResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['DataChangeSignal'] = ResolversParentTypes['DataChangeSignal']> = ResolversObject<{
   source?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   ts?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
 
-export type EventCountsResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['EventCounts'] = ResolversParentTypes['EventCounts'],
-> = ResolversObject<{
+export type EventCountsResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['EventCounts'] = ResolversParentTypes['EventCounts']> = ResolversObject<{
   error?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   restart?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   warning?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
-export type EventDensityBucketResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['EventDensityBucket'] = ResolversParentTypes['EventDensityBucket'],
-> = ResolversObject<{
+export type EventDensityBucketResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['EventDensityBucket'] = ResolversParentTypes['EventDensityBucket']> = ResolversObject<{
   count?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   epochStart?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   errorCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
@@ -552,29 +551,20 @@ export type EventDensityBucketResolvers<
   warningCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
-export type EventEntryResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['EventEntry'] = ResolversParentTypes['EventEntry'],
-> = ResolversObject<{
+export type EventEntryResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['EventEntry'] = ResolversParentTypes['EventEntry']> = ResolversObject<{
   message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   module?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   timestamp?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
 
-export type EventsResultResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['EventsResult'] = ResolversParentTypes['EventsResult'],
-> = ResolversObject<{
+export type EventsResultResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['EventsResult'] = ResolversParentTypes['EventsResult']> = ResolversObject<{
   counts?: Resolver<ResolversTypes['EventCounts'], ParentType, ContextType>;
   events?: Resolver<Array<ResolversTypes['EventEntry']>, ParentType, ContextType>;
   total?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
-export type GatewayStatusResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['GatewayStatus'] = ResolversParentTypes['GatewayStatus'],
-> = ResolversObject<{
+export type GatewayStatusResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['GatewayStatus'] = ResolversParentTypes['GatewayStatus']> = ResolversObject<{
   appVersion?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   connectLatencyMs?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   latestVersion?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -588,10 +578,7 @@ export type GatewayStatusResolvers<
   version?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
 
-export type LifetimeStatsResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['LifetimeStats'] = ResolversParentTypes['LifetimeStats'],
-> = ResolversObject<{
+export type LifetimeStatsResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['LifetimeStats'] = ResolversParentTypes['LifetimeStats']> = ResolversObject<{
   createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   daysSinceCreation?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   isReady?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
@@ -605,38 +592,26 @@ export type LifetimeStatsResolvers<
   totalUserMessages?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
-export type LogBatchResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['LogBatch'] = ResolversParentTypes['LogBatch'],
-> = ResolversObject<{
+export type LogBatchResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['LogBatch'] = ResolversParentTypes['LogBatch']> = ResolversObject<{
   counts?: Resolver<ResolversTypes['LogCounts'], ParentType, ContextType>;
   entries?: Resolver<Array<ResolversTypes['LogEntry']>, ParentType, ContextType>;
 }>;
 
-export type LogCountsResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['LogCounts'] = ResolversParentTypes['LogCounts'],
-> = ResolversObject<{
+export type LogCountsResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['LogCounts'] = ResolversParentTypes['LogCounts']> = ResolversObject<{
   debug?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   error?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   info?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   warn?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
-export type LogEntryResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['LogEntry'] = ResolversParentTypes['LogEntry'],
-> = ResolversObject<{
+export type LogEntryResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['LogEntry'] = ResolversParentTypes['LogEntry']> = ResolversObject<{
   level?: Resolver<ResolversTypes['LogLevel'], ParentType, ContextType>;
   message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   module?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   time?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
 
-export type MetricsBucketResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['MetricsBucket'] = ResolversParentTypes['MetricsBucket'],
-> = ResolversObject<{
+export type MetricsBucketResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['MetricsBucket'] = ResolversParentTypes['MetricsBucket']> = ResolversObject<{
   apiCalls?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   assistantTurns?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   bucket?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
@@ -654,10 +629,7 @@ export type MetricsBucketResolvers<
   warnings?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
-export type MetricsSummaryResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['MetricsSummary'] = ResolversParentTypes['MetricsSummary'],
-> = ResolversObject<{
+export type MetricsSummaryResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['MetricsSummary'] = ResolversParentTypes['MetricsSummary']> = ResolversObject<{
   bucketMinutes?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   buckets?: Resolver<Array<ResolversTypes['MetricsBucket']>, ParentType, ContextType>;
   date?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -672,18 +644,12 @@ export type MetricsSummaryResolvers<
   warnings?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
 }>;
 
-export type ModelTokensResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['ModelTokens'] = ResolversParentTypes['ModelTokens'],
-> = ResolversObject<{
+export type ModelTokensResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['ModelTokens'] = ResolversParentTypes['ModelTokens']> = ResolversObject<{
   model?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   tokensK?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
 }>;
 
-export type QueryResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query'],
-> = ResolversObject<{
+export type QueryResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
   channels?: Resolver<Array<ResolversTypes['Channel']>, ParentType, ContextType>;
   cronJobs?: Resolver<Array<ResolversTypes['CronJob']>, ParentType, ContextType>;
   eventCounts?: Resolver<ResolversTypes['EventCounts'], ParentType, ContextType, Partial<QueryEventCountsArgs>>;
@@ -694,20 +660,12 @@ export type QueryResolvers<
   metrics?: Resolver<ResolversTypes['MetricsSummary'], ParentType, ContextType, Partial<QueryMetricsArgs>>;
   recentLogs?: Resolver<Array<ResolversTypes['LogEntry']>, ParentType, ContextType, Partial<QueryRecentLogsArgs>>;
   resources?: Resolver<ResolversTypes['SystemResources'], ParentType, ContextType>;
-  sessionTranscript?: Resolver<
-    Maybe<ResolversTypes['SessionTranscript']>,
-    ParentType,
-    ContextType,
-    RequireFields<QuerySessionTranscriptArgs, 'sessionKey'>
-  >;
+  sessionTranscript?: Resolver<Maybe<ResolversTypes['SessionTranscript']>, ParentType, ContextType, RequireFields<QuerySessionTranscriptArgs, 'sessionKey'>>;
   sessions?: Resolver<Array<ResolversTypes['Session']>, ParentType, ContextType, Partial<QuerySessionsArgs>>;
   usageCost?: Resolver<ResolversTypes['UsageCost'], ParentType, ContextType>;
 }>;
 
-export type SessionResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['Session'] = ResolversParentTypes['Session'],
-> = ResolversObject<{
+export type SessionResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['Session'] = ResolversParentTypes['Session']> = ResolversObject<{
   channel?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   contextTokens?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   displayName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -722,10 +680,7 @@ export type SessionResolvers<
   usagePercent?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
 }>;
 
-export type SessionTranscriptResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['SessionTranscript'] = ResolversParentTypes['SessionTranscript'],
-> = ResolversObject<{
+export type SessionTranscriptResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['SessionTranscript'] = ResolversParentTypes['SessionTranscript']> = ResolversObject<{
   channel?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   contextTokens?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   displayName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -745,34 +700,19 @@ export type SessionTranscriptResolvers<
   totalTokens?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
-export type SubscriptionResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['Subscription'] = ResolversParentTypes['Subscription'],
-> = ResolversObject<{
-  dataChanged?: SubscriptionResolver<ResolversTypes['DataChangeSignal'], 'dataChanged', ParentType, ContextType>;
-  logs?: SubscriptionResolver<
-    ResolversTypes['LogBatch'],
-    'logs',
-    ParentType,
-    ContextType,
-    Partial<SubscriptionLogsArgs>
-  >;
+export type SubscriptionResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['Subscription'] = ResolversParentTypes['Subscription']> = ResolversObject<{
+  dataChanged?: SubscriptionResolver<ResolversTypes['DataChangeSignal'], "dataChanged", ParentType, ContextType>;
+  logs?: SubscriptionResolver<ResolversTypes['LogBatch'], "logs", ParentType, ContextType, Partial<SubscriptionLogsArgs>>;
 }>;
 
-export type SystemResourcesResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['SystemResources'] = ResolversParentTypes['SystemResources'],
-> = ResolversObject<{
+export type SystemResourcesResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['SystemResources'] = ResolversParentTypes['SystemResources']> = ResolversObject<{
   cpu?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   diskMB?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   memoryMB?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   sampledAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
 
-export type TranscriptMessageResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['TranscriptMessage'] = ResolversParentTypes['TranscriptMessage'],
-> = ResolversObject<{
+export type TranscriptMessageResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['TranscriptMessage'] = ResolversParentTypes['TranscriptMessage']> = ResolversObject<{
   content?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   contentTruncated?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   model?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -782,20 +722,14 @@ export type TranscriptMessageResolvers<
   usage?: Resolver<Maybe<ResolversTypes['TranscriptTokenUsage']>, ParentType, ContextType>;
 }>;
 
-export type TranscriptTokenUsageResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['TranscriptTokenUsage'] = ResolversParentTypes['TranscriptTokenUsage'],
-> = ResolversObject<{
+export type TranscriptTokenUsageResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['TranscriptTokenUsage'] = ResolversParentTypes['TranscriptTokenUsage']> = ResolversObject<{
   cacheRead?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   cacheWrite?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   input?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   output?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
-export type UsageCostResolvers<
-  ContextType = AppContext,
-  ParentType extends ResolversParentTypes['UsageCost'] = ResolversParentTypes['UsageCost'],
-> = ResolversObject<{
+export type UsageCostResolvers<ContextType = AppContext, ParentType extends ResolversParentTypes['UsageCost'] = ResolversParentTypes['UsageCost']> = ResolversObject<{
   fetchedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   todayCost?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   todayTokensM?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
@@ -828,3 +762,4 @@ export type Resolvers<ContextType = AppContext> = ResolversObject<{
   TranscriptTokenUsage?: TranscriptTokenUsageResolvers<ContextType>;
   UsageCost?: UsageCostResolvers<ContextType>;
 }>;
+

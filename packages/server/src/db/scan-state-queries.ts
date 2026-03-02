@@ -120,3 +120,23 @@ export function queryTotalSessionFiles(db: Database): number {
   const row = db.prepare('SELECT COUNT(*) AS cnt FROM scan_state').get<{ cnt: number }>();
   return row?.cnt ?? 0;
 }
+
+export function queryMissingFirstTimestampPaths(db: Database): string[] {
+  return db
+    .prepare('SELECT file_path FROM scan_state WHERE first_timestamp_ms IS NULL')
+    .all<{ file_path: string }>()
+    .map((row) => row.file_path);
+}
+
+export function updateFirstTimestamps(db: Database, updates: Array<{ path: string; ts: number }>): void {
+  if (updates.length === 0) {
+    return;
+  }
+
+  db.transaction((tx) => {
+    const stmt = cached(tx, 'UPDATE scan_state SET first_timestamp_ms = ? WHERE file_path = ?');
+    for (const u of updates) {
+      stmt.run(u.ts, u.path);
+    }
+  });
+}

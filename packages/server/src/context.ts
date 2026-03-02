@@ -3,20 +3,16 @@ import type { LogEntry } from '@claw-insights/shared';
 import { config } from './config.js';
 import type { Database } from './db/database.js';
 import { initDatabase } from './db/init.js';
-import { insertMessageEventBatch } from './db/message-queries.js';
-import { insertTokenUsageEventBatch } from './db/token-queries.js';
-import { type MessageEvent, MessageEventBus } from './events/message-event-bus.js';
-import type { TokenUsageEvent } from './events/token-event-bus.js';
+import { MessageEventBus } from './events/message-event-bus.js';
 import { TokenEventBus } from './events/token-event-bus.js';
 import { createChildLogger } from './logger.js';
 import { Pipeline } from './pipeline/index.js';
 import { loadPlatform } from './platforms/index.js';
 import { Aggregator } from './sources/aggregator.js';
-import { createLifetimeScanner, type LifetimeScanner } from './sources/collectors/lifetime-scanner.js';
-import { createLogIngester } from './sources/collectors/log-ingester.js';
-import { LogTailer } from './sources/collectors/log-tailer.js';
-import { SystemSampler } from './sources/collectors/metrics-collector.js';
-import { createTranscriptWatcher, type TranscriptWatcher } from './sources/collectors/transcript-watcher.js';
+import { createLogIngester } from './sources/collectors/log/ingester.js';
+import { LogTailer } from './sources/collectors/log/tailer.js';
+import { SystemSampler } from './sources/collectors/metrics/collector.js';
+import { createTranscriptManager, type TranscriptManager } from './sources/collectors/transcript/index.js';
 import { DataRetention } from './sources/data-retention.js';
 import { DataValidator } from './sources/data-validator.js';
 import { createGatewayClient, type GatewayClient } from './sources/gateway-cli.js';
@@ -38,13 +34,10 @@ export interface AppContext {
   systemSampler: SystemSampler;
   dataValidator: DataValidator;
   dataRetention: DataRetention;
-  lifetimeScanner: LifetimeScanner;
-  transcriptWatcher: TranscriptWatcher | null;
+  lifetimeScanner: TranscriptManager;
   destroyed: boolean;
   tokenBus: TokenEventBus;
   messageBus: MessageEventBus;
-  flushTokenEvents: () => void;
-  flushMessageEvents: () => void;
   gatewayClient: GatewayClient;
   systemInfoService: SystemInfoService;
 }
@@ -65,36 +58,6 @@ export async function createContext(): Promise<AppContext> {
 
   const tokenBus = new TokenEventBus();
   const messageBus = new MessageEventBus();
-  const BATCH_SIZE = 100;
-
-  let tokenEventBuffer: TokenUsageEvent[] = [];
-  const flushTokenEvents = () => {
-    if (tokenEventBuffer.length > 0) {
-      insertTokenUsageEventBatch(db, tokenEventBuffer);
-      tokenEventBuffer = [];
-    }
-  };
-  tokenBus.on((event) => {
-    tokenEventBuffer.push(event);
-    if (tokenEventBuffer.length >= BATCH_SIZE) {
-      flushTokenEvents();
-    }
-  });
-
-  let messageEventBuffer: MessageEvent[] = [];
-  const flushMessageEvents = () => {
-    if (messageEventBuffer.length > 0) {
-      insertMessageEventBatch(db, messageEventBuffer);
-      sessionReader.invalidateTurnCounts();
-      messageEventBuffer = [];
-    }
-  };
-  messageBus.on((event) => {
-    messageEventBuffer.push(event);
-    if (messageEventBuffer.length >= BATCH_SIZE) {
-      flushMessageEvents();
-    }
-  });
 
   const systemSampler = new SystemSampler(db, sessionReader, () => systemInfoService.getSystemMetrics(), aggregator);
 
@@ -110,13 +73,15 @@ export async function createContext(): Promise<AppContext> {
     aggregateIntervalMs: config.aggregateIntervalMs,
   });
 
-  const lifetimeScanner = createLifetimeScanner({
+  const transcriptManager = createTranscriptManager({
     db,
     transcriptsDir: config.transcriptsDir,
     deviceJsonPath: config.deviceJsonPath,
     tokenBus,
     messageBus,
-    scanTiered: config.scanTiered,
+    onFlush: (flushedMessages) => {
+      if (flushedMessages > 0) {sessionReader.invalidateTurnCounts();}
+    },
   });
 
   const ingestLog = createLogIngester(db);
@@ -142,7 +107,7 @@ export async function createContext(): Promise<AppContext> {
     .addService('systemSampler', systemSampler)
     .addService('dataValidator', dataValidator)
     .addService('dataRetention', dataRetention)
-    .addManaged('lifetimeScanner', lifetimeScanner)
+    .addManaged('lifetimeScanner', transcriptManager)
     // Wiring — declarative data flow
     .wire('logTailer', 'log', ['logIngester', 'spawnTracker'])
     .build();
@@ -160,13 +125,10 @@ export async function createContext(): Promise<AppContext> {
     systemSampler,
     dataValidator,
     dataRetention,
-    lifetimeScanner,
-    transcriptWatcher: null,
+    lifetimeScanner: transcriptManager,
     destroyed: false,
     tokenBus,
     messageBus,
-    flushTokenEvents,
-    flushMessageEvents,
     gatewayClient,
     systemInfoService,
   };
@@ -181,25 +143,12 @@ export function startContext(ctx: AppContext): void {
       if (ctx.destroyed) {
         return;
       }
-      ctx.flushTokenEvents();
-      ctx.flushMessageEvents();
 
       // Warm gateway cache after scanner completes — avoids event-loop
       // contention that caused false 'gateway down' on startup (ISS-056)
       ctx.gatewayClient.warmCache().catch((err: unknown) => {
         log.debug({ err }, 'warmCache failed (non-fatal)');
       });
-
-      const fileStates = ctx.lifetimeScanner.getFileStates();
-      ctx.transcriptWatcher = createTranscriptWatcher(config.transcriptsDir)
-        .pollEvery(10_000)
-        .dirScanEvery(60_000)
-        .emitTo(ctx.tokenBus, ctx.messageBus)
-        .onFlush(() => {
-          ctx.flushTokenEvents();
-          ctx.flushMessageEvents();
-        })
-        .start(fileStates);
     })
     .catch((err: unknown) => {
       log.error({ err }, 'lifetime scanner init failed');
@@ -209,9 +158,6 @@ export function startContext(ctx: AppContext): void {
 export function destroyContext(ctx: AppContext): void {
   log.info('destroyContext started');
   ctx.destroyed = true;
-  ctx.transcriptWatcher?.destroy();
-  ctx.flushTokenEvents();
-  ctx.flushMessageEvents();
   ctx.pipeline.destroy();
   ctx.db.close();
 }

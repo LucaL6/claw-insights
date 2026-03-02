@@ -94,7 +94,7 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
         return Math.max(1, Math.ceil((Date.now() - new Date(cached).getTime()) / 86_400_000));
       }
       // Cold path: collect all sources including lifetime scanner
-      const lifetimeResult = await ctx.lifetimeScanner?.getStats();
+      const lifetimeResult = ctx.lifetimeScanner?.getStats();
       const lifetimeCreatedAt = lifetimeResult?.createdAt ?? null;
       const since = await resolveCompanionSince(ctx.db, {
         deviceJsonPath: config.deviceJsonPath,

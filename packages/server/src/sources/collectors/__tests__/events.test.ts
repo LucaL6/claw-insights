@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { initDatabase } from '../../../db/init.js';
 import { dataBus, type DataChangeEvent, emitChange } from '../../../events';
-import { SystemSampler } from '../metrics-collector';
+import { SystemSampler } from '../metrics/collector.js';
 
 describe('dataBus', () => {
   it('should emit change events with source and ts', () => {

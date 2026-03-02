@@ -1,5 +1,5 @@
 import { createChildLogger } from '../logger.js';
-import { contentHash } from '../sources/collectors/transcript-parser.js';
+import { contentHash } from '../sources/collectors/transcript/processing/parser.js';
 import type { Database } from './database.js';
 import { bucketExpr, cached, timedQuery } from './query-utils.js';
 

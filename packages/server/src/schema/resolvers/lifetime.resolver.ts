@@ -8,7 +8,7 @@ const log = createChildLogger('resolver:lifetime');
 export function lifetimeResolvers(ctx: AppContext): Partial<Resolvers> {
   const lifetimeStats: QueryResolvers['lifetimeStats'] = async () => {
     const start = performance.now();
-    const result = await safe(async () => ctx.lifetimeScanner.getStats());
+    const result = await safe(() => ctx.lifetimeScanner.getStats());
     const ms = performance.now() - start;
     if (ms > 100) {
       log.debug({ ms: Math.round(ms) }, 'slow resolve: lifetimeStats');

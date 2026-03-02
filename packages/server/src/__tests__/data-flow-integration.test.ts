@@ -98,7 +98,7 @@ describe('EventBus → Flush → DB → GraphQL Query', () => {
     });
 
     // Flush to DB + clear aggregator cache
-    t.ctx.flushTokenEvents();
+    t.flushTokenEvents();
     t.clearAggregatorCache();
 
     const after = await request(t.app).post('/graphql').send({ query: '{ metrics { totalTokensK } }' });
@@ -116,7 +116,7 @@ describe('EventBus → Flush → DB → GraphQL Query', () => {
       timestamp: new Date().toISOString(),
     });
 
-    t.ctx.flushMessageEvents();
+    t.flushMessageEvents();
 
     const afterCount = (t.ctx.db.prepare('SELECT COUNT(*) as cnt FROM message_events').get() as { cnt: number }).cnt;
     expect(afterCount).toBe(beforeCount + 1);

@@ -117,36 +117,20 @@ vi.mock('../sources/system-info.js', () => ({
   })),
 }));
 
-vi.mock('../sources/collectors/log-tailer.js', () => ({
+vi.mock('../sources/collectors/log/tailer.js', () => ({
   LogTailer: mockClass({ on() {}, off() {}, destroy() {} }),
 }));
 
-vi.mock('../sources/collectors/lifetime-scanner.js', () => ({
-  createLifetimeScanner: () => ({
+vi.mock('../sources/collectors/transcript/manager.js', () => ({
+  createTranscriptManager: () => ({
+    state: { kind: 'idle' },
     init: () => Promise.resolve(),
-    destroy() {},
-    getStats: () => ({}),
+    destroy: vi.fn(),
+    getStats: () => Promise.resolve({}),
     getFileStates: () => new Map(),
     isReady: () => false,
   }),
 }));
-
-vi.mock('../sources/collectors/transcript-watcher.js', () => {
-  const mockWatcher = { destroy: vi.fn() };
-  const mockBuilder = {
-    pollEvery: vi.fn().mockReturnThis(),
-    dirScanEvery: vi.fn().mockReturnThis(),
-    byteBudget: vi.fn().mockReturnThis(),
-    emitTo: vi.fn().mockReturnThis(),
-    onFlush: vi.fn().mockReturnThis(),
-    start: vi.fn(() => mockWatcher),
-  };
-  return {
-    createTranscriptWatcher: vi.fn(() => mockBuilder),
-    __mockBuilder: mockBuilder,
-    __mockWatcher: mockWatcher,
-  };
-});
 
 vi.mock('../sources/readers/spawn-tracker.js', () => ({
   SpawnTracker: mockClass({ ingest() {} }),
@@ -156,7 +140,7 @@ vi.mock('../sources/aggregator.js', () => ({
   Aggregator: mockClass({ ingestLog() {}, getMetrics: () => ({ totalTokensK: 100 }) }),
 }));
 
-vi.mock('../sources/collectors/metrics-collector.js', () => ({
+vi.mock('../sources/collectors/metrics/collector.js', () => ({
   SystemSampler: mockClass({ start() {}, stop() {} }),
 }));
 
@@ -187,12 +171,9 @@ describe('context', () => {
     expect(ctx.systemSampler).toBeDefined();
     expect(ctx.dataValidator).toBeDefined();
     expect(ctx.dataRetention).toBeDefined();
-    expect(ctx.transcriptWatcher).toBeNull();
     expect(ctx.destroyed).toBe(false);
     expect(ctx.tokenBus).toBeDefined();
     expect(ctx.messageBus).toBeDefined();
-    expect(ctx.flushTokenEvents).toBeTypeOf('function');
-    expect(ctx.flushMessageEvents).toBeTypeOf('function');
     expect(ctx.gatewayClient).toBeDefined();
     expect(ctx.systemInfoService).toBeDefined();
   });
@@ -205,65 +186,27 @@ describe('context', () => {
     expect(ctx.pipeline).toBeDefined();
   });
 
-  it('startContext starts pipeline and flushes buffered events after init', async () => {
+  it('startContext starts pipeline and calls init', async () => {
     const { createContext, startContext } = await import('../context');
     const ctx = await createContext();
-    const flushTokenSpy = vi.spyOn(ctx, 'flushTokenEvents');
-    const flushMessageSpy = vi.spyOn(ctx, 'flushMessageEvents');
 
     startContext(ctx);
     await Promise.resolve();
 
     expect(ctx.pipeline.start).toHaveBeenCalled();
-    expect(flushTokenSpy).toHaveBeenCalled();
-    expect(flushMessageSpy).toHaveBeenCalled();
   });
 
-  it('destroyContext flushes buffers, destroys pipeline, and closes db', async () => {
+  it('destroyContext destroys pipeline and closes db', async () => {
     const { createContext, destroyContext } = await import('../context');
     const ctx = await createContext();
-    const flushTokenSpy = vi.spyOn(ctx, 'flushTokenEvents');
-    const flushMessageSpy = vi.spyOn(ctx, 'flushMessageEvents');
 
     destroyContext(ctx);
 
-    expect(flushTokenSpy).toHaveBeenCalled();
-    expect(flushMessageSpy).toHaveBeenCalled();
     expect(ctx.pipeline.destroy).toHaveBeenCalled();
     expect((ctx.db as unknown as Record<string, unknown>).close).toHaveBeenCalled();
   });
 
-  it('startContext creates TranscriptWatcher after scanner init', async () => {
-    const { createContext, startContext } = await import('../context');
-    const { createTranscriptWatcher } = await import('../sources/collectors/transcript-watcher');
-    const ctx = await createContext();
-
-    startContext(ctx);
-    // Wait for init() promise to resolve
-    await new Promise((r) => setImmediate(r));
-    await Promise.resolve();
-
-    expect(createTranscriptWatcher).toHaveBeenCalled();
-    expect(ctx.transcriptWatcher).toBeDefined();
-    expect(ctx.transcriptWatcher).not.toBeNull();
-  });
-
-  it('destroyContext destroys TranscriptWatcher', async () => {
-    const { createContext, startContext, destroyContext } = await import('../context');
-    const ctx = await createContext();
-
-    startContext(ctx);
-    await new Promise((r) => setImmediate(r));
-    await Promise.resolve();
-
-    const watcher = ctx.transcriptWatcher;
-    expect(watcher).not.toBeNull();
-
-    destroyContext(ctx);
-    expect(watcher!.destroy).toHaveBeenCalled();
-  });
-
-  it('does not create TranscriptWatcher if destroyed before init resolves', async () => {
+  it('does not warm cache if destroyed before init resolves', async () => {
     const { createContext, startContext, destroyContext } = await import('../context');
     const ctx = await createContext();
 
@@ -273,7 +216,6 @@ describe('context', () => {
     await new Promise((r) => setImmediate(r));
     await Promise.resolve();
 
-    expect(ctx.transcriptWatcher).toBeNull();
     expect(ctx.destroyed).toBe(true);
   });
 

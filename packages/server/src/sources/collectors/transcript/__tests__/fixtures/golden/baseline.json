@@ -1,0 +1,266 @@
+{
+  "empty.jsonl": {
+    "events": [],
+    "finalOffset": 0,
+    "partial": "",
+    "firstTimestampMs": null
+  },
+  "long-single-line.jsonl": {
+    "events": [
+      {
+        "kind": "token",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "sessionKey": "long-single-line",
+        "model": "claude-3-opus",
+        "inputTokens": 100,
+        "outputTokens": 50,
+        "cacheReadTokens": 10,
+        "cacheWriteTokens": 5
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "sessionKey": "long-single-line",
+        "role": "assistant",
+        "lineHash": "f579cd25"
+      }
+    ],
+    "finalOffset": 1048826,
+    "partial": "",
+    "firstTimestampMs": 1767225600000
+  },
+  "multibyte-emoji.jsonl": {
+    "events": [
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "sessionKey": "multibyte-emoji",
+        "role": "user",
+        "lineHash": "1586e330"
+      },
+      {
+        "kind": "token",
+        "timestamp": "2026-01-01T00:00:01Z",
+        "sessionKey": "multibyte-emoji",
+        "model": "claude-3-opus",
+        "inputTokens": 200,
+        "outputTokens": 100,
+        "cacheReadTokens": 20,
+        "cacheWriteTokens": 10
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:01Z",
+        "sessionKey": "multibyte-emoji",
+        "role": "assistant",
+        "lineHash": "cc116115"
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:02Z",
+        "sessionKey": "multibyte-emoji",
+        "role": "user",
+        "lineHash": "4d51b05e"
+      },
+      {
+        "kind": "token",
+        "timestamp": "2026-01-01T00:00:03Z",
+        "sessionKey": "multibyte-emoji",
+        "model": "claude-3-opus",
+        "inputTokens": 150,
+        "outputTokens": 80,
+        "cacheReadTokens": 15,
+        "cacheWriteTokens": 8
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:03Z",
+        "sessionKey": "multibyte-emoji",
+        "role": "assistant",
+        "lineHash": "2e6e2097"
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:04Z",
+        "sessionKey": "multibyte-emoji",
+        "role": "tool",
+        "lineHash": "d7b3041b"
+      }
+    ],
+    "finalOffset": 821,
+    "partial": "",
+    "firstTimestampMs": 1767225600000
+  },
+  "no-trailing-newline.jsonl": {
+    "events": [
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:01:00Z",
+        "sessionKey": "no-trailing-newline",
+        "role": "user",
+        "lineHash": "0c7ba7ba"
+      },
+      {
+        "kind": "token",
+        "timestamp": "2026-01-01T00:01:01Z",
+        "sessionKey": "no-trailing-newline",
+        "model": "claude-3",
+        "inputTokens": 10,
+        "outputTokens": 20,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:01:01Z",
+        "sessionKey": "no-trailing-newline",
+        "role": "assistant",
+        "lineHash": "2863b3c8"
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:01:02Z",
+        "sessionKey": "no-trailing-newline",
+        "role": "user",
+        "lineHash": "048cad63"
+      },
+      {
+        "kind": "token",
+        "timestamp": "2026-01-01T00:01:03Z",
+        "sessionKey": "no-trailing-newline",
+        "model": "claude-3",
+        "inputTokens": 30,
+        "outputTokens": 40,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:01:03Z",
+        "sessionKey": "no-trailing-newline",
+        "role": "assistant",
+        "lineHash": "326966ba"
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:01:04Z",
+        "sessionKey": "no-trailing-newline",
+        "role": "user",
+        "lineHash": "0a6cf052"
+      }
+    ],
+    "finalOffset": 541,
+    "partial": "{\"type\":\"message\",\"timestamp\":\"2026-01-01T00:01:04Z\",\"message\":{\"role\":\"user\"}}",
+    "firstTimestampMs": 1767225660000
+  },
+  "normal.jsonl": {
+    "events": [
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "sessionKey": "normal",
+        "role": "user",
+        "lineHash": "bf389d7f"
+      },
+      {
+        "kind": "token",
+        "timestamp": "2026-01-01T00:00:01Z",
+        "sessionKey": "normal",
+        "model": "claude-3",
+        "inputTokens": 10,
+        "outputTokens": 20,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:01Z",
+        "sessionKey": "normal",
+        "role": "assistant",
+        "lineHash": "f8da01aa"
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:02Z",
+        "sessionKey": "normal",
+        "role": "user",
+        "lineHash": "f657d499"
+      },
+      {
+        "kind": "token",
+        "timestamp": "2026-01-01T00:00:03Z",
+        "sessionKey": "normal",
+        "model": "claude-3",
+        "inputTokens": 15,
+        "outputTokens": 25,
+        "cacheReadTokens": 5,
+        "cacheWriteTokens": 0
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:03Z",
+        "sessionKey": "normal",
+        "role": "assistant",
+        "lineHash": "f1f1c204"
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:04Z",
+        "sessionKey": "normal",
+        "role": "tool",
+        "lineHash": "0e8590d1"
+      },
+      {
+        "kind": "token",
+        "timestamp": "2026-01-01T00:00:05Z",
+        "sessionKey": "normal",
+        "model": "gpt-4",
+        "inputTokens": 100,
+        "outputTokens": 200,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:05Z",
+        "sessionKey": "normal",
+        "role": "assistant",
+        "lineHash": "98c593ee"
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:06Z",
+        "sessionKey": "normal",
+        "role": "user",
+        "lineHash": "eada4b75"
+      },
+      {
+        "kind": "token",
+        "timestamp": "2026-01-01T00:00:07Z",
+        "sessionKey": "normal",
+        "model": "claude-3",
+        "inputTokens": 50,
+        "outputTokens": 75,
+        "cacheReadTokens": 10,
+        "cacheWriteTokens": 3
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:07Z",
+        "sessionKey": "normal",
+        "role": "assistant",
+        "lineHash": "ca301476"
+      },
+      {
+        "kind": "message",
+        "timestamp": "2026-01-01T00:00:09Z",
+        "sessionKey": "normal",
+        "role": "user",
+        "lineHash": "27578430"
+      }
+    ],
+    "finalOffset": 1173,
+    "partial": "",
+    "firstTimestampMs": 1767225600000
+  }
+}

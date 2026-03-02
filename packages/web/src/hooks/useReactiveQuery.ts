@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { AnyVariables, UseQueryArgs, UseQueryResponse } from 'urql';
 import { useQuery, useSubscription } from 'urql';
 
@@ -109,5 +109,21 @@ export function useReactiveQuery<TData = unknown, TVariables extends AnyVariable
     };
   }, [reactive.fallbackPollMs, refetch]);
 
-  return [result, executeQuery];
+  // Preserve last known data when connection drops (result.data becomes undefined)
+  const lastDataRef = useRef(result.data);
+
+  const stableResult = useMemo(() => {
+    if (result.data !== undefined) {
+      // Update ref inside useMemo to keep it consistent with memoized result
+      lastDataRef.current = result.data;
+      return result;
+    }
+    // Connection lost: return stale data with current fetching/error state
+    if (lastDataRef.current !== undefined) {
+      return { ...result, data: lastDataRef.current, stale: true } as typeof result;
+    }
+    return result;
+  }, [result]);
+
+  return [stableResult, executeQuery];
 }

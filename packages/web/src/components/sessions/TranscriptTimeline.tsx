@@ -47,10 +47,12 @@ const ROLE_CONFIG = {
 
 /** Shorten model id: "anthropic/claude-opus-4-6" → "opus-4-6", "openai/gpt-4o" → "gpt-4o" */
 function formatModelShort(model: string): string {
-  // Strip provider prefix
-  const name = model.includes('/') ? model.split('/').slice(1).join('/') : model;
-  // Common Claude shortenings
-  return name.replace(/^claude-/, '').replace(/^models\//, '');
+  if (!model) {return '';}
+  // Strip provider prefix (handles multiple slashes: "a/b/c" → "b/c")
+  const afterSlash = model.includes('/') ? model.split('/').slice(1).join('/') : model;
+  if (!afterSlash) {return model;} // fallback for trailing slash like "provider/"
+  // Strip common prefixes (anchored to start only)
+  return afterSlash.replace(/^models\//, '').replace(/^claude-/, '');
 }
 
 function formatTime(iso: string): string {

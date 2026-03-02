@@ -1,6 +1,6 @@
 import { describe, expect,it } from 'vitest';
 
-import { redact } from '../sources/collectors/log-tailer';
+import { redact } from '../sources/collectors/log/tailer';
 
 describe('Security (NFR-3)', () => {
   // NFR-3.3 Sensitive data redaction

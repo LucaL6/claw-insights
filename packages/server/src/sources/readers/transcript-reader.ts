@@ -172,6 +172,7 @@ export async function readTranscript(
         kind = parsed.group;
       }
     } else if (type === 'model_change') {
+      // Always overwrite: model reflects the last-used model in the session
       if (parsed.modelId) {
         model = parsed.modelId;
       }
@@ -200,6 +201,7 @@ export async function readTranscript(
         if (!startedAt && ts) {
           startedAt = ts;
         }
+        // Always overwrite: model reflects the last-used model in the session
         if (role === 'assistant' && inner.model) {
           model = inner.model;
         }

@@ -131,6 +131,7 @@ function stubSpawnTracker() {
 
 function stubLifetimeScanner() {
   return {
+    state: { kind: 'complete' as const },
     init: async () => {},
     getStats: async () => ({
       isReady: true,
@@ -157,6 +158,8 @@ export interface TestApp {
   app: Express;
   db: Database;
   ctx: AppContext;
+  flushTokenEvents(): void;
+  flushMessageEvents(): void;
   clearAggregatorCache(): void;
   destroy(): void;
 }
@@ -219,12 +222,9 @@ export function createTestApp(): TestApp {
     dataValidator,
     dataRetention: { start() {}, destroy() {} } as unknown as AppContext['dataRetention'],
     lifetimeScanner: stubLifetimeScanner(),
-    transcriptWatcher: null,
     destroyed: false,
     tokenBus,
     messageBus,
-    flushTokenEvents,
-    flushMessageEvents,
     gatewayClient: stubGatewayClient() as unknown as AppContext['gatewayClient'],
     systemInfoService: stubSystemInfoService() as unknown as AppContext['systemInfoService'],
   };
@@ -236,6 +236,8 @@ export function createTestApp(): TestApp {
     app,
     db,
     ctx,
+    flushTokenEvents,
+    flushMessageEvents,
     clearAggregatorCache() {
       aggregator.clearCache();
     },

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { initDatabase } from '../../db/init.js';
 import { Aggregator } from '../aggregator';
-import { createLogIngester } from '../collectors/log-ingester';
+import { createLogIngester } from '../collectors/log/ingester';
 
 function setup() {
   const dbPath = join(tmpdir(), `agg-${Date.now()}-${Math.random()}.db`);

@@ -73,7 +73,7 @@ describe('createSnapshotSources.getCompanionDays', () => {
       spawnTracker: { getParentChildMap: () => new Map() },
       aggregator: { getMetrics: () => ({}) },
       lifetimeScanner: {
-        getStats: vi.fn(() => Promise.resolve({ createdAt: '2026-01-25T00:00:00.000Z' })),
+        getStats: vi.fn(() => ({ createdAt: '2026-01-25T00:00:00.000Z' })),
       },
       ...overrides,
     } as any;

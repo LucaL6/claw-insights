@@ -9,11 +9,11 @@ export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> =
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
-  ID: { input: string; output: string };
-  String: { input: string; output: string };
-  Boolean: { input: boolean; output: boolean };
-  Int: { input: number; output: number };
-  Float: { input: number; output: number };
+  ID: { input: string; output: string; }
+  String: { input: string; output: string; }
+  Boolean: { input: boolean; output: boolean; }
+  Int: { input: number; output: number; }
+  Float: { input: number; output: number; }
 };
 
 /** Channel connectivity */
@@ -24,7 +24,13 @@ export type Channel = {
   provider: ChannelProvider;
 };
 
-export type ChannelProvider = 'discord' | 'signal' | 'slack' | 'telegram' | 'webchat' | 'whatsapp';
+export type ChannelProvider =
+  | 'discord'
+  | 'signal'
+  | 'slack'
+  | 'telegram'
+  | 'webchat'
+  | 'whatsapp';
 
 export type CronJob = {
   enabled: Scalars['Boolean']['output'];
@@ -135,7 +141,11 @@ export type LogFilter = {
   module?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type LogLevel = 'DEBUG' | 'ERROR' | 'INFO' | 'WARN';
+export type LogLevel =
+  | 'DEBUG'
+  | 'ERROR'
+  | 'INFO'
+  | 'WARN';
 
 export type MetricsBucket = {
   apiCalls: Scalars['Int']['output'];
@@ -155,7 +165,12 @@ export type MetricsBucket = {
   warnings: Scalars['Int']['output'];
 };
 
-export type MetricsRange = 'ONE_HOUR' | 'SIX_HOUR' | 'THIRTY_MIN' | 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR';
+export type MetricsRange =
+  | 'ONE_HOUR'
+  | 'SIX_HOUR'
+  | 'THIRTY_MIN'
+  | 'TWELVE_HOUR'
+  | 'TWENTY_FOUR_HOUR';
 
 export type MetricsSummary = {
   bucketMinutes: Scalars['Int']['output'];
@@ -194,10 +209,12 @@ export type Query = {
   usageCost: UsageCost;
 };
 
+
 export type QueryEventCountsArgs = {
   from?: InputMaybe<Scalars['Int']['input']>;
   to?: InputMaybe<Scalars['Int']['input']>;
 };
+
 
 export type QueryEventsArgs = {
   from?: InputMaybe<Scalars['Int']['input']>;
@@ -206,20 +223,24 @@ export type QueryEventsArgs = {
   types?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+
 export type QueryMetricsArgs = {
   date?: InputMaybe<Scalars['String']['input']>;
   range?: InputMaybe<MetricsRange>;
 };
 
+
 export type QueryRecentLogsArgs = {
   count?: InputMaybe<Scalars['Int']['input']>;
 };
+
 
 export type QuerySessionTranscriptArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   sessionKey: Scalars['String']['input'];
 };
+
 
 export type QuerySessionsArgs = {
   filter?: InputMaybe<SessionFilter>;
@@ -246,9 +267,16 @@ export type SessionFilter = {
   sortBy?: InputMaybe<SessionSortBy>;
 };
 
-export type SessionSortBy = 'NAME' | 'TOKENS_DESC' | 'UPDATED_AT';
+export type SessionSortBy =
+  | 'NAME'
+  | 'TOKENS_DESC'
+  | 'UPDATED_AT';
 
-export type SessionStatus = 'ACTIVE' | 'DONE' | 'FAILED' | 'IDLE';
+export type SessionStatus =
+  | 'ACTIVE'
+  | 'DONE'
+  | 'FAILED'
+  | 'IDLE';
 
 export type SessionTranscript = {
   /** Channel provider */
@@ -292,6 +320,7 @@ export type Subscription = {
   dataChanged: DataChangeSignal;
   logs: LogBatch;
 };
+
 
 export type SubscriptionLogsArgs = {
   filter?: InputMaybe<LogFilter>;
@@ -345,159 +374,68 @@ export type EventsQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type EventsQuery = {
-  events: {
-    total: number;
-    events: Array<{ timestamp: string; type: string; module: string; message: string }>;
-    counts: { error: number; warning: number; restart: number };
-  };
-};
 
-export type EventDensityQueryVariables = Exact<{ [key: string]: never }>;
+export type EventsQuery = { events: { total: number, events: Array<{ timestamp: string, type: string, module: string, message: string }>, counts: { error: number, warning: number, restart: number } } };
 
-export type EventDensityQuery = {
-  eventDensity: Array<{
-    hour: number;
-    count: number;
-    hasError: boolean;
-    hasWarning: boolean;
-    hasRestart: boolean;
-    errorCount: number;
-    warningCount: number;
-    restartCount: number;
-    epochStart: number;
-  }>;
-};
+export type EventDensityQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type EventDensityQuery = { eventDensity: Array<{ hour: number, count: number, hasError: boolean, hasWarning: boolean, hasRestart: boolean, errorCount: number, warningCount: number, restartCount: number, epochStart: number }> };
 
 export type EventCountsQueryVariables = Exact<{
   from?: InputMaybe<Scalars['Int']['input']>;
   to?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type EventCountsQuery = { eventCounts: { error: number; warning: number; restart: number } };
 
-export type GatewayQueryVariables = Exact<{ [key: string]: never }>;
+export type EventCountsQuery = { eventCounts: { error: number, warning: number, restart: number } };
 
-export type GatewayQuery = {
-  gateway: {
-    running: boolean;
-    pid?: number | null;
-    version: string;
-    appVersion: string;
-    updateAvailable?: string | null;
-    uptime: string;
-    startedAt?: string | null;
-    connectLatencyMs?: number | null;
-    latestVersion?: string | null;
-    securityCritical: number;
-    securityWarn: number;
-  };
-};
+export type GatewayQueryVariables = Exact<{ [key: string]: never; }>;
 
-export type ResourcesQueryVariables = Exact<{ [key: string]: never }>;
 
-export type ResourcesQuery = { resources: { cpu: number; memoryMB: number; diskMB: number; sampledAt: string } };
+export type GatewayQuery = { gateway: { running: boolean, pid?: number | null, version: string, appVersion: string, updateAvailable?: string | null, uptime: string, startedAt?: string | null, connectLatencyMs?: number | null, latestVersion?: string | null, securityCritical: number, securityWarn: number } };
 
-export type ChannelsQueryVariables = Exact<{ [key: string]: never }>;
+export type ResourcesQueryVariables = Exact<{ [key: string]: never; }>;
 
-export type ChannelsQuery = {
-  channels: Array<{ provider: ChannelProvider; name: string; connected: boolean; latencyMs?: number | null }>;
-};
+
+export type ResourcesQuery = { resources: { cpu: number, memoryMB: number, diskMB: number, sampledAt: string } };
+
+export type ChannelsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ChannelsQuery = { channels: Array<{ provider: ChannelProvider, name: string, connected: boolean, latencyMs?: number | null }> };
 
 export type SessionsQueryVariables = Exact<{
   filter?: InputMaybe<SessionFilter>;
 }>;
 
-export type SessionsQuery = {
-  sessions: Array<{
-    key: string;
-    displayName: string;
-    kind: string;
-    model: string;
-    channel?: string | null;
-    totalTokens: number;
-    contextTokens: number;
-    usagePercent: number;
-    status: SessionStatus;
-    updatedAt: number;
-    subAgents: Array<{
-      key: string;
-      displayName: string;
-      kind: string;
-      model: string;
-      channel?: string | null;
-      totalTokens: number;
-      contextTokens: number;
-      usagePercent: number;
-      status: SessionStatus;
-      updatedAt: number;
-    }>;
-  }>;
-};
+
+export type SessionsQuery = { sessions: Array<{ key: string, displayName: string, kind: string, model: string, channel?: string | null, totalTokens: number, contextTokens: number, usagePercent: number, status: SessionStatus, updatedAt: number, subAgents: Array<{ key: string, displayName: string, kind: string, model: string, channel?: string | null, totalTokens: number, contextTokens: number, usagePercent: number, status: SessionStatus, updatedAt: number }> }> };
 
 export type MetricsQueryVariables = Exact<{
   date?: InputMaybe<Scalars['String']['input']>;
   range?: InputMaybe<MetricsRange>;
 }>;
 
-export type MetricsQuery = {
-  metrics: {
-    date: string;
-    range: MetricsRange;
-    bucketMinutes: number;
-    timezone: string;
-    totalTokensK: number;
-    rangeTokensK: number;
-    totalTurns: number;
-    totalErrors: number;
-    totalWarnings: number;
-    uptimePercent: number;
-    warnings: Array<string>;
-    buckets: Array<{
-      bucket: number;
-      label: string;
-      epochStart: number;
-      sessions: number;
-      tokensK: number;
-      apiCalls: number;
-      toolCalls: number;
-      turns: number;
-      userTurns: number;
-      assistantTurns: number;
-      errors: number;
-      warnings: number;
-      gatewayUp: boolean;
-      restartEvent: boolean;
-      tokensByModel: Array<{ model: string; tokensK: number }>;
-    }>;
-  };
-};
 
-export type UsageCostQueryVariables = Exact<{ [key: string]: never }>;
+export type MetricsQuery = { metrics: { date: string, range: MetricsRange, bucketMinutes: number, timezone: string, totalTokensK: number, rangeTokensK: number, totalTurns: number, totalErrors: number, totalWarnings: number, uptimePercent: number, warnings: Array<string>, buckets: Array<{ bucket: number, label: string, epochStart: number, sessions: number, tokensK: number, apiCalls: number, toolCalls: number, turns: number, userTurns: number, assistantTurns: number, errors: number, warnings: number, gatewayUp: boolean, restartEvent: boolean, tokensByModel: Array<{ model: string, tokensK: number }> }> } };
 
-export type UsageCostQuery = {
-  usageCost: { totalCost: number; totalTokensM: number; todayCost: number; todayTokensM: number; fetchedAt: string };
-};
+export type UsageCostQueryVariables = Exact<{ [key: string]: never; }>;
 
-export type CronJobsQueryVariables = Exact<{ [key: string]: never }>;
 
-export type CronJobsQuery = {
-  cronJobs: Array<{
-    id: string;
-    name?: string | null;
-    enabled: boolean;
-    schedule: string;
-    lastRunAt?: string | null;
-    lastRunSuccess?: boolean | null;
-    nextRunAt?: string | null;
-  }>;
-};
+export type UsageCostQuery = { usageCost: { totalCost: number, totalTokensM: number, todayCost: number, todayTokensM: number, fetchedAt: string } };
+
+export type CronJobsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type CronJobsQuery = { cronJobs: Array<{ id: string, name?: string | null, enabled: boolean, schedule: string, lastRunAt?: string | null, lastRunSuccess?: boolean | null, nextRunAt?: string | null }> };
 
 export type RecentLogsQueryVariables = Exact<{
   count?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type RecentLogsQuery = { recentLogs: Array<{ time: string; level: LogLevel; module: string; message: string }> };
+
+export type RecentLogsQuery = { recentLogs: Array<{ time: string, level: LogLevel, module: string, message: string }> };
 
 export type SessionTranscriptQueryVariables = Exact<{
   sessionKey: Scalars['String']['input'];
@@ -505,827 +443,39 @@ export type SessionTranscriptQueryVariables = Exact<{
   offset?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type SessionTranscriptQuery = {
-  sessionTranscript?: {
-    sessionKey: string;
-    displayName: string;
-    model: string;
-    channel?: string | null;
-    kind: string;
-    thinkingLevel?: string | null;
-    startedAt: string;
-    fileSize: number;
-    totalTokens: number;
-    contextTokens: number;
-    durationMs: number;
-    isSubAgent: boolean;
-    parentDisplayName?: string | null;
-    spawnPrompt?: string | null;
-    totalMessages: number;
-    hasMore: boolean;
-    messages: Array<{
-      timestamp: string;
-      role: string;
-      content: string;
-      contentTruncated: boolean;
-      model?: string | null;
-      toolName?: string | null;
-      usage?: { input: number; output: number; cacheRead: number; cacheWrite: number } | null;
-    }>;
-  } | null;
-};
 
-export type LifetimeStatsQueryVariables = Exact<{ [key: string]: never }>;
+export type SessionTranscriptQuery = { sessionTranscript?: { sessionKey: string, displayName: string, model: string, channel?: string | null, kind: string, thinkingLevel?: string | null, startedAt: string, fileSize: number, totalTokens: number, contextTokens: number, durationMs: number, isSubAgent: boolean, parentDisplayName?: string | null, spawnPrompt?: string | null, totalMessages: number, hasMore: boolean, messages: Array<{ timestamp: string, role: string, content: string, contentTruncated: boolean, model?: string | null, toolName?: string | null, usage?: { input: number, output: number, cacheRead: number, cacheWrite: number } | null }> } | null };
 
-export type LifetimeStatsQuery = {
-  lifetimeStats: {
-    isReady: boolean;
-    createdAt: string;
-    daysSinceCreation: number;
-    totalSessions: number;
-    totalInputTokens: number;
-    totalOutputTokens: number;
-    totalCacheReadTokens: number;
-    totalCacheWriteTokens: number;
-    totalTokens: number;
-    totalUserMessages: number;
-    totalAssistantMessages: number;
-  };
-};
+export type LifetimeStatsQueryVariables = Exact<{ [key: string]: never; }>;
 
-export type DataChangedSubscriptionVariables = Exact<{ [key: string]: never }>;
 
-export type DataChangedSubscription = { dataChanged: { source: string; ts: string } };
+export type LifetimeStatsQuery = { lifetimeStats: { isReady: boolean, createdAt: string, daysSinceCreation: number, totalSessions: number, totalInputTokens: number, totalOutputTokens: number, totalCacheReadTokens: number, totalCacheWriteTokens: number, totalTokens: number, totalUserMessages: number, totalAssistantMessages: number } };
+
+export type DataChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DataChangedSubscription = { dataChanged: { source: string, ts: string } };
 
 export type LogsSubscriptionVariables = Exact<{
   filter?: InputMaybe<LogFilter>;
 }>;
 
-export type LogsSubscription = {
-  logs: {
-    entries: Array<{ time: string; level: LogLevel; module: string; message: string }>;
-    counts: { debug: number; info: number; warn: number; error: number };
-  };
-};
 
-export const EventsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'Events' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'from' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'to' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'types' } },
-          type: {
-            kind: 'ListType',
-            type: { kind: 'NonNullType', type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } } },
-          },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'limit' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'events' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'from' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'from' } },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'to' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'to' } },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'types' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'types' } },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'limit' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'limit' } },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'events' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'timestamp' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'module' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'message' } },
-                    ],
-                  },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'total' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'counts' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'error' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'warning' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'restart' } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<EventsQuery, EventsQueryVariables>;
-export const EventDensityDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'EventDensity' },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'eventDensity' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'hour' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'count' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'hasError' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'hasWarning' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'hasRestart' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'errorCount' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'warningCount' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'restartCount' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'epochStart' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<EventDensityQuery, EventDensityQueryVariables>;
-export const EventCountsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'EventCounts' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'from' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'to' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'eventCounts' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'from' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'from' } },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'to' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'to' } },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'error' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'warning' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'restart' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<EventCountsQuery, EventCountsQueryVariables>;
-export const GatewayDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'Gateway' },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'gateway' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'running' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'pid' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'appVersion' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updateAvailable' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'uptime' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'startedAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'connectLatencyMs' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'latestVersion' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'securityCritical' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'securityWarn' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<GatewayQuery, GatewayQueryVariables>;
-export const ResourcesDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'Resources' },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'resources' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'cpu' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'memoryMB' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'diskMB' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'sampledAt' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<ResourcesQuery, ResourcesQueryVariables>;
-export const ChannelsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'Channels' },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'channels' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'provider' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'connected' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'latencyMs' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<ChannelsQuery, ChannelsQueryVariables>;
-export const SessionsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'Sessions' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'filter' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'SessionFilter' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'sessions' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'filter' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'filter' } },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'key' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'kind' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'model' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'channel' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalTokens' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'contextTokens' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'usagePercent' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'subAgents' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'key' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'kind' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'model' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'channel' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'totalTokens' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'contextTokens' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'usagePercent' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'status' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<SessionsQuery, SessionsQueryVariables>;
-export const MetricsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'Metrics' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'date' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'range' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'MetricsRange' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'metrics' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'date' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'date' } },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'range' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'range' } },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'date' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'range' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'bucketMinutes' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'buckets' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'bucket' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'label' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'epochStart' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'sessions' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'tokensK' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'tokensByModel' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            { kind: 'Field', name: { kind: 'Name', value: 'model' } },
-                            { kind: 'Field', name: { kind: 'Name', value: 'tokensK' } },
-                          ],
-                        },
-                      },
-                      { kind: 'Field', name: { kind: 'Name', value: 'apiCalls' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'toolCalls' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'turns' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'userTurns' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'assistantTurns' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'errors' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'warnings' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'gatewayUp' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'restartEvent' } },
-                    ],
-                  },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalTokensK' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'rangeTokensK' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalTurns' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalErrors' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalWarnings' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'uptimePercent' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'warnings' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<MetricsQuery, MetricsQueryVariables>;
-export const UsageCostDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'UsageCost' },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'usageCost' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalTokensM' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'todayCost' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'todayTokensM' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'fetchedAt' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<UsageCostQuery, UsageCostQueryVariables>;
-export const CronJobsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'CronJobs' },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'cronJobs' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'enabled' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'schedule' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'lastRunAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'lastRunSuccess' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'nextRunAt' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<CronJobsQuery, CronJobsQueryVariables>;
-export const RecentLogsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'RecentLogs' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'count' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'recentLogs' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'count' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'count' } },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'time' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'level' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'module' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<RecentLogsQuery, RecentLogsQueryVariables>;
-export const SessionTranscriptDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'SessionTranscript' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'sessionKey' } },
-          type: { kind: 'NonNullType', type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } } },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'limit' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'offset' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'sessionTranscript' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'sessionKey' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'sessionKey' } },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'limit' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'limit' } },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'offset' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'offset' } },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'sessionKey' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'model' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'channel' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'kind' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'thinkingLevel' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'startedAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'fileSize' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalTokens' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'contextTokens' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'durationMs' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isSubAgent' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'parentDisplayName' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'spawnPrompt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalMessages' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'hasMore' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'messages' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'timestamp' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'role' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'content' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'contentTruncated' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'model' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'usage' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            { kind: 'Field', name: { kind: 'Name', value: 'input' } },
-                            { kind: 'Field', name: { kind: 'Name', value: 'output' } },
-                            { kind: 'Field', name: { kind: 'Name', value: 'cacheRead' } },
-                            { kind: 'Field', name: { kind: 'Name', value: 'cacheWrite' } },
-                          ],
-                        },
-                      },
-                      { kind: 'Field', name: { kind: 'Name', value: 'toolName' } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<SessionTranscriptQuery, SessionTranscriptQueryVariables>;
-export const LifetimeStatsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'LifetimeStats' },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'lifetimeStats' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'isReady' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'daysSinceCreation' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalSessions' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalInputTokens' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalOutputTokens' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalCacheReadTokens' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalCacheWriteTokens' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalTokens' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalUserMessages' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalAssistantMessages' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<LifetimeStatsQuery, LifetimeStatsQueryVariables>;
-export const DataChangedDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'subscription',
-      name: { kind: 'Name', value: 'DataChanged' },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'dataChanged' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'source' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'ts' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<DataChangedSubscription, DataChangedSubscriptionVariables>;
-export const LogsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'subscription',
-      name: { kind: 'Name', value: 'Logs' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'filter' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'LogFilter' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'logs' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'filter' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'filter' } },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'entries' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'time' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'level' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'module' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'message' } },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'counts' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'debug' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'info' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'warn' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'error' } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<LogsSubscription, LogsSubscriptionVariables>;
+export type LogsSubscription = { logs: { entries: Array<{ time: string, level: LogLevel, module: string, message: string }>, counts: { debug: number, info: number, warn: number, error: number } } };
+
+
+export const EventsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Events"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"from"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"to"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"types"}},"type":{"kind":"ListType","type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"events"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"from"},"value":{"kind":"Variable","name":{"kind":"Name","value":"from"}}},{"kind":"Argument","name":{"kind":"Name","value":"to"},"value":{"kind":"Variable","name":{"kind":"Name","value":"to"}}},{"kind":"Argument","name":{"kind":"Name","value":"types"},"value":{"kind":"Variable","name":{"kind":"Name","value":"types"}}},{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"events"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"module"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}},{"kind":"Field","name":{"kind":"Name","value":"total"}},{"kind":"Field","name":{"kind":"Name","value":"counts"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"error"}},{"kind":"Field","name":{"kind":"Name","value":"warning"}},{"kind":"Field","name":{"kind":"Name","value":"restart"}}]}}]}}]}}]} as unknown as DocumentNode<EventsQuery, EventsQueryVariables>;
+export const EventDensityDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"EventDensity"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"eventDensity"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hour"}},{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"hasError"}},{"kind":"Field","name":{"kind":"Name","value":"hasWarning"}},{"kind":"Field","name":{"kind":"Name","value":"hasRestart"}},{"kind":"Field","name":{"kind":"Name","value":"errorCount"}},{"kind":"Field","name":{"kind":"Name","value":"warningCount"}},{"kind":"Field","name":{"kind":"Name","value":"restartCount"}},{"kind":"Field","name":{"kind":"Name","value":"epochStart"}}]}}]}}]} as unknown as DocumentNode<EventDensityQuery, EventDensityQueryVariables>;
+export const EventCountsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"EventCounts"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"from"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"to"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"eventCounts"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"from"},"value":{"kind":"Variable","name":{"kind":"Name","value":"from"}}},{"kind":"Argument","name":{"kind":"Name","value":"to"},"value":{"kind":"Variable","name":{"kind":"Name","value":"to"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"error"}},{"kind":"Field","name":{"kind":"Name","value":"warning"}},{"kind":"Field","name":{"kind":"Name","value":"restart"}}]}}]}}]} as unknown as DocumentNode<EventCountsQuery, EventCountsQueryVariables>;
+export const GatewayDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Gateway"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"gateway"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"running"}},{"kind":"Field","name":{"kind":"Name","value":"pid"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"appVersion"}},{"kind":"Field","name":{"kind":"Name","value":"updateAvailable"}},{"kind":"Field","name":{"kind":"Name","value":"uptime"}},{"kind":"Field","name":{"kind":"Name","value":"startedAt"}},{"kind":"Field","name":{"kind":"Name","value":"connectLatencyMs"}},{"kind":"Field","name":{"kind":"Name","value":"latestVersion"}},{"kind":"Field","name":{"kind":"Name","value":"securityCritical"}},{"kind":"Field","name":{"kind":"Name","value":"securityWarn"}}]}}]}}]} as unknown as DocumentNode<GatewayQuery, GatewayQueryVariables>;
+export const ResourcesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Resources"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"resources"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cpu"}},{"kind":"Field","name":{"kind":"Name","value":"memoryMB"}},{"kind":"Field","name":{"kind":"Name","value":"diskMB"}},{"kind":"Field","name":{"kind":"Name","value":"sampledAt"}}]}}]}}]} as unknown as DocumentNode<ResourcesQuery, ResourcesQueryVariables>;
+export const ChannelsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Channels"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"channels"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"provider"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"connected"}},{"kind":"Field","name":{"kind":"Name","value":"latencyMs"}}]}}]}}]} as unknown as DocumentNode<ChannelsQuery, ChannelsQueryVariables>;
+export const SessionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Sessions"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filter"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"SessionFilter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sessions"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filter"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"model"}},{"kind":"Field","name":{"kind":"Name","value":"channel"}},{"kind":"Field","name":{"kind":"Name","value":"totalTokens"}},{"kind":"Field","name":{"kind":"Name","value":"contextTokens"}},{"kind":"Field","name":{"kind":"Name","value":"usagePercent"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"subAgents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"model"}},{"kind":"Field","name":{"kind":"Name","value":"channel"}},{"kind":"Field","name":{"kind":"Name","value":"totalTokens"}},{"kind":"Field","name":{"kind":"Name","value":"contextTokens"}},{"kind":"Field","name":{"kind":"Name","value":"usagePercent"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]}}]} as unknown as DocumentNode<SessionsQuery, SessionsQueryVariables>;
+export const MetricsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Metrics"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"date"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"range"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"MetricsRange"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"metrics"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"date"},"value":{"kind":"Variable","name":{"kind":"Name","value":"date"}}},{"kind":"Argument","name":{"kind":"Name","value":"range"},"value":{"kind":"Variable","name":{"kind":"Name","value":"range"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"range"}},{"kind":"Field","name":{"kind":"Name","value":"bucketMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"buckets"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"bucket"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"epochStart"}},{"kind":"Field","name":{"kind":"Name","value":"sessions"}},{"kind":"Field","name":{"kind":"Name","value":"tokensK"}},{"kind":"Field","name":{"kind":"Name","value":"tokensByModel"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"model"}},{"kind":"Field","name":{"kind":"Name","value":"tokensK"}}]}},{"kind":"Field","name":{"kind":"Name","value":"apiCalls"}},{"kind":"Field","name":{"kind":"Name","value":"toolCalls"}},{"kind":"Field","name":{"kind":"Name","value":"turns"}},{"kind":"Field","name":{"kind":"Name","value":"userTurns"}},{"kind":"Field","name":{"kind":"Name","value":"assistantTurns"}},{"kind":"Field","name":{"kind":"Name","value":"errors"}},{"kind":"Field","name":{"kind":"Name","value":"warnings"}},{"kind":"Field","name":{"kind":"Name","value":"gatewayUp"}},{"kind":"Field","name":{"kind":"Name","value":"restartEvent"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalTokensK"}},{"kind":"Field","name":{"kind":"Name","value":"rangeTokensK"}},{"kind":"Field","name":{"kind":"Name","value":"totalTurns"}},{"kind":"Field","name":{"kind":"Name","value":"totalErrors"}},{"kind":"Field","name":{"kind":"Name","value":"totalWarnings"}},{"kind":"Field","name":{"kind":"Name","value":"uptimePercent"}},{"kind":"Field","name":{"kind":"Name","value":"warnings"}}]}}]}}]} as unknown as DocumentNode<MetricsQuery, MetricsQueryVariables>;
+export const UsageCostDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"UsageCost"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"usageCost"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"totalCost"}},{"kind":"Field","name":{"kind":"Name","value":"totalTokensM"}},{"kind":"Field","name":{"kind":"Name","value":"todayCost"}},{"kind":"Field","name":{"kind":"Name","value":"todayTokensM"}},{"kind":"Field","name":{"kind":"Name","value":"fetchedAt"}}]}}]}}]} as unknown as DocumentNode<UsageCostQuery, UsageCostQueryVariables>;
+export const CronJobsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"CronJobs"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cronJobs"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"enabled"}},{"kind":"Field","name":{"kind":"Name","value":"schedule"}},{"kind":"Field","name":{"kind":"Name","value":"lastRunAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastRunSuccess"}},{"kind":"Field","name":{"kind":"Name","value":"nextRunAt"}}]}}]}}]} as unknown as DocumentNode<CronJobsQuery, CronJobsQueryVariables>;
+export const RecentLogsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"RecentLogs"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"count"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"recentLogs"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"count"},"value":{"kind":"Variable","name":{"kind":"Name","value":"count"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"time"}},{"kind":"Field","name":{"kind":"Name","value":"level"}},{"kind":"Field","name":{"kind":"Name","value":"module"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode<RecentLogsQuery, RecentLogsQueryVariables>;
+export const SessionTranscriptDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"SessionTranscript"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"sessionKey"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"offset"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sessionTranscript"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"sessionKey"},"value":{"kind":"Variable","name":{"kind":"Name","value":"sessionKey"}}},{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}},{"kind":"Argument","name":{"kind":"Name","value":"offset"},"value":{"kind":"Variable","name":{"kind":"Name","value":"offset"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sessionKey"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"model"}},{"kind":"Field","name":{"kind":"Name","value":"channel"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"thinkingLevel"}},{"kind":"Field","name":{"kind":"Name","value":"startedAt"}},{"kind":"Field","name":{"kind":"Name","value":"fileSize"}},{"kind":"Field","name":{"kind":"Name","value":"totalTokens"}},{"kind":"Field","name":{"kind":"Name","value":"contextTokens"}},{"kind":"Field","name":{"kind":"Name","value":"durationMs"}},{"kind":"Field","name":{"kind":"Name","value":"isSubAgent"}},{"kind":"Field","name":{"kind":"Name","value":"parentDisplayName"}},{"kind":"Field","name":{"kind":"Name","value":"spawnPrompt"}},{"kind":"Field","name":{"kind":"Name","value":"totalMessages"}},{"kind":"Field","name":{"kind":"Name","value":"hasMore"}},{"kind":"Field","name":{"kind":"Name","value":"messages"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"content"}},{"kind":"Field","name":{"kind":"Name","value":"contentTruncated"}},{"kind":"Field","name":{"kind":"Name","value":"model"}},{"kind":"Field","name":{"kind":"Name","value":"usage"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"input"}},{"kind":"Field","name":{"kind":"Name","value":"output"}},{"kind":"Field","name":{"kind":"Name","value":"cacheRead"}},{"kind":"Field","name":{"kind":"Name","value":"cacheWrite"}}]}},{"kind":"Field","name":{"kind":"Name","value":"toolName"}}]}}]}}]}}]} as unknown as DocumentNode<SessionTranscriptQuery, SessionTranscriptQueryVariables>;
+export const LifetimeStatsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"LifetimeStats"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"lifetimeStats"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isReady"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"daysSinceCreation"}},{"kind":"Field","name":{"kind":"Name","value":"totalSessions"}},{"kind":"Field","name":{"kind":"Name","value":"totalInputTokens"}},{"kind":"Field","name":{"kind":"Name","value":"totalOutputTokens"}},{"kind":"Field","name":{"kind":"Name","value":"totalCacheReadTokens"}},{"kind":"Field","name":{"kind":"Name","value":"totalCacheWriteTokens"}},{"kind":"Field","name":{"kind":"Name","value":"totalTokens"}},{"kind":"Field","name":{"kind":"Name","value":"totalUserMessages"}},{"kind":"Field","name":{"kind":"Name","value":"totalAssistantMessages"}}]}}]}}]} as unknown as DocumentNode<LifetimeStatsQuery, LifetimeStatsQueryVariables>;
+export const DataChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"DataChanged"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"dataChanged"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"ts"}}]}}]}}]} as unknown as DocumentNode<DataChangedSubscription, DataChangedSubscriptionVariables>;
+export const LogsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"Logs"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filter"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"LogFilter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"logs"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filter"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"entries"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"time"}},{"kind":"Field","name":{"kind":"Name","value":"level"}},{"kind":"Field","name":{"kind":"Name","value":"module"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}},{"kind":"Field","name":{"kind":"Name","value":"counts"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"debug"}},{"kind":"Field","name":{"kind":"Name","value":"info"}},{"kind":"Field","name":{"kind":"Name","value":"warn"}},{"kind":"Field","name":{"kind":"Name","value":"error"}}]}}]}}]}}]} as unknown as DocumentNode<LogsSubscription, LogsSubscriptionVariables>;
