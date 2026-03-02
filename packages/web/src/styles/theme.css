@@ -383,3 +383,23 @@
 .animate-fade-in {
   animation: fade-in-down 0.2s ease-out;
 }
+
+/* Drawer refresh button */
+.dr-refresh-btn {
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--dr-dim);
+}
+.dr-refresh-btn:hover:not(:disabled) {
+  background-color: var(--dr-surface);
+  color: var(--dr-fg2);
+  border-color: var(--dr-border);
+}
+.dr-refresh-btn:active:not(:disabled) {
+  color: var(--dr-teal);
+}
+
+@keyframes dr-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

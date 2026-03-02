@@ -4,6 +4,7 @@ import { useQuery } from 'urql';
 import { SessionTranscriptQuery } from '../../graphql/queries';
 import { useI18n } from '../../i18n/context';
 import { formatModel } from '../../utils/formatModel';
+import { dismissToast, replaceToast, showToast } from '../ui/toast-store';
 import { SpawnPromptBox } from './SpawnPromptBox';
 import { TimelineScrubber } from './TimelineScrubber';
 import { type TimelineState, TranscriptTimeline } from './TranscriptTimeline';
@@ -42,18 +43,14 @@ function formatDuration(ms: number): string {
   return remainMin > 0 ? `${hr}h${remainMin}m` : `${hr}h`;
 }
 
-function formatTime(isoOrEpoch: string | number): string {
-  return new Date(isoOrEpoch).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes}B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(0)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function formatDateTime(isoOrEpoch: string | number): string {
+  return new Date(isoOrEpoch).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
 }
 
 function HeaderSkeleton() {
@@ -106,6 +103,11 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
     return () => {
       document.removeEventListener('keydown', handler);
       clearTimeout(cooldownTimerRef.current);
+      // Dismiss any lingering refresh toast on unmount
+      if (refreshToastRef.current !== undefined) {
+        dismissToast(refreshToastRef.current);
+        refreshToastRef.current = undefined;
+      }
     };
   }, [onClose]);
 
@@ -149,13 +151,14 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
   // Accumulate raw transcript pages, derive mapped messages via useMemo
   type RawPage = NonNullable<typeof transcript>;
   const [pages] = useState<Map<number, RawPage>>(() => new Map());
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Store completed page data (only when not fetching to avoid partial data)
+  // Store completed page data (only when not fetching and not mid-refresh)
   const lastStoredOffset = useRef(-1);
-  if (transcript && !result.fetching && lastStoredOffset.current !== currentOffset) {
-    // This runs during render but only sets ref + prepares for next useMemo
+  if (transcript && !result.fetching && !isRefreshing && lastStoredOffset.current !== currentOffset) {
     lastStoredOffset.current = currentOffset;
-    pages.set(currentOffset, transcript); // mutate-in-place, useMemo dep on pages.size below
+    pages.set(currentOffset, transcript);
   }
 
   const allMessages = useMemo(() => {
@@ -179,9 +182,53 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
       })),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pages.size, transcript, result.fetching]);
+  }, [pages.size, transcript, result.fetching, refreshKey]);
 
   const loadingMore = currentOffset > 0 && result.fetching;
+
+  const refreshToastRef = useRef<number | undefined>(undefined);
+  const sawFetchingRef = useRef(false);
+
+  const handleRefresh = useCallback(() => {
+    if (isRefreshing) {
+      return;
+    }
+    setIsRefreshing(true);
+    sawFetchingRef.current = false;
+    refreshToastRef.current = showToast(t('drawer.refresh.loading'), 'loading');
+    // Reset pagination to fetch fresh data from the beginning
+    pages.clear();
+    lastStoredOffset.current = -1;
+    setRefreshKey((k) => k + 1);
+    setCurrentOffset(0);
+    reexecute({ requestPolicy: 'network-only' });
+  }, [isRefreshing, pages, reexecute, t]);
+
+  // Detect when refresh completes: must see fetching=true then fetching=false
+  useEffect(() => {
+    if (!isRefreshing) {
+      return;
+    }
+    if (result.fetching) {
+      sawFetchingRef.current = true;
+      return;
+    }
+    // Only complete if we actually saw a fetch cycle
+    if (!sawFetchingRef.current) {
+      return;
+    }
+    setIsRefreshing(false);
+    sawFetchingRef.current = false;
+    if (refreshToastRef.current !== undefined) {
+      replaceToast(refreshToastRef.current, t('drawer.refresh.done'), 'success');
+      refreshToastRef.current = undefined;
+    }
+    // Restore scroll position after refresh
+    if (visibleIndex !== undefined && visibleIndex > 0) {
+      jumpKeyRef.current += 1;
+      setJumpRequest({ index: visibleIndex, key: jumpKeyRef.current });
+    }
+  }, [isRefreshing, result.fetching, t, visibleIndex]);
 
   const handleLoadMore = useCallback(() => {
     if (result.fetching || !transcript?.hasMore) {
@@ -191,7 +238,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
   }, [result.fetching, transcript?.hasMore, PAGE_SIZE]);
 
   const timelineState: TimelineState = useMemo(() => {
-    if (result.fetching && allMessages.length === 0) {
+    if (isRefreshing || (result.fetching && allMessages.length === 0)) {
       return { status: 'loading' };
     }
     if (result.error) {
@@ -228,7 +275,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
       hasMore,
       loadingMore,
     };
-  }, [result.fetching, result.error, transcript, reexecute, allMessages, loadingMore]);
+  }, [isRefreshing, result.fetching, result.error, transcript, reexecute, allMessages, loadingMore]);
 
   const isLoading = result.fetching && !transcript;
   const resolvedStatus = status ?? (transcript ? 'DONE' : 'ACTIVE');
@@ -341,11 +388,34 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
               ✕
             </button>
             <span
-              className="font-semibold text-sm truncate flex-1"
+              className="font-bold text-base truncate flex-1"
               style={{ fontFamily: "'Space Grotesk', var(--font-title, sans-serif)", color: 'var(--dr-fg)' }}
             >
               {resolvedName}
             </span>
+            {!isLoading && (
+              <button
+                onClick={handleRefresh}
+                className="dr-refresh-btn w-7 h-7 flex items-center justify-center rounded-md shrink-0 transition-colors"
+                aria-label={t('drawer.refresh')}
+                title={t('drawer.refresh')}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={isRefreshing ? { animation: 'dr-spin 0.8s linear infinite' } : undefined}
+                >
+                  <path d="M1.5 1.5v4h4" />
+                  <path d="M3.1 10a5.5 5.5 0 1 0 1.06-5.57L1.5 5.5" />
+                </svg>
+              </button>
+            )}
             {transcript?.isSubAgent && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded shrink-0 font-medium"
@@ -399,13 +469,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
               </div>
 
               {/* Parent session for sub-agents */}
-              {transcript.isSubAgent && transcript.parentDisplayName && (
-                <div className="flex items-center gap-1 mt-1 text-[10px]" style={{ color: 'var(--dr-dim)' }}>
-                  <span>↳</span>
-                  <span>{t('drawer.meta.spawnedBy')}</span>
-                  <span style={{ color: 'var(--dr-fg2)' }}>{transcript.parentDisplayName}</span>
-                </div>
-              )}
+              {/* ISS-063: "Spawned by" hidden — parentDisplayName is inaccurate, pending backend fix */}
 
               {/* Stats row: turns · tokens · context · duration */}
               <div
@@ -487,10 +551,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
             className="flex-shrink-0 px-5 py-1.5 text-[10px] flex items-center justify-between"
             style={{ borderTop: '1px solid var(--dr-border)', color: 'var(--dr-dim)' }}
           >
-            <span>
-              {t('drawer.footer.started', { time: formatTime(transcript.startedAt) })} ·{' '}
-              {formatFileSize(transcript.fileSize)}
-            </span>
+            <span>{t('drawer.footer.started', { time: formatDateTime(transcript.startedAt) })}</span>
             <span>{t('drawer.footer.messages', { shown: allMessages.length, total: transcript.totalMessages })}</span>
           </div>
         )}

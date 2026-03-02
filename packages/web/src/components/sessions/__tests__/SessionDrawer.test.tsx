@@ -124,6 +124,32 @@ describe('SessionDrawer', () => {
     expect(screen.getByText('SUB-AGENT')).toBeDefined();
   });
 
+  it('renders refresh button when transcript is loaded', () => {
+    mockReady();
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const refreshBtns = screen.getAllByRole('button', { name: 'Refresh transcript' });
+    expect(refreshBtns.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('calls reexecute on refresh click', () => {
+    const reexecute = vi.fn();
+    mockUseQuery.mockReturnValue([
+      { data: { sessionTranscript: { ...baseMockTranscript } }, fetching: false, error: undefined },
+      reexecute,
+    ]);
+    const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const refreshBtn = container.querySelector<HTMLButtonElement>('.dr-refresh-btn');
+    expect(refreshBtn).toBeTruthy();
+    fireEvent.click(refreshBtn!);
+    expect(reexecute).toHaveBeenCalledWith({ requestPolicy: 'network-only' });
+  });
+
+  it('does not render "Spawned by" row (ISS-063)', () => {
+    mockReady({ isSubAgent: true, parentDisplayName: 'main' });
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    expect(screen.queryByText('spawned by')).toBeNull();
+  });
+
   it('shows SpawnPromptBox when spawnPrompt is present', () => {
     mockReady({ isSubAgent: true, spawnPrompt: 'Do something special' });
     renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
