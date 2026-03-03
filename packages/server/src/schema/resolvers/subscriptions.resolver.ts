@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: legacy ctx.* refs not yet migrated to ports */
 import { Repeater } from 'graphql-yoga';
 
 import type { AppContext } from '../../context.js';

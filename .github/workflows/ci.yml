@@ -27,6 +27,9 @@ jobs:
       - name: ESLint (server)
         run: npm run -w @claw-insights/server lint
 
+      - name: Legacy context gate (incremental)
+        run: npm run -w @claw-insights/server lint:legacy-gate
+
       - name: ESLint (web)
         run: npm run -w @claw-insights/web lint
 

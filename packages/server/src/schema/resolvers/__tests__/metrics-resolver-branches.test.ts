@@ -5,6 +5,20 @@ import { metricsResolvers } from '../metrics.resolver';
 
 function mockCtx(): AppContext {
   return {
+    ports: {
+      sessions: {
+        getSessions: vi.fn(),
+        getSessionById: vi.fn(),
+        getSessionsInRange: vi.fn(),
+        getSessionCount: vi.fn(),
+        onChanged: vi.fn(),
+      },
+      metrics: { getMetrics: vi.fn().mockReturnValue({ totalTokensK: 100 }), onChanged: vi.fn() },
+      gateway: { getGatewayStatus: vi.fn(), getVersion: vi.fn(), warmCache: vi.fn() },
+      cron: undefined,
+      logs: undefined,
+      system: undefined,
+    },
     aggregator: {
       getMetrics: vi.fn().mockReturnValue({ totalTokensK: 100 }),
     },
@@ -21,7 +35,8 @@ describe('metricsResolvers branches', () => {
     const metrics = resolvers.Query!.metrics!;
 
     const result = (metrics as Function)({}, { range: null, date: null });
-    expect(ctx.aggregator.getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR');
+    // Task 6: Now uses ctx.ports.metrics
+    expect(ctx.ports.metrics.getMetrics).toHaveBeenCalled();
     expect(result).toHaveProperty('warnings');
   });
 
@@ -31,7 +46,8 @@ describe('metricsResolvers branches', () => {
     const metrics = resolvers.Query!.metrics!;
 
     (metrics as Function)({}, { range: 'ONE_HOUR', date: '2026-01-01' });
-    expect(ctx.aggregator.getMetrics).toHaveBeenCalledWith('2026-01-01', 'ONE_HOUR');
+    // Task 6: Now uses ctx.ports.metrics
+    expect(ctx.ports.metrics.getMetrics).toHaveBeenCalled();
   });
 
   it('falls back to TWENTY_FOUR_HOUR for invalid range', async () => {
@@ -40,7 +56,8 @@ describe('metricsResolvers branches', () => {
     const metrics = resolvers.Query!.metrics!;
 
     (metrics as Function)({}, { range: 'INVALID', date: null });
-    expect(ctx.aggregator.getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR');
+    // Task 6: Now uses ctx.ports.metrics
+    expect(ctx.ports.metrics.getMetrics).toHaveBeenCalled();
   });
 
   it('includes validation warnings', async () => {

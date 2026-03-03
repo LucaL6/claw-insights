@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from 'urql';
 
-import { SessionTranscriptQuery } from '../../graphql/queries';
+import { useSessionTranscript } from '../../hooks/useSessionTranscript';
 import { useI18n } from '../../i18n/context';
 import { formatModel } from '../../utils/formatModel';
 import { dismissToast, replaceToast, showToast } from '../ui/toast-store';
@@ -85,13 +84,26 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
   const scrollTickRef = useRef(false);
   const jumpCooldownRef = useRef(false);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const PAGE_SIZE = 200;
-  const [currentOffset, setCurrentOffset] = useState(0);
 
-  const [result, reexecute] = useQuery({
-    query: SessionTranscriptQuery,
-    variables: { sessionKey, limit: PAGE_SIZE, offset: currentOffset },
-  });
+  const {
+    meta,
+    messages,
+    isInitialLoading,
+    isRefreshing,
+    isLoadingMore,
+    hasMore,
+    totalMessages,
+    error,
+    refresh,
+    loadMore,
+    retry,
+  } = useSessionTranscript({ sessionKey });
+
+  const resolvedName = externalName || meta?.displayName || sessionKey.split(':').pop() || sessionKey;
+  const spawnPrompt = meta?.isSubAgent && meta.spawnPrompt ? meta.spawnPrompt : undefined;
+
+  const refreshToastRef = useRef<number | undefined>(undefined);
+  const previousRefreshingRef = useRef(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -103,7 +115,6 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
     return () => {
       document.removeEventListener('keydown', handler);
       clearTimeout(cooldownTimerRef.current);
-      // Dismiss any lingering refresh toast on unmount
       if (refreshToastRef.current !== undefined) {
         dismissToast(refreshToastRef.current);
         refreshToastRef.current = undefined;
@@ -118,6 +129,28 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
       triggerRef.current?.focus();
     };
   }, []);
+
+  useEffect(() => {
+    const wasRefreshing = previousRefreshingRef.current;
+
+    if (isRefreshing && !wasRefreshing) {
+      refreshToastRef.current = showToast(t('drawer.refresh.loading'), 'loading');
+    }
+
+    if (!isRefreshing && wasRefreshing) {
+      if (refreshToastRef.current !== undefined) {
+        replaceToast(refreshToastRef.current, t('drawer.refresh.done'), 'success');
+        refreshToastRef.current = undefined;
+      }
+
+      if (visibleIndex !== undefined && visibleIndex > 0) {
+        jumpKeyRef.current += 1;
+        setJumpRequest({ index: visibleIndex, key: jumpKeyRef.current });
+      }
+    }
+
+    previousRefreshingRef.current = isRefreshing;
+  }, [isRefreshing, t, visibleIndex]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key !== 'Tab') {
@@ -144,145 +177,50 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
     }
   }, []);
 
-  const transcript = result.data?.sessionTranscript;
-  const resolvedName = externalName || transcript?.displayName || sessionKey.split(':').pop() || sessionKey;
-  const spawnPrompt = transcript?.isSubAgent && transcript.spawnPrompt ? transcript.spawnPrompt : undefined;
-
-  // Accumulate raw transcript pages, derive mapped messages via useMemo
-  type RawPage = NonNullable<typeof transcript>;
-  const [pages] = useState<Map<number, RawPage>>(() => new Map());
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Store completed page data (only when not fetching and not mid-refresh)
-  const lastStoredOffset = useRef(-1);
-  if (transcript && !result.fetching && !isRefreshing && lastStoredOffset.current !== currentOffset) {
-    lastStoredOffset.current = currentOffset;
-    pages.set(currentOffset, transcript);
-  }
-
-  const allMessages = useMemo(() => {
-    const sorted = [...pages.entries()].sort(([a], [b]) => a - b);
-    return sorted.flatMap(([, t]) =>
-      t.messages.map((m) => ({
-        timestamp: m.timestamp,
-        role: m.role as 'user' | 'assistant' | 'tool',
-        content: m.content,
-        contentTruncated: m.contentTruncated,
-        model: m.model ?? undefined,
-        usage: m.usage
-          ? {
-              input: m.usage.input,
-              output: m.usage.output,
-              cacheRead: m.usage.cacheRead,
-              cacheWrite: m.usage.cacheWrite,
-            }
-          : undefined,
-        toolName: m.toolName ?? undefined,
-      })),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pages.size, transcript, result.fetching, refreshKey]);
-
-  const loadingMore = currentOffset > 0 && result.fetching;
-
-  const refreshToastRef = useRef<number | undefined>(undefined);
-  const sawFetchingRef = useRef(false);
-
-  const handleRefresh = useCallback(() => {
-    if (isRefreshing) {
-      return;
-    }
-    setIsRefreshing(true);
-    sawFetchingRef.current = false;
-    refreshToastRef.current = showToast(t('drawer.refresh.loading'), 'loading');
-    // Reset pagination to fetch fresh data from the beginning
-    pages.clear();
-    lastStoredOffset.current = -1;
-    setRefreshKey((k) => k + 1);
-    setCurrentOffset(0);
-    reexecute({ requestPolicy: 'network-only' });
-  }, [isRefreshing, pages, reexecute, t]);
-
-  // Detect when refresh completes: must see fetching=true then fetching=false
-  useEffect(() => {
-    if (!isRefreshing) {
-      return;
-    }
-    if (result.fetching) {
-      sawFetchingRef.current = true;
-      return;
-    }
-    // Only complete if we actually saw a fetch cycle
-    if (!sawFetchingRef.current) {
-      return;
-    }
-    setIsRefreshing(false);
-    sawFetchingRef.current = false;
-    if (refreshToastRef.current !== undefined) {
-      replaceToast(refreshToastRef.current, t('drawer.refresh.done'), 'success');
-      refreshToastRef.current = undefined;
-    }
-    // Restore scroll position after refresh
-    if (visibleIndex !== undefined && visibleIndex > 0) {
-      jumpKeyRef.current += 1;
-      setJumpRequest({ index: visibleIndex, key: jumpKeyRef.current });
-    }
-  }, [isRefreshing, result.fetching, t, visibleIndex]);
-
-  const handleLoadMore = useCallback(() => {
-    if (result.fetching || !transcript?.hasMore) {
-      return;
-    }
-    setCurrentOffset((prev) => prev + PAGE_SIZE);
-  }, [result.fetching, transcript?.hasMore, PAGE_SIZE]);
-
   const timelineState: TimelineState = useMemo(() => {
-    if (isRefreshing || (result.fetching && allMessages.length === 0)) {
+    if (isRefreshing || (isInitialLoading && messages.length === 0)) {
       return { status: 'loading' };
     }
-    if (result.error) {
+
+    if (error) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      const gqlCode = result.error.graphQLErrors?.[0]?.extensions?.code as string | undefined;
+      const gqlCode = error.graphQLErrors?.[0]?.extensions?.code as string | undefined;
       return {
         status: 'error',
         errorCode: gqlCode,
-        retry: () => {
-          reexecute({ requestPolicy: 'network-only' });
-        },
+        retry,
       };
     }
-    if (!transcript) {
-      if (result.fetching) {
+
+    if (!meta) {
+      if (isInitialLoading) {
         return { status: 'loading' };
       }
       return {
         status: 'error',
         errorCode: 'NOT_AVAILABLE',
-        retry: () => {
-          reexecute({ requestPolicy: 'network-only' });
-        },
+        retry,
       };
     }
-    if (transcript.totalMessages === 0) {
+
+    if (totalMessages === 0) {
       return { status: 'empty' };
     }
-    const hasMore = allMessages.length < transcript.totalMessages;
+
     return {
       status: 'ready',
-      messages: allMessages,
-      totalMessages: transcript.totalMessages,
+      messages,
+      totalMessages,
       hasMore,
-      loadingMore,
+      loadingMore: isLoadingMore,
     };
-  }, [isRefreshing, result.fetching, result.error, transcript, reexecute, allMessages, loadingMore]);
+  }, [isRefreshing, isInitialLoading, messages, error, retry, meta, totalMessages, hasMore, isLoadingMore]);
 
-  const isLoading = result.fetching && !transcript;
-  const resolvedStatus = status ?? (transcript ? 'DONE' : 'ACTIVE');
+  const isLoading = isInitialLoading;
+  const resolvedStatus = status ?? (meta ? 'DONE' : 'ACTIVE');
   const statusColor =
     resolvedStatus === 'ACTIVE' ? 'var(--dr-teal)' : resolvedStatus === 'FAILED' ? 'var(--dr-rose)' : 'var(--dr-dim)';
 
-  // Timestamps for scrubber
   const timestamps = useMemo(() => {
     if (timelineState.status !== 'ready') {
       return [];
@@ -294,7 +232,6 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
     jumpKeyRef.current += 1;
     setJumpRequest({ index, key: jumpKeyRef.current });
     setVisibleIndex(index);
-    // Suppress scroll tracking while jump animation settles
     jumpCooldownRef.current = true;
     clearTimeout(cooldownTimerRef.current);
     cooldownTimerRef.current = setTimeout(() => {
@@ -302,7 +239,6 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
     }, 600);
   }, []);
 
-  // Track visible message on scroll (throttled via rAF)
   const handleScroll = useCallback(() => {
     if (scrollTickRef.current || jumpCooldownRef.current) {
       return;
@@ -315,22 +251,22 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
         return;
       }
       const containerTop = container.getBoundingClientRect().top;
-      // Find the first data-msg-index element near the top of the visible area
-      const els = container.querySelectorAll('[data-msg-index]');
+      const elements = container.querySelectorAll('[data-msg-index]');
       let closest: number | undefined;
       let closestDist = Infinity;
-      for (const el of els) {
-        const rect = el.getBoundingClientRect();
+
+      for (const element of elements) {
+        const rect = element.getBoundingClientRect();
         const dist = Math.abs(rect.top - containerTop);
         if (dist < closestDist) {
           closestDist = dist;
-          closest = Number(el.getAttribute('data-msg-index'));
+          closest = Number(element.getAttribute('data-msg-index'));
         }
-        // Early exit once elements are below viewport
         if (rect.top > containerTop + 200) {
           break;
         }
       }
+
       if (closest !== undefined) {
         setVisibleIndex(closest);
       }
@@ -344,10 +280,8 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
       aria-modal="true"
       aria-label={t('drawer.ariaLabel')}
     >
-      {/* Backdrop */}
       <div onClick={onClose} className="absolute inset-0 bg-black/40" />
 
-      {/* Panel — warm stone theme via --dr-* tokens */}
       <div
         role="document"
         ref={panelRef}
@@ -360,9 +294,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
           boxShadow: '-8px 0 32px rgba(0,0,0,0.3)',
         }}
       >
-        {/* Header */}
         <div className="flex-shrink-0 px-5 pt-4 pb-3">
-          {/* Title row */}
           <div className="flex items-center gap-2.5 mb-2">
             <button
               ref={closeRef}
@@ -395,7 +327,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
             </span>
             {!isLoading && (
               <button
-                onClick={handleRefresh}
+                onClick={refresh}
                 className="dr-refresh-btn w-7 h-7 flex items-center justify-center rounded-md shrink-0 transition-colors"
                 aria-label={t('drawer.refresh')}
                 title={t('drawer.refresh')}
@@ -416,7 +348,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
                 </svg>
               </button>
             )}
-            {transcript?.isSubAgent && (
+            {meta?.isSubAgent && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded shrink-0 font-medium"
                 style={{
@@ -446,32 +378,27 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
 
           {isLoading ? (
             <HeaderSkeleton />
-          ) : transcript ? (
+          ) : meta ? (
             <>
-              {/* Meta row: model · channel · thinking */}
               <div className="flex items-center gap-1.5 text-[11px] flex-wrap" style={{ color: 'var(--dr-dim)' }}>
-                <span>{formatModel(transcript.model)}</span>
-                {transcript.channel && (
+                <span>{formatModel(meta.model)}</span>
+                {meta.channel && (
                   <>
                     <span>·</span>
-                    <span>{transcript.channel}</span>
+                    <span>{meta.channel}</span>
                   </>
                 )}
-                {transcript.thinkingLevel && (
+                {meta.thinkingLevel && (
                   <>
                     <span>·</span>
                     <span>
                       {t('drawer.meta.thinking')}
-                      {transcript.thinkingLevel}
+                      {meta.thinkingLevel}
                     </span>
                   </>
                 )}
               </div>
 
-              {/* Parent session for sub-agents */}
-              {/* ISS-063: "Spawned by" hidden — parentDisplayName is inaccurate, pending backend fix */}
-
-              {/* Stats row: turns · tokens · context · duration */}
               <div
                 className="flex items-center gap-4 mt-3 pt-3 text-[11px] flex-wrap"
                 style={{ borderTop: '1px solid var(--dr-border)', color: 'var(--dr-dim)' }}
@@ -482,7 +409,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
                     className="font-semibold text-base ml-0.5"
                     style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--dr-fg)' }}
                   >
-                    {transcript.totalMessages}
+                    {totalMessages}
                   </span>
                 </div>
                 <div>
@@ -491,7 +418,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
                     className="font-semibold text-base ml-0.5"
                     style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--dr-fg)' }}
                   >
-                    {formatTokens(transcript.totalTokens)}
+                    {formatTokens(meta.totalTokens)}
                   </span>
                 </div>
                 <div>
@@ -500,7 +427,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
                     className="font-semibold text-base ml-0.5"
                     style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--dr-fg)' }}
                   >
-                    {formatTokens(transcript.contextTokens)}
+                    {formatTokens(meta.contextTokens)}
                   </span>
                 </div>
                 <div>
@@ -509,7 +436,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
                     className="font-semibold text-base ml-0.5"
                     style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--dr-fg)' }}
                   >
-                    {formatDuration(transcript.durationMs)}
+                    {formatDuration(meta.durationMs)}
                   </span>
                 </div>
               </div>
@@ -517,14 +444,12 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
           ) : null}
         </div>
 
-        {/* Time scrubber — fixed above scroll area */}
         {timestamps.length >= 2 && (
           <div className="flex-shrink-0 px-5" style={{ borderTop: '1px solid var(--dr-border)' }}>
             <TimelineScrubber timestamps={timestamps} activeIndex={visibleIndex} onJump={handleJump} />
           </div>
         )}
 
-        {/* Timeline */}
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto px-5 py-3 drawer-scroll"
@@ -538,21 +463,20 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
           )}
           <TranscriptTimeline
             state={timelineState}
-            onLoadMore={handleLoadMore}
+            onLoadMore={loadMore}
             scrollRef={scrollRef}
             jumpToIndex={jumpRequest?.index}
             jumpKey={jumpRequest?.key}
           />
         </div>
 
-        {/* Footer */}
-        {transcript && (
+        {meta && (
           <div
             className="flex-shrink-0 px-5 py-1.5 text-[10px] flex items-center justify-between"
             style={{ borderTop: '1px solid var(--dr-border)', color: 'var(--dr-dim)' }}
           >
-            <span>{t('drawer.footer.started', { time: formatDateTime(transcript.startedAt) })}</span>
-            <span>{t('drawer.footer.messages', { shown: allMessages.length, total: transcript.totalMessages })}</span>
+            <span>{t('drawer.footer.started', { time: formatDateTime(meta.startedAt) })}</span>
+            <span>{t('drawer.footer.messages', { shown: messages.length, total: totalMessages })}</span>
           </div>
         )}
       </div>

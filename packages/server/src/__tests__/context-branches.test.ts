@@ -31,6 +31,7 @@ vi.mock('../db/init.js', () => ({
 
 vi.mock('../pipeline/index.js', () => ({
   Pipeline: class {
+    private ports = new Map();
     addSource() {
       return this;
     }
@@ -42,6 +43,13 @@ vi.mock('../pipeline/index.js', () => ({
     }
     addService() {
       return this;
+    }
+    addPort(key: string, port: any) {
+      this.ports.set(key, port);
+      return this;
+    }
+    getPort(key: string) {
+      return this.ports.get(key);
     }
     wire() {
       return this;
@@ -179,32 +187,51 @@ describe('startContext', () => {
 });
 
 describe('destroyContext', () => {
-  it('destroys pipeline and closes db', () => {
-    const callOrder: string[] = [];
+  it('awaits pipeline destroy before closing db', async () => {
+    let resolveDestroy: (() => void) | null = null;
+    const destroyPromise = new Promise<void>((resolve) => {
+      resolveDestroy = resolve;
+    });
+
+    const closeSpy = vi.fn();
     const ctx = mockCtx({
       pipeline: {
         start: vi.fn(),
-        destroy: vi.fn(() => {
-          callOrder.push('destroy');
+        destroy: vi.fn(() => destroyPromise),
+      },
+      db: {
+        close: closeSpy,
+      },
+    } as any);
+
+    const destroyTask = destroyContext(ctx);
+
+    expect(ctx.pipeline.destroy).toHaveBeenCalledTimes(1);
+    expect(closeSpy).not.toHaveBeenCalled();
+
+    resolveDestroy?.();
+    await destroyTask;
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects when pipeline destroy fails and still closes db', async () => {
+    const destroyErr = new Error('destroy failed');
+    const closeSpy = vi.fn();
+    const ctx = mockCtx({
+      pipeline: {
+        start: vi.fn(),
+        destroy: vi.fn(async () => {
+          throw destroyErr;
         }),
       },
       db: {
-        close: vi.fn(() => {
-          callOrder.push('close');
-        }),
+        close: closeSpy,
       },
     } as any);
-    destroyContext(ctx);
-    expect(ctx.pipeline.destroy).toHaveBeenCalledTimes(1);
-    expect((ctx.db as any).close).toHaveBeenCalledTimes(1);
-    expect(callOrder).toEqual(['destroy', 'close']);
-  });
 
-  it('calls db.close()', () => {
-    const closeSpy = vi.fn();
-    const ctx = mockCtx({ db: { close: closeSpy } as any });
-    destroyContext(ctx);
-    expect(closeSpy).toHaveBeenCalled();
+    await expect(destroyContext(ctx)).rejects.toThrow('destroy failed');
+    expect(closeSpy).toHaveBeenCalledTimes(1);
   });
 });
 

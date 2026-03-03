@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: legacy ctx.* refs not yet migrated to ports */
 import type { AppContext } from '../../context.js';
 import { getEventCounts, getEventDensity, queryEvents } from '../../db/event-queries.js';
 import { createChildLogger } from '../../logger.js';

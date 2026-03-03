@@ -33,15 +33,41 @@ import { resolveCompanionSince } from '../../sources/companion-days.js';
 
 describe('createSnapshotSources.getTurnCounts', () => {
   it('maps turn-count session keys from sessionId to session key', () => {
+    const sessionIdToKeyMap = new Map([['uuid-1', 'agent:main:main']]);
     const ctx = {
       db: {},
+      ports: {
+        sessions: {
+          getSessions: () => [],
+          getSessionById: () => null,
+          getSessionsInRange: () => [],
+          getSessionCount: () => 0,
+          getSessionIdToKeyMap: () => sessionIdToKeyMap,
+          onChanged: () => () => undefined,
+        },
+        metrics: {
+          getMetrics: () => ({}),
+          getSessionTokens: () => 0,
+          clearCache: () => undefined,
+          onChanged: () => () => undefined,
+        },
+        gateway: {
+          getGatewayStatus: vi.fn(() => Promise.resolve({ channels: [] })),
+          getVersion: vi.fn(() => Promise.resolve('1.0.0')),
+          warmCache: vi.fn(() => Promise.resolve()),
+        },
+        cron: undefined,
+        logs: undefined,
+        system: undefined,
+      },
       sessionReader: {
-        getSessionIdToKeyMap: () => new Map([['uuid-1', 'agent:main:main']]),
+        getSessionIdToKeyMap: () => sessionIdToKeyMap,
         attachSubAgents: () => undefined,
         getSessions: () => [],
       },
       spawnTracker: { getParentChildMap: () => new Map() },
       aggregator: { getMetrics: () => ({}) },
+      systemInfoService: { getSystemMetrics: vi.fn(() => Promise.resolve({ cpu: 0, memoryMB: 0 })) },
     } as any;
 
     const sources = createSnapshotSources(ctx);
@@ -63,15 +89,41 @@ describe('createSnapshotSources.getCompanionDays', () => {
   });
 
   function makeCtx(overrides: Record<string, unknown> = {}) {
+    const sessionIdToKeyMap = new Map();
     return {
       db: {},
+      ports: {
+        sessions: {
+          getSessions: () => [],
+          getSessionById: () => null,
+          getSessionsInRange: () => [],
+          getSessionCount: () => 0,
+          getSessionIdToKeyMap: () => sessionIdToKeyMap,
+          onChanged: () => () => undefined,
+        },
+        metrics: {
+          getMetrics: () => ({}),
+          getSessionTokens: () => 0,
+          clearCache: () => undefined,
+          onChanged: () => () => undefined,
+        },
+        gateway: {
+          getGatewayStatus: vi.fn(() => Promise.resolve({ channels: [] })),
+          getVersion: vi.fn(() => Promise.resolve('1.0.0')),
+          warmCache: vi.fn(() => Promise.resolve()),
+        },
+        cron: undefined,
+        logs: undefined,
+        system: undefined,
+      },
       sessionReader: {
-        getSessionIdToKeyMap: () => new Map(),
+        getSessionIdToKeyMap: () => sessionIdToKeyMap,
         attachSubAgents: () => undefined,
         getSessions: () => [],
       },
       spawnTracker: { getParentChildMap: () => new Map() },
       aggregator: { getMetrics: () => ({}) },
+      systemInfoService: { getSystemMetrics: vi.fn(() => Promise.resolve({ cpu: 0, memoryMB: 0 })) },
       lifetimeScanner: {
         getStats: vi.fn(() => ({ createdAt: '2026-01-25T00:00:00.000Z' })),
       },

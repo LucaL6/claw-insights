@@ -88,8 +88,10 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
             animation: 'expand 150ms ease-out',
           }}
         >
-          <pre className="mono text-xs text-fg whitespace-pre-wrap break-words m-0">{message}</pre>
-          <div className="flex items-center gap-3 mt-2 text-[10px] text-fg-muted mono">
+          <pre className="mono text-xs text-fg whitespace-pre-wrap break-words m-0 leading-[1.55] tracking-[0.01em] font-medium [font-variant-ligatures:none]">
+            {message}
+          </pre>
+          <div className="flex items-center gap-4 mt-2 text-[11px] text-fg-muted mono">
             <span>{t('logs.detail.module', { name: module })}</span>
             <span>{t('logs.detail.time', { time: fmtTime(timestamp, locale) })}</span>
             {repeatCount && repeatCount >= 2 && repeatFirst && (

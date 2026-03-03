@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: most sources not yet migrated to ports */
 import { config } from '../config.js';
 import type { AppContext } from '../context.js';
+import { createReadContext } from '../context/read-context.js';
 import { queryEvents } from '../db/event-queries.js';
 import { getRangeTurnCount, getRangeTurnCountBySession } from '../db/message-queries.js';
 import { type MetricsRangeKey, RANGE_CONFIG } from '../db/query-utils.js';
@@ -19,7 +21,8 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
     getGateway: async () => {
       const t0 = performance.now();
       try {
-        const s = await ctx.gatewayClient.getGatewayStatus();
+        const readContext = createReadContext();
+        const s = await ctx.ports.gateway.getGatewayStatus(readContext);
         const sys = await ctx.systemInfoService.getSystemMetrics();
         log.debug({ source: 'gateway', ms: Math.round(performance.now() - t0) }, 'collected');
         // Stash channels from the same request so getChannels() doesn't re-fetch
@@ -39,14 +42,17 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
         return result ?? [];
       }
       const t0 = performance.now();
-      const channels = (await ctx.gatewayClient.getGatewayStatus()).channels;
+      const readContext = createReadContext();
+      const channels = (await ctx.ports.gateway.getGatewayStatus(readContext)).channels;
       log.debug({ source: 'channels', ms: Math.round(performance.now() - t0) }, 'collected');
       return channels;
     },
     getSessions: () => {
       const t0 = performance.now();
+      const readContext = createReadContext();
+      // Preserve legacy behavior: attach sub-agents before reading
       ctx.sessionReader.attachSubAgents(ctx.spawnTracker.getParentChildMap());
-      const result = ctx.sessionReader.getSessions();
+      const result = ctx.ports.sessions.getSessions(undefined, readContext);
       log.debug({ source: 'sessions', ms: Math.round(performance.now() - t0) }, 'collected');
       return result;
     },
@@ -55,7 +61,10 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
       const validated: MetricsRangeKey = VALID_RANGES.has(range as MetricsRangeKey)
         ? (range as MetricsRangeKey)
         : 'TWENTY_FOUR_HOUR';
-      const result = ctx.aggregator.getMetrics(undefined, validated) as ReturnType<DataSources['getMetrics']>;
+      const readContext = createReadContext();
+      const result = ctx.ports.metrics.getMetrics(undefined, validated, readContext) as ReturnType<
+        DataSources['getMetrics']
+      >;
       log.debug({ source: 'metrics', ms: Math.round(performance.now() - t0) }, 'collected');
       return result;
     },
@@ -80,7 +89,8 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
     getTurnCounts: (startTs: string, endTs: string) => {
       const total = getRangeTurnCount(ctx.db, startTs, endTs);
       const bySessionRaw = getRangeTurnCountBySession(ctx.db, startTs, endTs);
-      const sessionIdToKey = ctx.sessionReader.getSessionIdToKeyMap();
+      const readContext = createReadContext();
+      const sessionIdToKey = ctx.ports.sessions.getSessionIdToKeyMap(readContext);
       const bySession = bySessionRaw.map((r) => ({
         sessionKey: sessionIdToKey.get(r.sessionKey) ?? r.sessionKey,
         turns: r.turns,

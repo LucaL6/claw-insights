@@ -47,6 +47,41 @@ interface MockCtxOverrides {
 
 function mockCtx(overrides: MockCtxOverrides = {}): AppContext {
   const base: MockCtxOverrides = {
+    ports: {
+      sessions: {
+        getSessions: vi.fn().mockReturnValue([]),
+        getSessionById: vi.fn(),
+        getSessionsInRange: vi.fn(),
+        getSessionCount: vi.fn(),
+        onChanged: vi.fn(() => () => {}),
+      },
+      metrics: {
+        getMetrics: vi.fn().mockReturnValue({}),
+        getSessionTokens: vi.fn(),
+        clearCache: vi.fn(),
+        onChanged: vi.fn(() => () => {}),
+      },
+      gateway: {
+        getGatewayStatus: vi.fn().mockResolvedValue({
+          running: true,
+          pid: 1,
+          version: '1.0',
+          updateAvailable: null,
+          uptime: '100s',
+          startedAt: '2025-01-01',
+          connectLatencyMs: 5,
+          latestVersion: '1.0',
+          securitySummary: { critical: 0, warn: 0, info: 0 },
+          channels: [],
+          sessionDefaults: null,
+        }),
+        getVersion: vi.fn().mockResolvedValue('1.0'),
+        warmCache: vi.fn().mockResolvedValue(undefined),
+      },
+      cron: undefined,
+      logs: undefined,
+      system: undefined,
+    },
     gatewayClient: {
       getGatewayStatus: vi.fn().mockResolvedValue({
         running: true,
@@ -64,6 +99,13 @@ function mockCtx(overrides: MockCtxOverrides = {}): AppContext {
     systemInfoService: {
       getSystemMetrics: vi.fn().mockResolvedValue({ cpu: 0, memoryMB: 0 }),
       getUsageCost: vi.fn().mockResolvedValue({ totalCost: 0 }),
+    },
+    sessionReader: {
+      attachSubAgents: vi.fn(),
+      getSessions: vi.fn().mockReturnValue([]),
+    },
+    spawnTracker: {
+      getParentChildMap: vi.fn().mockReturnValue(new Map()),
     },
     cronReader: { getJobs: vi.fn().mockReturnValue([]) },
     lifetimeScanner: { getStats: vi.fn().mockResolvedValue({}) },
@@ -122,17 +164,27 @@ describe('slow resolve branches', () => {
       running: true,
       pid: 1,
       version: '1.0',
-      updateAvailable: false,
-      uptime: 100,
+      updateAvailable: null,
+      uptime: '100s',
       startedAt: '2025-01-01',
       connectLatencyMs: 5,
       latestVersion: '1.0',
-      securitySummary: { critical: 0, warn: 0 },
+      securitySummary: { critical: 0, warn: 0, info: 0 },
       channels: [],
+      sessionDefaults: null,
     };
     const ctx = mockCtx({
-      gatewayClient: {
-        getGatewayStatus: vi.fn().mockImplementation(() => delay(110).then(() => slowStatus)),
+      ports: {
+        sessions: mockCtx().ports.sessions,
+        metrics: mockCtx().ports.metrics,
+        gateway: {
+          getGatewayStatus: vi.fn().mockImplementation(() => delay(110).then(() => slowStatus)),
+          getVersion: vi.fn(),
+          warmCache: vi.fn(),
+        },
+        cron: undefined,
+        logs: undefined,
+        system: undefined,
       },
     });
     const r = gatewayResolvers(ctx);
@@ -147,13 +199,31 @@ describe('slow resolve branches', () => {
   it('channels: logs when slow', async () => {
     mockDebug.mockClear();
     const ctx = mockCtx({
-      gatewayClient: {
-        getGatewayStatus: vi.fn().mockImplementation(() =>
-          delay(110).then(() => ({
-            channels: [],
-            securitySummary: { critical: 0, warn: 0 },
-          })),
-        ),
+      ports: {
+        sessions: mockCtx().ports.sessions,
+        metrics: mockCtx().ports.metrics,
+        gateway: {
+          getGatewayStatus: vi.fn().mockImplementation(() =>
+            delay(110).then(() => ({
+              running: true,
+              pid: 1,
+              version: '1.0',
+              updateAvailable: null,
+              uptime: '100s',
+              startedAt: '2025-01-01',
+              connectLatencyMs: 5,
+              latestVersion: '1.0',
+              securitySummary: { critical: 0, warn: 0, info: 0 },
+              channels: [],
+              sessionDefaults: null,
+            })),
+          ),
+          getVersion: vi.fn(),
+          warmCache: vi.fn(),
+        },
+        cron: undefined,
+        logs: undefined,
+        system: undefined,
       },
     });
     const r = gatewayResolvers(ctx);
@@ -224,14 +294,24 @@ describe('slow resolve branches', () => {
   it('metrics: logs when slow', () => {
     mockDebug.mockClear();
     const ctx = mockCtx({
-      aggregator: {
-        getMetrics: vi.fn().mockImplementation(() => {
-          const end = performance.now() + 110;
-          while (performance.now() < end) {
-            /* busy-wait */
-          }
-          return {};
-        }),
+      ports: {
+        sessions: mockCtx().ports.sessions,
+        metrics: {
+          getMetrics: vi.fn().mockImplementation(() => {
+            const end = performance.now() + 110;
+            while (performance.now() < end) {
+              /* busy-wait */
+            }
+            return {};
+          }),
+          getSessionTokens: vi.fn(),
+          clearCache: vi.fn(),
+          onChanged: vi.fn(() => () => {}),
+        },
+        gateway: mockCtx().ports.gateway,
+        cron: undefined,
+        logs: undefined,
+        system: undefined,
       },
     });
     const r = metricsResolvers(ctx);
@@ -348,23 +428,37 @@ describe('args defaults / coalescing', () => {
   it('metrics: invalid range falls back to TWENTY_FOUR_HOUR', () => {
     const getMetrics = vi.fn().mockReturnValue({});
     const ctx = mockCtx({
-      aggregator: { getMetrics },
+      ports: {
+        sessions: mockCtx().ports.sessions,
+        metrics: { ...mockCtx().ports.metrics, getMetrics },
+        gateway: mockCtx().ports.gateway,
+        cron: undefined,
+        logs: undefined,
+        system: undefined,
+      },
       dataValidator: { runValidation: vi.fn().mockReturnValue([]) },
     });
     const r = metricsResolvers(ctx);
     (r.Query!.metrics as Function)({}, { range: 'INVALID' });
-    expect(getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR');
+    expect(getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR', expect.anything());
   });
 
   it('metrics: null args.range falls back to TWENTY_FOUR_HOUR', () => {
     const getMetrics = vi.fn().mockReturnValue({});
     const ctx = mockCtx({
-      aggregator: { getMetrics },
+      ports: {
+        sessions: mockCtx().ports.sessions,
+        metrics: { ...mockCtx().ports.metrics, getMetrics },
+        gateway: mockCtx().ports.gateway,
+        cron: undefined,
+        logs: undefined,
+        system: undefined,
+      },
       dataValidator: { runValidation: vi.fn().mockReturnValue([]) },
     });
     const r = metricsResolvers(ctx);
     (r.Query!.metrics as Function)({}, {});
-    expect(getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR');
+    expect(getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR', expect.anything());
   });
 
   it('events: null args coalesce to undefined', async () => {

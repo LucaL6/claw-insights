@@ -15,12 +15,24 @@ describe('formatModel', () => {
     expect(formatModel('claude-haiku-3-5')).toBe('Haiku 3.5');
   });
 
-  test('gpt-5.1-codex → GPT 5.1 Codex', () => {
-    expect(formatModel('gpt-5.1-codex')).toBe('GPT 5.1 Codex');
+  test('gpt-5.1-codex → Codex 5.1', () => {
+    expect(formatModel('gpt-5.1-codex')).toBe('Codex 5.1');
+  });
+
+  test('gpt-5.3-codex-spark → Codex 5.3 Spark', () => {
+    expect(formatModel('gpt-5.3-codex-spark')).toBe('Codex 5.3 Spark');
+  });
+
+  test('provider prefix openai-codex is handled', () => {
+    expect(formatModel('openai-codex/gpt-5.3-codex')).toBe('Codex 5.3');
   });
 
   test('provider prefix: anthropic/claude-opus-4-6 → Opus 4.6', () => {
     expect(formatModel('anthropic/claude-opus-4-6')).toBe('Opus 4.6');
+  });
+
+  test('gpt-4o-mini → GPT 4o Mini', () => {
+    expect(formatModel('gpt-4o-mini')).toBe('GPT 4o Mini');
   });
 
   test('unknown model passes through', () => {

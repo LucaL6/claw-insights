@@ -6,6 +6,7 @@
  * - Managed: lifecycle-only resource (destroy, no events)
  * - Processor: receives events (a function or object with handler method)
  * - Service: background lifecycle (start/stop, optional destroy)
+ * - Port: typed contract for data access (subscribable + destroyable)
  */
 
 /** Minimal event emitter interface (subset of EventEmitter) */
@@ -34,6 +35,12 @@ export interface Service {
   destroy?(): void;
 }
 
+/** A port provides typed data access with subscription and lifecycle. */
+export interface Port {
+  destroy?(): void | Promise<void>;
+  onChanged?(cb: () => void): () => void;
+}
+
 /** Wiring declaration: source event → processor targets */
 export interface WiringRule {
   source: string;
@@ -47,5 +54,24 @@ export interface PipelineConfig {
   managed: Map<string, Managed>;
   processors: Map<string, Processor>;
   services: Map<string, Service>;
+  ports: Map<string, Port>;
   wiring: WiringRule[];
+}
+
+/** Pipeline state */
+export type PipelineState = 'init' | 'built' | 'started' | 'destroyed';
+
+/** Destroy report structure */
+export interface DestroyReport {
+  destroyed: {
+    ports: string[];
+    services: string[];
+    sources: string[];
+    managed: string[];
+  };
+  failed: Array<{
+    component: 'ports' | 'services' | 'sources' | 'managed';
+    key: string;
+    error: Error;
+  }>;
 }

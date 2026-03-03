@@ -23,6 +23,7 @@ vi.mock('../db/init.js', () => ({
 
 vi.mock('../pipeline/index.js', () => ({
   Pipeline: class {
+    private ports = new Map();
     addSource() {
       return this;
     }
@@ -34,6 +35,13 @@ vi.mock('../pipeline/index.js', () => ({
     }
     addService() {
       return this;
+    }
+    addPort(key: string, port: any) {
+      this.ports.set(key, port);
+      return this;
+    }
+    getPort(key: string) {
+      return this.ports.get(key);
     }
     wire() {
       return this;
@@ -200,7 +208,7 @@ describe('context', () => {
     const { createContext, destroyContext } = await import('../context');
     const ctx = await createContext();
 
-    destroyContext(ctx);
+    await destroyContext(ctx);
 
     expect(ctx.pipeline.destroy).toHaveBeenCalled();
     expect((ctx.db as unknown as Record<string, unknown>).close).toHaveBeenCalled();
@@ -211,7 +219,7 @@ describe('context', () => {
     const ctx = await createContext();
 
     startContext(ctx);
-    destroyContext(ctx);
+    await destroyContext(ctx);
 
     await new Promise((r) => setImmediate(r));
     await Promise.resolve();
@@ -224,7 +232,7 @@ describe('context', () => {
     const ctx = await createContext();
     const closeSpy = vi.fn();
     (ctx.db as unknown as Record<string, unknown>).close = closeSpy;
-    destroyContext(ctx);
+    await destroyContext(ctx);
     expect(closeSpy).toHaveBeenCalled();
   });
 });

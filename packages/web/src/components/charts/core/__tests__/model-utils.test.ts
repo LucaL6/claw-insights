@@ -31,6 +31,15 @@ describe('shortModelName', () => {
   it('shortens claude models', () => expect(shortModelName('claude-sonnet-3-5')).toBe('Sonnet 3.5'));
   it('shortens claude without minor version', () => expect(shortModelName('claude-opus-4')).toBe('Opus 4'));
   it('shortens gpt models', () => expect(shortModelName('gpt-4.1')).toBe('GPT 4.1'));
+  it('uses Codex naming for codex models', () => {
+    expect(shortModelName('gpt-5.3-codex')).toBe('Codex 5.3');
+    expect(shortModelName('gpt-5.3-codex-spark')).toBe('Codex 5.3 Spark');
+  });
+  it('supports provider-prefixed codex ids', () => {
+    expect(shortModelName('openai-codex/gpt-5.3-codex')).toBe('Codex 5.3');
+    expect(shortModelName('openai-codex/gpt-5.3-codex-spark')).toBe('Codex 5.3 Spark');
+  });
+  it('handles GPT variant suffixes', () => expect(shortModelName('gpt-4o-mini')).toBe('GPT 4o Mini'));
   it('truncates long unknown models', () => {
     const long = 'a-very-long-model-name-here';
     expect(shortModelName(long).length).toBeLessThanOrEqual(16);

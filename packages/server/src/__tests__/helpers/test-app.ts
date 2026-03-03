@@ -210,6 +210,9 @@ export function createTestApp(): TestApp {
   const logTailer = stubLogTailer();
   const spawnTracker = stubSpawnTracker();
 
+  const gatewayClient = stubGatewayClient();
+  const systemInfoService = stubSystemInfoService();
+
   const ctx: AppContext = {
     db,
     pipeline: { start() {}, destroy() {} } as unknown as AppContext['pipeline'],
@@ -225,8 +228,56 @@ export function createTestApp(): TestApp {
     destroyed: false,
     tokenBus,
     messageBus,
-    gatewayClient: stubGatewayClient() as unknown as AppContext['gatewayClient'],
-    systemInfoService: stubSystemInfoService() as unknown as AppContext['systemInfoService'],
+    gatewayClient: gatewayClient as unknown as AppContext['gatewayClient'],
+    systemInfoService: systemInfoService as unknown as AppContext['systemInfoService'],
+    ports: {
+      sessions: {
+        getSessions: (filter?: unknown) => sessionReader.getSessions(filter),
+        getSessionById: (_id: string) => null,
+        onChanged: () => () => {},
+        destroy: () => {},
+      },
+      metrics: {
+        getMetrics: () => aggregator.getMetrics(),
+        getTokenTimeline: (...args: unknown[]) =>
+          (aggregator as unknown as { getTokenTimeline: (...a: unknown[]) => unknown }).getTokenTimeline(...args),
+        getModelBreakdown: (...args: unknown[]) =>
+          (aggregator as unknown as { getModelBreakdown: (...a: unknown[]) => unknown }).getModelBreakdown(...args),
+        getCostTimeline: (...args: unknown[]) =>
+          (aggregator as unknown as { getCostTimeline: (...a: unknown[]) => unknown }).getCostTimeline(...args),
+        onChanged: () => () => {},
+        destroy: () => {},
+      },
+      gateway: {
+        getGatewayStatus: async () => ({
+          running: true,
+          pid: 12345,
+          version: '1.0.0-test',
+          updateAvailable: null,
+          uptime: '2h 30m',
+          startedAt: new Date().toISOString(),
+          connectLatencyMs: 5,
+          latestVersion: '1.0.0-test',
+          securitySummary: { critical: 0, warn: 0, info: 0 },
+          sessionDefaults: null,
+          channels: [
+            {
+              type: 'telegram',
+              accountId: 'default',
+              protocol: 'bot',
+              profile: null,
+              name: 'main',
+              connectionStatus: 'connected',
+            },
+          ],
+        }),
+        getVersion: () => gatewayClient.getVersion(),
+        destroy: () => {},
+      },
+      cron: undefined,
+      logs: undefined,
+      system: undefined,
+    } as unknown as AppContext['ports'],
   };
 
   const app = express();

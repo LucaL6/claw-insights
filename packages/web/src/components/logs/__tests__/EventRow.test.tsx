@@ -71,4 +71,20 @@ describe('EventRow', () => {
     const { container } = render(<EventRow {...base} type="error" />);
     expect((container.firstChild as HTMLElement).id).toBe('event-0');
   });
+
+  it('applies readable monospace styling in expanded detail', () => {
+    const { container } = render(<EventRow {...base} type="error" expanded />);
+
+    const pre = container.querySelector('pre');
+    expect(pre).toBeTruthy();
+    expect(pre?.className).toContain('mono');
+    expect(pre?.className).toContain('leading-[1.55]');
+    expect(pre?.className).toContain('tracking-[0.01em]');
+    expect(pre?.className).toContain('font-medium');
+    expect(pre?.className).toContain('[font-variant-ligatures:none]');
+
+    const metadata = container.querySelector('[role="region"] .flex.items-center');
+    expect(metadata?.className).toContain('gap-4');
+    expect(metadata?.className).toContain('text-[11px]');
+  });
 });

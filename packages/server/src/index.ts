@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: legacy ctx.* refs not yet migrated to ports */
 import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
@@ -132,8 +133,16 @@ if (!config.isDev && !config.serverOnly && existsSync(webDistPath)) {
 const pidPath = join(process.env.HOME ?? '/tmp', '.claw-insights', 'claw-insights.pid');
 
 // Graceful shutdown
-function shutdown() {
-  destroyContext(ctx);
+async function shutdown(signal: 'SIGTERM' | 'SIGINT'): Promise<void> {
+  let exitCode = 0;
+
+  try {
+    await destroyContext(ctx);
+  } catch (err) {
+    exitCode = 1;
+    log.error({ err, signal }, 'shutdown failed during context destroy');
+  }
+
   // Clean up PID file if we are the daemon process
   try {
     if (existsSync(pidPath)) {
@@ -145,13 +154,14 @@ function shutdown() {
   } catch {
     // best effort
   }
-  process.exit(0);
+
+  process.exit(exitCode);
 }
 process.on('SIGTERM', () => {
-  shutdown();
+  void shutdown('SIGTERM');
 });
 process.on('SIGINT', () => {
-  shutdown();
+  void shutdown('SIGINT');
 });
 
 // Gateway cache warm-up moved to startContext (after scanner init) — ISS-056

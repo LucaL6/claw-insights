@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: systemInfoService not yet migrated */
 import type { AppContext } from '../../context.js';
+import { createReadContext } from '../../context/read-context.js';
 import { createChildLogger } from '../../logger.js';
 import { getAppVersion } from '../../version.js';
 import type { ChannelProvider, QueryResolvers, Resolvers } from '../generated/resolver-types.js';
@@ -9,8 +11,10 @@ const log = createChildLogger('resolver:gateway');
 export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
   const gateway: QueryResolvers['gateway'] = async () => {
     const start = performance.now();
+    const readCtx = createReadContext();
+
     const result = await safe(async () => {
-      const status = await ctx.gatewayClient.getGatewayStatus();
+      const status = await ctx.ports.gateway.getGatewayStatus(readCtx);
       return {
         running: status.running,
         pid: status.pid,
@@ -25,6 +29,7 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
         securityWarn: status.securitySummary.warn,
       };
     });
+
     const ms = performance.now() - start;
     if (ms > 100) {
       log.debug({ ms: Math.round(ms) }, 'slow resolve: gateway');
@@ -34,15 +39,19 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
 
   const channels: QueryResolvers['channels'] = async () => {
     const start = performance.now();
+    const readCtx = createReadContext();
+
     const result = await safe(async () => {
-      const status = await ctx.gatewayClient.getGatewayStatus();
-      return status.channels as Array<{
-        provider: ChannelProvider;
-        name: string;
-        connected: boolean;
-        latencyMs: number | null;
-      }>;
+      const status = await ctx.ports.gateway.getGatewayStatus(readCtx);
+      // Map ChannelInfo to GraphQL Channel type
+      return status.channels.map((ch) => ({
+        provider: ch.type as ChannelProvider,
+        name: ch.name ?? 'unknown',
+        connected: ch.connectionStatus === 'connected',
+        latencyMs: null, // Not available in ChannelInfo
+      }));
     });
+
     const ms = performance.now() - start;
     if (ms > 100) {
       log.debug({ ms: Math.round(ms) }, 'slow resolve: channels');
@@ -52,6 +61,7 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
 
   const resources: QueryResolvers['resources'] = async () => {
     const start = performance.now();
+    // resources is NOT migrated in Task 6 (systemInfoService → ports.system is Phase 2)
     const result = await safe(async () => ctx.systemInfoService.getSystemMetrics());
     const ms = performance.now() - start;
     if (ms > 100) {

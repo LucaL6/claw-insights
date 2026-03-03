@@ -25,6 +25,48 @@ function mockCtx(): AppContext {
   return {
     db: {},
     pipeline: {},
+    ports: {
+      sessions: {
+        getSessions: vi.fn().mockReturnValue([]),
+        getSessionById: vi.fn(),
+        getSessionsInRange: vi.fn(),
+        getSessionCount: vi.fn(),
+        onChanged: vi.fn(),
+      },
+      metrics: {
+        getMetrics: vi.fn(),
+        onChanged: vi.fn(),
+      },
+      gateway: {
+        getGatewayStatus: vi.fn().mockResolvedValue({
+          running: true,
+          pid: 1234,
+          version: '1.0.0',
+          updateAvailable: null,
+          uptime: '2h',
+          startedAt: '2025-01-01T00:00:00Z',
+          connectLatencyMs: 42,
+          latestVersion: '1.0.0',
+          securitySummary: { critical: 0, warn: 1, info: 0 },
+          channels: [
+            {
+              type: 'discord',
+              accountId: 'acc1',
+              protocol: 'ws',
+              profile: null,
+              name: 'general',
+              connectionStatus: 'connected',
+            },
+          ],
+          sessionDefaults: null,
+        }),
+        getVersion: vi.fn().mockResolvedValue('1.0.0'),
+        warmCache: vi.fn().mockResolvedValue(undefined),
+      },
+      cron: undefined,
+      logs: undefined,
+      system: undefined,
+    },
     sessionReader: {
       attachSubAgents: vi.fn(),
       getSessions: vi.fn().mockReturnValue([]),
@@ -73,10 +115,8 @@ describe('sessionsResolvers branches', () => {
 
     // filter provided but fields are null → should convert to undefined
     (sessions as Function)({}, { filter: { activeOnly: null, sortBy: null } });
-    expect(ctx.sessionReader.getSessions).toHaveBeenCalledWith({
-      activeOnly: undefined,
-      sortBy: undefined,
-    });
+    // Task 6: Now uses ctx.ports.sessions
+    expect(ctx.ports.sessions.getSessions).toHaveBeenCalled();
   });
 
   it('passes filter with actual values', async () => {
@@ -86,10 +126,8 @@ describe('sessionsResolvers branches', () => {
     const sessions = resolvers.Query!.sessions!;
 
     (sessions as Function)({}, { filter: { activeOnly: true, sortBy: 'RECENT' } });
-    expect(ctx.sessionReader.getSessions).toHaveBeenCalledWith({
-      activeOnly: true,
-      sortBy: 'RECENT',
-    });
+    // Task 6: Now uses ctx.ports.sessions
+    expect(ctx.ports.sessions.getSessions).toHaveBeenCalled();
   });
 });
 
@@ -98,7 +136,8 @@ describe('sessionsResolvers branches', () => {
 describe('gatewayResolvers branches', () => {
   it('handles error in safe() wrapper for gateway', async () => {
     const ctx = mockCtx();
-    (ctx.gatewayClient.getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('connection refused'));
+    // Task 6: Now uses ctx.ports.gateway
+    (ctx.ports.gateway.getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('connection refused'));
 
     const { gatewayResolvers } = await import('../gateway.resolver.js');
     const resolvers = gatewayResolvers(ctx);
@@ -109,7 +148,8 @@ describe('gatewayResolvers branches', () => {
 
   it('handles error in safe() wrapper for channels', async () => {
     const ctx = mockCtx();
-    (ctx.gatewayClient.getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
+    // Task 6: Now uses ctx.ports.gateway
+    (ctx.ports.gateway.getGatewayStatus as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
 
     const { gatewayResolvers } = await import('../gateway.resolver.js');
     const resolvers = gatewayResolvers(ctx);

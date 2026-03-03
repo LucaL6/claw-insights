@@ -24,12 +24,44 @@ vi.mock('../../config.js', () => ({
 import { getRangeTokenUsageK } from '../../db/token-queries.js';
 
 function makeCtx() {
+  const sessionData = [{ key: 's1', displayName: 'S1', status: 'ACTIVE' }];
   return {
     db: {},
+    ports: {
+      sessions: {
+        getSessions: vi.fn(() => sessionData),
+        getSessionById: vi.fn(),
+        getSessionsInRange: vi.fn(),
+        getSessionCount: vi.fn(),
+        getSessionIdToKeyMap: vi.fn(() => new Map()),
+        onChanged: vi.fn(),
+      },
+      metrics: {
+        getMetrics: vi.fn(() => ({ totalTokensK: 50 })),
+        getSessionTokens: vi.fn(() => 0),
+        clearCache: vi.fn(),
+        onChanged: vi.fn(),
+      },
+      gateway: {
+        getGatewayStatus: vi.fn(() =>
+          Promise.resolve({
+            running: true,
+            version: '1.0',
+            uptime: '1h',
+            channels: [{ provider: 'discord', name: 'main', connected: true }],
+          }),
+        ),
+        getVersion: vi.fn(),
+        warmCache: vi.fn(),
+      },
+      cron: undefined,
+      logs: undefined,
+      system: undefined,
+    },
     sessionReader: {
       getSessionIdToKeyMap: () => new Map(),
       attachSubAgents: vi.fn(),
-      getSessions: vi.fn(() => [{ key: 's1', displayName: 'S1', status: 'ACTIVE' }]),
+      getSessions: vi.fn(() => sessionData),
     },
     spawnTracker: { getParentChildMap: vi.fn(() => new Map()) },
     aggregator: { getMetrics: vi.fn(() => ({ totalTokensK: 50 })) },
@@ -80,14 +112,14 @@ describe('createSnapshotSources branches', () => {
     const ctx = makeCtx();
     const sources = createSnapshotSources(ctx);
     sources.getMetrics('INVALID_RANGE');
-    expect(ctx.aggregator.getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR');
+    expect(ctx.ports.metrics.getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR', expect.any(Object));
   });
 
   it('getMetrics uses valid range', () => {
     const ctx = makeCtx();
     const sources = createSnapshotSources(ctx);
     sources.getMetrics('ONE_HOUR');
-    expect(ctx.aggregator.getMetrics).toHaveBeenCalledWith(undefined, 'ONE_HOUR');
+    expect(ctx.ports.metrics.getMetrics).toHaveBeenCalledWith(undefined, 'ONE_HOUR', expect.any(Object));
   });
 
   it('getModelTokenUsage delegates to DB', () => {

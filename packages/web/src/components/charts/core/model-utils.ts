@@ -43,9 +43,20 @@ export function shortModelName(model: string): string {
     const version = claude[3] ? `${claude[2]}.${claude[3]}` : claude[2];
     return `${family} ${version}`;
   }
-  const gpt = model.match(/^(?:openai\/)?gpt-([\d.]+)/);
+  const raw = model.includes('/') ? (model.split('/').pop() ?? model) : model;
+  const codex = raw.match(/^gpt-([\d.]+)-codex(?:-(spark))?$/i);
+  if (codex) {
+    return `Codex ${codex[1]}${codex[2] ? ' Spark' : ''}`;
+  }
+  const gpt = raw.match(/^gpt-([a-z\d.]+)(?:-([a-z\d-]+))?$/i);
   if (gpt) {
-    return `GPT ${gpt[1]}`;
+    const suffix = gpt[2]
+      ? ` ${gpt[2]
+          .split('-')
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ')}`
+      : '';
+    return `GPT ${gpt[1]}${suffix}`;
   }
   return model.length > 15 ? model.slice(0, 15) + '…' : model;
 }

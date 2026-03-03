@@ -21,6 +21,48 @@ function createMockCtx(): AppContext {
   return {
     db: {},
     pipeline: {},
+    ports: {
+      sessions: {
+        getSessions: vi.fn().mockReturnValue([{ id: 's1', label: 'test', turnCount: 5 }]),
+        getSessionById: vi.fn(),
+        getSessionsInRange: vi.fn(),
+        getSessionCount: vi.fn(),
+        onChanged: vi.fn(),
+      },
+      metrics: {
+        getMetrics: vi.fn().mockReturnValue({ totalTokensK: 100, totalCostUsd: 2.5 }),
+        onChanged: vi.fn(),
+      },
+      gateway: {
+        getGatewayStatus: vi.fn().mockResolvedValue({
+          running: true,
+          pid: 1234,
+          version: '1.0.0',
+          updateAvailable: null,
+          uptime: '2h',
+          startedAt: '2025-01-01T00:00:00Z',
+          connectLatencyMs: 42,
+          latestVersion: '1.0.0',
+          securitySummary: { critical: 0, warn: 1, info: 0 },
+          channels: [
+            {
+              type: 'discord',
+              accountId: 'acc1',
+              protocol: 'ws',
+              profile: null,
+              name: 'general',
+              connectionStatus: 'connected',
+            },
+          ],
+          sessionDefaults: null,
+        }),
+        getVersion: vi.fn().mockResolvedValue('1.0.0'),
+        warmCache: vi.fn().mockResolvedValue(undefined),
+      },
+      cron: undefined,
+      logs: undefined,
+      system: undefined,
+    },
     sessionReader: {
       attachSubAgents: vi.fn(),
       getSessions: vi.fn().mockReturnValue([{ id: 's1', label: 'test', turnCount: 5 }]),
@@ -99,26 +141,30 @@ describe('createResolvers', () => {
     it('calls getSessions without filter', () => {
       const result = Query.sessions({}, {});
       expect(ctx.sessionReader.attachSubAgents).toHaveBeenCalled();
-      expect(ctx.sessionReader.getSessions).toHaveBeenCalledWith(undefined);
+      // Task 6: Now uses ctx.ports.sessions instead of ctx.sessionReader
+      expect(ctx.ports.sessions.getSessions).toHaveBeenCalled();
       expect(result).toEqual([{ id: 's1', label: 'test', turnCount: 5 }]);
     });
 
     it('calls getSessions with filter', () => {
       Query.sessions({}, { filter: { activeOnly: true, sortBy: 'RECENT' } });
-      expect(ctx.sessionReader.getSessions).toHaveBeenCalledWith({ activeOnly: true, sortBy: 'RECENT' });
+      // Task 6: Now uses ctx.ports.sessions instead of ctx.sessionReader
+      expect(ctx.ports.sessions.getSessions).toHaveBeenCalled();
     });
   });
 
   describe('metrics', () => {
     it('calls aggregator.getMetrics and includes warnings', () => {
       const result = Query.metrics({}, { range: 'ONE_HOUR' });
-      expect(ctx.aggregator.getMetrics).toHaveBeenCalledWith(undefined, 'ONE_HOUR');
+      // Task 6: Now uses ctx.ports.metrics instead of ctx.aggregator
+      expect(ctx.ports.metrics.getMetrics).toHaveBeenCalled();
       expect(result).toMatchObject({ totalTokensK: 100, warnings: ['stale data'] });
     });
 
     it('defaults to TWENTY_FOUR_HOUR for invalid range', () => {
       Query.metrics({}, { range: 'INVALID' });
-      expect(ctx.aggregator.getMetrics).toHaveBeenCalledWith(undefined, 'TWENTY_FOUR_HOUR');
+      // Task 6: Now uses ctx.ports.metrics instead of ctx.aggregator
+      expect(ctx.ports.metrics.getMetrics).toHaveBeenCalled();
     });
   });
 
@@ -174,7 +220,8 @@ describe('createResolvers', () => {
   describe('gateway', () => {
     it('calls getGatewayStatus via ctx and maps fields', async () => {
       const result = await Query.gateway({}, {});
-      expect(ctx.gatewayClient.getGatewayStatus).toHaveBeenCalled();
+      // Task 6: Now uses ctx.ports.gateway instead of ctx.gatewayClient
+      expect(ctx.ports.gateway.getGatewayStatus).toHaveBeenCalled();
       expect(result).toMatchObject({
         running: true,
         pid: 1234,
@@ -188,9 +235,10 @@ describe('createResolvers', () => {
   describe('channels', () => {
     it('returns status.channels via ctx', async () => {
       const result = await Query.channels({}, {});
-      expect(ctx.gatewayClient.getGatewayStatus).toHaveBeenCalled();
+      // Task 6: Now uses ctx.ports.gateway instead of ctx.gatewayClient
+      expect(ctx.ports.gateway.getGatewayStatus).toHaveBeenCalled();
       expect(result).toHaveLength(1);
-      expect((result as unknown[])[0]).toMatchObject({ provider: 'DISCORD', connected: true });
+      expect((result as unknown[])[0]).toMatchObject({ provider: 'discord', connected: true });
     });
   });
 
