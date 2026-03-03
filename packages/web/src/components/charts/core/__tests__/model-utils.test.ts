@@ -16,6 +16,11 @@ describe('getModelColor', () => {
     expect(getModelColor('gpt-5.3-codex')).toBe('#f97316');
   });
 
+  it('returns unique color for gpt-5.3-codex-spark', () => {
+    expect(getModelColor('gpt-5.3-codex-spark')).toBe(MODEL_COLORS['5.3-codex-spark']);
+    expect(getModelColor('gpt-5.3-codex-spark')).toBe('#fbbf24');
+  });
+
   it('returns orange-300 for gpt-5.2-codex', () => {
     expect(getModelColor('gpt-5.2-codex')).toBe(MODEL_COLORS['5.2-codex']);
     expect(getModelColor('gpt-5.2-codex')).toBe('#fdba74');

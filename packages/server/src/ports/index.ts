@@ -28,25 +28,24 @@ export type { CliAdapter, Platform, ProcessAdapter } from './types.js';
 /**
  * Typed port registry interface.
  *
- * Phase 1 ports (sessions, metrics, gateway) are required and must be present.
- * Phase 2 ports (cron, logs, system) are marked as optional (| undefined) and will be implemented later.
+ * All ports are required and must be present after context initialization.
  */
 export interface TypedPorts {
-  /** Session data access port (Phase 1) */
+  /** Session data access port */
   sessions: SessionPort;
 
-  /** Metrics aggregation port (Phase 1) */
+  /** Metrics aggregation port */
   metrics: MetricsPort;
 
-  /** Gateway CLI interaction port (Phase 1) */
+  /** Gateway CLI interaction port */
   gateway: GatewayPort;
 
-  /** Cron job data access port (Phase 2 - not yet implemented) */
-  cron: CronPort | undefined;
+  /** Cron job data access port */
+  cron: CronPort;
 
-  /** Log data access port (Phase 2 - not yet implemented) */
-  logs: LogPort | undefined;
+  /** Log data access port */
+  logs: LogPort;
 
-  /** System information port (Phase 2 - not yet implemented) */
-  system: SystemPort | undefined;
+  /** System information port */
+  system: SystemPort;
 }

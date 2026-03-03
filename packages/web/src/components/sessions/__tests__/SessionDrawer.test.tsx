@@ -1,6 +1,7 @@
-import { fireEvent, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { SessionTranscriptMessage } from '../../../hooks/useSessionTranscript';
 import { renderWithProviders } from '../../../test/render';
 import { SessionDrawer } from '../SessionDrawer';
 
@@ -20,7 +21,11 @@ vi.mock('../../ui/toast-store', () => ({
 }));
 
 vi.mock('../TranscriptTimeline', () => ({
-  TranscriptTimeline: ({ state }: { state: { status: string } }) => <div data-testid="timeline">{state.status}</div>,
+  TranscriptTimeline: ({ state, jumpToIndex }: { state: { status: string }; jumpToIndex?: number }) => (
+    <div data-testid="timeline">
+      {state.status}:{jumpToIndex ?? 'none'}
+    </div>
+  ),
 }));
 
 type MockMeta = {
@@ -63,7 +68,7 @@ const baseMeta: MockMeta = {
   messages: [],
 };
 
-const baseMessages = [
+const baseMessages: SessionTranscriptMessage[] = [
   {
     timestamp: '2024-01-01T10:00:00Z',
     role: 'user' as const,
@@ -88,7 +93,21 @@ const mockRefresh = vi.fn();
 const mockLoadMore = vi.fn();
 const mockRetry = vi.fn();
 
-function mockReady(overrides?: Partial<ReturnType<typeof buildState>>) {
+type MockHookState = {
+  meta: MockMeta | undefined;
+  messages: SessionTranscriptMessage[];
+  isInitialLoading: boolean;
+  isRefreshing: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  totalMessages: number;
+  error: unknown;
+  refresh: typeof mockRefresh;
+  loadMore: typeof mockLoadMore;
+  retry: typeof mockRetry;
+};
+
+function mockReady(overrides?: Partial<MockHookState>) {
   mockUseSessionTranscript.mockReturnValue({
     ...buildState(),
     ...overrides,
@@ -118,7 +137,7 @@ function mockError() {
   return retry;
 }
 
-function buildState(overrides: Record<string, unknown> = {}) {
+function buildState(overrides: Partial<MockHookState> = {}): MockHookState {
   return {
     meta: baseMeta,
     messages: baseMessages,
@@ -137,6 +156,10 @@ function buildState(overrides: Record<string, unknown> = {}) {
 
 describe('SessionDrawer', () => {
   const onClose = vi.fn();
+
+  afterEach(() => {
+    cleanup();
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -160,13 +183,15 @@ describe('SessionDrawer', () => {
     const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
     const pulsingElements = container.querySelectorAll('.animate-pulse');
     expect(pulsingElements.length).toBeGreaterThan(0);
-    expect(screen.getByText('loading')).toBeDefined();
+    const timeline = container.querySelector('[data-testid="timeline"]');
+    expect(timeline?.textContent).toContain('loading');
   });
 
   it('shows error state when query fails', () => {
     mockError();
-    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
-    expect(screen.getByText('error')).toBeDefined();
+    const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const timeline = container.querySelector('[data-testid="timeline"]');
+    expect(timeline?.textContent).toContain('error');
   });
 
   it('calls onClose when Escape key is pressed', () => {
@@ -210,6 +235,89 @@ describe('SessionDrawer', () => {
     expect(refreshButton).toBeTruthy();
     fireEvent.click(refreshButton!);
     expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables refresh button while refresh is in progress', () => {
+    mockReady({ isRefreshing: true });
+    const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const refreshButton = container.querySelector<HTMLButtonElement>('.dr-refresh-btn');
+    expect(refreshButton).toBeTruthy();
+    expect(refreshButton?.disabled).toBe(true);
+  });
+
+  it('restores jump target using anchor id after refresh when messages shift', async () => {
+    const first = {
+      timestamp: '2024-01-01T10:00:00Z',
+      role: 'user' as const,
+      content: 'A',
+      contentTruncated: false,
+      model: undefined,
+      usage: undefined,
+      toolName: undefined,
+    };
+    const second = {
+      timestamp: '2024-01-01T10:01:00Z',
+      role: 'assistant' as const,
+      content: 'B',
+      contentTruncated: false,
+      model: 'claude-sonnet-4-20250514',
+      usage: undefined,
+      toolName: undefined,
+    };
+    const third = {
+      timestamp: '2024-01-01T10:02:00Z',
+      role: 'assistant' as const,
+      content: 'C',
+      contentTruncated: false,
+      model: 'claude-sonnet-4-20250514',
+      usage: undefined,
+      toolName: undefined,
+    };
+    const prepended = {
+      timestamp: '2024-01-01T09:59:00Z',
+      role: 'assistant' as const,
+      content: 'prepended',
+      contentTruncated: false,
+      model: undefined,
+      usage: undefined,
+      toolName: undefined,
+    };
+
+    const hookState = buildState({
+      messages: [first, second, third],
+      totalMessages: 3,
+      meta: {
+        ...baseMeta,
+        totalMessages: 3,
+      },
+    });
+
+    mockUseSessionTranscript.mockImplementation(() => hookState);
+
+    const { container, rerender } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+
+    const scrubberButtons = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).filter((button) =>
+      button.className.includes('text-[10px]'),
+    );
+    expect(scrubberButtons.length).toBeGreaterThanOrEqual(3);
+    fireEvent.click(scrubberButtons[1]!);
+
+    hookState.isRefreshing = true;
+    rerender(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+
+    hookState.messages = [prepended, first, second, third];
+    hookState.totalMessages = 4;
+    hookState.meta = {
+      ...baseMeta,
+      totalMessages: 4,
+    };
+    hookState.isRefreshing = false;
+    rerender(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+
+    await waitFor(() => {
+      const timeline = container.querySelector('[data-testid="timeline"]');
+      expect(timeline?.textContent).toContain('ready:2');
+    });
   });
 
   it('shows loading toast and then replaces with success when refresh settles', () => {

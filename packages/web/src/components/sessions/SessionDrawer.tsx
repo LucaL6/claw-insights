@@ -6,6 +6,7 @@ import { formatModel } from '../../utils/formatModel';
 import { dismissToast, replaceToast, showToast } from '../ui/toast-store';
 import { SpawnPromptBox } from './SpawnPromptBox';
 import { TimelineScrubber } from './TimelineScrubber';
+import { buildTranscriptAnchorId, resolveAnchorIndex, type TranscriptAnchor } from './transcriptAnchor';
 import { type TimelineState, TranscriptTimeline } from './TranscriptTimeline';
 
 interface SessionDrawerProps {
@@ -104,6 +105,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
 
   const refreshToastRef = useRef<number | undefined>(undefined);
   const previousRefreshingRef = useRef(false);
+  const refreshAnchorRef = useRef<TranscriptAnchor | undefined>(undefined);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -135,6 +137,15 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
 
     if (isRefreshing && !wasRefreshing) {
       refreshToastRef.current = showToast(t('drawer.refresh.loading'), 'loading');
+
+      const anchorMessage = visibleIndex !== undefined ? messages[visibleIndex] : undefined;
+      refreshAnchorRef.current =
+        visibleIndex !== undefined
+          ? {
+              index: visibleIndex,
+              id: anchorMessage ? buildTranscriptAnchorId(anchorMessage) : undefined,
+            }
+          : undefined;
     }
 
     if (!isRefreshing && wasRefreshing) {
@@ -143,14 +154,18 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
         refreshToastRef.current = undefined;
       }
 
-      if (visibleIndex !== undefined && visibleIndex > 0) {
+      const resolvedIndex = resolveAnchorIndex(refreshAnchorRef.current, messages);
+      refreshAnchorRef.current = undefined;
+
+      if (resolvedIndex !== undefined && resolvedIndex > 0) {
         jumpKeyRef.current += 1;
-        setJumpRequest({ index: visibleIndex, key: jumpKeyRef.current });
+        setJumpRequest({ index: resolvedIndex, key: jumpKeyRef.current });
+        setVisibleIndex(resolvedIndex);
       }
     }
 
     previousRefreshingRef.current = isRefreshing;
-  }, [isRefreshing, t, visibleIndex]);
+  }, [isRefreshing, messages, t, visibleIndex]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key !== 'Tab') {
@@ -328,9 +343,11 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
             {!isLoading && (
               <button
                 onClick={refresh}
+                disabled={isRefreshing}
                 className="dr-refresh-btn w-7 h-7 flex items-center justify-center rounded-md shrink-0 transition-colors"
                 aria-label={t('drawer.refresh')}
                 title={t('drawer.refresh')}
+                aria-busy={isRefreshing}
               >
                 <svg
                   width="14"

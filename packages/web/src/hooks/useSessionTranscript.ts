@@ -125,9 +125,9 @@ export function useSessionTranscript({
     clearRefreshTimeout();
   }, [clearRefreshTimeout, sessionKey]);
 
-  // Store completed page data only after refresh has settled.
+  // Store completed page data from each fetched offset.
   useEffect(() => {
-    if (!transcript || result.fetching || isRefreshing) {
+    if (!transcript || result.fetching) {
       return;
     }
 
@@ -140,7 +140,7 @@ export function useSessionTranscript({
       next.set(currentOffset, transcript);
       return next;
     });
-  }, [currentOffset, isRefreshing, result.fetching, transcript]);
+  }, [currentOffset, result.fetching, transcript]);
 
   const messages = useMemo<SessionTranscriptMessage[]>(() => {
     const sorted = [...pages.entries()].sort(([a], [b]) => a - b);
@@ -172,8 +172,6 @@ export function useSessionTranscript({
     setIsRefreshing(true);
     sawFetchingRef.current = false;
 
-    setPages(new Map());
-    setCurrentOffset(0);
     setPendingRefresh(true);
 
     clearRefreshTimeout();
@@ -185,7 +183,7 @@ export function useSessionTranscript({
     }, REFRESH_TIMEOUT_MS);
   }, [clearRefreshTimeout, isRefreshing]);
 
-  // Run network-only reexecute only after offset reset state has committed.
+  // Run network-only reexecute after refresh intent has committed.
   useEffect(() => {
     if (!pendingRefresh) {
       return;

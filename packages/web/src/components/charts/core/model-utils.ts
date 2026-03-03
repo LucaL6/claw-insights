@@ -17,6 +17,7 @@ export const MODEL_COLORS: Record<string, string> = {
   opus: '#38bdf8', // sky-400 (generic Opus fallback)
   sonnet: '#a78bfa', // violet-400
   haiku: '#34d399', // emerald-400
+  '5.3-codex-spark': '#fbbf24', // amber-400 (Codex Spark)
   '5.3-codex': '#f97316', // orange-500 (primary GPT)
   '5.2-codex': '#fdba74', // orange-300 (secondary GPT)
   gpt: '#fb923c', // orange-400 (generic GPT fallback)

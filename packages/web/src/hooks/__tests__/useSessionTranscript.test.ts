@@ -116,7 +116,7 @@ describe('useSessionTranscript', () => {
     vi.useRealTimers();
   });
 
-  it('defers reexecute and completes refresh across fetching lifecycle', () => {
+  it('defers reexecute and keeps loaded messages after refresh lifecycle', () => {
     const { result, rerender } = renderHook(({ sessionKey }) => useSessionTranscript({ sessionKey }), {
       initialProps: { sessionKey: 's1' },
     });
@@ -125,6 +125,7 @@ describe('useSessionTranscript', () => {
       result.current.loadMore();
     });
     expect(state.lastVars).toEqual({ sessionKey: 's1', offset: 200 });
+    expect(result.current.messages.map((message) => message.content)).toEqual(['s1-p0', 's1-p200']);
 
     act(() => {
       result.current.refresh();
@@ -133,14 +134,6 @@ describe('useSessionTranscript', () => {
 
     expect(mockReexecute).toHaveBeenCalledWith({ requestPolicy: 'network-only' });
     expect(result.current.isRefreshing).toBe(true);
-
-    act(() => {
-      result.current.loadMore();
-    });
-    act(() => {
-      rerender({ sessionKey: 's1' });
-    });
-    expect(state.lastVars.offset).toBe(0);
 
     state.fetching = true;
     act(() => {
@@ -153,6 +146,8 @@ describe('useSessionTranscript', () => {
       rerender({ sessionKey: 's1' });
     });
     expect(result.current.isRefreshing).toBe(false);
+    expect(result.current.messages.map((message) => message.content)).toEqual(['s1-p0', 's1-p200']);
+    expect(result.current.hasMore).toBe(false);
   });
 
   it('accumulates messages across pages', () => {

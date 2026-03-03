@@ -43,14 +43,14 @@ describe('Context Ports Integration', () => {
     expect(typeof ports.gateway.getGatewayStatus).toBe('function');
   });
 
-  it('should mark Phase 2 ports as undefined (cron, logs, system)', async () => {
+  it('should expose Phase 2 ports after registration (cron, logs, system)', async () => {
     ctx = await createContext();
     const { ports } = ctx;
 
-    // Phase 2 ports should be undefined
-    expect(ports.cron).toBeUndefined();
-    expect(ports.logs).toBeUndefined();
-    expect(ports.system).toBeUndefined();
+    // Phase 2 ports should be present
+    expect(ports.cron).toBeDefined();
+    expect(ports.logs).toBeDefined();
+    expect(ports.system).toBeDefined();
   });
 
   it('should keep legacy fields for backward compatibility', async () => {

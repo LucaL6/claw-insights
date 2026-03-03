@@ -149,11 +149,15 @@ export async function createContext(): Promise<AppContext> {
     .addService('dataRetention', dataRetention)
     .addManaged('lifetimeScanner', transcriptManager);
 
-  // Register ports (Phase 1: sessions, metrics, gateway)
+  // Register ports (Phase 1 + Phase 2)
   registerPorts(pipeline, {
     sessionReader,
     aggregator,
     gatewayClient,
+    cronReader,
+    logTailer,
+    systemInfoService,
+    platform,
   });
 
   // Build pipeline
