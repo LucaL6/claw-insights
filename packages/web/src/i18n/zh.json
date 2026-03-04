@@ -62,6 +62,8 @@
   "drawer.timeline.loading": "加载中…",
   "drawer.scrubber.tooltip": "点击时间标记跳转到对应位置",
   "drawer.scrubber.jumpTo": "跳转到第 {n} 条消息",
+  "drawer.scrubber.jumpToStart": "跳转到第一条",
+  "drawer.scrubber.jumpToEnd": "跳转到最后一条",
   "drawer.timeline.sessionStarted": "会话开始",
   "drawer.timeline.showMore": "展开更多",
   "drawer.timeline.spawned": "已创建",

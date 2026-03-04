@@ -23,12 +23,13 @@ function mapToCronEntry(job: CronJob): CronEntry {
 export function createCronAdapter(reader: CronReader): CronPort & { destroy: () => void } {
   const hub = createSubscriptionHub();
   let underlyingAttached = false;
+  let readerUnsub: (() => void) | null = null;
 
   function ensureAttached(): void {
     if (underlyingAttached) {
       return;
     }
-    reader.onChange(() => hub.trigger());
+    readerUnsub = reader.onChange(() => hub.trigger());
     underlyingAttached = true;
   }
 
@@ -55,6 +56,10 @@ export function createCronAdapter(reader: CronReader): CronPort & { destroy: () 
   }
 
   function destroy(): void {
+    if (readerUnsub) {
+      readerUnsub();
+      readerUnsub = null;
+    }
     hub.destroy();
   }
 

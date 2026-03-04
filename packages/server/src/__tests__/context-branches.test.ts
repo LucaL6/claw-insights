@@ -85,6 +85,7 @@ vi.mock('../sources/readers/session-reader.js', () => ({
     attachSubAgents() {},
     setDb() {},
     invalidateTurnCounts() {},
+    setSpawnBus() {},
   }),
 }));
 vi.mock('../sources/readers/cron-reader.js', () => ({ CronReader: mockClass({ destroy() {} }) }));
@@ -120,7 +121,9 @@ vi.mock('../sources/collectors/transcript/manager.js', () => ({
     isReady: () => false,
   }),
 }));
-vi.mock('../sources/readers/spawn-tracker.js', () => ({ SpawnTracker: mockClass({ ingest() {} }) }));
+vi.mock('../sources/readers/spawn-tracker.js', () => ({
+  SpawnTracker: mockClass({ ingest() {}, getParentChildMap: () => new Map() }),
+}));
 vi.mock('../sources/aggregator.js', () => ({
   Aggregator: mockClass({ ingestLog() {}, getMetrics: () => ({ totalTokensK: 0 }) }),
 }));

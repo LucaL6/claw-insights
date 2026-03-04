@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: legacy ctx.* refs not yet migrated to ports */
 import { GraphQLError } from 'graphql';
 
 import type { AppContext } from '../../context.js';
+import { createReadContext } from '../../context/read-context.js';
 import { createChildLogger } from '../../logger.js';
 import { readTranscript } from '../../sources/readers/transcript-reader.js';
 import type { QueryResolvers, Resolvers } from '../generated/resolver-types.js';
@@ -11,7 +11,8 @@ const log = createChildLogger('resolver:transcript');
 export function transcriptResolvers(ctx: AppContext): Partial<Resolvers> {
   const sessionTranscript: QueryResolvers['sessionTranscript'] = async (_parent, args) => {
     const start = performance.now();
-    const filePath = ctx.sessionReader.getTranscriptPath(args.sessionKey);
+    const readCtx = createReadContext();
+    const filePath = ctx.ports.transcript.getTranscriptPath(args.sessionKey, readCtx);
     if (!filePath) {
       log.debug({ sessionKey: args.sessionKey }, 'transcript not found');
       return null;

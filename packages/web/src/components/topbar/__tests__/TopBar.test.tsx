@@ -75,6 +75,14 @@ describe('TopBar', () => {
     expect(screen.getByText('OpenClaw Gateway')).toBeDefined();
   });
 
+  it('renders lobster icon for OpenClaw monitor context', () => {
+    mockViewport(1024);
+    renderWithProviders(<TopBar />);
+    const lobster = screen.getByAltText('OpenClaw lobster') as HTMLImageElement;
+    expect(lobster.getAttribute('src')).toBe('/logo/openclaw-lobster.svg');
+    expect(screen.queryByAltText('Claw Insights logo')).toBeNull();
+  });
+
   it('renders nav tabs in mobile mode (no gateway)', () => {
     mockViewport(600);
     renderWithProviders(<TopBar currentPage="dashboard" onNavigate={vi.fn()} />);

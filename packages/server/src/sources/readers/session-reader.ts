@@ -6,6 +6,7 @@ import { config } from '../../config.js';
 import type { Database } from '../../db/database.js';
 import { getRangeTurnCountBySession } from '../../db/message-queries.js';
 import { emitChange } from '../../events.js';
+import type { SpawnBus, SpawnLinkEvent } from '../../events/spawn-bus.js';
 import { createChildLogger } from '../../logger.js';
 
 const log = createChildLogger('session-reader');
@@ -111,6 +112,11 @@ export class SessionReader {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private listeners: Array<() => void> = [];
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  // SpawnBus event-driven subAgent attachment
+  private spawnBus?: SpawnBus;
+  private unsubSpawn?: () => void;
+  private pendingLinks = new Map<string, Set<string>>(); // parent -> children (for late-arriving sessions)
+  private eventLinks = new Map<string, Set<string>>(); // all links received via events (for reload persistence)
 
   /** Inject DB reference for turn count queries */
   setDb(db: Database): void {
@@ -143,6 +149,98 @@ export class SessionReader {
     this.startWatching();
   }
 
+  /**
+   * Set SpawnBus for event-driven subAgent attachment.
+   * Call this after construction to enable real-time spawn link handling.
+   */
+  setSpawnBus(bus: SpawnBus): void {
+    // Cleanup previous subscription if exists (safety for rewire/tests)
+    this.unsubSpawn?.();
+    this.spawnBus = bus;
+    this.unsubSpawn = bus.onLink(this.onSpawnLink.bind(this));
+  }
+
+  private onSpawnLink({ parent, child }: SpawnLinkEvent): void {
+    // Always record in eventLinks for reload persistence
+    let eventChildren = this.eventLinks.get(parent);
+    if (!eventChildren) {
+      eventChildren = new Set();
+      this.eventLinks.set(parent, eventChildren);
+    }
+    eventChildren.add(child);
+
+    const parentSession = this.sessions.get(parent);
+    const childSession = this.sessions.get(child);
+
+    if (parentSession && childSession) {
+      // Both exist: attach immediately
+      if (!parentSession.subAgents.some((s) => s.key === child)) {
+        parentSession.subAgents.push(childSession);
+        this.attachedChildKeys.add(child);
+        log.debug({ parent, child }, 'attached sub-agent via event');
+      }
+    } else {
+      // Store pending link for later
+      let pendingChildren = this.pendingLinks.get(parent);
+      if (!pendingChildren) {
+        pendingChildren = new Set();
+        this.pendingLinks.set(parent, pendingChildren);
+      }
+      pendingChildren.add(child);
+      log.debug({ parent, child }, 'stored pending spawn link');
+    }
+  }
+
+  private applyPendingLinks(): void {
+    const toRemove: Array<{ parent: string; child: string }> = [];
+
+    for (const [parent, children] of this.pendingLinks) {
+      const parentSession = this.sessions.get(parent);
+      if (!parentSession) {
+        continue;
+      }
+
+      for (const child of children) {
+        const childSession = this.sessions.get(child);
+        if (childSession && !parentSession.subAgents.some((s) => s.key === child)) {
+          parentSession.subAgents.push(childSession);
+          this.attachedChildKeys.add(child);
+          toRemove.push({ parent, child });
+        }
+      }
+    }
+
+    // Accumulate-then-delete: avoid mutation during iteration
+    for (const { parent, child } of toRemove) {
+      const children = this.pendingLinks.get(parent);
+      children?.delete(child);
+      if (children?.size === 0) {
+        this.pendingLinks.delete(parent);
+      }
+    }
+  }
+
+  /**
+   * Reapply all event-driven links after reload.
+   * This ensures links persist across session file reloads.
+   */
+  private applyEventLinks(): void {
+    for (const [parent, children] of this.eventLinks) {
+      const parentSession = this.sessions.get(parent);
+      if (!parentSession) {
+        continue;
+      }
+
+      for (const child of children) {
+        const childSession = this.sessions.get(child);
+        if (childSession && !parentSession.subAgents.some((s) => s.key === child)) {
+          parentSession.subAgents.push(childSession);
+          this.attachedChildKeys.add(child);
+        }
+      }
+    }
+  }
+
   private reload() {
     try {
       const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Record<string, RawSession>;
@@ -153,6 +251,10 @@ export class SessionReader {
         this.sessions.set(key, parseSession(key, entry));
       }
       this.refreshTurnCounts();
+      // Reapply event-driven links after reload (ensures persistence)
+      this.applyEventLinks();
+      // Apply any pending spawn links
+      this.applyPendingLinks();
     } catch (err) {
       log.error({ err }, 'failed to read sessions');
     }
@@ -365,9 +467,13 @@ export class SessionReader {
   }
 
   destroy() {
+    this.unsubSpawn?.();
     this.watcher?.close();
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
+    }
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
     }
     this.listeners = [];
   }

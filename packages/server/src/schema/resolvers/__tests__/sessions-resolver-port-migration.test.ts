@@ -134,14 +134,15 @@ describe('sessions.resolver - Port Migration', () => {
   });
 
   describe('Behavior parity', () => {
-    it('still calls spawnTracker.getParentChildMap for sub-agent attachment', () => {
+    it('no longer calls spawnTracker directly (DESIGN-066 event-driven)', () => {
       const resolvers = sessionsResolvers(ctx);
       const Query = resolvers.Query!;
 
       Query.sessions!({}, {});
 
-      // This behavior must be preserved
-      expect(ctx.spawnTracker.getParentChildMap).toHaveBeenCalled();
+      // DESIGN-066: subAgent attachment now handled by SpawnBus event system
+      // resolver no longer directly calls spawnTracker
+      expect(ctx.spawnTracker.getParentChildMap).not.toHaveBeenCalled();
     });
 
     it('passes filter options to Port correctly', () => {

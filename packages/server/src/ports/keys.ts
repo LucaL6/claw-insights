@@ -11,6 +11,9 @@ export const PORT_KEYS = Object.freeze({
   cron: 'cron',
   logs: 'logs',
   system: 'system',
+  lifetime: 'lifetime',
+  transcript: 'transcript',
+  usage: 'usage',
 } as const);
 
 export type PortKey = (typeof PORT_KEYS)[keyof typeof PORT_KEYS];

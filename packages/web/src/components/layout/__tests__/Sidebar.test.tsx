@@ -53,6 +53,14 @@ describe('Sidebar', () => {
     expect(screen.getByText(/v1\.2\.3/)).toBeDefined();
   });
 
+  it('renders readable brand logo in footer when expanded', () => {
+    renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
+    const logo = screen.getByRole('img', { name: /claw insights logo/i });
+    expect(logo.getAttribute('width')).toBe('12');
+    expect(logo.getAttribute('height')).toBe('12');
+    expect(logo.className).toContain('opacity-80');
+  });
+
   it('collapses when toggle button is clicked', () => {
     renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
     const toggle = screen.getByRole('button', { name: /collapse/i });

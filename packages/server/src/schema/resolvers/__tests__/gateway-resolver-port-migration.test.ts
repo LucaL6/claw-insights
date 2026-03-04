@@ -53,12 +53,22 @@ describe('gateway.resolver - Port Migration', () => {
         sessions: {} as any,
         metrics: {} as any,
         gateway: gatewayPortMock,
-        cron: undefined,
-        logs: undefined,
-        system: undefined,
+        cron: {} as any,
+        logs: {} as any,
+        system: {
+          getSystemMetrics: vi.fn().mockResolvedValue({
+            cpu: 25,
+            memoryMB: 512,
+            diskMB: 1024,
+            uptime: '3600s',
+            platform: 'darwin',
+            nodeVersion: 'v20.0.0',
+          }),
+          getProcessMetrics: vi.fn(),
+        },
       },
       systemInfoService: {
-        getSystemMetrics: vi.fn().mockResolvedValue({ cpu: 25, memoryMB: 512 }),
+        getSystemMetrics: vi.fn(),
       },
       // Legacy field should NOT be accessed
       gatewayClient: {
@@ -199,15 +209,15 @@ describe('gateway.resolver - Port Migration', () => {
       ]);
     });
 
-    it('resources resolver still uses ctx.systemInfoService (not migrated yet)', async () => {
+    it('resources resolver uses ctx.ports.system', async () => {
       const resolvers = gatewayResolvers(ctx);
       const Query = resolvers.Query!;
 
       const result = await Query.resources!({}, {});
 
-      // This one is NOT migrated in Task 6, should still use old path
-      expect(ctx.systemInfoService.getSystemMetrics).toHaveBeenCalled();
-      expect(result).toMatchObject({ cpu: 25, memoryMB: 512 });
+      // Phase 2: Now migrated to use ctx.ports.system
+      expect(ctx.ports.system!.getSystemMetrics).toHaveBeenCalled();
+      expect(result).toMatchObject({ cpu: 25, memoryMB: 512, diskMB: 1024 });
     });
 
     it('handles errors gracefully with safe() wrapper', async () => {

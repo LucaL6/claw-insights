@@ -44,9 +44,13 @@ function GatewayBar() {
   return (
     <div className="flex items-center gap-3 px-1">
       {!isDashboardIssue && (
-        <span className="text-sm" aria-hidden="true">
-          🦞
-        </span>
+        <img
+          src="/logo/openclaw-lobster.svg"
+          alt="OpenClaw lobster"
+          width={15}
+          height={15}
+          className="shrink-0 opacity-90"
+        />
       )}
       <span className={`text-xs font-medium ${isDashboardIssue ? 'text-amber' : 'text-fg-secondary'}`}>{title}</span>
       <Tooltip text={statusTooltipMap[status]}>

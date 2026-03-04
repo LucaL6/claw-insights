@@ -78,9 +78,54 @@ function mockCtx(overrides: MockCtxOverrides = {}): AppContext {
         getVersion: vi.fn().mockResolvedValue('1.0'),
         warmCache: vi.fn().mockResolvedValue(undefined),
       },
-      cron: undefined,
-      logs: undefined,
-      system: undefined,
+      cron: {
+        getCronJobs: vi.fn().mockReturnValue([]),
+        getCronJobById: vi.fn(),
+        onChanged: vi.fn(() => () => {}),
+      },
+      logs: {
+        getRecentLogs: vi.fn().mockReturnValue([]),
+        getLogsInRange: vi.fn(),
+        onChanged: vi.fn(() => () => {}),
+      },
+      system: {
+        getSystemMetrics: vi.fn().mockResolvedValue({
+          cpu: 0,
+          memoryMB: 0,
+          diskMB: 0,
+          uptime: '0s',
+          platform: 'darwin',
+          nodeVersion: 'v20.0.0',
+        }),
+        getProcessMetrics: vi.fn(),
+      },
+      lifetime: {
+        getStats: vi.fn().mockReturnValue({
+          isReady: true,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          daysSinceCreation: 0,
+          totalSessions: 0,
+          totalInputTokens: 0,
+          totalOutputTokens: 0,
+          totalCacheReadTokens: 0,
+          totalCacheWriteTokens: 0,
+          totalTokens: 0,
+          totalUserMessages: 0,
+          totalAssistantMessages: 0,
+        }),
+      },
+      transcript: {
+        getTranscriptPath: vi.fn().mockReturnValue(null),
+      },
+      usage: {
+        getUsageCost: vi.fn().mockResolvedValue({
+          totalCost: 0,
+          totalTokensM: 0,
+          todayCost: 0,
+          todayTokensM: 0,
+          fetchedAt: new Date().toISOString(),
+        }),
+      },
     },
     gatewayClient: {
       getGatewayStatus: vi.fn().mockResolvedValue({
@@ -122,15 +167,21 @@ function mockCtx(overrides: MockCtxOverrides = {}): AppContext {
 describe('slow resolve branches', () => {
   it('cron: logs when slow', () => {
     mockDebug.mockClear();
+    const baseCtx = mockCtx();
     const ctx = mockCtx({
-      cronReader: {
-        getJobs: vi.fn().mockImplementation(() => {
-          const end = performance.now() + 110;
-          while (performance.now() < end) {
-            /* busy-wait */
-          }
-          return [];
-        }),
+      ports: {
+        ...baseCtx.ports,
+        cron: {
+          getCronJobs: vi.fn().mockImplementation(() => {
+            const end = performance.now() + 110;
+            while (performance.now() < end) {
+              /* busy-wait */
+            }
+            return [];
+          }),
+          getCronJobById: vi.fn(),
+          onChanged: vi.fn(() => () => {}),
+        },
       },
     });
     const r = cronResolvers(ctx);
@@ -144,14 +195,36 @@ describe('slow resolve branches', () => {
 
   it('lifetime: logs when slow', async () => {
     mockDebug.mockClear();
+    const slowStats = {
+      isReady: true,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      daysSinceCreation: 0,
+      totalSessions: 0,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      totalCacheReadTokens: 0,
+      totalCacheWriteTokens: 0,
+      totalTokens: 0,
+      totalUserMessages: 0,
+      totalAssistantMessages: 0,
+    };
     const ctx = mockCtx({
-      lifetimeScanner: {
-        getStats: vi.fn().mockImplementation(() => delay(110).then(() => ({}))),
+      ports: {
+        lifetime: {
+          getStats: vi.fn().mockImplementation(() => {
+            // Simulate slow sync call with blocking delay
+            const start = Date.now();
+            while (Date.now() - start < 110) {
+              // busy wait
+            }
+            return slowStats;
+          }),
+        },
       },
     });
     const r = lifetimeResolvers(ctx);
     const result = await (r.Query!.lifetimeStats as Function)();
-    expect(result).toEqual({});
+    expect(result).toEqual(slowStats);
     expect(mockDebug).toHaveBeenCalledWith(
       expect.objectContaining({ ms: expect.any(Number) }),
       expect.stringContaining('slow resolve'),
@@ -237,15 +310,28 @@ describe('slow resolve branches', () => {
 
   it('resources: logs when slow', async () => {
     mockDebug.mockClear();
+    const baseCtx = mockCtx();
     const ctx = mockCtx({
-      systemInfoService: {
-        getSystemMetrics: vi.fn().mockImplementation(() => delay(110).then(() => ({ cpu: 0 }))),
-        getUsageCost: vi.fn().mockResolvedValue({}),
+      ports: {
+        ...baseCtx.ports,
+        system: {
+          getSystemMetrics: vi.fn().mockImplementation(() =>
+            delay(110).then(() => ({
+              cpu: 0,
+              memoryMB: 0,
+              diskMB: 0,
+              uptime: '0s',
+              platform: 'darwin',
+              nodeVersion: 'v20.0.0',
+            })),
+          ),
+          getProcessMetrics: vi.fn(),
+        },
       },
     });
     const r = gatewayResolvers(ctx);
     const result = await (r.Query!.resources as Function)();
-    expect(result).toEqual({ cpu: 0 });
+    expect(result).toMatchObject({ cpu: 0, memoryMB: 0, diskMB: 0 });
     expect(mockDebug).toHaveBeenCalledWith(
       expect.objectContaining({ ms: expect.any(Number) }),
       expect.stringContaining('slow resolve'),
@@ -254,15 +340,23 @@ describe('slow resolve branches', () => {
 
   it('usageCost: logs when slow', async () => {
     mockDebug.mockClear();
+    const slowCost = {
+      totalCost: 0,
+      totalTokensM: 0,
+      todayCost: 0,
+      todayTokensM: 0,
+      fetchedAt: new Date().toISOString(),
+    };
     const ctx = mockCtx({
-      systemInfoService: {
-        getSystemMetrics: vi.fn(),
-        getUsageCost: vi.fn().mockImplementation(() => delay(110).then(() => ({ totalCost: 0 }))),
+      ports: {
+        usage: {
+          getUsageCost: vi.fn().mockImplementation(() => delay(110).then(() => slowCost)),
+        },
       },
     });
     const r = usageResolvers(ctx);
     const result = await (r.Query!.usageCost as Function)();
-    expect(result).toEqual({ totalCost: 0 });
+    expect(result).toEqual(slowCost);
     expect(mockDebug).toHaveBeenCalledWith(
       expect.objectContaining({ ms: expect.any(Number) }),
       expect.stringContaining('slow resolve'),
@@ -271,15 +365,21 @@ describe('slow resolve branches', () => {
 
   it('recentLogs: logs when slow', () => {
     mockDebug.mockClear();
+    const baseCtx = mockCtx();
     const ctx = mockCtx({
-      logTailer: {
-        getRecentEntries: vi.fn().mockImplementation(() => {
-          const end = performance.now() + 110;
-          while (performance.now() < end) {
-            /* busy-wait */
-          }
-          return [];
-        }),
+      ports: {
+        ...baseCtx.ports,
+        logs: {
+          getRecentLogs: vi.fn().mockImplementation(() => {
+            const end = performance.now() + 110;
+            while (performance.now() < end) {
+              /* busy-wait */
+            }
+            return [];
+          }),
+          getLogsInRange: vi.fn(),
+          onChanged: vi.fn(() => () => {}),
+        },
       },
     });
     const r = usageResolvers(ctx);
@@ -387,12 +487,18 @@ describe('slow resolve branches', () => {
 // ── Error paths (safe() catch) ──
 
 describe('safe() error paths', () => {
-  it('lifetime: rejects → GraphQLError', async () => {
+  it('lifetime: throws → GraphQLError', () => {
     const ctx = mockCtx({
-      lifetimeScanner: { getStats: vi.fn().mockRejectedValue(new Error('boom')) },
+      ports: {
+        lifetime: {
+          getStats: vi.fn().mockImplementation(() => {
+            throw new Error('boom');
+          }),
+        },
+      },
     });
     const r = lifetimeResolvers(ctx);
-    await expect((r.Query!.lifetimeStats as Function)()).rejects.toThrow('boom');
+    expect(() => (r.Query!.lifetimeStats as Function)()).toThrow('boom');
   });
 
   it('events: rejects → GraphQLError', async () => {
@@ -410,19 +516,31 @@ describe('safe() error paths', () => {
 
 describe('args defaults / coalescing', () => {
   it('recentLogs: null count defaults to 50', () => {
-    const getRecentEntries = vi.fn().mockReturnValue([]);
-    const ctx = mockCtx({ logTailer: { getRecentEntries } });
+    const getRecentLogs = vi.fn().mockReturnValue([]);
+    const baseCtx = mockCtx();
+    const ctx = mockCtx({
+      ports: {
+        ...baseCtx.ports,
+        logs: { getRecentLogs, getLogsInRange: vi.fn(), onChanged: vi.fn(() => () => {}) },
+      },
+    });
     const r = usageResolvers(ctx);
     (r.Query!.recentLogs as Function)({}, { count: null });
-    expect(getRecentEntries).toHaveBeenCalledWith(50);
+    expect(getRecentLogs).toHaveBeenCalledWith(50, expect.any(Object));
   });
 
   it('recentLogs: undefined count defaults to 50', () => {
-    const getRecentEntries = vi.fn().mockReturnValue([]);
-    const ctx = mockCtx({ logTailer: { getRecentEntries } });
+    const getRecentLogs = vi.fn().mockReturnValue([]);
+    const baseCtx = mockCtx();
+    const ctx = mockCtx({
+      ports: {
+        ...baseCtx.ports,
+        logs: { getRecentLogs, getLogsInRange: vi.fn(), onChanged: vi.fn(() => () => {}) },
+      },
+    });
     const r = usageResolvers(ctx);
     (r.Query!.recentLogs as Function)({}, {});
-    expect(getRecentEntries).toHaveBeenCalledWith(50);
+    expect(getRecentLogs).toHaveBeenCalledWith(50, expect.any(Object));
   });
 
   it('metrics: invalid range falls back to TWENTY_FOUR_HOUR', () => {

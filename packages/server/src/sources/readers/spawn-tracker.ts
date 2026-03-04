@@ -1,5 +1,6 @@
 import type { LogEntry } from '@claw-insights/shared';
 
+import type { SpawnBus } from '../../events/spawn-bus.js';
 import { createChildLogger } from '../../logger.js';
 
 const log = createChildLogger('spawn-tracker');
@@ -8,6 +9,8 @@ export class SpawnTracker {
   private runToParent = new Map<string, string>();
   private runToChild = new Map<string, string>();
   private parentToChildren = new Map<string, Set<string>>();
+
+  constructor(private spawnBus?: SpawnBus) {}
 
   ingest(entry: LogEntry) {
     const msg = entry.message;
@@ -36,6 +39,8 @@ export class SpawnTracker {
       if (children) {
         children.add(c);
       }
+      // Emit event for real-time listeners
+      this.spawnBus?.emitLink({ parent: p, child: c });
     }
   }
 

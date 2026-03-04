@@ -83,6 +83,7 @@ vi.mock('../sources/readers/session-reader.js', () => ({
     attachSubAgents() {},
     setDb() {},
     invalidateTurnCounts() {},
+    setSpawnBus() {},
   }),
 }));
 
@@ -141,7 +142,7 @@ vi.mock('../sources/collectors/transcript/manager.js', () => ({
 }));
 
 vi.mock('../sources/readers/spawn-tracker.js', () => ({
-  SpawnTracker: mockClass({ ingest() {} }),
+  SpawnTracker: mockClass({ ingest() {}, getParentChildMap: () => new Map() }),
 }));
 
 vi.mock('../sources/aggregator.js', () => ({

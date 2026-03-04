@@ -4,18 +4,38 @@ import { t } from '../i18n/index.js';
 import type { ColorScheme } from './colors.js';
 import type { SatoriNode } from './helpers.js';
 import { div, span } from './helpers.js';
+import type { BrandTheme } from './logo-assets.js';
+import { getFooterBrandLogoFile, loadLogoDataUri } from './logo-assets.js';
 
-export function renderFooter(data: SnapshotData, c: ColorScheme, locale: string = 'en'): SatoriNode {
+export function renderFooter(
+  data: SnapshotData,
+  c: ColorScheme,
+  theme: BrandTheme = 'dark',
+  locale: string = 'en',
+): SatoriNode {
   const datetime = data.timestamp.slice(0, 16).replace('T', ' ') + ' UTC';
+  const logoSrc = loadLogoDataUri(getFooterBrandLogoFile(theme));
 
   return div(
     {
       justifyContent: 'space-between',
       padding: '8px 20px 12px',
       borderTop: `1px solid ${c.border}`,
+      alignItems: 'center',
     },
     [
-      span({ color: c.textDim, fontSize: 11 }, t('footer.version', locale, { version: getAppVersion() })),
+      div({ alignItems: 'center', gap: 6 }, [
+        {
+          type: 'img',
+          props: {
+            src: logoSrc,
+            width: 14,
+            height: 14,
+            style: { display: 'flex', width: 14, height: 14, borderRadius: 3 },
+          },
+        },
+        span({ color: c.textDim, fontSize: 11 }, t('footer.version', locale, { version: getAppVersion() })),
+      ]),
       span({ color: c.textDim, fontSize: 11, fontFamily: 'JetBrains Mono' }, datetime),
     ],
   );

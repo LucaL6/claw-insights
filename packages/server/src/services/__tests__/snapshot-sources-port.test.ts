@@ -143,15 +143,14 @@ describe('Task 7: snapshot-sources getSessions() port migration', () => {
     expect(readContext).toHaveProperty('requestId');
   });
 
-  it('getSessions() still calls attachSubAgents (legacy behavior preservation)', () => {
+  it('getSessions() uses port without calling attachSubAgents (DESIGN-066 event-driven)', () => {
     const ctx = createMockContext();
     const sources = createSnapshotSources(ctx);
 
     sources.getSessions();
 
-    // Verify attachSubAgents is still called (behavioral parity)
-    expect(ctx.sessionReader.attachSubAgents).toHaveBeenCalledTimes(1);
-    expect(ctx.sessionReader.attachSubAgents).toHaveBeenCalledWith(ctx.spawnTracker.getParentChildMap());
+    // attachSubAgents no longer called here - handled by SpawnBus event system
+    expect(ctx.sessionReader.attachSubAgents).not.toHaveBeenCalled();
   });
 
   it('getSessions() returns data from port, not from legacy reader', () => {
@@ -170,5 +169,131 @@ describe('Task 7: snapshot-sources getSessions() port migration', () => {
     // Should return port data, not legacy data
     expect(result).toEqual([portSession]);
     expect(result).not.toEqual([legacySession]);
+  });
+});
+
+describe('Phase 2: snapshot-sources getGateway() system metrics port migration', () => {
+  function createMockContext() {
+    const mockSystemPort = {
+      getSystemMetrics: vi.fn(() =>
+        Promise.resolve({
+          cpu: 42,
+          memoryMB: 1024,
+          diskMB: 2048,
+          uptime: '3600s',
+          platform: 'darwin',
+          nodeVersion: 'v20.0.0',
+        }),
+      ),
+      getProcessMetrics: vi.fn(),
+    };
+
+    const mockGatewayPort = {
+      getGatewayStatus: vi.fn(() =>
+        Promise.resolve({
+          running: true,
+          pid: 1234,
+          version: '1.0.0',
+          channels: [],
+        }),
+      ),
+      getVersion: vi.fn(),
+      warmCache: vi.fn(),
+    };
+
+    return {
+      ports: {
+        sessions: {
+          getSessions: vi.fn(() => []),
+          getSessionById: vi.fn(),
+          getSessionsInRange: vi.fn(),
+          getSessionCount: vi.fn(),
+          getSessionIdToKeyMap: vi.fn(() => new Map()),
+          onChanged: vi.fn(() => () => {}),
+        },
+        metrics: {
+          getMetrics: vi.fn(() => ({})),
+          onChanged: vi.fn(() => () => {}),
+        },
+        gateway: mockGatewayPort,
+        cron: undefined,
+        logs: undefined,
+        system: mockSystemPort,
+      },
+      db: {},
+      sessionReader: {
+        getSessionIdToKeyMap: () => new Map(),
+        attachSubAgents: vi.fn(),
+        getSessions: vi.fn(() => []),
+      },
+      spawnTracker: {
+        getParentChildMap: () => new Map(),
+      },
+      aggregator: {
+        getMetrics: vi.fn(() => ({})),
+      },
+      gatewayClient: {
+        getGatewayStatus: vi.fn(() => Promise.resolve({ channels: [] })),
+      },
+      systemInfoService: {
+        getSystemMetrics: vi.fn(() => Promise.resolve({ cpu: 99, memoryMB: 9999 })),
+      },
+    } as any;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('getGateway() reads system metrics from ctx.ports.system instead of legacy systemInfoService', async () => {
+    const ctx = createMockContext();
+    const sources = createSnapshotSources(ctx);
+
+    const result = await sources.getGateway();
+
+    // Should call ctx.ports.system.getSystemMetrics()
+    expect(ctx.ports.system.getSystemMetrics).toHaveBeenCalledTimes(1);
+
+    // Should NOT call legacy ctx.systemInfoService.getSystemMetrics()
+    expect(ctx.systemInfoService.getSystemMetrics).not.toHaveBeenCalled();
+
+    // Result should have system metrics from port
+    expect(result.cpu).toBe(42);
+    expect(result.memoryMB).toBe(1024);
+  });
+
+  it('getGateway() passes ReadContext to system port', async () => {
+    const ctx = createMockContext();
+    const sources = createSnapshotSources(ctx);
+
+    await sources.getGateway();
+
+    // Verify port was called with a ReadContext argument
+    const portCall = vi.mocked(ctx.ports.system.getSystemMetrics).mock.calls[0];
+    expect(portCall).toBeDefined();
+
+    // First argument should be ReadContext
+    const readContext = portCall[0] as ReadContext | undefined;
+    expect(readContext).toBeDefined();
+    expect(readContext).toHaveProperty('requestId');
+    expect(readContext).toHaveProperty('asOfTs');
+    expect(typeof readContext!.requestId).toBe('string');
+    expect(typeof readContext!.asOfTs).toBe('number');
+  });
+
+  it('getGateway() returns merged data from gateway and system ports', async () => {
+    const ctx = createMockContext();
+    const sources = createSnapshotSources(ctx);
+
+    const result = await sources.getGateway();
+
+    // Should have gateway data
+    expect(result.running).toBe(true);
+    expect(result.pid).toBe(1234);
+    expect(result.version).toBe('1.0.0');
+
+    // Should have system metrics data
+    expect(result.cpu).toBe(42);
+    expect(result.memoryMB).toBe(1024);
   });
 });

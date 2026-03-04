@@ -14,6 +14,12 @@ describe('CronAdapter', () => {
       getJobs: vi.fn(() => jobs),
       onChange: vi.fn((fn: () => void) => {
         listeners.push(fn);
+        return () => {
+          const idx = listeners.indexOf(fn);
+          if (idx !== -1) {
+            listeners.splice(idx, 1);
+          }
+        };
       }),
       destroy: vi.fn(),
       // Test helpers
@@ -144,6 +150,26 @@ describe('CronAdapter', () => {
       adapter.onChanged(vi.fn());
 
       expect(reader.onChange).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('listener cleanup', () => {
+    it('should unsubscribe from reader onChange on destroy', () => {
+      const unsubSpy = vi.fn();
+      const mockReader = {
+        getJobs: () => [],
+        onChange: vi.fn(() => unsubSpy),
+        destroy: vi.fn(),
+      };
+
+      const adapter = createCronAdapter(mockReader as any);
+      adapter.onChanged(() => {});
+
+      expect(mockReader.onChange).toHaveBeenCalledOnce();
+
+      adapter.destroy();
+
+      expect(unsubSpy).toHaveBeenCalledOnce();
     });
   });
 

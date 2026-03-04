@@ -5,6 +5,7 @@ import type { Page } from '../../hooks/useHashRoute';
 import { usePreference } from '../../hooks/usePreference';
 import { useTopBarData } from '../../hooks/useTopBarData';
 import { useI18n } from '../../i18n/context';
+import { BrandLogo } from '../ui/BrandLogo';
 import { ChevronLeftIcon, ChevronRightIcon, DashboardIcon, LogsIcon } from '../ui/icons';
 import { Tooltip } from '../ui/Tooltip';
 
@@ -104,8 +105,11 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       {/* Footer: version only */}
       {!collapsed && (
         <div className="flex-shrink-0 border-t border-edge-subtle px-3 py-2">
-          <div className="text-[10px] text-fg-secondary">
-            {t('brand.name')} v{version}
+          <div className="text-[10px] text-fg-secondary flex items-center gap-1.5">
+            <BrandLogo size={12} className="shrink-0 opacity-80" />
+            <span>
+              {t('brand.name')} v{version}
+            </span>
           </div>
         </div>
       )}

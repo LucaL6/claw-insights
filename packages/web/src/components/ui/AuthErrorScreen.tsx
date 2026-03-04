@@ -1,4 +1,5 @@
 import { useI18n } from '../../i18n/context';
+import { BrandLogo } from './BrandLogo';
 
 export function AuthErrorScreen() {
   const { t } = useI18n();
@@ -9,8 +10,9 @@ export function AuthErrorScreen() {
     >
       <div className="text-center max-w-md px-6">
         {/* Product identity */}
-        <div className="text-xs font-semibold tracking-wider uppercase text-fg-dim mb-6">
-          {t('auth.error.brand')}
+        <div className="flex flex-col items-center gap-2 mb-6">
+          <BrandLogo size={30} className="opacity-90" />
+          <div className="text-xs font-semibold tracking-wider uppercase text-fg-dim">{t('auth.error.brand')}</div>
         </div>
 
         <div className="text-4xl mb-4">🔒</div>

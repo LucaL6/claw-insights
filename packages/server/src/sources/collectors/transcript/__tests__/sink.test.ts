@@ -112,6 +112,17 @@ describe('transcript-sink', () => {
     expect(upsertScanStateMock).toHaveBeenCalledTimes(1);
   });
 
+  it('flushes scan_state even when token/message buffers are empty', async () => {
+    const db = new MockDb();
+    const sink = createTranscriptSink({ db }, { maxEvents: 999, maxLatencyMs: 10_000 });
+
+    sink.accept(makeResult({ tokens: [], messages: [] }));
+    await sink.flush();
+
+    expect(db.transactionCalls).toBe(1);
+    expect(upsertScanStateMock).toHaveBeenCalledTimes(1);
+  });
+
   it('maxLatencyMs triggers flush', async () => {
     const db = new MockDb();
     const sink = createTranscriptSink({ db }, { maxEvents: 999, maxLatencyMs: 2000 });

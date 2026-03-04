@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: most sources not yet migrated to ports */
+/* eslint-disable @typescript-eslint/no-deprecated -- remaining legacy: db queries */
 import { config } from '../config.js';
 import type { AppContext } from '../context.js';
 import { createReadContext } from '../context/read-context.js';
@@ -23,7 +23,7 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
       try {
         const readContext = createReadContext();
         const s = await ctx.ports.gateway.getGatewayStatus(readContext);
-        const sys = await ctx.systemInfoService.getSystemMetrics();
+        const sys = await ctx.ports.system.getSystemMetrics(readContext);
         log.debug({ source: 'gateway', ms: Math.round(performance.now() - t0) }, 'collected');
         // Stash channels from the same request so getChannels() doesn't re-fetch
         cachedChannels = s.channels ?? [];
@@ -50,8 +50,6 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
     getSessions: () => {
       const t0 = performance.now();
       const readContext = createReadContext();
-      // Preserve legacy behavior: attach sub-agents before reading
-      ctx.sessionReader.attachSubAgents(ctx.spawnTracker.getParentChildMap());
       const result = ctx.ports.sessions.getSessions(undefined, readContext);
       log.debug({ source: 'sessions', ms: Math.round(performance.now() - t0) }, 'collected');
       return result;
@@ -103,8 +101,8 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
       if (cached) {
         return Math.max(1, Math.ceil((Date.now() - new Date(cached).getTime()) / 86_400_000));
       }
-      // Cold path: collect all sources including lifetime scanner
-      const lifetimeResult = ctx.lifetimeScanner?.getStats();
+      // Cold path: collect all sources including lifetime port
+      const lifetimeResult = ctx.ports.lifetime.getStats(createReadContext());
       const lifetimeCreatedAt = lifetimeResult?.createdAt ?? null;
       const since = await resolveCompanionSince(ctx.db, {
         deviceJsonPath: config.deviceJsonPath,

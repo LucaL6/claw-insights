@@ -29,6 +29,7 @@
     "status": "node bin/claw-insights.mjs status",
     "logs": "node bin/claw-insights.mjs logs",
     "restart": "npm run build && node bin/claw-insights.mjs restart",
+    "check:assets": "node scripts/check-assets-parity.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:all": "npm run test && npm run test:integration && npm run test:e2e"

@@ -56,7 +56,19 @@ function makeCtx() {
       },
       cron: undefined,
       logs: undefined,
-      system: undefined,
+      system: {
+        getSystemMetrics: vi.fn(() =>
+          Promise.resolve({
+            cpu: 10,
+            memoryMB: 256,
+            diskMB: 512,
+            uptime: '1h',
+            platform: 'darwin',
+            nodeVersion: 'v20.0.0',
+          }),
+        ),
+        getProcessMetrics: vi.fn(),
+      },
     },
     sessionReader: {
       getSessionIdToKeyMap: () => new Map(),
@@ -100,11 +112,11 @@ describe('createSnapshotSources branches', () => {
     expect(channels[0].provider).toBe('discord');
   });
 
-  it('getSessions attaches sub-agents and returns sessions', () => {
+  it('getSessions returns sessions from port', () => {
     const ctx = makeCtx();
     const sources = createSnapshotSources(ctx);
     const sessions = sources.getSessions();
-    expect(ctx.sessionReader.attachSubAgents).toHaveBeenCalled();
+    // attachSubAgents now handled by SpawnBus event-driven system (DESIGN-066)
     expect(sessions).toHaveLength(1);
   });
 

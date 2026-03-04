@@ -1,0 +1,121 @@
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { I18nProvider } from '../../../i18n/context';
+import { TimelineScrubber } from '../TimelineScrubber';
+
+function renderScrubber(props: ComponentProps<typeof TimelineScrubber>) {
+  return render(
+    <I18nProvider>
+      <TimelineScrubber {...props} />
+    </I18nProvider>,
+  );
+}
+
+afterEach(() => {
+  cleanup();
+});
+
+const baseTimestamps = [
+  '2025-01-01T09:00:00Z',
+  '2025-01-01T09:15:00Z',
+  '2025-01-01T09:30:00Z',
+  '2025-01-01T09:45:00Z',
+  '2025-01-01T10:00:00Z',
+];
+
+describe('TimelineScrubber', () => {
+  it('renders nothing with fewer than 2 timestamps', () => {
+    const { container } = renderScrubber({ timestamps: ['2025-01-01T09:00:00Z'], onJump: vi.fn() });
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('renders time markers', () => {
+    renderScrubber({ timestamps: baseTimestamps, onJump: vi.fn() });
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('renders jump-to-start and jump-to-end buttons', () => {
+    renderScrubber({ timestamps: baseTimestamps, onJump: vi.fn() });
+    expect(screen.getByLabelText('Jump to first message')).toBeTruthy();
+    expect(screen.getByLabelText('Jump to last message')).toBeTruthy();
+  });
+
+  it('calls onJump(0) when start button clicked', () => {
+    const onJump = vi.fn();
+    renderScrubber({ timestamps: baseTimestamps, onJump, activeIndex: 2 });
+    fireEvent.click(screen.getByLabelText('Jump to first message'));
+    expect(onJump).toHaveBeenCalledWith(0);
+  });
+
+  it('calls onJump(last) when end button clicked', () => {
+    const onJump = vi.fn();
+    renderScrubber({ timestamps: baseTimestamps, onJump, activeIndex: 0 });
+    fireEvent.click(screen.getByLabelText('Jump to last message'));
+    expect(onJump).toHaveBeenCalledWith(4);
+  });
+
+  it('uses totalMessages for end index when provided', () => {
+    const onJump = vi.fn();
+    renderScrubber({ timestamps: baseTimestamps, onJump, activeIndex: 0, totalMessages: 100 });
+    fireEvent.click(screen.getByLabelText('Jump to last message'));
+    expect(onJump).toHaveBeenCalledWith(99);
+  });
+
+  it('uses onJumpToEnd when provided', () => {
+    const onJump = vi.fn();
+    const onJumpToEnd = vi.fn();
+
+    renderScrubber({ timestamps: baseTimestamps, onJump, activeIndex: 0, onJumpToEnd });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Jump to last message' }));
+
+    expect(onJumpToEnd).toHaveBeenCalledTimes(1);
+    expect(onJump).not.toHaveBeenCalledWith(baseTimestamps.length - 1);
+  });
+
+  it('shows loading icon when isLoadingToEnd is true', () => {
+    renderScrubber({
+      timestamps: baseTimestamps,
+      onJump: vi.fn(),
+      onJumpToEnd: vi.fn(),
+      isLoadingToEnd: true,
+    });
+
+    expect(screen.getByText('⏳')).toBeDefined();
+  });
+
+  it('disables jump-to-end while loading to end', () => {
+    renderScrubber({
+      timestamps: baseTimestamps,
+      onJump: vi.fn(),
+      onJumpToEnd: vi.fn(),
+      isLoadingToEnd: true,
+    });
+
+    const endButton = screen.getByRole('button', { name: 'Jump to last message' }) as HTMLButtonElement;
+    expect(endButton.disabled).toBe(true);
+  });
+
+  it('disables start button when at index 0', () => {
+    renderScrubber({ timestamps: baseTimestamps, onJump: vi.fn(), activeIndex: 0 });
+    const startBtn = screen.getByLabelText('Jump to first message') as HTMLButtonElement;
+    expect(startBtn.disabled).toBe(true);
+  });
+
+  it('disables end button when at last index', () => {
+    renderScrubber({ timestamps: baseTimestamps, onJump: vi.fn(), activeIndex: 4 });
+    const endBtn = screen.getByLabelText('Jump to last message') as HTMLButtonElement;
+    expect(endBtn.disabled).toBe(true);
+  });
+
+  it('calls onJump with marker index when time marker clicked', () => {
+    const onJump = vi.fn();
+    renderScrubber({ timestamps: baseTimestamps, onJump });
+    const timeMarker = screen.getByTitle('Jump to message #2');
+    fireEvent.click(timeMarker);
+    expect(onJump).toHaveBeenCalledWith(1);
+  });
+});

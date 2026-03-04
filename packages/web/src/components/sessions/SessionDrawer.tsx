@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useSessionTranscript } from '../../hooks/useSessionTranscript';
+import { useTranscriptNavigator } from '../../hooks/useTranscriptNavigator';
 import { useI18n } from '../../i18n/context';
 import { formatModel } from '../../utils/formatModel';
 import { dismissToast, replaceToast, showToast } from '../ui/toast-store';
@@ -15,6 +16,8 @@ interface SessionDrawerProps {
   status?: string;
   displayName?: string;
 }
+
+const JUMP_COOLDOWN_MS = 600;
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) {
@@ -79,9 +82,6 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [jumpRequest, setJumpRequest] = useState<{ index: number; key: number } | undefined>(undefined);
-  const jumpKeyRef = useRef(0);
-  const [visibleIndex, setVisibleIndex] = useState<number | undefined>(undefined);
   const scrollTickRef = useRef(false);
   const jumpCooldownRef = useRef(false);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -94,11 +94,23 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
     isLoadingMore,
     hasMore,
     totalMessages,
+    isFetching,
     error,
     refresh,
     loadMore,
     retry,
   } = useSessionTranscript({ sessionKey });
+
+  const { jumpRequest, visibleIndex, setVisibleIndex, jumpToIndex, jumpToEnd, isLoadingToEnd } = useTranscriptNavigator(
+    {
+      totalMessages,
+      loadedCount: messages.length,
+      hasMore,
+      isLoadingMore,
+      isFetching,
+      loadMore,
+    },
+  );
 
   const resolvedName = externalName || meta?.displayName || sessionKey.split(':').pop() || sessionKey;
   const spawnPrompt = meta?.isSubAgent && meta.spawnPrompt ? meta.spawnPrompt : undefined;
@@ -158,14 +170,12 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
       refreshAnchorRef.current = undefined;
 
       if (resolvedIndex !== undefined && resolvedIndex > 0) {
-        jumpKeyRef.current += 1;
-        setJumpRequest({ index: resolvedIndex, key: jumpKeyRef.current });
-        setVisibleIndex(resolvedIndex);
+        jumpToIndex(resolvedIndex);
       }
     }
 
     previousRefreshingRef.current = isRefreshing;
-  }, [isRefreshing, messages, t, visibleIndex]);
+  }, [isRefreshing, jumpToIndex, messages, t, visibleIndex]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key !== 'Tab') {
@@ -243,16 +253,17 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
     return timelineState.messages.map((m) => m.timestamp);
   }, [timelineState]);
 
-  const handleJump = useCallback((index: number) => {
-    jumpKeyRef.current += 1;
-    setJumpRequest({ index, key: jumpKeyRef.current });
-    setVisibleIndex(index);
-    jumpCooldownRef.current = true;
-    clearTimeout(cooldownTimerRef.current);
-    cooldownTimerRef.current = setTimeout(() => {
-      jumpCooldownRef.current = false;
-    }, 600);
-  }, []);
+  const handleJump = useCallback(
+    (index: number) => {
+      jumpToIndex(index);
+      jumpCooldownRef.current = true;
+      clearTimeout(cooldownTimerRef.current);
+      cooldownTimerRef.current = setTimeout(() => {
+        jumpCooldownRef.current = false;
+      }, JUMP_COOLDOWN_MS);
+    },
+    [jumpToIndex],
+  );
 
   const handleScroll = useCallback(() => {
     if (scrollTickRef.current || jumpCooldownRef.current) {
@@ -286,7 +297,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
         setVisibleIndex(closest);
       }
     });
-  }, []);
+  }, [setVisibleIndex]);
 
   return (
     <div
@@ -340,31 +351,6 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
             >
               {resolvedName}
             </span>
-            {!isLoading && (
-              <button
-                onClick={refresh}
-                disabled={isRefreshing}
-                className="dr-refresh-btn w-7 h-7 flex items-center justify-center rounded-md shrink-0 transition-colors"
-                aria-label={t('drawer.refresh')}
-                title={t('drawer.refresh')}
-                aria-busy={isRefreshing}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={isRefreshing ? { animation: 'dr-spin 0.8s linear infinite' } : undefined}
-                >
-                  <path d="M1.5 1.5v4h4" />
-                  <path d="M3.1 10a5.5 5.5 0 1 0 1.06-5.57L1.5 5.5" />
-                </svg>
-              </button>
-            )}
             {meta?.isSubAgent && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded shrink-0 font-medium"
@@ -463,7 +449,14 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
 
         {timestamps.length >= 2 && (
           <div className="flex-shrink-0 px-5" style={{ borderTop: '1px solid var(--dr-border)' }}>
-            <TimelineScrubber timestamps={timestamps} activeIndex={visibleIndex} onJump={handleJump} />
+            <TimelineScrubber
+              timestamps={timestamps}
+              activeIndex={visibleIndex}
+              onJump={handleJump}
+              totalMessages={totalMessages}
+              onJumpToEnd={jumpToEnd}
+              isLoadingToEnd={isLoadingToEnd}
+            />
           </div>
         )}
 
@@ -493,7 +486,32 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
             style={{ borderTop: '1px solid var(--dr-border)', color: 'var(--dr-dim)' }}
           >
             <span>{t('drawer.footer.started', { time: formatDateTime(meta.startedAt) })}</span>
-            <span>{t('drawer.footer.messages', { shown: messages.length, total: totalMessages })}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={refresh}
+                disabled={isRefreshing}
+                className="dr-refresh-btn w-6 h-6 flex items-center justify-center rounded-md shrink-0 transition-colors"
+                aria-label={t('drawer.refresh')}
+                title={t('drawer.refresh')}
+                aria-busy={isRefreshing}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={isRefreshing ? { animation: 'dr-spin 0.8s linear infinite' } : undefined}
+                >
+                  <path d="M1.5 1.5v4h4" />
+                  <path d="M3.1 10a5.5 5.5 0 1 0 1.06-5.57L1.5 5.5" />
+                </svg>
+              </button>
+              <span>{t('drawer.footer.messages', { shown: messages.length, total: totalMessages })}</span>
+            </div>
           </div>
         )}
       </div>

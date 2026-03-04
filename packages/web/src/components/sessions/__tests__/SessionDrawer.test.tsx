@@ -99,6 +99,7 @@ type MockHookState = {
   isInitialLoading: boolean;
   isRefreshing: boolean;
   isLoadingMore: boolean;
+  isFetching: boolean;
   hasMore: boolean;
   totalMessages: number;
   error: unknown;
@@ -144,6 +145,7 @@ function buildState(overrides: Partial<MockHookState> = {}): MockHookState {
     isInitialLoading: false,
     isRefreshing: false,
     isLoadingMore: false,
+    isFetching: false,
     hasMore: false,
     totalMessages: baseMeta.totalMessages,
     error: undefined,
@@ -382,5 +384,46 @@ describe('SessionDrawer', () => {
     expect(screen.getByText('27')).toBeDefined();
     expect(screen.getByText('423.0k')).toBeDefined();
     expect(screen.getAllByText('47m').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('jump-to-end works after close and reopen without page refresh (BUG-039)', async () => {
+    const hookState = buildState({
+      hasMore: true,
+      isLoadingMore: false,
+      totalMessages: 6,
+      meta: {
+        ...baseMeta,
+        totalMessages: 6,
+      },
+      messages: [
+        ...baseMessages,
+        {
+          timestamp: '2024-01-01T10:00:02Z',
+          role: 'assistant' as const,
+          content: 'm3',
+          contentTruncated: false,
+          model: undefined,
+          usage: undefined,
+          toolName: undefined,
+        },
+      ],
+    });
+
+    mockUseSessionTranscript.mockImplementation(() => hookState);
+
+    const first = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Jump to last message' }));
+
+    expect(mockLoadMore).toHaveBeenCalled();
+
+    first.unmount();
+
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Jump to last message' }));
+
+    await waitFor(() => {
+      expect(mockLoadMore).toHaveBeenCalledTimes(2);
+    });
   });
 });

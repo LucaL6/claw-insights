@@ -59,6 +59,11 @@ describe('createSnapshotSources.getTurnCounts', () => {
         cron: undefined,
         logs: undefined,
         system: undefined,
+        lifetime: {
+          getStats: vi.fn(() => ({ createdAt: '2026-01-25T00:00:00.000Z' })),
+        },
+        transcript: undefined,
+        usage: undefined,
       },
       sessionReader: {
         getSessionIdToKeyMap: () => sessionIdToKeyMap,
@@ -115,6 +120,11 @@ describe('createSnapshotSources.getCompanionDays', () => {
         cron: undefined,
         logs: undefined,
         system: undefined,
+        lifetime: {
+          getStats: vi.fn(() => ({ createdAt: '2026-01-25T00:00:00.000Z' })),
+        },
+        transcript: undefined,
+        usage: undefined,
       },
       sessionReader: {
         getSessionIdToKeyMap: () => sessionIdToKeyMap,
@@ -146,7 +156,7 @@ describe('createSnapshotSources.getCompanionDays', () => {
     expect(days).toBeLessThanOrEqual(31);
   });
 
-  it('passes lifetimeScanner createdAt to resolveCompanionSince', async () => {
+  it('passes lifetime port createdAt to resolveCompanionSince', async () => {
     vi.mocked(resolveCompanionSince).mockResolvedValueOnce('2026-01-25T00:00:00.000Z');
     const ctx = makeCtx();
     const sources = createSnapshotSources(ctx);
@@ -159,9 +169,11 @@ describe('createSnapshotSources.getCompanionDays', () => {
     );
   });
 
-  it('handles missing lifetimeScanner gracefully', async () => {
+  it('handles missing lifetime port stats gracefully', async () => {
     vi.mocked(resolveCompanionSince).mockResolvedValueOnce(null);
-    const sources = createSnapshotSources(makeCtx({ lifetimeScanner: undefined }));
+    const ctx = makeCtx();
+    ctx.ports.lifetime.getStats = vi.fn(() => null);
+    const sources = createSnapshotSources(ctx);
     expect(await sources.getCompanionDays()).toBe(0);
     expect(resolveCompanionSince).toHaveBeenCalledWith(
       expect.anything(),

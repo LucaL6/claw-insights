@@ -1,20 +1,30 @@
-/* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: legacy ctx.* refs not yet migrated to ports */
+import { GraphQLError } from 'graphql';
+
 import type { AppContext } from '../../context.js';
+import { createReadContext } from '../../context/read-context.js';
 import { createChildLogger } from '../../logger.js';
 import type { QueryResolvers, Resolvers } from '../generated/resolver-types.js';
-import { safe } from './utils.js';
 
 const log = createChildLogger('resolver:lifetime');
 
 export function lifetimeResolvers(ctx: AppContext): Partial<Resolvers> {
-  const lifetimeStats: QueryResolvers['lifetimeStats'] = async () => {
+  const lifetimeStats: QueryResolvers['lifetimeStats'] = () => {
     const start = performance.now();
-    const result = await safe(() => ctx.lifetimeScanner.getStats());
-    const ms = performance.now() - start;
-    if (ms > 100) {
-      log.debug({ ms: Math.round(ms) }, 'slow resolve: lifetimeStats');
+    const readCtx = createReadContext();
+    try {
+      const result = ctx.ports.lifetime.getStats(readCtx);
+      const ms = performance.now() - start;
+      if (ms > 100) {
+        log.debug({ ms: Math.round(ms) }, 'slow resolve: lifetimeStats');
+      }
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Internal server error';
+      log.error({ err }, message);
+      throw new GraphQLError(message, {
+        extensions: { code: 'INTERNAL_SERVER_ERROR' },
+      });
     }
-    return result;
   };
 
   return { Query: { lifetimeStats } };

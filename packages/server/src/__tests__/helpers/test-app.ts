@@ -274,9 +274,74 @@ export function createTestApp(): TestApp {
         getVersion: () => gatewayClient.getVersion(),
         destroy: () => {},
       },
-      cron: undefined,
-      logs: undefined,
-      system: undefined,
+      cron: {
+        getCronJobs: () =>
+          cronReader.getJobs().map((j) => ({
+            id: j.id,
+            schedule: j.schedule,
+            enabled: j.enabled,
+            lastRun: j.lastRunAt ? new Date(j.lastRunAt).getTime() : null,
+            nextRun: j.nextRunAt ? new Date(j.nextRunAt).getTime() : null,
+            description: j.name,
+          })),
+        getCronJobById: (_id: string) => null,
+        onChanged: () => () => {},
+        destroy: () => {},
+      },
+      logs: {
+        getRecentLogs: (count?: number) =>
+          logTailer.getRecentEntries(count).map((e) => ({
+            timestamp: new Date(e.time).getTime(),
+            level: e.level,
+            source: e.module,
+            message: e.message,
+          })),
+        getLogsInRange: () => [],
+        onChanged: () => () => {},
+        destroy: () => {},
+      },
+      system: {
+        getSystemMetrics: async () => ({
+          cpu: 25.5,
+          memoryMB: 512,
+          diskMB: 102400,
+          uptime: '1h',
+          platform: 'darwin',
+          nodeVersion: 'v20.0.0',
+        }),
+        getProcessMetrics: async () => null,
+        destroy: () => {},
+      },
+      lifetime: {
+        getStats: () => ({
+          isReady: true,
+          createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
+          daysSinceCreation: 30,
+          totalSessions: 100,
+          totalInputTokens: 500000,
+          totalOutputTokens: 200000,
+          totalCacheReadTokens: 150000,
+          totalCacheWriteTokens: 50000,
+          totalTokens: 900000,
+          totalUserMessages: 1000,
+          totalAssistantMessages: 1000,
+        }),
+        destroy: () => {},
+      },
+      transcript: {
+        getTranscriptPath: (sessionKey: string) => `/tmp/transcripts/${sessionKey}.jsonl`,
+        destroy: () => {},
+      },
+      usage: {
+        getUsageCost: async () => ({
+          totalCost: 42.5,
+          totalTokensM: 1.2,
+          todayCost: 3.1,
+          todayTokensM: 0.08,
+          fetchedAt: new Date().toISOString(),
+        }),
+        destroy: () => {},
+      },
     } as unknown as AppContext['ports'],
   };
 

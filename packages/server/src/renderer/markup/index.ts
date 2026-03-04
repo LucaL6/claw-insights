@@ -30,7 +30,7 @@ export function buildMarkup(data: SnapshotData, opts: MarkupOptions): SatoriNode
   if ((opts.detail === 'standard' || opts.detail === 'full') && (data.summary?.errors ?? 0) > 0) {
     sections.push(renderErrors(data, c, opts.lang));
   }
-  sections.push(renderFooter(data, c, opts.lang));
+  sections.push(renderFooter(data, c, opts.theme, opts.lang));
 
   // Ambient glow blobs (indigo top-left, emerald bottom-right) — soft circles
   const blobs =

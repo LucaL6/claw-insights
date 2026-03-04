@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: systemInfoService not yet migrated */
 import type { AppContext } from '../../context.js';
 import { createReadContext } from '../../context/read-context.js';
 import { createChildLogger } from '../../logger.js';
@@ -61,8 +60,19 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
 
   const resources: QueryResolvers['resources'] = async () => {
     const start = performance.now();
-    // resources is NOT migrated in Task 6 (systemInfoService → ports.system is Phase 2)
-    const result = await safe(async () => ctx.systemInfoService.getSystemMetrics());
+    const readCtx = createReadContext();
+
+    const result = await safe(async () => {
+      const metrics = await ctx.ports.system.getSystemMetrics(readCtx);
+      // Map SystemMetrics to GraphQL SystemResources
+      return {
+        cpu: metrics.cpu,
+        memoryMB: metrics.memoryMB,
+        diskMB: metrics.diskMB,
+        sampledAt: new Date().toISOString(),
+      };
+    });
+
     const ms = performance.now() - start;
     if (ms > 100) {
       log.debug({ ms: Math.round(ms) }, 'slow resolve: resources');

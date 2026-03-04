@@ -5,6 +5,7 @@ import { getPorts, registerPorts } from './context/ports.js';
 import type { Database } from './db/database.js';
 import { initDatabase } from './db/init.js';
 import { MessageEventBus } from './events/message-event-bus.js';
+import { createSpawnBus } from './events/spawn-bus.js';
 import { TokenEventBus } from './events/token-event-bus.js';
 import { createChildLogger } from './logger.js';
 import { Pipeline } from './pipeline/index.js';
@@ -26,7 +27,7 @@ import { createSystemInfoService, type SystemInfoService } from './sources/syste
 const log = createChildLogger('context');
 
 export interface AppContext {
-  /** Typed port registry (Phase 1: sessions, metrics, gateway; Phase 2: cron, logs, system as undefined) */
+  /** Typed port registry (9 ports: sessions, metrics, gateway, cron, logs, system, lifetime, transcript, usage) */
   ports: TypedPorts;
 
   /**
@@ -43,11 +44,11 @@ export interface AppContext {
    */
   sessionReader: SessionReader;
   /**
-   * @deprecated Use ctx.ports.cron instead (Phase 2). Will be removed in v0.X.0
+   * @deprecated Use ctx.ports.cron instead. Will be removed in v0.X.0
    */
   cronReader: CronReader;
   /**
-   * @deprecated Use ctx.ports.logs instead (Phase 2). Will be removed in v0.X.0
+   * @deprecated Use ctx.ports.logs instead. Will be removed in v0.X.0
    */
   logTailer: LogTailer;
   /** @deprecated Internal component. Will be removed in v0.X.0 */
@@ -75,7 +76,7 @@ export interface AppContext {
    */
   gatewayClient: GatewayClient;
   /**
-   * @deprecated Use ctx.ports.system instead (Phase 2). Will be removed in v0.X.0
+   * @deprecated Use ctx.ports.system instead. Will be removed in v0.X.0
    */
   systemInfoService: SystemInfoService;
 }
@@ -91,7 +92,13 @@ export async function createContext(): Promise<AppContext> {
   sessionReader.setDb(db);
   const cronReader = new CronReader(config.cronPath);
   const logTailer = new LogTailer(config.logDir);
-  const spawnTracker = new SpawnTracker();
+  const spawnBus = createSpawnBus();
+  const spawnTracker = new SpawnTracker(spawnBus);
+
+  // Enable event-driven subAgent attachment
+  sessionReader.setSpawnBus(spawnBus);
+  // Initial attach for existing links (one-time bootstrap)
+  sessionReader.attachSubAgents(spawnTracker.getParentChildMap());
   const aggregator = new Aggregator(db);
 
   const tokenBus = new TokenEventBus();
@@ -149,7 +156,7 @@ export async function createContext(): Promise<AppContext> {
     .addService('dataRetention', dataRetention)
     .addManaged('lifetimeScanner', transcriptManager);
 
-  // Register ports (Phase 1 + Phase 2)
+  // Register all 9 ports (DESIGN-065 complete)
   registerPorts(pipeline, {
     sessionReader,
     aggregator,
@@ -158,6 +165,7 @@ export async function createContext(): Promise<AppContext> {
     logTailer,
     systemInfoService,
     platform,
+    transcriptManager,
   });
 
   // Build pipeline
@@ -197,9 +205,7 @@ export async function createContext(): Promise<AppContext> {
 
 export function startContext(ctx: AppContext): void {
   log.info('startContext: starting pipeline');
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal implementation needs direct access
   ctx.pipeline.start();
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal implementation needs direct access
   void ctx.lifetimeScanner
     .init()
     .then(() => {
@@ -209,7 +215,6 @@ export function startContext(ctx: AppContext): void {
 
       // Warm gateway cache after scanner completes — avoids event-loop
       // contention that caused false 'gateway down' on startup (ISS-056)
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal implementation needs direct access
       ctx.gatewayClient.warmCache().catch((err: unknown) => {
         log.debug({ err }, 'warmCache failed (non-fatal)');
       });
@@ -224,10 +229,8 @@ export async function destroyContext(ctx: AppContext): Promise<void> {
   ctx.destroyed = true;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal implementation needs direct access
     await ctx.pipeline.destroy();
   } finally {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal implementation needs direct access
     ctx.db.close();
   }
 }

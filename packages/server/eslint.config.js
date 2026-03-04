@@ -64,6 +64,15 @@ export default tseslint.config(
       '@typescript-eslint/no-redundant-type-constituents': 'off',
       // Intentional pattern: get<T>(name): T for typed resource access
       '@typescript-eslint/no-unnecessary-type-parameters': 'off',
+      // DESIGN-065: warn on deprecated ctx.* access, gate new violations
+      '@typescript-eslint/no-deprecated': 'warn',
+    },
+  },
+  {
+    // Context definition file — allowed to use deprecated for backward compat
+    files: ['src/context.ts'],
+    rules: {
+      '@typescript-eslint/no-deprecated': 'off',
     },
   },
   {

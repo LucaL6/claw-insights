@@ -59,6 +59,7 @@ export interface UseSessionTranscriptResult {
   isInitialLoading: boolean;
   isRefreshing: boolean;
   isLoadingMore: boolean;
+  isFetching: boolean;
   hasMore: boolean;
   totalMessages: number;
   error: CombinedError | undefined;
@@ -233,19 +234,19 @@ export function useSessionTranscript({
     };
   }, [clearRefreshTimeout]);
 
+  const totalMessages = transcript?.totalMessages ?? 0;
+  const hasMore = transcript ? messages.length < totalMessages : false;
+
   const loadMore = useCallback(() => {
-    if (isRefreshing || result.fetching || !transcript?.hasMore) {
+    if (isRefreshing || result.fetching || !hasMore) {
       return;
     }
     setCurrentOffset((previous) => previous + pageSize);
-  }, [isRefreshing, pageSize, result.fetching, transcript?.hasMore]);
+  }, [hasMore, isRefreshing, pageSize, result.fetching]);
 
   const retry = useCallback(() => {
     reexecute({ requestPolicy: 'network-only' });
   }, [reexecute]);
-
-  const totalMessages = transcript?.totalMessages ?? 0;
-  const hasMore = transcript ? messages.length < totalMessages : false;
 
   return {
     meta: transcript,
@@ -253,6 +254,7 @@ export function useSessionTranscript({
     isInitialLoading: result.fetching && !transcript,
     isRefreshing,
     isLoadingMore: !isRefreshing && currentOffset > 0 && result.fetching,
+    isFetching: result.fetching,
     hasMore,
     totalMessages,
     error: result.error,

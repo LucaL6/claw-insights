@@ -17,10 +17,13 @@ export { createReadContext } from './shared.js';
 // Port interfaces
 export type { CronEntry, CronPort } from './cron-port.js';
 export type { ChannelInfo, GatewayPort, GatewayStatus } from './gateway-port.js';
+export type { LifetimePort, LifetimeStats } from './lifetime-port.js';
 export type { LogEntry, LogPort } from './log-port.js';
 export type { MetricsPort, MetricsRangeKey, MetricsResult } from './metrics-port.js';
 export type { SessionPort } from './session-port.js';
 export type { SystemMetrics, SystemPort } from './system-port.js';
+export type { TranscriptPort } from './transcript-port.js';
+export type { UsageCost, UsagePort } from './usage-port.js';
 
 // Platform types (re-export from existing types.ts)
 export type { CliAdapter, Platform, ProcessAdapter } from './types.js';
@@ -48,4 +51,13 @@ export interface TypedPorts {
 
   /** System information port */
   system: SystemPort;
+
+  /** Lifetime statistics port */
+  lifetime: LifetimePort;
+
+  /** Transcript path resolution port */
+  transcript: TranscriptPort;
+
+  /** Usage cost data port */
+  usage: UsagePort;
 }

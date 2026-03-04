@@ -72,6 +72,30 @@ describe('LogAdapter', () => {
       expect(result).toHaveLength(2);
       expect(result.map((r) => r.message)).toEqual(['2', '3']);
     });
+
+    it('should handle invalid limit values gracefully', () => {
+      const tailer = new MockLogTailer([
+        mkSharedLog({ message: '1' }),
+        mkSharedLog({ message: '2' }),
+        mkSharedLog({ message: '3' }),
+      ]);
+      const adapter = createLogAdapter(tailer as any);
+
+      // NaN should fallback to default 50
+      expect(adapter.getRecentLogs(NaN)).toHaveLength(3);
+
+      // Negative should fallback to default 50
+      expect(adapter.getRecentLogs(-1)).toHaveLength(3);
+
+      // Zero should fallback to default 50
+      expect(adapter.getRecentLogs(0)).toHaveLength(3);
+
+      // Infinity should fallback to default 50
+      expect(adapter.getRecentLogs(Infinity)).toHaveLength(3);
+
+      // Decimal should be floored
+      expect(adapter.getRecentLogs(1.9)).toHaveLength(1);
+    });
   });
 
   describe('getLogsInRange', () => {
@@ -172,8 +196,114 @@ describe('LogAdapter', () => {
       tailer.emitLog(mkSharedLog({ message: 'post-destroy' }));
 
       expect(cb).not.toHaveBeenCalled();
-      expect(adapter.getRecentLogs(500)).toHaveLength(1);
-      expect(adapter.getRecentLogs(500)[0].message).toBe('post-destroy');
+      expect(adapter.getRecentLogs(500)).toHaveLength(0);
+    });
+  });
+
+  describe('listener cleanup', () => {
+    it('should detach tailer listener on destroy', () => {
+      const tailer = new MockLogTailer([mkSharedLog({ message: 'seed' })]);
+      const adapter = createLogAdapter(tailer as any);
+
+      // Force attach by reading logs
+      adapter.getRecentLogs();
+
+      // Verify listener is attached
+      expect(tailer.listenerCount('log')).toBe(1);
+
+      adapter.destroy();
+
+      // Listener should be detached
+      expect(tailer.listenerCount('log')).toBe(0);
+    });
+
+    it('should not add to buffer after destroy', () => {
+      const tailer = new MockLogTailer([mkSharedLog({ message: 'seed' })]);
+      const adapter = createLogAdapter(tailer as any);
+
+      adapter.getRecentLogs(); // attach
+      adapter.destroy();
+
+      tailer.emitLog(mkSharedLog({ message: 'post-destroy' }));
+
+      // Buffer should stay empty (was cleared by destroy)
+      expect(adapter.getRecentLogs(500)).toHaveLength(0);
+    });
+
+    it('should be idempotent on multiple destroy calls', () => {
+      const tailer = new MockLogTailer();
+      const adapter = createLogAdapter(tailer as any);
+      adapter.getRecentLogs();
+
+      expect(() => {
+        adapter.destroy();
+        adapter.destroy();
+        adapter.destroy();
+      }).not.toThrow();
+
+      expect(tailer.listenerCount('log')).toBe(0);
+    });
+  });
+
+  describe('race condition handling', () => {
+    it('should deduplicate entries from hydration and listener', () => {
+      // Scenario: tailer already has 'existing' in its buffer
+      // When we attach, we get it from hydration
+      // The dedup should prevent exact duplicates
+      const tailer = new MockLogTailer([mkSharedLog({ message: 'existing', level: 'INFO', module: 'test' })]);
+      const adapter = createLogAdapter(tailer as any);
+
+      const firstRead = adapter.getRecentLogs();
+      expect(firstRead).toHaveLength(1);
+      expect(firstRead[0].message).toBe('existing');
+
+      // Emit a DIFFERENT log - should be added
+      tailer.emitLog(mkSharedLog({ message: 'new-entry', level: 'INFO', module: 'test' }));
+
+      const secondRead = adapter.getRecentLogs();
+      expect(secondRead).toHaveLength(2);
+      expect(secondRead.map((l) => l.message)).toEqual(['existing', 'new-entry']);
+    });
+
+    it('should capture entries emitted before first read via tailer buffer', () => {
+      const tailer = new MockLogTailer();
+      const adapter = createLogAdapter(tailer as any);
+
+      // Emit before first read - MockLogTailer stores in its internal entries
+      tailer.emitLog(mkSharedLog({ message: 'before-attach' }));
+
+      // First read triggers attach + hydration from tailer's buffer
+      const logs = adapter.getRecentLogs();
+
+      expect(logs).toHaveLength(1);
+      expect(logs[0].message).toBe('before-attach');
+    });
+
+    it('should not deduplicate entries with same content but different times', () => {
+      const tailer = new MockLogTailer([
+        mkSharedLog({ message: 'repeat', time: '12:00:00.000' }),
+        mkSharedLog({ message: 'repeat', time: '12:00:01.000' }),
+      ]);
+      const adapter = createLogAdapter(tailer as any);
+
+      const logs = adapter.getRecentLogs();
+
+      expect(logs).toHaveLength(2);
+      expect(logs.map((l) => l.message)).toEqual(['repeat', 'repeat']);
+    });
+
+    it('should preserve hydration-internal natural duplicates with same time', () => {
+      const tailer = new MockLogTailer([
+        mkSharedLog({ message: 'dup', time: '12:00:00.000', level: 'WARN', module: 'core' }),
+        mkSharedLog({ message: 'dup', time: '12:00:00.000', level: 'WARN', module: 'core' }),
+        mkSharedLog({ message: 'dup', time: '12:00:00.000', level: 'WARN', module: 'core' }),
+      ]);
+      const adapter = createLogAdapter(tailer as any);
+
+      const logs = adapter.getRecentLogs();
+
+      expect(logs).toHaveLength(3);
+      expect(logs.every((l) => l.message === 'dup')).toBe(true);
     });
   });
 });

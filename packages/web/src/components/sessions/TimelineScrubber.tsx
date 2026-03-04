@@ -12,6 +12,12 @@ interface TimelineScrubberProps {
   /** Currently visible message index (from scroll tracking or manual jump) */
   activeIndex?: number;
   onJump: (index: number) => void;
+  /** Total message count (for jump-to-end when more messages exist beyond loaded) */
+  totalMessages?: number;
+  /** Called when user wants to jump to the very last message (may trigger load-all) */
+  onJumpToEnd?: () => void;
+  /** Whether we're currently loading to reach the end */
+  isLoadingToEnd?: boolean;
 }
 
 function formatHHMM(iso: string): string {
@@ -67,7 +73,14 @@ function findNearestMarker(markers: TimeMarker[], msgIndex: number): number | un
   return best;
 }
 
-export function TimelineScrubber({ timestamps, activeIndex, onJump }: TimelineScrubberProps) {
+export function TimelineScrubber({
+  timestamps,
+  activeIndex,
+  onJump,
+  totalMessages,
+  onJumpToEnd,
+  isLoadingToEnd,
+}: TimelineScrubberProps) {
   const { t } = useI18n();
   const markers = useMemo(() => buildMarkers(timestamps), [timestamps]);
 
@@ -77,48 +90,101 @@ export function TimelineScrubber({ timestamps, activeIndex, onJump }: TimelineSc
     [markers, activeIndex],
   );
 
+  // Determine if we're at start/end for button states
+  const isAtStart = activeIndex === 0;
+  const endIndex = (totalMessages ?? timestamps.length) - 1;
+  const isAtEnd = activeIndex === endIndex;
+
   if (markers.length < 2) {
     return null;
   }
 
+  const jumpButtonClass = 'w-6 h-6 flex items-center justify-center rounded-md transition-colors text-[11px] shrink-0';
+
   return (
-    <div className="flex items-center justify-between py-1.5" title={t('drawer.scrubber.tooltip')}>
-      {markers.map((m, i) => {
-        const isActive = activeMarkerIndex === m.index;
-        const isFirst = i === 0;
-        const isLast = i === markers.length - 1;
-        return (
-          <div key={i} className="flex items-center flex-1">
-            <button
-              type="button"
-              onClick={() => {
-                onJump(m.index);
-              }}
-              className="font-mono text-[10px] px-1.5 py-0.5 rounded-md transition-all cursor-pointer whitespace-nowrap"
-              style={{
-                backgroundColor: isActive ? 'var(--dr-teal)' : 'transparent',
-                color: isActive ? 'var(--dr-bg)' : 'var(--dr-dim)',
-                fontWeight: isActive ? 600 : 400,
-                boxShadow: isActive ? '0 0 6px rgba(45, 212, 191, 0.3)' : 'none',
-              }}
-              title={t('drawer.scrubber.jumpTo', { n: m.index + 1 })}
-            >
-              {isFirst ? '◁ ' : ''}
-              {m.label}
-              {isLast ? ' ▷' : ''}
-            </button>
-            {!isLast && (
-              <div
-                className="flex-1 h-px mx-0.5 transition-colors"
-                style={{
-                  backgroundColor: isActive ? 'var(--dr-teal)' : 'var(--dr-border)',
-                  opacity: isActive ? 0.4 : 1,
+    <div className="flex items-center gap-1.5 py-1.5" title={t('drawer.scrubber.tooltip')}>
+      {/* Jump to start button */}
+      <button
+        type="button"
+        onClick={() => {
+          onJump(0);
+        }}
+        disabled={isAtStart}
+        className={jumpButtonClass}
+        style={{
+          backgroundColor: isAtStart ? 'transparent' : 'var(--dr-surface)',
+          color: isAtStart ? 'var(--dr-border)' : 'var(--dr-dim)',
+          border: `1px solid ${isAtStart ? 'var(--dr-border)' : 'var(--dr-border)'}`,
+          cursor: isAtStart ? 'default' : 'pointer',
+          opacity: isAtStart ? 0.5 : 1,
+        }}
+        title={t('drawer.scrubber.jumpToStart')}
+        aria-label={t('drawer.scrubber.jumpToStart')}
+      >
+        ⏮
+      </button>
+
+      {/* Time markers */}
+      <div className="flex items-center justify-between flex-1">
+        {markers.map((m, i) => {
+          const isActive = activeMarkerIndex === m.index;
+          const isLast = i === markers.length - 1;
+          return (
+            <div key={i} className="flex items-center flex-1">
+              <button
+                type="button"
+                onClick={() => {
+                  onJump(m.index);
                 }}
-              />
-            )}
-          </div>
-        );
-      })}
+                className="font-mono text-[10px] px-1.5 py-0.5 rounded-md transition-all cursor-pointer whitespace-nowrap"
+                style={{
+                  backgroundColor: isActive ? 'var(--dr-teal)' : 'transparent',
+                  color: isActive ? 'var(--dr-bg)' : 'var(--dr-dim)',
+                  fontWeight: isActive ? 600 : 400,
+                  boxShadow: isActive ? '0 0 6px rgba(45, 212, 191, 0.3)' : 'none',
+                }}
+                title={t('drawer.scrubber.jumpTo', { n: m.index + 1 })}
+              >
+                {m.label}
+              </button>
+              {!isLast && (
+                <div
+                  className="flex-1 h-px mx-0.5 transition-colors"
+                  style={{
+                    backgroundColor: isActive ? 'var(--dr-teal)' : 'var(--dr-border)',
+                    opacity: isActive ? 0.4 : 1,
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Jump to end button */}
+      <button
+        type="button"
+        onClick={() => {
+          if (onJumpToEnd) {
+            onJumpToEnd();
+          } else {
+            onJump(endIndex);
+          }
+        }}
+        disabled={isAtEnd || isLoadingToEnd}
+        className={jumpButtonClass}
+        style={{
+          backgroundColor: isAtEnd || isLoadingToEnd ? 'transparent' : 'var(--dr-surface)',
+          color: isAtEnd || isLoadingToEnd ? 'var(--dr-border)' : 'var(--dr-dim)',
+          border: `1px solid ${isAtEnd || isLoadingToEnd ? 'var(--dr-border)' : 'var(--dr-border)'}`,
+          cursor: isAtEnd || isLoadingToEnd ? 'default' : 'pointer',
+          opacity: isAtEnd || isLoadingToEnd ? 0.5 : 1,
+        }}
+        title={t('drawer.scrubber.jumpToEnd')}
+        aria-label={t('drawer.scrubber.jumpToEnd')}
+      >
+        {isLoadingToEnd ? '⏳' : '⏭'}
+      </button>
     </div>
   );
 }

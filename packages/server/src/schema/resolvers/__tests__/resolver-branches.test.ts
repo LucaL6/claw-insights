@@ -63,9 +63,19 @@ function mockCtx(): AppContext {
         getVersion: vi.fn().mockResolvedValue('1.0.0'),
         warmCache: vi.fn().mockResolvedValue(undefined),
       },
-      cron: undefined,
-      logs: undefined,
-      system: undefined,
+      cron: {} as any,
+      logs: {} as any,
+      system: {
+        getSystemMetrics: vi.fn().mockResolvedValue({
+          cpu: 25,
+          memoryMB: 512,
+          diskMB: 1024,
+          uptime: '3600s',
+          platform: 'darwin',
+          nodeVersion: 'v20.0.0',
+        }),
+        getProcessMetrics: vi.fn(),
+      },
     },
     sessionReader: {
       attachSubAgents: vi.fn(),
@@ -160,7 +170,8 @@ describe('gatewayResolvers branches', () => {
 
   it('handles error in safe() wrapper for resources', async () => {
     const ctx = mockCtx();
-    (ctx.systemInfoService.getSystemMetrics as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('metrics fail'));
+    // Phase 2: Now uses ctx.ports.system instead of ctx.systemInfoService
+    (ctx.ports.system!.getSystemMetrics as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('metrics fail'));
 
     const { gatewayResolvers } = await import('../gateway.resolver.js');
     const resolvers = gatewayResolvers(ctx);

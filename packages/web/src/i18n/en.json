@@ -62,6 +62,8 @@
   "drawer.timeline.loading": "Loading…",
   "drawer.scrubber.tooltip": "Click a time to jump to that point in the conversation",
   "drawer.scrubber.jumpTo": "Jump to message #{n}",
+  "drawer.scrubber.jumpToStart": "Jump to first message",
+  "drawer.scrubber.jumpToEnd": "Jump to last message",
   "drawer.timeline.sessionStarted": "session started",
   "drawer.timeline.showMore": "show more",
   "drawer.timeline.spawned": "spawned",

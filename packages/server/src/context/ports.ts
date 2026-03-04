@@ -1,22 +1,26 @@
 // src/context/ports.ts
 import { createCronAdapter } from '../adapters/cron-adapter.js';
 import { createGatewayAdapter } from '../adapters/gateway-adapter.js';
+import { createLifetimeAdapter } from '../adapters/lifetime-adapter.js';
 import { createLogAdapter } from '../adapters/log-adapter.js';
 import { createMetricsAdapter } from '../adapters/metrics-adapter.js';
 import { createSessionAdapter } from '../adapters/session-adapter.js';
 import { createSystemAdapter } from '../adapters/system-adapter.js';
+import { createTranscriptAdapter } from '../adapters/transcript-adapter.js';
+import { createUsageAdapter } from '../adapters/usage-adapter.js';
 import type { Pipeline } from '../pipeline/index.js';
 import { PORT_KEYS, type TypedPorts } from '../ports/index.js';
 import type { Platform } from '../ports/types.js';
 import type { Aggregator } from '../sources/aggregator.js';
 import type { LogTailer } from '../sources/collectors/log/tailer.js';
+import type { TranscriptManager } from '../sources/collectors/transcript/index.js';
 import type { GatewayClient } from '../sources/gateway-cli.js';
 import type { CronReader } from '../sources/readers/cron-reader.js';
 import type { SessionReader } from '../sources/readers/session-reader.js';
 import type { SystemInfoService } from '../sources/system-info.js';
 
 /**
- * Build and register all ports (Phase 1 + Phase 2) in the pipeline.
+ * Build and register all ports (Phase 1 + Phase 2 + Phase 3) in the pipeline.
  *
  * @param pipeline - Pipeline instance to register ports into
  * @param deps - Dependencies for port creation
@@ -31,6 +35,7 @@ export function registerPorts(
     logTailer: LogTailer;
     systemInfoService: SystemInfoService;
     platform: Platform;
+    transcriptManager: TranscriptManager;
   },
 ): void {
   // Phase 1 ports
@@ -43,12 +48,20 @@ export function registerPorts(
   const logAdapter = createLogAdapter(deps.logTailer);
   const systemAdapter = createSystemAdapter(deps.systemInfoService, deps.platform);
 
+  // Phase 3 ports (PR-3 Step 2)
+  const lifetimeAdapter = createLifetimeAdapter(deps.transcriptManager);
+  const transcriptAdapter = createTranscriptAdapter(deps.sessionReader);
+  const usageAdapter = createUsageAdapter(deps.systemInfoService);
+
   pipeline.addPort(PORT_KEYS.sessions, sessionAdapter);
   pipeline.addPort(PORT_KEYS.metrics, metricsAdapter);
   pipeline.addPort(PORT_KEYS.gateway, gatewayAdapter);
   pipeline.addPort(PORT_KEYS.cron, cronAdapter);
   pipeline.addPort(PORT_KEYS.logs, logAdapter);
   pipeline.addPort(PORT_KEYS.system, systemAdapter);
+  pipeline.addPort(PORT_KEYS.lifetime, lifetimeAdapter);
+  pipeline.addPort(PORT_KEYS.transcript, transcriptAdapter);
+  pipeline.addPort(PORT_KEYS.usage, usageAdapter);
 }
 
 /**
@@ -65,5 +78,8 @@ export function getPorts(pipeline: Pipeline): TypedPorts {
     cron: pipeline.getPort(PORT_KEYS.cron),
     logs: pipeline.getPort(PORT_KEYS.logs),
     system: pipeline.getPort(PORT_KEYS.system),
+    lifetime: pipeline.getPort(PORT_KEYS.lifetime),
+    transcript: pipeline.getPort(PORT_KEYS.transcript),
+    usage: pipeline.getPort(PORT_KEYS.usage),
   };
 }

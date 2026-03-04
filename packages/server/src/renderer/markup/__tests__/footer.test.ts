@@ -28,6 +28,24 @@ function collectText(node: SatoriNode | string | unknown): string[] {
   return results;
 }
 
+function collectImageSrc(node: SatoriNode | string | unknown): string[] {
+  if (!node || typeof node !== 'object') {
+    return [];
+  }
+  const n = node as SatoriNode;
+  const results: string[] = [];
+  if (n.type === 'img' && typeof n.props?.src === 'string') {
+    results.push(n.props.src);
+  }
+  const children = n.props?.children;
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      results.push(...collectImageSrc(child));
+    }
+  }
+  return results;
+}
+
 function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
   return {
     gateway: { status: 'up', version: '0.1.0', uptime: '2h', cpu: 5, memoryMB: 512 },
@@ -70,6 +88,18 @@ describe('renderFooter', () => {
     const tree = renderFooter(makeData(), c, 'zh');
     const texts = collectText(tree);
     expect(texts.join(' ')).toContain('Claw Insights v');
+  });
+
+  it('uses embedded Claw Insights brand icon and never the lobster icon', () => {
+    const tree = renderFooter(makeData(), c);
+    const sources = collectImageSrc(tree);
+    const logoSrc = sources.find((src) => src.startsWith('data:image/svg+xml;base64,'));
+    expect(logoSrc).toBeDefined();
+
+    const encoded = logoSrc!.replace('data:image/svg+xml;base64,', '');
+    const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+    expect(decoded).not.toContain('lobster-gradient');
+    expect(decoded.includes('topFill') || decoded.includes('topFillL')).toBe(true);
   });
 
   it('does not render Uptime', () => {

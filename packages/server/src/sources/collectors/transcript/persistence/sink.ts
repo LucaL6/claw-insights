@@ -40,6 +40,8 @@ export function createTranscriptSink(deps: SinkDeps, policy: FlushPolicy): Trans
   };
 
   const bufferedEventCount = (): number => tokenBuffer.length + messageBuffer.length;
+  const hasBufferedData = (): boolean =>
+    tokenBuffer.length > 0 || messageBuffer.length > 0 || stateBuffer.length > 0;
 
   const accept = (result: FileResult): void => {
     if (destroyed) {
@@ -70,7 +72,7 @@ export function createTranscriptSink(deps: SinkDeps, policy: FlushPolicy): Trans
   const flush = async (): Promise<void> => {
     clearFlushTimer();
 
-    if (bufferedEventCount() === 0) {
+    if (!hasBufferedData()) {
       return;
     }
 

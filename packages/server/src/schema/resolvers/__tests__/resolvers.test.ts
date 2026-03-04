@@ -59,9 +59,70 @@ function createMockCtx(): AppContext {
         getVersion: vi.fn().mockResolvedValue('1.0.0'),
         warmCache: vi.fn().mockResolvedValue(undefined),
       },
-      cron: undefined,
-      logs: undefined,
-      system: undefined,
+      cron: {
+        getCronJobs: vi.fn().mockReturnValue([
+          {
+            id: 'job1',
+            schedule: '0 * * * *',
+            enabled: true,
+            lastRun: null,
+            nextRun: null,
+            description: 'cleanup',
+          },
+        ]),
+        getCronJobById: vi.fn(),
+        onChanged: vi.fn(),
+      },
+      logs: {
+        getRecentLogs: vi.fn().mockReturnValue([
+          {
+            timestamp: Date.now(),
+            level: 'info',
+            source: 'test',
+            message: 'log1',
+          },
+        ]),
+        getLogsInRange: vi.fn(),
+        onChanged: vi.fn(),
+      },
+      system: {
+        getSystemMetrics: vi.fn().mockResolvedValue({
+          cpu: 25,
+          memoryMB: 512,
+          diskMB: 1024,
+          uptime: '3600s',
+          platform: 'darwin',
+          nodeVersion: 'v20.0.0',
+        }),
+        getProcessMetrics: vi.fn(),
+      },
+      lifetime: {
+        getStats: vi.fn().mockReturnValue({
+          isReady: true,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          daysSinceCreation: 100,
+          totalSessions: 42,
+          totalInputTokens: 1_000_000,
+          totalOutputTokens: 500_000,
+          totalCacheReadTokens: 200_000,
+          totalCacheWriteTokens: 100_000,
+          totalTokens: 1_800_000,
+          totalUserMessages: 1000,
+          totalAssistantMessages: 1000,
+        }),
+      },
+      transcript: {
+        getTranscriptPath: vi.fn().mockReturnValue('/tmp/transcripts/test.jsonl'),
+      },
+      usage: {
+        getUsageCost: vi.fn().mockResolvedValue({
+          totalCost: 1.5,
+          totalTokensM: 1.8,
+          todayCost: 0.5,
+          todayTokensM: 0.3,
+          fetchedAt: new Date().toISOString(),
+        }),
+      },
     },
     sessionReader: {
       attachSubAgents: vi.fn(),
@@ -140,8 +201,7 @@ describe('createResolvers', () => {
   describe('sessions', () => {
     it('calls getSessions without filter', () => {
       const result = Query.sessions({}, {});
-      expect(ctx.sessionReader.attachSubAgents).toHaveBeenCalled();
-      // Task 6: Now uses ctx.ports.sessions instead of ctx.sessionReader
+      // DESIGN-066: attachSubAgents now handled by SpawnBus event system
       expect(ctx.ports.sessions.getSessions).toHaveBeenCalled();
       expect(result).toEqual([{ id: 's1', label: 'test', turnCount: 5 }]);
     });
@@ -169,10 +229,21 @@ describe('createResolvers', () => {
   });
 
   describe('cronJobs', () => {
-    it('returns from cronReader', () => {
+    it('returns from cron port', () => {
       const result = Query.cronJobs({}, {});
-      expect(ctx.cronReader.getJobs).toHaveBeenCalled();
-      expect(result).toEqual([{ name: 'cleanup', schedule: '0 * * * *' }]);
+      // Phase 2: Now uses ctx.ports.cron instead of ctx.cronReader
+      expect(ctx.ports.cron!.getCronJobs).toHaveBeenCalled();
+      expect(result).toEqual([
+        {
+          id: 'job1',
+          name: 'cleanup',
+          enabled: true,
+          schedule: '0 * * * *',
+          lastRunAt: null,
+          nextRunAt: null,
+          lastRunSuccess: null,
+        },
+      ]);
     });
   });
 
@@ -198,22 +269,24 @@ describe('createResolvers', () => {
   });
 
   describe('usageCost', () => {
-    it('calls getUsageCost via ctx', async () => {
+    it('calls getUsageCost via ctx.ports.usage', async () => {
       const result = await Query.usageCost({}, {});
-      expect(ctx.systemInfoService.getUsageCost).toHaveBeenCalled();
-      expect(result).toMatchObject({ totalCostUsd: 1.5 });
+      expect(ctx.ports.usage.getUsageCost).toHaveBeenCalled();
+      expect(result).toMatchObject({ totalCost: 1.5 });
     });
   });
 
   describe('recentLogs', () => {
     it('uses default count of 50', () => {
       Query.recentLogs({}, {});
-      expect(ctx.logTailer.getRecentEntries).toHaveBeenCalledWith(50);
+      // Phase 2: Now uses ctx.ports.logs instead of ctx.logTailer
+      expect(ctx.ports.logs!.getRecentLogs).toHaveBeenCalledWith(50, expect.any(Object));
     });
 
     it('uses custom count', () => {
       Query.recentLogs({}, { count: 10 });
-      expect(ctx.logTailer.getRecentEntries).toHaveBeenCalledWith(10);
+      // Phase 2: Now uses ctx.ports.logs instead of ctx.logTailer
+      expect(ctx.ports.logs!.getRecentLogs).toHaveBeenCalledWith(10, expect.any(Object));
     });
   });
 
@@ -243,10 +316,11 @@ describe('createResolvers', () => {
   });
 
   describe('resources', () => {
-    it('calls getSystemMetrics via ctx', async () => {
+    it('calls getSystemMetrics via ctx.ports.system', async () => {
       const result = await Query.resources({}, {});
-      expect(ctx.systemInfoService.getSystemMetrics).toHaveBeenCalled();
-      expect(result).toMatchObject({ cpu: 25, memoryMB: 512 });
+      // Phase 2: Now uses ctx.ports.system instead of ctx.systemInfoService
+      expect(ctx.ports.system!.getSystemMetrics).toHaveBeenCalled();
+      expect(result).toMatchObject({ cpu: 25, memoryMB: 512, diskMB: 1024 });
     });
   });
 });

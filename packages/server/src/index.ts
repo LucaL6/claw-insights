@@ -81,7 +81,7 @@ app.get(
     serverOnly: config.serverOnly,
     checkGateway: async () => {
       try {
-        const status = await ctx.gatewayClient.getGatewayStatus();
+        const status = await ctx.ports.gateway.getGatewayStatus();
         return status.running;
       } catch {
         return false;
@@ -95,7 +95,7 @@ app.get(
         return false;
       }
     },
-    checkReady: () => ctx.lifetimeScanner.isReady(),
+    checkReady: () => ctx.ports.lifetime.isReady(),
   }),
 );
 

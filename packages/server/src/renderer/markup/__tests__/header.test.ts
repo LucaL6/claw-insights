@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SnapshotData } from '../../../services/snapshot-types.js';
 import { DARK } from '../colors.js';
-import { renderHeader } from '../header.js';
+import { renderHeader, resolveLobsterAssetPath } from '../header.js';
 import type { SatoriNode } from '../helpers.js';
 
 function collectText(node: SatoriNode | string | unknown): string[] {
@@ -23,6 +23,24 @@ function collectText(node: SatoriNode | string | unknown): string[] {
   } else if (Array.isArray(children)) {
     for (const child of children) {
       results.push(...collectText(child));
+    }
+  }
+  return results;
+}
+
+function collectImages(node: SatoriNode | string | unknown): SatoriNode[] {
+  if (!node || typeof node !== 'object') {
+    return [];
+  }
+  const n = node as SatoriNode;
+  const results: SatoriNode[] = [];
+  if (n.type === 'img') {
+    results.push(n);
+  }
+  const children = n.props?.children;
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      results.push(...collectImages(child));
     }
   }
   return results;
@@ -59,6 +77,28 @@ describe('renderHeader', () => {
     const texts = collectText(tree);
     expect(texts).toContain('OpenClaw');
     expect(texts.join(' ')).not.toContain('Claw Insights');
+  });
+
+  it('resolves lobster asset path for bundled dist output', () => {
+    const distChunkDir = '/repo/packages/server/dist';
+    const expectedPath = '/repo/packages/server/assets/openclaw-lobster.svg';
+    const resolved = resolveLobsterAssetPath(distChunkDir, (candidate) => candidate === expectedPath);
+    expect(resolved).toBe(expectedPath);
+  });
+
+  it('uses the lobster asset styling in snapshot header icon with fixed 32x32 size', () => {
+    const tree = renderHeader(makeData(), 'standard', c, 'en');
+    const images = collectImages(tree);
+    const lobsterImage = images.find((img) =>
+      typeof img.props?.src === 'string' ? img.props.src.startsWith('data:image/svg+xml;base64,') : false,
+    );
+    expect(lobsterImage).toBeDefined();
+    expect(lobsterImage?.props?.width).toBe(32);
+    expect(lobsterImage?.props?.height).toBe(32);
+
+    const encoded = String(lobsterImage?.props?.src).replace('data:image/svg+xml;base64,', '');
+    const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+    expect(decoded).toContain('lobster-gradient');
   });
 
   it('shows Online when gateway is up', () => {
