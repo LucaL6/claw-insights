@@ -91,26 +91,23 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
     messages,
     isInitialLoading,
     isRefreshing,
-    isLoadingMore,
-    hasMore,
+    isLoadingOlder,
+    hasPreviousPage,
     totalMessages,
     isFetching,
     error,
     refresh,
-    loadMore,
-    retry,
+    loadOlder,
   } = useSessionTranscript({ sessionKey });
 
-  const { jumpRequest, visibleIndex, setVisibleIndex, jumpToIndex, jumpToEnd, isLoadingToEnd } = useTranscriptNavigator(
-    {
-      totalMessages,
+  const { jumpRequest, visibleIndex, setVisibleIndex, jumpToIndex, jumpToStart, jumpToEnd, isLoadingToStart } =
+    useTranscriptNavigator({
       loadedCount: messages.length,
-      hasMore,
-      isLoadingMore,
+      hasPreviousPage,
+      isLoadingOlder,
       isFetching,
-      loadMore,
-    },
-  );
+      loadOlder,
+    });
 
   const resolvedName = externalName || meta?.displayName || sessionKey.split(':').pop() || sessionKey;
   const spawnPrompt = meta?.isSubAgent && meta.spawnPrompt ? meta.spawnPrompt : undefined;
@@ -213,7 +210,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
       return {
         status: 'error',
         errorCode: gqlCode,
-        retry,
+        retry: refresh,
       };
     }
 
@@ -224,7 +221,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
       return {
         status: 'error',
         errorCode: 'NOT_AVAILABLE',
-        retry,
+        retry: refresh,
       };
     }
 
@@ -236,10 +233,10 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
       status: 'ready',
       messages,
       totalMessages,
-      hasMore,
-      loadingMore: isLoadingMore,
+      hasPreviousPage,
+      loadingOlder: isLoadingOlder,
     };
-  }, [isRefreshing, isInitialLoading, messages, error, retry, meta, totalMessages, hasMore, isLoadingMore]);
+  }, [isRefreshing, isInitialLoading, messages, error, refresh, meta, totalMessages, hasPreviousPage, isLoadingOlder]);
 
   const isLoading = isInitialLoading;
   const resolvedStatus = status ?? (meta ? 'DONE' : 'ACTIVE');
@@ -252,6 +249,20 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
     }
     return timelineState.messages.map((m) => m.timestamp);
   }, [timelineState]);
+
+  const currentMessagePosition = useMemo(() => {
+    if (!meta || totalMessages <= 0 || messages.length === 0) {
+      return 0;
+    }
+
+    const loadedCount = messages.length;
+    const globalStartIndex = Math.max(totalMessages - loadedCount, 0);
+    const fallbackLocalIndex = loadedCount - 1;
+    const localIndex = Math.min(Math.max(visibleIndex ?? fallbackLocalIndex, 0), loadedCount - 1);
+    const globalPosition = globalStartIndex + localIndex + 1;
+
+    return Math.min(Math.max(globalPosition, 1), totalMessages);
+  }, [messages.length, meta, totalMessages, visibleIndex]);
 
   const handleJump = useCallback(
     (index: number) => {
@@ -454,8 +465,11 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
               activeIndex={visibleIndex}
               onJump={handleJump}
               totalMessages={totalMessages}
+              hasPreviousPage={hasPreviousPage}
+              onJumpToStart={jumpToStart}
               onJumpToEnd={jumpToEnd}
-              isLoadingToEnd={isLoadingToEnd}
+              isLoadingToStart={isLoadingToStart}
+              isLoadingToEnd={false}
             />
           </div>
         )}
@@ -473,7 +487,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
           )}
           <TranscriptTimeline
             state={timelineState}
-            onLoadMore={loadMore}
+            onLoadOlder={loadOlder}
             scrollRef={scrollRef}
             jumpToIndex={jumpRequest?.index}
             jumpKey={jumpRequest?.key}
@@ -510,7 +524,7 @@ export function SessionDrawer({ sessionKey, onClose, status, displayName: extern
                   <path d="M3.1 10a5.5 5.5 0 1 0 1.06-5.57L1.5 5.5" />
                 </svg>
               </button>
-              <span>{t('drawer.footer.messages', { shown: messages.length, total: totalMessages })}</span>
+              <span>{t('drawer.footer.messages', { shown: currentMessagePosition, total: totalMessages })}</span>
             </div>
           </div>
         )}

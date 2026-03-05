@@ -3,9 +3,10 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 
+import { encodeCursor } from '../transcript-cursor.js';
 import { readTranscript } from '../transcript-reader.js';
 
-function makeTmpFile(lines: any[]): string {
+function makeTmpFile(lines: unknown[]): string {
   const dir = mkdtempSync(join(tmpdir(), 'transcript-test-'));
   const file = join(dir, 'test.jsonl');
   writeFileSync(file, lines.map((l) => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n'));
@@ -64,8 +65,13 @@ describe('readTranscript', () => {
     expect(result.isSubAgent).toBe(false);
     expect(result.totalMessages).toBe(2);
     expect(result.messages).toHaveLength(2);
-    expect(result.messages[0]).toMatchObject({ role: 'user', content: 'hello', contentTruncated: false });
-    expect(result.messages[1]).toMatchObject({ role: 'assistant', content: 'hi there', model: 'claude-opus-4-6' });
+    expect(result.messages[0]).toMatchObject({ role: 'user', content: 'hello', contentTruncated: false, seq: 0 });
+    expect(result.messages[1]).toMatchObject({
+      role: 'assistant',
+      content: 'hi there',
+      model: 'claude-opus-4-6',
+      seq: 1,
+    });
     expect(result.messages[1].usage).toEqual({ input: 10, output: 20, cacheRead: 5, cacheWrite: 2 });
   });
 
@@ -93,18 +99,34 @@ describe('readTranscript', () => {
     expect(result.messages[1]).toMatchObject({ role: 'tool', toolName: 'tool' });
   });
 
-  it('paginates with offset and limit', async () => {
-    const lines: any[] = [SESSION_LINE];
+  it('paginates with before cursor and limit', async () => {
+    const lines: unknown[] = [SESSION_LINE];
     for (let i = 0; i < 10; i++) {
-      lines.push(msgLine('user', `msg${i}`, {}, `2025-01-01T00:00:0${i}Z`));
+      lines.push(msgLine('user', `msg${i}`, {}, `2025-01-01T00:00:${String(i).padStart(2, '0')}Z`));
     }
     const file = makeTmpFile(lines);
-    const result = await readTranscript(file, 'agent:main:test', { offset: 3, limit: 4 });
+    const before = encodeCursor('2025-01-01T00:00:07Z', 7);
+    const result = await readTranscript(file, 'agent:main:test', { before, limit: 4 });
     expect(result.totalMessages).toBe(10);
     expect(result.messages).toHaveLength(4);
     expect(result.messages[0].content).toBe('msg3');
     expect(result.messages[3].content).toBe('msg6');
-    expect(result.hasMore).toBe(true);
+    expect(result.pageInfo.hasPreviousPage).toBe(true);
+    expect(result.pageInfo.hasNextPage).toBe(true);
+  });
+
+  it('returns tail-first page by default when no cursor is provided', async () => {
+    const lines: unknown[] = [SESSION_LINE];
+    for (let i = 0; i < 10; i++) {
+      lines.push(msgLine('user', `msg${i}`, {}, `2025-01-01T00:00:${String(i).padStart(2, '0')}Z`));
+    }
+    const file = makeTmpFile(lines);
+    const result = await readTranscript(file, 'agent:main:test', { limit: 3 });
+    expect(result.messages).toHaveLength(3);
+    expect(result.messages[0].content).toBe('msg7');
+    expect(result.messages[2].content).toBe('msg9');
+    expect(result.pageInfo.hasPreviousPage).toBe(true);
+    expect(result.pageInfo.hasNextPage).toBe(false);
   });
 
   it('truncates user/assistant content at 4000 chars', async () => {

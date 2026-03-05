@@ -242,6 +242,13 @@ type TranscriptTokenUsage {
   cacheWrite: Int!
 }
 
+type PageInfo {
+  startCursor: String
+  endCursor: String
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+}
+
 type SessionTranscript {
   """Session key"""
   sessionKey: String!
@@ -275,8 +282,7 @@ type SessionTranscript {
   messages: [TranscriptMessage!]!
   """Total message count in transcript file"""
   totalMessages: Int!
-  """Whether there are more messages beyond limit"""
-  hasMore: Boolean!
+  pageInfo: PageInfo!
 }
 
 # ── Root Types ──
@@ -295,7 +301,7 @@ type Query {
   eventCounts(from: Int, to: Int): EventCounts!
   lifetimeStats: LifetimeStats!
   """Fetch session transcript. Returns null if session/file not found."""
-  sessionTranscript(sessionKey: String!, limit: Int, offset: Int): SessionTranscript
+  sessionTranscript(sessionKey: String!, limit: Int, before: String, after: String): SessionTranscript
 }
 
 """Lightweight signal emitted when a data source updates"""

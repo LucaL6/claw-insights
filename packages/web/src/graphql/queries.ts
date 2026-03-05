@@ -145,8 +145,8 @@ export const RecentLogsQuery = graphql(/* GraphQL */ `
 `);
 
 export const SessionTranscriptQuery = graphql(/* GraphQL */ `
-  query SessionTranscript($sessionKey: String!, $limit: Int, $offset: Int) {
-    sessionTranscript(sessionKey: $sessionKey, limit: $limit, offset: $offset) {
+  query SessionTranscript($sessionKey: String!, $limit: Int, $before: String, $after: String) {
+    sessionTranscript(sessionKey: $sessionKey, limit: $limit, before: $before, after: $after) {
       sessionKey
       displayName
       model
@@ -162,7 +162,12 @@ export const SessionTranscriptQuery = graphql(/* GraphQL */ `
       parentDisplayName
       spawnPrompt
       totalMessages
-      hasMore
+      pageInfo {
+        startCursor
+        endCursor
+        hasPreviousPage
+        hasNextPage
+      }
       messages {
         timestamp
         role

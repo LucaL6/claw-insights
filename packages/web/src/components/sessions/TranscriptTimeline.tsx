@@ -24,18 +24,15 @@ export type TimelineState =
       status: 'ready';
       messages: Message[];
       totalMessages: number;
-      hasMore: boolean;
-      loadingMore?: boolean;
+      hasPreviousPage: boolean;
+      loadingOlder?: boolean;
     };
 
 export interface TranscriptTimelineProps {
   state: TimelineState;
-  onLoadMore?: () => void;
-  /** Ref to the external scrollable container (for virtualizer scroll element) */
+  onLoadOlder?: () => void;
   scrollRef?: React.RefObject<HTMLDivElement | null>;
-  /** When set, scroll to this message index */
   jumpToIndex?: number;
-  /** Incrementing key to allow repeated jumps to the same index */
   jumpKey?: number;
 }
 
@@ -45,13 +42,14 @@ const ROLE_CONFIG = {
   tool: { label: 'TOOL', color: 'var(--dr-rose)', dotSize: 5 },
 } as const;
 
-/** Shorten model id: "anthropic/claude-opus-4-6" → "opus-4-6", "openai/gpt-4o" → "gpt-4o" */
 function formatModelShort(model: string): string {
-  if (!model) {return '';}
-  // Strip provider prefix (handles multiple slashes: "a/b/c" → "b/c")
+  if (!model) {
+    return '';
+  }
   const afterSlash = model.includes('/') ? model.split('/').slice(1).join('/') : model;
-  if (!afterSlash) {return model;} // fallback for trailing slash like "provider/"
-  // Strip common prefixes (anchored to start only)
+  if (!afterSlash) {
+    return model;
+  }
   return afterSlash.replace(/^models\//, '').replace(/^claude-/, '');
 }
 
@@ -59,11 +57,11 @@ function formatTime(iso: string): string {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) {
-      return '--:--';
+      return '--:--:--';
     }
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
   } catch {
-    return '--:--';
+    return '--:--:--';
   }
 }
 
@@ -85,7 +83,6 @@ function TimelineRow({ msg, isLast, index }: { msg: Message; isLast: boolean; in
 
   return (
     <div className="flex min-h-[24px]" data-msg-index={index}>
-      {/* Timeline column */}
       <div className="relative flex w-5 shrink-0 flex-col items-center">
         <div
           className="z-10 shrink-0 rounded-full"
@@ -99,7 +96,6 @@ function TimelineRow({ msg, isLast, index }: { msg: Message; isLast: boolean; in
         {!isLast && <div className="flex-1" style={{ width: 1, backgroundColor: 'var(--dr-border)' }} />}
       </div>
 
-      {/* Content column */}
       <div className="min-w-0 flex-1 pb-2 pt-0.5 pl-2">
         <div className="flex items-baseline gap-2 mb-0.5">
           <span className="shrink-0 font-mono text-[11px] font-medium" style={{ color: cfg.color }}>
@@ -118,22 +114,7 @@ function TimelineRow({ msg, isLast, index }: { msg: Message; isLast: boolean; in
             </span>
           )}
           {msg.role === 'assistant' && msg.usage && (
-            <span
-              className="font-mono text-[10px] ml-auto cursor-default"
-              style={{ color: 'var(--dr-dim)' }}
-              title={[
-                `${t('drawer.token.input')}: ${msg.usage.input.toLocaleString()}`,
-                `${t('drawer.token.output')}: ${msg.usage.output.toLocaleString()}`,
-                msg.usage.cacheRead > 0
-                  ? `${t('drawer.token.cacheRead')}: ${msg.usage.cacheRead.toLocaleString()}`
-                  : '',
-                msg.usage.cacheWrite > 0
-                  ? `${t('drawer.token.cacheWrite')}: ${msg.usage.cacheWrite.toLocaleString()}`
-                  : '',
-              ]
-                .filter(Boolean)
-                .join('\n')}
-            >
+            <span className="font-mono text-[10px] ml-auto cursor-default" style={{ color: 'var(--dr-dim)' }}>
               in:{formatTokens(msg.usage.input)} out:{formatTokens(msg.usage.output)}
               {msg.usage.cacheRead > 0 && ` cache:${formatTokens(msg.usage.cacheRead)}`}
             </span>
@@ -185,12 +166,6 @@ function SkeletonRows() {
               className="h-3 animate-pulse rounded"
               style={{ backgroundColor: 'var(--dr-border)', width: `${55 + i * 12}%` }}
             />
-            {i % 2 === 0 && (
-              <div
-                className="h-3 animate-pulse rounded"
-                style={{ backgroundColor: 'var(--dr-border)', width: `${35 + i * 8}%` }}
-              />
-            )}
           </div>
         </div>
       ))}
@@ -200,47 +175,39 @@ function SkeletonRows() {
 
 const VIRTUAL_THRESHOLD = 50;
 
-/**
- * Virtualized timeline — uses the external scroll container as scroll element.
- * Does NOT create its own scrollable wrapper; it outputs a single tall div
- * with absolutely-positioned rows that the parent scroll container scrolls.
- */
 function VirtualizedTimeline({
   messages,
-  hasMore,
+  hasPreviousPage,
   totalMessages,
-  loadingMore,
-  onLoadMore,
+  loadingOlder,
+  onLoadOlder,
   scrollRef,
   jumpToIndex,
   jumpKey,
 }: {
   messages: Message[];
-  hasMore: boolean;
+  hasPreviousPage: boolean;
   totalMessages: number;
-  loadingMore?: boolean;
-  onLoadMore?: () => void;
+  loadingOlder?: boolean;
+  onLoadOlder?: () => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
   jumpToIndex?: number;
   jumpKey?: number;
 }) {
   const { t } = useI18n();
-  const remaining = totalMessages - messages.length;
-
-  const rowCount = messages.length + (hasMore ? 1 : 0);
+  const olderCount = totalMessages - messages.length;
   const listRef = useRef<HTMLDivElement>(null);
-
-  // Measure offset of virtualizer container relative to scroll container
-  // This accounts for SpawnPromptBox and other content above the list
   const [scrollMargin, setScrollMargin] = useState(0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-measure on every render to catch dynamic content changes (SpawnPromptBox expand)
+  const rowCount = messages.length + (hasPreviousPage ? 1 : 0);
+
   useEffect(() => {
     const list = listRef.current;
     if (list) {
       setScrollMargin(list.offsetTop);
     }
-  });
+  }, [messages.length, hasPreviousPage]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is intentionally used for transcript virtualization.
   const virtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => scrollRef.current,
@@ -249,39 +216,32 @@ function VirtualizedTimeline({
     scrollMargin,
   });
 
-  // Jump to index when requested (keyed to allow repeated jumps)
   const lastJumpKey = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (jumpToIndex === undefined || jumpKey === undefined || jumpKey === lastJumpKey.current) {
       return;
     }
     lastJumpKey.current = jumpKey;
+    virtualizer.scrollToIndex(hasPreviousPage ? jumpToIndex + 1 : jumpToIndex, { align: 'start', behavior: 'auto' });
+  }, [hasPreviousPage, jumpKey, jumpToIndex, virtualizer]);
 
-    // For large jumps (>30 rows), use instant scroll then re-align after measurement
-    const currentRange = virtualizer.range;
-    const distance = currentRange ? Math.abs(jumpToIndex - (currentRange.startIndex + currentRange.endIndex) / 2) : 0;
-    const isLargeJump = distance > 30;
-
-    virtualizer.scrollToIndex(jumpToIndex, { align: 'start', behavior: isLargeJump ? 'auto' : 'smooth' });
-
-    // Re-scroll after measurements settle (estimated sizes may be off for unmeasured rows)
-    if (isLargeJump) {
-      const timer = setTimeout(() => {
-        virtualizer.scrollToIndex(jumpToIndex, { align: 'start', behavior: 'auto' });
-      }, 50);
-      return () => {
-        clearTimeout(timer);
-      };
+  const initialBottomDoneRef = useRef(false);
+  useEffect(() => {
+    if (initialBottomDoneRef.current || messages.length === 0) {
+      return;
     }
-  }, [jumpToIndex, jumpKey, virtualizer]);
+    initialBottomDoneRef.current = true;
+    virtualizer.scrollToIndex(rowCount - 1, { align: 'end', behavior: 'auto' });
+  }, [messages.length, rowCount, virtualizer]);
 
   return (
     <div ref={listRef} style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
       {virtualizer.getVirtualItems().map((vItem) => {
-        if (vItem.index === messages.length) {
+        const isLoadOlderRow = hasPreviousPage && vItem.index === 0;
+        if (isLoadOlderRow) {
           return (
             <div
-              key="load-more"
+              key="load-older"
               ref={virtualizer.measureElement}
               data-index={vItem.index}
               style={{
@@ -294,20 +254,21 @@ function VirtualizedTimeline({
             >
               <button
                 type="button"
-                onClick={onLoadMore}
-                disabled={loadingMore}
-                className="w-full py-3 font-mono text-[11px] cursor-pointer transition-colors text-center"
-                style={{ color: loadingMore ? 'var(--dr-dim)' : 'var(--dr-orange)' }}
+                onClick={onLoadOlder}
+                disabled={loadingOlder}
+                className="w-full py-3 font-mono text-[11px] cursor-pointer transition-colors text-left"
+                style={{ color: loadingOlder ? 'var(--dr-dim)' : 'var(--dr-orange)' }}
               >
-                {loadingMore
+                {loadingOlder
                   ? t('drawer.timeline.loading')
-                  : `↓ ${t('drawer.timeline.moreMessages', { count: remaining })}`}
+                  : `↑ ${t('drawer.timeline.moreMessages', { count: olderCount })}`}
               </button>
             </div>
           );
         }
 
-        const msg = messages[vItem.index];
+        const msgIndex = hasPreviousPage ? vItem.index - 1 : vItem.index;
+        const msg = messages[msgIndex];
         return (
           <div
             key={vItem.index}
@@ -321,7 +282,7 @@ function VirtualizedTimeline({
               transform: `translateY(${vItem.start - scrollMargin}px)`,
             }}
           >
-            <TimelineRow msg={msg} index={vItem.index} isLast={vItem.index === messages.length - 1 && !hasMore} />
+            <TimelineRow msg={msg} index={msgIndex} isLast={msgIndex === messages.length - 1} />
           </div>
         );
       })}
@@ -331,48 +292,79 @@ function VirtualizedTimeline({
 
 function PlainTimeline({
   messages,
-  hasMore,
+  hasPreviousPage,
   totalMessages,
-  loadingMore,
-  onLoadMore,
+  loadingOlder,
+  onLoadOlder,
   jumpToIndex,
   jumpKey,
   scrollRef,
 }: {
   messages: Message[];
-  hasMore: boolean;
+  hasPreviousPage: boolean;
   totalMessages: number;
-  loadingMore?: boolean;
-  onLoadMore?: () => void;
+  loadingOlder?: boolean;
+  onLoadOlder?: () => void;
   jumpToIndex?: number;
   jumpKey?: number;
   scrollRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const { t } = useI18n();
-  const remaining = totalMessages - messages.length;
+  const olderCount = totalMessages - messages.length;
 
   const lastJumpKey = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (jumpToIndex !== undefined && jumpKey !== undefined && jumpKey !== lastJumpKey.current) {
       lastJumpKey.current = jumpKey;
-      const container = scrollRef?.current;
-      if (!container) {
-        return;
-      }
-      const target = container.querySelector(`[data-msg-index="${jumpToIndex}"]`);
-      if (!target) {
-        return;
-      }
-      // Use instant for large distance jumps
-      const rect = target.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-      const distance = Math.abs(rect.top - containerRect.top);
-      target.scrollIntoView({ behavior: distance > 2000 ? 'auto' : 'smooth', block: 'start' });
+      const target = scrollRef?.current?.querySelector(`[data-msg-index="${jumpToIndex}"]`);
+      target?.scrollIntoView({ behavior: 'auto', block: 'start' });
     }
   }, [jumpToIndex, jumpKey, scrollRef]);
 
+  const initialBottomDoneRef = useRef(false);
+  useEffect(() => {
+    const container = scrollRef?.current;
+    if (!container || initialBottomDoneRef.current || messages.length === 0) {
+      return;
+    }
+    initialBottomDoneRef.current = true;
+    container.scrollTo({ top: container.scrollHeight });
+  }, [messages.length, scrollRef]);
+
+  const prevLenRef = useRef(0);
+  const prevHeightRef = useRef(0);
+  useEffect(() => {
+    const container = scrollRef?.current;
+    if (!container) {
+      return;
+    }
+
+    const prepended = messages.length > prevLenRef.current && prevLenRef.current > 0 && hasPreviousPage;
+    if (prepended) {
+      const delta = container.scrollHeight - prevHeightRef.current;
+      container.scrollTo({ top: container.scrollTop + delta });
+    }
+
+    prevLenRef.current = messages.length;
+    prevHeightRef.current = container.scrollHeight;
+  }, [hasPreviousPage, messages.length, scrollRef]);
+
   return (
     <div className="flex flex-col">
+      {hasPreviousPage && olderCount > 0 && (
+        <button
+          type="button"
+          onClick={onLoadOlder}
+          disabled={loadingOlder}
+          className="py-2 font-mono text-[11px] cursor-pointer transition-colors text-left"
+          style={{ color: loadingOlder ? 'var(--dr-dim)' : 'var(--dr-orange)' }}
+        >
+          {loadingOlder
+            ? t('drawer.timeline.loading')
+            : `↑ ${t('drawer.timeline.moreMessages', { count: olderCount })}`}
+        </button>
+      )}
+
       {messages.length > 0 && (
         <div className="flex items-center gap-1.5 pb-2 font-mono text-[10px]" style={{ color: 'var(--dr-fg2)' }}>
           <span style={{ color: 'var(--dr-dim)' }}>·</span>
@@ -383,32 +375,19 @@ function PlainTimeline({
       )}
 
       {messages.map((msg, i) => (
-        <TimelineRow key={i} msg={msg} index={i} isLast={i === messages.length - 1 && !hasMore} />
+        <TimelineRow key={i} msg={msg} index={i} isLast={i === messages.length - 1} />
       ))}
-
-      {hasMore && remaining > 0 && (
-        <button
-          type="button"
-          onClick={onLoadMore}
-          disabled={loadingMore}
-          className="py-2 font-mono text-[11px] cursor-pointer transition-colors text-left"
-          style={{ color: loadingMore ? 'var(--dr-dim)' : 'var(--dr-orange)' }}
-        >
-          {loadingMore ? t('drawer.timeline.loading') : `↓ ${t('drawer.timeline.moreMessages', { count: remaining })}`}
-        </button>
-      )}
     </div>
   );
 }
 
-export function TranscriptTimeline({ state, onLoadMore, scrollRef, jumpToIndex, jumpKey }: TranscriptTimelineProps) {
+export function TranscriptTimeline({ state, onLoadOlder, scrollRef, jumpToIndex, jumpKey }: TranscriptTimelineProps) {
   const { t } = useI18n();
   const fallbackRef = useRef<HTMLDivElement | null>(null);
 
   if (state.status === 'loading') {
     return <SkeletonRows />;
   }
-
   if (state.status === 'empty') {
     return (
       <div className="flex items-center justify-center py-8 font-mono text-xs" style={{ color: 'var(--dr-dim)' }}>
@@ -436,14 +415,13 @@ export function TranscriptTimeline({ state, onLoadMore, scrollRef, jumpToIndex, 
     );
   }
 
-  const { messages, totalMessages, hasMore, loadingMore } = state;
+  const { messages, totalMessages, hasPreviousPage, loadingOlder } = state;
   const effectiveRef = scrollRef ?? fallbackRef;
   const useVirtual = messages.length > VIRTUAL_THRESHOLD && scrollRef !== undefined;
 
   if (useVirtual) {
     return (
       <>
-        {/* Session started marker */}
         {messages.length > 0 && (
           <div className="flex items-center gap-1.5 pb-2 font-mono text-[10px]" style={{ color: 'var(--dr-fg2)' }}>
             <span style={{ color: 'var(--dr-dim)' }}>·</span>
@@ -454,10 +432,10 @@ export function TranscriptTimeline({ state, onLoadMore, scrollRef, jumpToIndex, 
         )}
         <VirtualizedTimeline
           messages={messages}
-          hasMore={hasMore}
+          hasPreviousPage={hasPreviousPage}
           totalMessages={totalMessages}
-          loadingMore={loadingMore}
-          onLoadMore={onLoadMore}
+          loadingOlder={loadingOlder}
+          onLoadOlder={onLoadOlder}
           scrollRef={effectiveRef}
           jumpToIndex={jumpToIndex}
           jumpKey={jumpKey}
@@ -469,10 +447,10 @@ export function TranscriptTimeline({ state, onLoadMore, scrollRef, jumpToIndex, 
   return (
     <PlainTimeline
       messages={messages}
-      hasMore={hasMore}
+      hasPreviousPage={hasPreviousPage}
       totalMessages={totalMessages}
-      loadingMore={loadingMore}
-      onLoadMore={onLoadMore}
+      loadingOlder={loadingOlder}
+      onLoadOlder={onLoadOlder}
       jumpToIndex={jumpToIndex}
       jumpKey={jumpKey}
       scrollRef={effectiveRef}

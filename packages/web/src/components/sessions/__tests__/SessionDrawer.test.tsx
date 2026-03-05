@@ -44,7 +44,7 @@ type MockMeta = {
   parentDisplayName: string | null;
   spawnPrompt: string | null;
   totalMessages: number;
-  hasMore: boolean;
+  hasPreviousPage: boolean;
   messages: unknown[];
 };
 
@@ -64,7 +64,7 @@ const baseMeta: MockMeta = {
   parentDisplayName: null,
   spawnPrompt: null,
   totalMessages: 3,
-  hasMore: false,
+  hasPreviousPage: false,
   messages: [],
 };
 
@@ -90,22 +90,20 @@ const baseMessages: SessionTranscriptMessage[] = [
 ];
 
 const mockRefresh = vi.fn();
-const mockLoadMore = vi.fn();
-const mockRetry = vi.fn();
+const mockLoadOlder = vi.fn();
 
 type MockHookState = {
   meta: MockMeta | undefined;
   messages: SessionTranscriptMessage[];
   isInitialLoading: boolean;
   isRefreshing: boolean;
-  isLoadingMore: boolean;
+  isLoadingOlder: boolean;
   isFetching: boolean;
-  hasMore: boolean;
+  hasPreviousPage: boolean;
   totalMessages: number;
   error: unknown;
   refresh: typeof mockRefresh;
-  loadMore: typeof mockLoadMore;
-  retry: typeof mockRetry;
+  loadOlder: typeof mockLoadOlder;
 };
 
 function mockReady(overrides?: Partial<MockHookState>) {
@@ -126,16 +124,13 @@ function mockLoading() {
 }
 
 function mockError() {
-  const retry = vi.fn();
   mockUseSessionTranscript.mockReturnValue(
     buildState({
       meta: undefined,
       messages: [],
       error: new Error('fail'),
-      retry,
     }),
   );
-  return retry;
 }
 
 function buildState(overrides: Partial<MockHookState> = {}): MockHookState {
@@ -144,14 +139,13 @@ function buildState(overrides: Partial<MockHookState> = {}): MockHookState {
     messages: baseMessages,
     isInitialLoading: false,
     isRefreshing: false,
-    isLoadingMore: false,
+    isLoadingOlder: false,
     isFetching: false,
-    hasMore: false,
+    hasPreviousPage: false,
     totalMessages: baseMeta.totalMessages,
     error: undefined,
     refresh: mockRefresh,
-    loadMore: mockLoadMore,
-    retry: mockRetry,
+    loadOlder: mockLoadOlder,
     ...overrides,
   };
 }
@@ -166,8 +160,7 @@ describe('SessionDrawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRefresh.mockReset();
-    mockLoadMore.mockReset();
-    mockRetry.mockReset();
+    mockLoadOlder.mockReset();
     mockShowToast.mockReset();
     mockShowToast.mockReturnValue(42);
     mockReplaceToast.mockReset();
@@ -386,10 +379,57 @@ describe('SessionDrawer', () => {
     expect(screen.getAllByText('47m').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('jump-to-end works after close and reopen without page refresh (BUG-039)', async () => {
+  it('shows current global message position in footer (defaults to latest)', () => {
+    mockReady({
+      totalMessages: 3,
+      messages: baseMessages,
+      meta: {
+        ...baseMeta,
+        totalMessages: 3,
+      },
+    });
+
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+
+    expect(screen.getByText('3/3 messages')).toBeDefined();
+  });
+
+  it('jump-to-start triggers loadOlder when previous pages exist', async () => {
     const hookState = buildState({
-      hasMore: true,
-      isLoadingMore: false,
+      hasPreviousPage: true,
+      isLoadingOlder: false,
+      isFetching: false,
+      totalMessages: 3004,
+      meta: {
+        ...baseMeta,
+        totalMessages: 3004,
+      },
+      messages: Array.from({ length: 200 }, (_, i) => ({
+        timestamp: `2024-01-01T10:${String(Math.floor(i / 60)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}Z`,
+        role: i % 2 === 0 ? ('user' as const) : ('assistant' as const),
+        content: `m${i}`,
+        contentTruncated: false,
+        model: undefined,
+        usage: undefined,
+        toolName: undefined,
+      })),
+    });
+
+    mockUseSessionTranscript.mockImplementation(() => hookState);
+
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Jump to first message' }));
+
+    await waitFor(() => {
+      expect(mockLoadOlder).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('jump-to-end is local scroll only after reopen', async () => {
+    const hookState = buildState({
+      hasPreviousPage: true,
+      isLoadingOlder: false,
       totalMessages: 6,
       meta: {
         ...baseMeta,
@@ -415,7 +455,7 @@ describe('SessionDrawer', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Jump to last message' }));
 
-    expect(mockLoadMore).toHaveBeenCalled();
+    expect(mockLoadOlder).not.toHaveBeenCalled();
 
     first.unmount();
 
@@ -423,7 +463,7 @@ describe('SessionDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Jump to last message' }));
 
     await waitFor(() => {
-      expect(mockLoadMore).toHaveBeenCalledTimes(2);
+      expect(mockLoadOlder).toHaveBeenCalledTimes(0);
     });
   });
 });

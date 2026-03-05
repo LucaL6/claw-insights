@@ -12,10 +12,16 @@ interface TimelineScrubberProps {
   /** Currently visible message index (from scroll tracking or manual jump) */
   activeIndex?: number;
   onJump: (index: number) => void;
-  /** Total message count (for jump-to-end when more messages exist beyond loaded) */
+  /** Total message count (for jump-to-start/end when more messages exist beyond loaded) */
   totalMessages?: number;
+  /** Whether there are older messages before the loaded window */
+  hasPreviousPage?: boolean;
+  /** Called when user wants to jump to the very first message (may trigger load-all) */
+  onJumpToStart?: () => void;
   /** Called when user wants to jump to the very last message (may trigger load-all) */
   onJumpToEnd?: () => void;
+  /** Whether we're currently loading to reach the start */
+  isLoadingToStart?: boolean;
   /** Whether we're currently loading to reach the end */
   isLoadingToEnd?: boolean;
 }
@@ -78,7 +84,10 @@ export function TimelineScrubber({
   activeIndex,
   onJump,
   totalMessages,
+  hasPreviousPage,
+  onJumpToStart,
   onJumpToEnd,
+  isLoadingToStart,
   isLoadingToEnd,
 }: TimelineScrubberProps) {
   const { t } = useI18n();
@@ -91,7 +100,8 @@ export function TimelineScrubber({
   );
 
   // Determine if we're at start/end for button states
-  const isAtStart = activeIndex === 0;
+  // Start should only be considered "at start" when there are no unloaded older messages.
+  const isAtStart = activeIndex === 0 && !hasPreviousPage;
   const endIndex = (totalMessages ?? timestamps.length) - 1;
   const isAtEnd = activeIndex === endIndex;
 
@@ -107,21 +117,25 @@ export function TimelineScrubber({
       <button
         type="button"
         onClick={() => {
-          onJump(0);
+          if (onJumpToStart) {
+            onJumpToStart();
+          } else {
+            onJump(0);
+          }
         }}
-        disabled={isAtStart}
+        disabled={isAtStart || isLoadingToStart}
         className={jumpButtonClass}
         style={{
-          backgroundColor: isAtStart ? 'transparent' : 'var(--dr-surface)',
-          color: isAtStart ? 'var(--dr-border)' : 'var(--dr-dim)',
-          border: `1px solid ${isAtStart ? 'var(--dr-border)' : 'var(--dr-border)'}`,
-          cursor: isAtStart ? 'default' : 'pointer',
-          opacity: isAtStart ? 0.5 : 1,
+          backgroundColor: isAtStart || isLoadingToStart ? 'transparent' : 'var(--dr-surface)',
+          color: isAtStart || isLoadingToStart ? 'var(--dr-border)' : 'var(--dr-dim)',
+          border: `1px solid ${isAtStart || isLoadingToStart ? 'var(--dr-border)' : 'var(--dr-border)'}`,
+          cursor: isAtStart || isLoadingToStart ? 'default' : 'pointer',
+          opacity: isAtStart || isLoadingToStart ? 0.5 : 1,
         }}
         title={t('drawer.scrubber.jumpToStart')}
         aria-label={t('drawer.scrubber.jumpToStart')}
       >
-        ⏮
+        {isLoadingToStart ? '⏳' : '⏮'}
       </button>
 
       {/* Time markers */}

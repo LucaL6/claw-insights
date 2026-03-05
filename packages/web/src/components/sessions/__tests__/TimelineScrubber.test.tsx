@@ -50,6 +50,18 @@ describe('TimelineScrubber', () => {
     expect(onJump).toHaveBeenCalledWith(0);
   });
 
+  it('uses onJumpToStart when provided', () => {
+    const onJump = vi.fn();
+    const onJumpToStart = vi.fn();
+
+    renderScrubber({ timestamps: baseTimestamps, onJump, activeIndex: 2, onJumpToStart, hasPreviousPage: true });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Jump to first message' }));
+
+    expect(onJumpToStart).toHaveBeenCalledTimes(1);
+    expect(onJump).not.toHaveBeenCalledWith(0);
+  });
+
   it('calls onJump(last) when end button clicked', () => {
     const onJump = vi.fn();
     renderScrubber({ timestamps: baseTimestamps, onJump, activeIndex: 0 });
@@ -87,6 +99,20 @@ describe('TimelineScrubber', () => {
     expect(screen.getByText('⏳')).toBeDefined();
   });
 
+  it('shows loading icon when isLoadingToStart is true', () => {
+    renderScrubber({
+      timestamps: baseTimestamps,
+      onJump: vi.fn(),
+      onJumpToStart: vi.fn(),
+      isLoadingToStart: true,
+      hasPreviousPage: true,
+    });
+
+    const startButton = screen.getByRole('button', { name: 'Jump to first message' });
+    expect(startButton.textContent).toBe('⏳');
+    expect((startButton as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('disables jump-to-end while loading to end', () => {
     renderScrubber({
       timestamps: baseTimestamps,
@@ -99,10 +125,16 @@ describe('TimelineScrubber', () => {
     expect(endButton.disabled).toBe(true);
   });
 
-  it('disables start button when at index 0', () => {
-    renderScrubber({ timestamps: baseTimestamps, onJump: vi.fn(), activeIndex: 0 });
+  it('disables start button when at index 0 and no older messages', () => {
+    renderScrubber({ timestamps: baseTimestamps, onJump: vi.fn(), activeIndex: 0, hasPreviousPage: false });
     const startBtn = screen.getByLabelText('Jump to first message') as HTMLButtonElement;
     expect(startBtn.disabled).toBe(true);
+  });
+
+  it('keeps start button enabled at index 0 when older pages exist', () => {
+    renderScrubber({ timestamps: baseTimestamps, onJump: vi.fn(), activeIndex: 0, hasPreviousPage: true });
+    const startBtn = screen.getByLabelText('Jump to first message') as HTMLButtonElement;
+    expect(startBtn.disabled).toBe(false);
   });
 
   it('disables end button when at last index', () => {

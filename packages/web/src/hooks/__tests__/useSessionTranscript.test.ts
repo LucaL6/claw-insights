@@ -1,24 +1,13 @@
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useSessionTranscript } from '../useSessionTranscript';
 
-const mockReexecute = vi.fn();
 const mockUseQuery = vi.fn();
 
 vi.mock('urql', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
 }));
-
-type MockMessage = {
-  timestamp: string;
-  role: string;
-  content: string;
-  contentTruncated: boolean;
-  model: string | null;
-  usage: { input: number; output: number; cacheRead: number; cacheWrite: number } | null;
-  toolName: string | null;
-};
 
 type MockPage = {
   sessionKey: string;
@@ -36,11 +25,24 @@ type MockPage = {
   parentDisplayName: string | null;
   spawnPrompt: string | null;
   totalMessages: number;
-  hasMore: boolean;
-  messages: MockMessage[];
+  pageInfo: {
+    startCursor: string | null;
+    endCursor: string | null;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+  messages: Array<{
+    timestamp: string;
+    role: string;
+    content: string;
+    contentTruncated: boolean;
+    model: string | null;
+    usage: null;
+    toolName: string | null;
+  }>;
 };
 
-function makePage(sessionKey: string, content: string, role: string, hasMore: boolean): MockPage {
+function makePage(sessionKey: string, content: string, startCursor: string | null, hasPreviousPage: boolean): MockPage {
   return {
     sessionKey,
     displayName: `Session ${sessionKey}`,
@@ -56,12 +58,17 @@ function makePage(sessionKey: string, content: string, role: string, hasMore: bo
     isSubAgent: false,
     parentDisplayName: null,
     spawnPrompt: null,
-    totalMessages: hasMore ? 2 : 1,
-    hasMore,
+    totalMessages: 3,
+    pageInfo: {
+      startCursor,
+      endCursor: startCursor,
+      hasPreviousPage,
+      hasNextPage: false,
+    },
     messages: [
       {
         timestamp: '2026-03-03T10:00:00Z',
-        role,
+        role: 'user',
         content,
         contentTruncated: false,
         model: null,
@@ -72,135 +79,151 @@ function makePage(sessionKey: string, content: string, role: string, hasMore: bo
   };
 }
 
-const page0s1 = makePage('s1', 's1-p0', 'user', true);
-const page200s1 = makePage('s1', 's1-p200', 'assistant', false);
-const page0s2 = makePage('s2', 's2-p0', 'system', false);
+const latestS1 = makePage('s1', 'latest-s1', 'c-latest', true);
+const olderS1 = makePage('s1', 'older-s1', 'c-older', false);
+const latestS2 = makePage('s2', 'latest-s2', 'c-s2', false);
+const staleS2ForS1 = makePage('s2', 'stale', 'c-stale', false);
 
 const state = {
-  lastVars: { sessionKey: 's1', offset: 0 },
+  lastRequestPolicy: 'cache-first',
   fetching: false,
-  error: undefined as unknown,
-  pagesBySession: {
-    s1: { 0: page0s1, 200: page200s1 },
-    s2: { 0: page0s2 },
-  } as Record<string, Record<number, MockPage>>,
+  before: null as string | null,
+  sessionKey: 's1',
 };
 
-mockUseQuery.mockImplementation((args: { variables: { sessionKey: string; offset: number } }) => {
-  state.lastVars = { sessionKey: args.variables.sessionKey, offset: args.variables.offset };
-  const page = state.pagesBySession[args.variables.sessionKey]?.[args.variables.offset];
-  return [
-    {
-      data: page ? { sessionTranscript: page } : undefined,
-      fetching: state.fetching,
-      error: state.error,
-    },
-    mockReexecute,
-  ];
-});
+mockUseQuery.mockImplementation(
+  (args: { variables: { sessionKey: string; before: string | null }; requestPolicy: string }) => {
+    state.before = args.variables.before;
+    state.sessionKey = args.variables.sessionKey;
+    state.lastRequestPolicy = args.requestPolicy;
+
+    let page: MockPage | undefined;
+    if (state.sessionKey === 's1' && state.before === null) {
+      page = latestS1;
+    } else if (state.sessionKey === 's1' && state.before === 'c-latest') {
+      page = olderS1;
+    } else if (state.sessionKey === 's2' && state.before === null) {
+      page = latestS2;
+    }
+
+    return [
+      {
+        data: page ? { sessionTranscript: page } : undefined,
+        fetching: state.fetching,
+        error: undefined,
+      },
+    ];
+  },
+);
 
 describe('useSessionTranscript', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.clearAllMocks();
-    state.lastVars = { sessionKey: 's1', offset: 0 };
     state.fetching = false;
-    state.error = undefined;
-    state.pagesBySession = {
-      s1: { 0: page0s1, 200: page200s1 },
-      s2: { 0: page0s2 },
-    };
+    latestS1.messages[0]!.content = 'latest-s1';
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  it('initial load returns latest page and hasPreviousPage', () => {
+    const { result } = renderHook(() => useSessionTranscript({ sessionKey: 's1' }));
+
+    expect(result.current.messages.map((m) => m.content)).toEqual(['latest-s1']);
+    expect(result.current.hasPreviousPage).toBe(true);
   });
 
-  it('defers reexecute and keeps loaded messages after refresh lifecycle', () => {
+  it('loadOlder prepends older page', () => {
+    const { result, rerender } = renderHook(() => useSessionTranscript({ sessionKey: 's1' }));
+
+    act(() => {
+      result.current.loadOlder();
+    });
+    act(() => {
+      rerender();
+    });
+
+    expect(result.current.messages.map((m) => m.content)).toEqual(['older-s1', 'latest-s1']);
+    expect(result.current.hasPreviousPage).toBe(false);
+  });
+
+  it('refresh uses network-only and replaces with newest page', () => {
+    const { result, rerender } = renderHook(() => useSessionTranscript({ sessionKey: 's1' }));
+
+    act(() => {
+      result.current.loadOlder();
+    });
+    act(() => {
+      rerender();
+    });
+    expect(result.current.messages.map((m) => m.content)).toEqual(['older-s1', 'latest-s1']);
+
+    latestS1.messages[0]!.content = 'latest-s1-refreshed';
+    act(() => {
+      result.current.refresh();
+    });
+
+    expect(result.current.messages.map((m) => m.content)).toEqual(['latest-s1-refreshed']);
+
+    act(() => {
+      rerender();
+    });
+
+    expect(result.current.isRefreshing).toBe(false);
+    expect(result.current.messages.map((m) => m.content)).toEqual(['latest-s1-refreshed']);
+  });
+
+  it('session switch resets state', () => {
     const { result, rerender } = renderHook(({ sessionKey }) => useSessionTranscript({ sessionKey }), {
       initialProps: { sessionKey: 's1' },
     });
 
     act(() => {
-      result.current.loadMore();
+      result.current.loadOlder();
     });
-    expect(state.lastVars).toEqual({ sessionKey: 's1', offset: 200 });
-    expect(result.current.messages.map((message) => message.content)).toEqual(['s1-p0', 's1-p200']);
+    rerender({ sessionKey: 's1' });
+    expect(result.current.messages.map((m) => m.content)).toEqual(['older-s1', 'latest-s1']);
 
-    act(() => {
-      result.current.refresh();
-      expect(mockReexecute).not.toHaveBeenCalled();
-    });
-
-    expect(mockReexecute).toHaveBeenCalledWith({ requestPolicy: 'network-only' });
-    expect(result.current.isRefreshing).toBe(true);
-
-    state.fetching = true;
-    act(() => {
-      rerender({ sessionKey: 's1' });
-    });
-    expect(result.current.isRefreshing).toBe(true);
-
-    state.fetching = false;
-    act(() => {
-      rerender({ sessionKey: 's1' });
-    });
-    expect(result.current.isRefreshing).toBe(false);
-    expect(result.current.messages.map((message) => message.content)).toEqual(['s1-p0', 's1-p200']);
-    expect(result.current.hasMore).toBe(false);
+    rerender({ sessionKey: 's2' });
+    rerender({ sessionKey: 's2' });
+    expect(result.current.messages.map((m) => m.content)).toEqual(['latest-s2']);
   });
 
-  it('accumulates messages across pages', () => {
-    const { result } = renderHook(() => useSessionTranscript({ sessionKey: 's1' }));
-
-    expect(result.current.messages.map((message) => message.content)).toEqual(['s1-p0']);
-
-    act(() => {
-      result.current.loadMore();
-    });
-
-    expect(result.current.messages.map((message) => message.content)).toEqual(['s1-p0', 's1-p200']);
-  });
-
-  it('falls back from refresh loading with timeout when fetching edge is never observed', () => {
+  it('loadOlder is ignored during refresh', () => {
     const { result } = renderHook(() => useSessionTranscript({ sessionKey: 's1' }));
 
     act(() => {
       result.current.refresh();
+      result.current.loadOlder();
     });
 
-    expect(result.current.isRefreshing).toBe(true);
-
-    act(() => {
-      vi.advanceTimersByTime(10_000);
-    });
-
-    expect(result.current.isRefreshing).toBe(false);
+    expect(state.before).toBe(null);
   });
 
-  it('resets pagination cache when sessionKey changes', () => {
-    const { result, rerender } = renderHook(({ sessionKey }) => useSessionTranscript({ sessionKey }), {
-      initialProps: { sessionKey: 's1' },
-    });
+  it('dedups same cursor page prepend', () => {
+    const { result, rerender } = renderHook(() => useSessionTranscript({ sessionKey: 's1' }));
 
     act(() => {
-      result.current.loadMore();
+      result.current.loadOlder();
     });
-    expect(result.current.messages.map((message) => message.content)).toEqual(['s1-p0', 's1-p200']);
+    rerender();
+    expect(result.current.messages.map((m) => m.content)).toEqual(['older-s1', 'latest-s1']);
 
     act(() => {
-      rerender({ sessionKey: 's2' });
+      result.current.loadOlder();
     });
-    act(() => {
-      rerender({ sessionKey: 's2' });
-    });
+    rerender();
 
-    expect(result.current.meta?.displayName).toBe('Session s2');
-    expect(result.current.messages.map((message) => message.content)).toEqual(['s2-p0']);
+    expect(result.current.messages.map((m) => m.content)).toEqual(['older-s1', 'latest-s1']);
   });
 
-  it('normalizes unknown roles to assistant', () => {
-    const { result } = renderHook(() => useSessionTranscript({ sessionKey: 's2' }));
-    expect(result.current.messages[0]?.role).toBe('assistant');
+  it('discards stale session response', () => {
+    mockUseQuery.mockImplementationOnce(() => [
+      {
+        data: { sessionTranscript: staleS2ForS1 },
+        fetching: false,
+        error: undefined,
+      },
+    ]);
+
+    const { result } = renderHook(() => useSessionTranscript({ sessionKey: 's1' }));
+    expect(result.current.messages.map((m) => m.content)).toEqual([]);
   });
 });

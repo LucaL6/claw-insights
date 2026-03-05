@@ -190,6 +190,13 @@ export type ModelTokens = {
   tokensK: Scalars['Float']['output'];
 };
 
+export type PageInfo = {
+  endCursor?: Maybe<Scalars['String']['output']>;
+  hasNextPage: Scalars['Boolean']['output'];
+  hasPreviousPage: Scalars['Boolean']['output'];
+  startCursor?: Maybe<Scalars['String']['output']>;
+};
+
 export type Query = {
   channels: Array<Channel>;
   cronJobs: Array<CronJob>;
@@ -234,8 +241,9 @@ export type QueryRecentLogsArgs = {
 
 
 export type QuerySessionTranscriptArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
   sessionKey: Scalars['String']['input'];
 };
 
@@ -287,8 +295,6 @@ export type SessionTranscript = {
   durationMs: Scalars['Int']['output'];
   /** File size in bytes */
   fileSize: Scalars['Int']['output'];
-  /** Whether there are more messages beyond limit */
-  hasMore: Scalars['Boolean']['output'];
   /** Whether this is a sub-agent session */
   isSubAgent: Scalars['Boolean']['output'];
   /** Session kind: direct / group / cron */
@@ -297,6 +303,7 @@ export type SessionTranscript = {
   messages: Array<TranscriptMessage>;
   /** Model at session start */
   model: Scalars['String']['output'];
+  pageInfo: PageInfo;
   /** Parent session display name (sub-agent only) */
   parentDisplayName?: Maybe<Scalars['String']['output']>;
   /** Session key */

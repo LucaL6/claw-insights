@@ -18,10 +18,17 @@ export function transcriptResolvers(ctx: AppContext): Partial<Resolvers> {
       return null;
     }
 
+    if (args.before && args.after) {
+      throw new GraphQLError('Cannot specify both before and after', {
+        extensions: { code: 'BAD_USER_INPUT' },
+      });
+    }
+
     try {
       const result = await readTranscript(filePath, args.sessionKey, {
         limit: args.limit ?? undefined,
-        offset: args.offset ?? undefined,
+        before: args.before ?? undefined,
+        after: args.after ?? undefined,
       });
       const ms = performance.now() - start;
       if (ms > 200) {

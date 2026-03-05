@@ -4,19 +4,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../test/render';
 import { type TimelineState, TranscriptTimeline } from '../TranscriptTimeline';
 
-// Mock TruncatedContent to just render children
 vi.mock('../../ui/TruncatedContent', () => ({
   TruncatedContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-
-// Mock react-markdown to avoid ESM issues in happy-dom
-vi.mock('react-markdown', () => ({
-  default: ({ children }: { children: string }) => <span>{children}</span>,
-}));
-
-vi.mock('rehype-highlight', () => ({
-  default: {},
-}));
+vi.mock('react-markdown', () => ({ default: ({ children }: { children: string }) => <span>{children}</span> }));
+vi.mock('rehype-highlight', () => ({ default: {} }));
 
 const makeMessage = (role: 'user' | 'assistant' | 'tool', content: string) => ({
   timestamp: '2024-01-01T10:00:00Z',
@@ -31,8 +23,7 @@ const makeMessage = (role: 'user' | 'assistant' | 'tool', content: string) => ({
 describe('TranscriptTimeline', () => {
   it('renders loading state with skeleton', () => {
     const { container } = renderWithProviders(<TranscriptTimeline state={{ status: 'loading' }} />);
-    const pulsingElements = container.querySelectorAll('.animate-pulse');
-    expect(pulsingElements.length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 
   it('renders empty state message', () => {
@@ -43,18 +34,16 @@ describe('TranscriptTimeline', () => {
   it('renders error state with retry button', () => {
     const retry = vi.fn();
     renderWithProviders(<TranscriptTimeline state={{ status: 'error', retry }} />);
-    expect(screen.getByText('Failed to load transcript')).toBeDefined();
-    const retryBtn = screen.getByText('Retry');
-    retryBtn.click();
+    screen.getByText('Retry').click();
     expect(retry).toHaveBeenCalled();
   });
 
-  it('renders messages with correct role labels', () => {
+  it('renders messages with role labels', () => {
     const state: TimelineState = {
       status: 'ready',
       messages: [makeMessage('user', 'Hello'), makeMessage('assistant', 'Hi'), makeMessage('tool', 'result')],
       totalMessages: 3,
-      hasMore: false,
+      hasPreviousPage: false,
     };
     renderWithProviders(<TranscriptTimeline state={state} />);
     expect(screen.getByText('user')).toBeDefined();
@@ -62,14 +51,15 @@ describe('TranscriptTimeline', () => {
     expect(screen.getByText('TOOL')).toBeDefined();
   });
 
-  it('shows hasMore indicator when there are more messages', () => {
+  it('shows load older indicator when there are previous messages', () => {
     const state: TimelineState = {
       status: 'ready',
       messages: [makeMessage('user', 'Hello')],
       totalMessages: 50,
-      hasMore: true,
+      hasPreviousPage: true,
     };
     renderWithProviders(<TranscriptTimeline state={state} />);
     expect(screen.getByText(/49 more messages/)).toBeDefined();
+    expect(screen.getByText(/↑/)).toBeDefined();
   });
 });

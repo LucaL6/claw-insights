@@ -6,12 +6,11 @@ export interface JumpRequest {
 }
 
 export interface UseTranscriptNavigatorOptions {
-  totalMessages: number;
   loadedCount: number;
-  hasMore: boolean;
-  isLoadingMore: boolean;
+  hasPreviousPage: boolean;
+  isLoadingOlder: boolean;
   isFetching: boolean;
-  loadMore: () => void;
+  loadOlder: () => void;
 }
 
 export interface UseTranscriptNavigatorResult {
@@ -21,119 +20,107 @@ export interface UseTranscriptNavigatorResult {
   jumpToIndex: (index: number) => void;
   jumpToStart: () => void;
   jumpToEnd: () => void;
-  isLoadingToEnd: boolean;
+  isLoadingToStart: boolean;
 }
 
 /** Bail out if loadedCount doesn't increase for this many idle cycles. */
-const MAX_NO_PROGRESS_CYCLES = 2;
+const MAX_NO_PROGRESS_CYCLES = 5;
 
 function lastLoadedIndex(loadedCount: number): number {
   return Math.max(loadedCount - 1, 0);
 }
 
 export function useTranscriptNavigator(options: UseTranscriptNavigatorOptions): UseTranscriptNavigatorResult {
-  const { totalMessages, loadedCount, hasMore, isLoadingMore, isFetching, loadMore } = options;
+  const { loadedCount, hasPreviousPage, isLoadingOlder, isFetching, loadOlder } = options;
 
   const [jumpRequest, setJumpRequest] = useState<JumpRequest | undefined>(undefined);
   const [visibleIndex, setVisibleIndex] = useState<number | undefined>(undefined);
-  const [isLoadingToEnd, setIsLoadingToEnd] = useState(false);
+  const [isLoadingToStart, setIsLoadingToStart] = useState(false);
 
   const jumpKeyRef = useRef(0);
-  const pendingJumpToEndRef = useRef(false);
-  const targetIndexRef = useRef<number | undefined>(undefined);
+  const pendingJumpToStartRef = useRef(false);
   const lastLoadedCountRef = useRef(0);
   const noProgressCyclesRef = useRef(0);
 
-  const resetJumpToEndState = useCallback(() => {
-    pendingJumpToEndRef.current = false;
-    targetIndexRef.current = undefined;
+  const resetJumpToStartState = useCallback(() => {
+    pendingJumpToStartRef.current = false;
     noProgressCyclesRef.current = 0;
     lastLoadedCountRef.current = 0;
-    setIsLoadingToEnd(false);
+    setIsLoadingToStart(false);
   }, []);
 
   const jumpToIndex = useCallback(
     (index: number) => {
-      resetJumpToEndState();
+      resetJumpToStartState();
       jumpKeyRef.current += 1;
       setJumpRequest({ index, key: jumpKeyRef.current });
       setVisibleIndex(index);
     },
-    [resetJumpToEndState],
+    [resetJumpToStartState],
   );
 
   const jumpToStart = useCallback(() => {
-    jumpToIndex(0);
-  }, [jumpToIndex]);
-
-  const jumpToEnd = useCallback(() => {
-    if (pendingJumpToEndRef.current || isLoadingToEnd) {
+    if (pendingJumpToStartRef.current || isLoadingToStart) {
       return;
     }
 
-    const targetIndex = Math.max(totalMessages - 1, 0);
-    const currentLastLoaded = lastLoadedIndex(loadedCount);
-
-    if (!hasMore || currentLastLoaded >= targetIndex) {
-      jumpToIndex(targetIndex);
+    if (!hasPreviousPage) {
+      jumpToIndex(0);
       return;
     }
 
-    pendingJumpToEndRef.current = true;
-    targetIndexRef.current = targetIndex;
+    pendingJumpToStartRef.current = true;
     lastLoadedCountRef.current = loadedCount;
     noProgressCyclesRef.current = 0;
-    setIsLoadingToEnd(true);
+    setIsLoadingToStart(true);
 
     if (!isFetching) {
-      loadMore();
+      loadOlder();
     }
-  }, [hasMore, isFetching, isLoadingToEnd, jumpToIndex, loadMore, loadedCount, totalMessages]);
+  }, [hasPreviousPage, isFetching, isLoadingToStart, jumpToIndex, loadOlder, loadedCount]);
+
+  const jumpToEnd = useCallback(() => {
+    jumpToIndex(lastLoadedIndex(loadedCount));
+  }, [jumpToIndex, loadedCount]);
 
   useEffect(() => {
-    if (!pendingJumpToEndRef.current) {
+    if (!pendingJumpToStartRef.current) {
       return;
     }
 
-    const targetIndex = targetIndexRef.current ?? Math.max(totalMessages - 1, 0);
-    const currentLastLoaded = lastLoadedIndex(loadedCount);
-
-    if (currentLastLoaded >= targetIndex) {
-      pendingJumpToEndRef.current = false;
-      targetIndexRef.current = undefined;
+    if (!hasPreviousPage) {
+      pendingJumpToStartRef.current = false;
       noProgressCyclesRef.current = 0;
       lastLoadedCountRef.current = 0;
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Deterministic terminal transition when frozen jump-to-end target is reached.
-      jumpToIndex(targetIndex);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Terminal transition when oldest page is fully loaded.
+      jumpToIndex(0);
       return;
     }
 
     if (loadedCount > lastLoadedCountRef.current) {
       lastLoadedCountRef.current = loadedCount;
       noProgressCyclesRef.current = 0;
-    } else if (!isLoadingMore && !isFetching) {
+    } else if (!isLoadingOlder && !isFetching) {
       noProgressCyclesRef.current += 1;
     }
 
     if (noProgressCyclesRef.current >= MAX_NO_PROGRESS_CYCLES) {
-      pendingJumpToEndRef.current = false;
-      targetIndexRef.current = undefined;
+      pendingJumpToStartRef.current = false;
       noProgressCyclesRef.current = 0;
       lastLoadedCountRef.current = 0;
 
-      jumpToIndex(currentLastLoaded);
+      jumpToIndex(0);
       return;
     }
 
-    if (!isLoadingMore && !isFetching) {
-      loadMore();
+    if (!isLoadingOlder && !isFetching) {
+      loadOlder();
     }
-  }, [hasMore, isFetching, isLoadingMore, jumpToIndex, loadMore, loadedCount, totalMessages]);
+  }, [hasPreviousPage, isFetching, isLoadingOlder, jumpToIndex, loadOlder, loadedCount]);
 
   useEffect(
     () => () => {
-      pendingJumpToEndRef.current = false;
-      targetIndexRef.current = undefined;
+      pendingJumpToStartRef.current = false;
       noProgressCyclesRef.current = 0;
       lastLoadedCountRef.current = 0;
     },
@@ -147,6 +134,6 @@ export function useTranscriptNavigator(options: UseTranscriptNavigatorOptions): 
     jumpToIndex,
     jumpToStart,
     jumpToEnd,
-    isLoadingToEnd,
+    isLoadingToStart,
   };
 }
