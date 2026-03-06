@@ -102,14 +102,16 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         })}
       </nav>
 
-      {/* Footer: version only */}
+      {/* Footer: brand only */}
       {!collapsed && (
-        <div className="flex-shrink-0 border-t border-edge-subtle px-3 py-2">
-          <div className="text-[10px] text-fg-secondary flex items-center gap-1.5">
-            <BrandLogo size={12} className="shrink-0 opacity-80" />
-            <span>
-              {t('brand.name')} v{version}
-            </span>
+        <div data-testid="sidebar-brand-footer" className="flex-shrink-0 px-3 pt-2 pb-3">
+          <div className="h-px mb-2.5" style={{ background: 'var(--sidebar-brand-divider)' }} />
+          <div className="flex items-center gap-2">
+            <BrandLogo size={16} className="shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-medium text-fg-secondary">{t('brand.name')}</span>
+              <span className="text-[9px] mono text-fg-dim mt-0.5">v{version}</span>
+            </div>
           </div>
         </div>
       )}

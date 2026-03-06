@@ -38,6 +38,76 @@ function formatHHMM(iso: string): string {
   }
 }
 
+const MIN_MARKERS = 4;
+const MAX_MARKERS = 12;
+const MINUTES_PER_MARKER = 10;
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function parseTimestampMs(iso: string, fallback: number): number {
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? fallback : ms;
+}
+
+function targetMarkerCount(timestamps: string[]): number {
+  const messageCount = timestamps.length;
+  if (messageCount <= 1) {
+    return messageCount;
+  }
+  if (messageCount <= MAX_MARKERS) {
+    return messageCount;
+  }
+
+  const firstMs = parseTimestampMs(timestamps[0], 0);
+  const lastMs = parseTimestampMs(timestamps[messageCount - 1], messageCount - 1);
+  const spanMinutes = Math.max((lastMs - firstMs) / 60_000, 0);
+
+  const byTime = Math.max(2, Math.ceil(spanMinutes / MINUTES_PER_MARKER) + 1);
+  const byCount = Math.ceil(Math.sqrt(messageCount) * 2);
+  const blended = Math.round((byTime + byCount) / 2);
+
+  return clamp(Math.min(blended, messageCount), MIN_MARKERS, MAX_MARKERS);
+}
+
+function nearestUnselectedByTime(targetMs: number, timeMs: number[], selected: Set<number>): number | undefined {
+  let bestIndex: number | undefined;
+  let bestDist = Infinity;
+
+  for (let i = 0; i < timeMs.length; i += 1) {
+    if (selected.has(i)) {
+      continue;
+    }
+    const dist = Math.abs(timeMs[i] - targetMs);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIndex = i;
+    }
+  }
+
+  return bestIndex;
+}
+
+function nearestUnselectedByIndex(targetIndex: number, total: number, selected: Set<number>): number | undefined {
+  if (!selected.has(targetIndex) && targetIndex >= 0 && targetIndex < total) {
+    return targetIndex;
+  }
+
+  for (let offset = 1; offset < total; offset += 1) {
+    const left = targetIndex - offset;
+    const right = targetIndex + offset;
+    if (left >= 0 && !selected.has(left)) {
+      return left;
+    }
+    if (right < total && !selected.has(right)) {
+      return right;
+    }
+  }
+
+  return undefined;
+}
+
 function buildMarkers(timestamps: string[]): TimeMarker[] {
   if (timestamps.length === 0) {
     return [];
@@ -46,36 +116,63 @@ function buildMarkers(timestamps: string[]): TimeMarker[] {
     return [{ label: formatHHMM(timestamps[0]), index: 0 }];
   }
 
-  const maxMarkers = 8;
-  const count = Math.min(maxMarkers, timestamps.length);
-  const step = (timestamps.length - 1) / (count - 1);
-  const markers: TimeMarker[] = [];
-  const seen = new Set<string>();
+  const count = targetMarkerCount(timestamps);
+  const total = timestamps.length;
+  const lastIndex = total - 1;
 
-  for (let i = 0; i < count; i++) {
-    const idx = Math.round(i * step);
-    const label = formatHHMM(timestamps[idx]);
-    if (!seen.has(label) || i === 0 || i === count - 1) {
-      markers.push({ label, index: idx });
-      seen.add(label);
+  const timeMs = timestamps.map((iso, index) => parseTimestampMs(iso, index));
+  const firstMs = timeMs[0];
+  const lastMs = timeMs[lastIndex];
+
+  const selected = new Set<number>([0, lastIndex]);
+
+  if (count > 2) {
+    const span = Math.max(lastMs - firstMs, 0);
+    if (span > 0) {
+      for (let i = 1; i < count - 1; i += 1) {
+        const targetMs = firstMs + (span * i) / (count - 1);
+        const nextIndex = nearestUnselectedByTime(targetMs, timeMs, selected);
+        if (nextIndex !== undefined) {
+          selected.add(nextIndex);
+        }
+      }
+    }
+
+    for (let i = 1; selected.size < count && i < count - 1; i += 1) {
+      const targetIndex = Math.round((lastIndex * i) / (count - 1));
+      const nextIndex = nearestUnselectedByIndex(targetIndex, total, selected);
+      if (nextIndex !== undefined) {
+        selected.add(nextIndex);
+      }
     }
   }
-  return markers;
+
+  return [...selected]
+    .sort((a, b) => a - b)
+    .map((index) => ({
+      label: formatHHMM(timestamps[index]),
+      index,
+    }));
 }
 
-/** Find the marker whose index is closest to (but ≤) the given message index */
+/** Find the marker whose index is closest to the given message index. */
 function findNearestMarker(markers: TimeMarker[], msgIndex: number): number | undefined {
   if (markers.length === 0) {
     return undefined;
   }
+
   let best = markers[0].index;
-  for (const m of markers) {
-    if (m.index <= msgIndex) {
-      best = m.index;
-    } else {
-      break;
+  let bestDist = Math.abs(best - msgIndex);
+
+  for (let i = 1; i < markers.length; i += 1) {
+    const index = markers[i].index;
+    const dist = Math.abs(index - msgIndex);
+    if (dist < bestDist || (dist === bestDist && index > best)) {
+      best = index;
+      bestDist = dist;
     }
   }
+
   return best;
 }
 

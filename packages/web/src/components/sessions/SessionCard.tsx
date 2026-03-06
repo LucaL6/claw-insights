@@ -19,6 +19,7 @@ interface Props {
   status: string;
   kind?: string;
   updatedAt: number;
+  turnCount?: number;
   /** 'primary' = full session card, 'compact' = sub-agent row */
   variant?: 'primary' | 'compact';
   /** Primary only: number of sub-agents */
@@ -41,6 +42,7 @@ export function SessionCard({
   status,
   kind,
   updatedAt,
+  turnCount,
   variant = 'primary',
   subAgentCount,
   onToggle,
@@ -64,6 +66,7 @@ export function SessionCard({
           usagePercent,
           status,
           updatedAt,
+          turnCount,
           hovered,
           setHovered,
           t,
@@ -155,6 +158,7 @@ interface CompactProps {
   usagePercent: number;
   status: string;
   updatedAt: number;
+  turnCount?: number;
   hovered: boolean;
   setHovered: (v: boolean) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -171,6 +175,7 @@ function CompactCard({
   usagePercent,
   status,
   updatedAt,
+  turnCount,
   hovered,
   setHovered,
   t,
@@ -180,7 +185,11 @@ function CompactCard({
 }: CompactProps) {
   const isDone = status === 'DONE' || status === 'FAILED';
   const completionMark = status === 'DONE' ? ' ✓' : status === 'FAILED' ? ' ✕' : '';
-  const isStarting = totalTokens === 0 && status === 'ACTIVE';
+  const hasTurnCount = typeof turnCount === 'number';
+  const isStarting = status === 'ACTIVE' && hasTurnCount && turnCount === 0 && totalTokens === 0;
+  const isRunning = status === 'ACTIVE' && hasTurnCount && turnCount > 0;
+  const showTransientState = isStarting || (isRunning && totalTokens === 0);
+  const transientLabel = isStarting ? t('sessions.starting') : t('sessions.running');
 
   return (
     <div
@@ -221,11 +230,11 @@ function CompactCard({
         setHovered(false);
       }}
     >
-      {isStarting ? (
+      {showTransientState ? (
         <div className="flex items-center gap-2">
           <StatusDot status={status} size="sm" />
           <span className="mono text-[13px] text-fg">{displayName}</span>
-          <span className="text-xs animate-pulse text-fg-dim">{t('sessions.starting')}</span>
+          <span className="text-xs animate-pulse text-fg-dim">{transientLabel}</span>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -235,6 +244,7 @@ function CompactCard({
               {displayName}
               {completionMark}
             </span>
+            {isRunning && <span className="text-[11px] text-fg-dim animate-pulse">{t('sessions.running')}</span>}
             <TagPill variant="model" size="sm">
               <span className="mono">{formatModel(model)}</span>
             </TagPill>

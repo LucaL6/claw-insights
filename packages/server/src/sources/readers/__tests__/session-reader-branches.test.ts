@@ -141,7 +141,49 @@ describe('SessionReader branches', () => {
     reader.destroy();
   });
 
-  it('attachSubAgents merges spawnedBy and parentChildMap', () => {
+  it('reload attaches children from spawnedBy without SpawnBus events', () => {
+    writeSessions({
+      'agent:main:parent': {
+        sessionId: 'p1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+      },
+      'agent:main:subagent:child': {
+        sessionId: 'c1',
+        updatedAt: Date.now(),
+        chatType: null,
+        spawnedBy: 'agent:main:parent',
+      },
+    });
+
+    const reader = new SessionReader(tmpFile);
+    const parent = reader.getSession('agent:main:parent');
+    expect(parent?.subAgents.map((s) => s.key)).toEqual(['agent:main:subagent:child']);
+    reader.destroy();
+  });
+
+  it('child attached via spawnedBy does not appear in top-level getSessions()', () => {
+    writeSessions({
+      'agent:main:parent': {
+        sessionId: 'p1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+      },
+      'agent:main:subagent:child': {
+        sessionId: 'c1',
+        updatedAt: Date.now(),
+        chatType: null,
+        spawnedBy: 'agent:main:parent',
+      },
+    });
+
+    const reader = new SessionReader(tmpFile);
+    const topLevelKeys = reader.getSessions().map((s) => s.key);
+    expect(topLevelKeys).toEqual(['agent:main:parent']);
+    reader.destroy();
+  });
+
+  it('attachSubAgents ignores parentChildMap and rebuilds from spawnedBy only', () => {
     writeSessions({
       'agent:main:parent': {
         sessionId: 'p1',
@@ -160,13 +202,52 @@ describe('SessionReader branches', () => {
         chatType: null,
       },
     });
-    const reader = new SessionReader(tmpFile);
+    // dual mode kept here for compatibility coverage; hierarchy behavior is spawnedBy-only.
+    const reader = new SessionReader(tmpFile, { sessionHierarchyMode: 'dual' });
     reader.attachSubAgents(new Map([['agent:main:parent', ['agent:main:child-tracker']]]));
     const parent = reader.getSession('agent:main:parent');
-    expect(parent!.subAgents.length).toBe(2);
-    // Children should be excluded from getSessions
-    const sessions = reader.getSessions();
-    expect(sessions.length).toBe(1);
+    expect(parent!.subAgents.map((s) => s.key)).toEqual(['agent:main:child-spawn']);
+
+    const topLevelKeys = reader
+      .getSessions()
+      .map((s) => s.key)
+      .sort();
+    expect(topLevelKeys).toEqual(['agent:main:child-tracker', 'agent:main:parent']);
+    reader.destroy();
+  });
+
+  it('attachSubAgents ignores parentChildMap in single mode and uses spawnedBy only', () => {
+    writeSessions({
+      'agent:main:parent': {
+        sessionId: 'p1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+      },
+      'agent:main:child-spawn': {
+        sessionId: 'c1',
+        updatedAt: Date.now(),
+        chatType: null,
+        spawnedBy: 'agent:main:parent',
+      },
+      'agent:main:child-tracker': {
+        sessionId: 'c2',
+        updatedAt: Date.now(),
+        chatType: null,
+      },
+    });
+
+    const reader = new SessionReader(tmpFile, { sessionHierarchyMode: 'single' });
+    reader.attachSubAgents(new Map([['agent:main:parent', ['agent:main:child-tracker']]]));
+
+    const parent = reader.getSession('agent:main:parent');
+    expect(parent!.subAgents.map((s) => s.key)).toEqual(['agent:main:child-spawn']);
+
+    const topLevelKeys = reader
+      .getSessions()
+      .map((s) => s.key)
+      .sort();
+    expect(topLevelKeys).toEqual(['agent:main:child-tracker', 'agent:main:parent']);
+
     reader.destroy();
   });
 
@@ -215,28 +296,28 @@ describe('SessionReader branches', () => {
     reader.destroy();
   });
 
-  it('attachSubAgents skips non-existent parent in parentChildMap', () => {
+  it('attachSubAgents ignores non-existent parent mappings in parentChildMap', () => {
     writeSessions({
       'agent:main:child': { sessionId: 'c', updatedAt: Date.now(), chatType: 'direct' },
     });
-    const reader = new SessionReader(tmpFile);
+    const reader = new SessionReader(tmpFile, { sessionHierarchyMode: 'dual' });
     reader.attachSubAgents(new Map([['agent:main:nonexistent-parent', ['agent:main:child']]]));
-    // Should not throw; child is in attachedChildKeys but parent doesn't exist
+
     const sessions = reader.getSessions();
-    expect(sessions.length).toBe(0); // child filtered out since it's in attachedChildKeys
+    expect(sessions.map((s) => s.key)).toEqual(['agent:main:child']);
     reader.destroy();
   });
 
-  it('attachSubAgents deduplicates children from spawnedBy and parentChildMap', () => {
+  it('attachSubAgents keeps spawnedBy child attachment stable when map repeats same child', () => {
     writeSessions({
       'agent:main:parent': { sessionId: 'p', updatedAt: Date.now(), chatType: 'direct' },
       'agent:main:child': { sessionId: 'c', updatedAt: Date.now(), chatType: null, spawnedBy: 'agent:main:parent' },
     });
-    const reader = new SessionReader(tmpFile);
-    // Same child from both spawnedBy and parentChildMap
+    const reader = new SessionReader(tmpFile, { sessionHierarchyMode: 'dual' });
     reader.attachSubAgents(new Map([['agent:main:parent', ['agent:main:child']]]));
     const parent = reader.getSession('agent:main:parent');
-    expect(parent!.subAgents.length).toBe(1); // deduped
+    expect(parent!.subAgents.length).toBe(1);
+    expect(parent!.subAgents[0].key).toBe('agent:main:child');
     reader.destroy();
   });
 

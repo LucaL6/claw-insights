@@ -5,7 +5,6 @@ import { getPorts, registerPorts } from './context/ports.js';
 import type { Database } from './db/database.js';
 import { initDatabase } from './db/init.js';
 import { MessageEventBus } from './events/message-event-bus.js';
-import { createSpawnBus } from './events/spawn-bus.js';
 import { TokenEventBus } from './events/token-event-bus.js';
 import { createChildLogger } from './logger.js';
 import { Pipeline } from './pipeline/index.js';
@@ -92,13 +91,9 @@ export async function createContext(): Promise<AppContext> {
   sessionReader.setDb(db);
   const cronReader = new CronReader(config.cronPath);
   const logTailer = new LogTailer(config.logDir);
-  const spawnBus = createSpawnBus();
-  const spawnTracker = new SpawnTracker(spawnBus);
-
-  // Enable event-driven subAgent attachment
-  sessionReader.setSpawnBus(spawnBus);
-  // Initial attach for existing links (one-time bootstrap)
-  sessionReader.attachSubAgents(spawnTracker.getParentChildMap());
+  // Task 9 (post-cutover): SpawnTracker remains for diagnostics/telemetry only.
+  // Hierarchy authority is sessions.json.spawnedBy; no event-driven wiring in context.
+  const spawnTracker = new SpawnTracker();
   const aggregator = new Aggregator(db);
 
   const tokenBus = new TokenEventBus();

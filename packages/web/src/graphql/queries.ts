@@ -53,6 +53,7 @@ export const SessionsQuery = graphql(/* GraphQL */ `
       usagePercent
       status
       updatedAt
+      turnCount
       subAgents {
         key
         displayName
@@ -64,6 +65,7 @@ export const SessionsQuery = graphql(/* GraphQL */ `
         usagePercent
         status
         updatedAt
+        turnCount
       }
     }
   }

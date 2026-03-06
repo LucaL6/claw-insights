@@ -60,6 +60,14 @@ export interface SessionTranscriptMessage {
 
 type TranscriptPage = NonNullable<TranscriptResult['sessionTranscript']>;
 
+/** Tracks the origin of the active refresh cycle. */
+export type RefreshMode = 'manual' | 'auto-silent' | null;
+
+/** Refresh options for transcript fetches. */
+export interface RefreshOptions {
+  silent?: boolean;
+}
+
 export interface UseSessionTranscriptResult {
   meta: TranscriptPage | undefined;
   messages: SessionTranscriptMessage[];
@@ -70,7 +78,9 @@ export interface UseSessionTranscriptResult {
   hasPreviousPage: boolean;
   totalMessages: number;
   error: CombinedError | undefined;
-  refresh: () => void;
+  refreshTimedOut: boolean;
+  refreshMode: RefreshMode;
+  refresh: (options?: RefreshOptions) => boolean;
   loadOlder: () => void;
 }
 
@@ -78,6 +88,8 @@ interface UseSessionTranscriptOptions {
   sessionKey: string;
   pageSize?: number;
 }
+
+const REFRESH_TIMEOUT_MS = 10_000;
 
 function normalizeRole(role: string): 'user' | 'assistant' | 'tool' {
   if (role === 'user' || role === 'assistant' || role === 'tool') {
@@ -92,13 +104,29 @@ export function useSessionTranscript({
 }: UseSessionTranscriptOptions): UseSessionTranscriptResult {
   const [pages, setPages] = useState<TranscriptPage[]>([]);
   const [beforeCursor, setBeforeCursor] = useState<string | undefined>(undefined);
+  const [afterCursor, setAfterCursor] = useState<string | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshTimedOut, setRefreshTimedOut] = useState(false);
+  const [refreshMode, setRefreshMode] = useState<RefreshMode>(null);
 
   const sessionKeyRef = useRef(sessionKey);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const [result] = useQuery<TranscriptResult>({
+  const clearRefreshTimeout = useCallback(() => {
+    if (refreshTimeoutRef.current !== undefined) {
+      clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = undefined;
+    }
+  }, []);
+
+  const [result, reexecute] = useQuery<TranscriptResult>({
     query: SessionTranscriptQuery,
-    variables: { sessionKey, limit: pageSize, before: beforeCursor ?? null },
+    variables: {
+      sessionKey,
+      limit: pageSize,
+      before: afterCursor !== undefined ? null : (beforeCursor ?? null),
+      after: afterCursor ?? null,
+    },
     requestPolicy: isRefreshing ? 'network-only' : 'cache-first',
   });
 
@@ -108,11 +136,16 @@ export function useSessionTranscript({
     }
 
     sessionKeyRef.current = sessionKey;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Session switch is explicit reset boundary.
+    clearRefreshTimeout();
+    /* eslint-disable react-hooks/set-state-in-effect -- Session switch is explicit reset boundary. */
     setPages([]);
     setBeforeCursor(undefined);
+    setAfterCursor(undefined);
     setIsRefreshing(false);
-  }, [sessionKey]);
+    setRefreshTimedOut(false);
+    setRefreshMode(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [clearRefreshTimeout, sessionKey]);
 
   const transcript = result.data?.sessionTranscript;
 
@@ -121,12 +154,58 @@ export function useSessionTranscript({
       return;
     }
 
-    if (isRefreshing || beforeCursor === undefined) {
-      /* eslint-disable react-hooks/set-state-in-effect -- Page storage is the core synchronization side-effect of this hook. */
-      setPages([transcript]);
-      setBeforeCursor(undefined);
+    if (isRefreshing && afterCursor !== undefined) {
+      if (transcript.messages.length > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronizes local page store with fetched transcript page.
+        setPages((previous) => {
+          const startCursor = transcript.pageInfo.startCursor;
+          if (startCursor && previous.some((page) => page.pageInfo.startCursor === startCursor)) {
+            return previous;
+          }
+          return [...previous, transcript];
+        });
+      }
+
+      const hasNextAfterPage = transcript.pageInfo.hasNextPage;
+      const nextAfterCursor = hasNextAfterPage ? (transcript.pageInfo.endCursor ?? undefined) : undefined;
+      if (hasNextAfterPage && !nextAfterCursor) {
+        // Defensive failure path: inconsistent pagination metadata should not be treated as a successful refresh.
+        clearRefreshTimeout();
+        setAfterCursor(undefined);
+        setRefreshTimedOut(true);
+        setRefreshMode(null);
+        setIsRefreshing(false);
+        return;
+      }
+
+      if (nextAfterCursor && nextAfterCursor !== afterCursor) {
+        setAfterCursor(nextAfterCursor);
+        return;
+      }
+
+      clearRefreshTimeout();
+      setRefreshTimedOut(false);
+      setAfterCursor(undefined);
+      setRefreshMode(null);
       setIsRefreshing(false);
-      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
+
+    if (beforeCursor === undefined) {
+      if (isRefreshing) {
+        // Fallback full refresh path when no tail cursor exists yet.
+        clearRefreshTimeout();
+        setPages([transcript]);
+        setRefreshTimedOut(false);
+        setAfterCursor(undefined);
+        setRefreshMode(null);
+        setIsRefreshing(false);
+        return;
+      }
+
+      if (pages.length === 0) {
+        setPages([transcript]);
+      }
       return;
     }
 
@@ -137,7 +216,7 @@ export function useSessionTranscript({
       }
       return [transcript, ...previous];
     });
-  }, [beforeCursor, isRefreshing, result.fetching, transcript]);
+  }, [afterCursor, beforeCursor, clearRefreshTimeout, isRefreshing, pages.length, result.fetching, transcript]);
 
   const messages = useMemo<SessionTranscriptMessage[]>(() => {
     return pages.flatMap((page) =>
@@ -171,13 +250,58 @@ export function useSessionTranscript({
     setBeforeCursor(startCursor);
   }, [isRefreshing, pages, result.fetching]);
 
-  const refresh = useCallback(() => {
-    if (isRefreshing) {
+  useEffect(() => {
+    if (!isRefreshing || result.fetching || !result.error) {
       return;
     }
-    setIsRefreshing(true);
-    setBeforeCursor(undefined);
-  }, [isRefreshing]);
+
+    clearRefreshTimeout();
+    /* eslint-disable react-hooks/set-state-in-effect -- Refresh error finalization. */
+    setAfterCursor(undefined);
+    setRefreshMode(null);
+    setIsRefreshing(false);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [clearRefreshTimeout, isRefreshing, result.error, result.fetching]);
+
+  useEffect(() => {
+    return () => {
+      clearRefreshTimeout();
+    };
+  }, [clearRefreshTimeout]);
+
+  const refresh = useCallback(
+    (options?: RefreshOptions) => {
+      if (isRefreshing) {
+        return false;
+      }
+
+      const tailCursor = pages.length === 0 ? undefined : (pages[pages.length - 1]?.pageInfo.endCursor ?? undefined);
+
+      setIsRefreshing(true);
+      setRefreshTimedOut(false);
+      setRefreshMode(options?.silent ? 'auto-silent' : 'manual');
+
+      if (tailCursor) {
+        setAfterCursor(tailCursor);
+      } else {
+        setAfterCursor(undefined);
+        setBeforeCursor(undefined);
+        reexecute({ requestPolicy: 'network-only' });
+      }
+
+      clearRefreshTimeout();
+      refreshTimeoutRef.current = setTimeout(() => {
+        setRefreshTimedOut(true);
+        setAfterCursor(undefined);
+        setRefreshMode(null);
+        setIsRefreshing(false);
+        refreshTimeoutRef.current = undefined;
+      }, REFRESH_TIMEOUT_MS);
+
+      return true;
+    },
+    [clearRefreshTimeout, isRefreshing, pages, reexecute],
+  );
 
   const lastPage = pages.length > 0 ? pages[pages.length - 1] : undefined;
   const meta = lastPage ?? transcript;
@@ -194,6 +318,8 @@ export function useSessionTranscript({
     hasPreviousPage: hasPrevious,
     totalMessages: total,
     error: result.error,
+    refreshTimedOut,
+    refreshMode,
     refresh,
     loadOlder,
   };

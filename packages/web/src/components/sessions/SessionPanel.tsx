@@ -64,9 +64,29 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
   const sessions: SessionData[] = (result.data?.sessions ?? []).map((s) => ({
     ...s,
     status: s.status as string,
-    subAgents: s.subAgents.map((sa) => ({ ...sa, status: sa.status as string, subAgents: [] })),
+    subAgents: s.subAgents.map((sa) => ({
+      ...sa,
+      status: sa.status as string,
+      turnCount: sa.turnCount,
+      subAgents: [],
+    })),
   }));
   const visibleCount = sessions.length;
+
+  const selectedSession = selectedKey
+    ? sessions.flatMap((session) => [session, ...session.subAgents]).find((session) => session.key === selectedKey)
+    : undefined;
+
+  const liveSession = selectedSession
+    ? {
+        key: selectedSession.key,
+        displayName: selectedSession.displayName,
+        totalTokens: selectedSession.totalTokens,
+        contextTokens: selectedSession.contextTokens,
+        usagePercent: selectedSession.usagePercent,
+        status: selectedSession.status,
+      }
+    : undefined;
 
   const sortOptions: { val: SortBy; label: string }[] = [
     { val: 'UPDATED_AT', label: t('sessions.recent') },
@@ -139,19 +159,16 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
           )}
         </div>
       </CollapsibleSection>
-      {selectedKey &&
-        (() => {
-          const found = sessions.flatMap((s) => [s, ...s.subAgents]).find((s) => s.key === selectedKey);
-          return (
-            <SessionDrawer
-              key={selectedKey}
-              sessionKey={selectedKey}
-              onClose={handleClose}
-              status={found?.status}
-              displayName={found?.displayName}
-            />
-          );
-        })()}
+      {selectedKey && (
+        <SessionDrawer
+          key={selectedKey}
+          sessionKey={selectedKey}
+          onClose={handleClose}
+          status={selectedSession?.status}
+          displayName={selectedSession?.displayName}
+          liveSession={liveSession}
+        />
+      )}
     </>
   );
 }

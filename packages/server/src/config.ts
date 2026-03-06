@@ -38,6 +38,18 @@ function env(key: string): string | undefined {
   return process.env[`CLAW_INSIGHTS_${key}`] ?? process.env[`OPENCLAW_${key}`];
 }
 
+export type SessionHierarchyMode = 'dual' | 'single';
+
+export function safeSessionHierarchyMode(
+  envValue: string | undefined,
+  fallback: SessionHierarchyMode,
+): SessionHierarchyMode {
+  if (!envValue) {
+    return fallback;
+  }
+  return envValue === 'single' || envValue === 'dual' ? envValue : fallback;
+}
+
 // --- Token ---
 
 const MIN_TOKEN_LENGTH = 32;
@@ -137,6 +149,7 @@ export function loadConfigFile(): Record<string, unknown> {
       'hourlyRetention',
       'transcriptsDir',
       'deviceJsonPath',
+      'sessionHierarchyMode',
     ]);
     for (const key of Object.keys(raw)) {
       if (!knownKeys.has(key)) {
@@ -171,6 +184,7 @@ export interface AppConfig {
   hourlyRetention: string;
   aggregateIntervalMs: number;
   scanTiered: boolean;
+  sessionHierarchyMode: SessionHierarchyMode;
 }
 
 // --- CLI path detection (BUG-023) ---
@@ -249,6 +263,12 @@ export function resolveConfig(): AppConfig {
     hourlyRetention: env('HOURLY_RETENTION') ?? 'permanent',
     aggregateIntervalMs: 6 * 60 * 60 * 1000,
     scanTiered: envBool(env('SCAN_TIERED')) ?? true,
+    sessionHierarchyMode: safeSessionHierarchyMode(
+      env('SESSION_HIERARCHY_MODE'),
+      typeof file.sessionHierarchyMode === 'string'
+        ? safeSessionHierarchyMode(file.sessionHierarchyMode, 'single')
+        : 'single',
+    ),
   };
 }
 

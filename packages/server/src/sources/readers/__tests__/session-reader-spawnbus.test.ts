@@ -1,6 +1,6 @@
 /**
- * Tests for SessionReader SpawnBus integration (DESIGN-066)
- * Covers: setSpawnBus, onSpawnLink, pendingLinks, eventLinks, reload persistence
+ * Tests for SessionReader SpawnBus compatibility hook.
+ * Hierarchy authority is sessions.json spawnedBy (SpawnBus is non-authoritative).
  */
 import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -22,7 +22,7 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
-describe('SessionReader SpawnBus integration', () => {
+describe('SessionReader SpawnBus compatibility', () => {
   let reader: SessionReader;
   let spawnBus: SpawnBus;
 
@@ -45,7 +45,7 @@ describe('SessionReader SpawnBus integration', () => {
         contextTokens: 200000,
       },
     });
-    reader = new SessionReader(tmpFile);
+    reader = new SessionReader(tmpFile, { sessionHierarchyMode: 'dual' });
     spawnBus = new SpawnBus();
   });
 
@@ -54,124 +54,93 @@ describe('SessionReader SpawnBus integration', () => {
   });
 
   describe('setSpawnBus', () => {
-    it('subscribes to spawn:link events', () => {
+    it('subscribes to spawn:link events in dual mode (compatibility)', () => {
       const onLinkSpy = vi.spyOn(spawnBus, 'onLink');
       reader.setSpawnBus(spawnBus);
       expect(onLinkSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('unsubscribes previous handler on re-subscription', () => {
-      const bus1 = new SpawnBus();
-      const bus2 = new SpawnBus();
+    it('does not subscribe in single mode', () => {
+      const localReader = new SessionReader(tmpFile, { sessionHierarchyMode: 'single' });
+      const localBus = new SpawnBus();
+      const onLinkSpy = vi.spyOn(localBus, 'onLink');
 
-      reader.setSpawnBus(bus1);
-      reader.setSpawnBus(bus2);
+      localReader.setSpawnBus(localBus);
 
-      // Emit on old bus should not affect reader
-      bus1.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:child1' });
-
-      const parent = reader.getSession('agent:main:parent1');
-      expect(parent?.subAgents).toHaveLength(0); // Not attached via old bus
+      expect(onLinkSpy).not.toHaveBeenCalled();
+      localReader.destroy();
     });
   });
 
-  describe('onSpawnLink', () => {
-    it('attaches immediately when both sessions exist', () => {
-      reader.setSpawnBus(spawnBus);
-      spawnBus.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:child1' });
+  it('keeps hierarchy strictly from spawnedBy even when SpawnBus emits links (dual mode)', () => {
+    reader.setSpawnBus(spawnBus);
+    spawnBus.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:child1' });
 
-      const parent = reader.getSession('agent:main:parent1');
-      expect(parent?.subAgents).toHaveLength(1);
-      expect(parent?.subAgents[0].key).toBe('agent:main:subagent:child1');
-    });
+    const parent = reader.getSession('agent:main:parent1');
+    expect(parent?.subAgents).toHaveLength(0);
 
-    it('stores in pendingLinks when parent missing', () => {
-      reader.setSpawnBus(spawnBus);
-      spawnBus.emitLink({ parent: 'agent:main:missing-parent', child: 'agent:main:subagent:child1' });
-
-      const pending = (reader as any).pendingLinks;
-      expect(pending.get('agent:main:missing-parent')?.has('agent:main:subagent:child1')).toBe(true);
-    });
-
-    it('stores in pendingLinks when child missing', () => {
-      reader.setSpawnBus(spawnBus);
-      spawnBus.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:missing-child' });
-
-      const pending = (reader as any).pendingLinks;
-      expect(pending.get('agent:main:parent1')?.has('agent:main:subagent:missing-child')).toBe(true);
-    });
-
-    it('records in eventLinks for reload persistence', () => {
-      reader.setSpawnBus(spawnBus);
-      spawnBus.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:child1' });
-
-      const eventLinks = (reader as any).eventLinks;
-      expect(eventLinks.get('agent:main:parent1')?.has('agent:main:subagent:child1')).toBe(true);
-    });
-
-    it('prevents duplicate attachments', () => {
-      reader.setSpawnBus(spawnBus);
-      spawnBus.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:child1' });
-      spawnBus.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:child1' }); // Duplicate
-
-      const parent = reader.getSession('agent:main:parent1');
-      expect(parent?.subAgents).toHaveLength(1);
-    });
+    const topLevelKeys = reader
+      .getSessions()
+      .map((s) => s.key)
+      .sort();
+    expect(topLevelKeys).toEqual(['agent:main:parent1', 'agent:main:subagent:child1']);
   });
 
-  describe('applyEventLinks after reload', () => {
-    it('reapplies event-driven links after file reload', () => {
-      reader.setSpawnBus(spawnBus);
-      spawnBus.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:child1' });
-
-      // Verify initial attachment
-      let parent = reader.getSession('agent:main:parent1');
-      expect(parent?.subAgents).toHaveLength(1);
-
-      // Simulate file change and reload
-      writeSessions({
-        'agent:main:parent1': {
-          sessionId: 'p1',
-          updatedAt: Date.now(),
-          chatType: 'direct',
-          model: 'claude-opus-4-6',
-          totalTokens: 2000, // Changed
-          contextTokens: 200000,
-        },
-        'agent:main:subagent:child1': {
-          sessionId: 'c1',
-          updatedAt: Date.now(),
-          chatType: 'direct',
-          model: 'claude-opus-4-6',
-          totalTokens: 500,
-          contextTokens: 200000,
-        },
-      });
-
-      // Force reload
-      (reader as any).reload();
-
-      // Verify link persisted after reload
-      parent = reader.getSession('agent:main:parent1');
-      expect(parent?.subAgents).toHaveLength(1);
-      expect(parent?.subAgents[0].key).toBe('agent:main:subagent:child1');
-      expect(parent?.totalTokens).toBe(2000); // Confirms reload happened
+  it('keeps spawnedBy hierarchy correct without any SpawnBus configured', () => {
+    writeSessions({
+      'agent:main:parent1': {
+        sessionId: 'p1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        model: 'claude-opus-4-6',
+        totalTokens: 1000,
+        contextTokens: 200000,
+      },
+      'agent:main:subagent:child1': {
+        sessionId: 'c1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        model: 'claude-opus-4-6',
+        totalTokens: 500,
+        contextTokens: 200000,
+        spawnedBy: 'agent:main:parent1',
+      },
     });
+
+    const localReader = new SessionReader(tmpFile, { sessionHierarchyMode: 'single' });
+    const parent = localReader.getSession('agent:main:parent1');
+    expect(parent?.subAgents.map((s) => s.key)).toEqual(['agent:main:subagent:child1']);
+    expect(localReader.getSessions().map((s) => s.key)).toEqual(['agent:main:parent1']);
+    localReader.destroy();
   });
 
-  describe('destroy cleanup', () => {
-    it('unsubscribes from SpawnBus on destroy', () => {
-      reader.setSpawnBus(spawnBus);
-      reader.destroy();
+  it('does not persist event links across reload because events are non-authoritative', () => {
+    reader.setSpawnBus(spawnBus);
+    spawnBus.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:child1' });
 
-      // Emit after destroy should not attach
-      spawnBus.emitLink({ parent: 'agent:main:parent1', child: 'agent:main:subagent:child1' });
-
-      // Create new reader to check sessions weren't modified
-      const reader2 = new SessionReader(tmpFile);
-      const parent = reader2.getSession('agent:main:parent1');
-      expect(parent?.subAgents).toHaveLength(0);
-      reader2.destroy();
+    writeSessions({
+      'agent:main:parent1': {
+        sessionId: 'p1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        model: 'claude-opus-4-6',
+        totalTokens: 2000,
+        contextTokens: 200000,
+      },
+      'agent:main:subagent:child1': {
+        sessionId: 'c1',
+        updatedAt: Date.now(),
+        chatType: 'direct',
+        model: 'claude-opus-4-6',
+        totalTokens: 500,
+        contextTokens: 200000,
+      },
     });
+
+    (reader as any).reload();
+
+    const parent = reader.getSession('agent:main:parent1');
+    expect(parent?.subAgents).toHaveLength(0);
+    expect(parent?.totalTokens).toBe(2000);
   });
 });

@@ -1,3 +1,9 @@
+/** Narrow snapshot passed from sessions query into the drawer header. */
+export type LiveSessionSnapshot = Pick<
+  SessionData,
+  'key' | 'displayName' | 'totalTokens' | 'contextTokens' | 'usagePercent' | 'status'
+>;
+
 export interface SessionData {
   key: string;
   displayName: string;
@@ -9,6 +15,7 @@ export interface SessionData {
   usagePercent: number;
   status: string;
   updatedAt: number;
+  turnCount?: number;
   subAgents: SessionData[];
   [key: string]: unknown;
 }

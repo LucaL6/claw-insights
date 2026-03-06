@@ -23,6 +23,44 @@ describe('SpawnTracker', () => {
     expect(map.get('agent:main:parent')?.[0]).toBe('agent:main:child');
   });
 
+  it('parses run/session fields with flexible spacing and mixed session/sessionKey forms', () => {
+    const t = new SpawnTracker();
+
+    t.ingest({
+      time: '10:00',
+      level: 'INFO',
+      module: 'tools',
+      message: 'embedded run tool start tool=sessions_spawn runId = abc-123 sessionKey = agent:main:parent',
+    });
+    t.ingest({
+      time: '10:01',
+      level: 'INFO',
+      module: 'sessions',
+      message: 'spawned session runId = abc-123 session = agent:main:child',
+    });
+
+    expect(t.getParentChildMap().get('agent:main:parent')).toEqual(['agent:main:child']);
+  });
+
+  it('parses quoted session values from realistic log lines', () => {
+    const t = new SpawnTracker();
+
+    t.ingest({
+      time: '10:00',
+      level: 'INFO',
+      module: 'tools',
+      message: 'tool=sessions_spawn runId="quoted-1" session="agent:main:parent-q"',
+    });
+    t.ingest({
+      time: '10:01',
+      level: 'INFO',
+      module: 'sessions',
+      message: 'spawned session runId="quoted-1" sessionKey="agent:main:child-q"',
+    });
+
+    expect(t.getParentChildMap().get('agent:main:parent-q')).toEqual(['agent:main:child-q']);
+  });
+
   it('prune removes oldest entries when over maxEntries', () => {
     const t = new SpawnTracker();
     // Add 3 pairs

@@ -53,7 +53,7 @@ interface RangeConfig {
 }
 
 export const RANGE_CONFIG: Record<MetricsRangeKey, RangeConfig> = {
-  THIRTY_MIN: { rangeMinutes: 30, bucketMinutes: 5, bucketCount: 6 },
+  THIRTY_MIN: { rangeMinutes: 30, bucketMinutes: 2, bucketCount: 15 },
   ONE_HOUR: { rangeMinutes: 60, bucketMinutes: 5, bucketCount: 12 },
   SIX_HOUR: { rangeMinutes: 360, bucketMinutes: 15, bucketCount: 24 },
   TWELVE_HOUR: { rangeMinutes: 720, bucketMinutes: 30, bucketCount: 24 },

@@ -13,6 +13,19 @@ describe('parseLogLine branches', () => {
     expect(entry!.message).toBe('');
   });
 
+  it('parses message from raw[1] when raw[0] is metadata', () => {
+    const entry = parseLogLine(
+      JSON.stringify({
+        '0': '[meta] structured log envelope',
+        '1': '[agent/embedded] embedded run tool start runId=abc123',
+        _meta: { logLevelName: 'INFO' },
+      }),
+    );
+    expect(entry).not.toBeNull();
+    expect(entry!.module).toBe('agent/embedded');
+    expect(entry!.message).toContain('embedded run tool start');
+  });
+
   it('handles missing time field', () => {
     const entry = parseLogLine(JSON.stringify({ '0': 'msg' }));
     expect(entry).not.toBeNull();

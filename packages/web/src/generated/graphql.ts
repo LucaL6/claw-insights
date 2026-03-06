@@ -427,6 +427,7 @@ export type SessionsQuery = {
     usagePercent: number;
     status: SessionStatus;
     updatedAt: number;
+    turnCount: number;
     subAgents: Array<{
       key: string;
       displayName: string;
@@ -438,6 +439,7 @@ export type SessionsQuery = {
       usagePercent: number;
       status: SessionStatus;
       updatedAt: number;
+      turnCount: number;
     }>;
   }>;
 };
@@ -893,6 +895,7 @@ export const SessionsDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'usagePercent' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'status' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'turnCount' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'subAgents' },
@@ -909,6 +912,7 @@ export const SessionsDocument = {
                       { kind: 'Field', name: { kind: 'Name', value: 'usagePercent' } },
                       { kind: 'Field', name: { kind: 'Name', value: 'status' } },
                       { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'turnCount' } },
                     ],
                   },
                 },

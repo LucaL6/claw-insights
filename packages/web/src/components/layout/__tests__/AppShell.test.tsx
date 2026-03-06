@@ -1,4 +1,4 @@
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '../../../test/render';
@@ -81,10 +81,13 @@ describe('App Shell (desktop/mobile integration)', () => {
     expect(dashLink.getAttribute('aria-current')).toBeNull();
   });
 
-  it('desktop: Sidebar shows clock and version in footer', () => {
+  it('desktop: Sidebar shows clock and brand/version in footer', () => {
     mockViewport(1024);
     renderWithProviders(<AppShell page="dashboard" />);
     expect(screen.getByText(/\d{2}:\d{2}/)).toBeDefined();
-    expect(screen.getByText(/Claw Insights v1\.0\.0/)).toBeDefined();
+
+    const footer = screen.getByTestId('sidebar-brand-footer');
+    expect(within(footer).getByText('Claw Insights')).toBeDefined();
+    expect(within(footer).getByText(/v1\.0\.0/)).toBeDefined();
   });
 });

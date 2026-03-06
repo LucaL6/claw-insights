@@ -1,6 +1,6 @@
 import type { LogEntry, LogLevel } from '@claw-insights/shared';
 import { EventEmitter } from 'events';
-import { closeSync, type FSWatcher,openSync, readSync, statSync, watch } from 'fs';
+import { closeSync, type FSWatcher, openSync, readSync, statSync, watch } from 'fs';
 
 import { config } from '../../../config.js';
 import { createChildLogger } from '../../../logger.js';
@@ -17,14 +17,26 @@ function redact(msg: string): string {
   });
 }
 
+function getMessageFromRaw(raw: RawLogEntry): string {
+  return raw['1'] ?? raw['0'] ?? '';
+}
+
 function inferModule(raw: RawLogEntry): string {
-  const msg = raw['0'] ?? '';
+  const msg = getMessageFromRaw(raw);
   const match = msg.match(/^\[(\w+(?:\/\w+)?)\]/);
-  if (match) {return match[1];}
+  if (match) {
+    return match[1];
+  }
   const filePath = raw._meta?.path?.filePath ?? '';
-  if (filePath.includes('cron')) {return 'cron';}
-  if (filePath.includes('exec')) {return 'tools';}
-  if (filePath.includes('agent')) {return 'agent/embedded';}
+  if (filePath.includes('cron')) {
+    return 'cron';
+  }
+  if (filePath.includes('exec')) {
+    return 'tools';
+  }
+  if (filePath.includes('agent')) {
+    return 'agent/embedded';
+  }
   return 'system';
 }
 
@@ -35,6 +47,7 @@ function cleanMessage(msg: string): string {
 
 interface RawLogEntry {
   '0'?: string;
+  '1'?: string;
   _meta?: {
     logLevelName?: string;
     path?: { filePath?: string };
@@ -45,7 +58,7 @@ interface RawLogEntry {
 function parseLogLine(line: string): LogEntry | null {
   try {
     const raw = JSON.parse(line) as RawLogEntry;
-    const msg = raw['0'] ?? '';
+    const msg = getMessageFromRaw(raw);
     const levelStr = raw._meta?.logLevelName ?? 'INFO';
     const level = (['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(levelStr) ? levelStr : 'INFO') as LogLevel;
     const time = raw.time ? (raw.time.split('T')[1]?.slice(0, 12) ?? '') : '';
@@ -87,7 +100,9 @@ export class LogTailer extends EventEmitter {
 
   private switchToCurrentFile() {
     const newFile = this.getLogFileName();
-    if (newFile === this.currentFile) {return;}
+    if (newFile === this.currentFile) {
+      return;
+    }
 
     this.watcher?.close();
     this.currentFile = newFile;
@@ -118,8 +133,12 @@ export class LogTailer extends EventEmitter {
       // File doesn't exist yet
     }
     // Polling fallback (fs.watch can be unreliable on macOS)
-    if (this.pollTimer) {clearInterval(this.pollTimer);}
-    this.pollTimer = setInterval(() => { this.readIncremental(); }, 2000);
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+    }
+    this.pollTimer = setInterval(() => {
+      this.readIncremental();
+    }, 2000);
   }
 
   private readIncremental() {
@@ -130,7 +149,9 @@ export class LogTailer extends EventEmitter {
         log.warn('file truncated/rotated, resetting offset');
         this.offset = 0;
       }
-      if (stat.size === this.offset) {return;}
+      if (stat.size === this.offset) {
+        return;
+      }
 
       const bytesToRead = stat.size - this.offset;
       const buf = Buffer.alloc(bytesToRead);
@@ -149,7 +170,9 @@ export class LogTailer extends EventEmitter {
         const entry = parseLogLine(line);
         if (entry) {
           this.ringBuffer.push(entry);
-          if (this.ringBuffer.length > this.ringSize) {this.ringBuffer.shift();}
+          if (this.ringBuffer.length > this.ringSize) {
+            this.ringBuffer.shift();
+          }
           this.emit('log', entry);
         }
       }
@@ -166,8 +189,12 @@ export class LogTailer extends EventEmitter {
 
   destroy() {
     this.watcher?.close();
-    if (this.pollTimer) {clearInterval(this.pollTimer);}
-    if (this.dateCheckInterval) {clearInterval(this.dateCheckInterval);}
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+    }
+    if (this.dateCheckInterval) {
+      clearInterval(this.dateCheckInterval);
+    }
     this.removeAllListeners();
   }
 }

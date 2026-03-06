@@ -96,10 +96,27 @@ describe('SessionCard (compact)', () => {
     expect(getByText(/✕/)).toBeDefined();
   });
 
-  it('shows Starting text when tokens=0 and ACTIVE', () => {
-    const { container } = renderWithI18n(<SessionCard {...baseProps} totalTokens={0} status="ACTIVE" />);
-    // i18n key: sessions.starting — exact text depends on locale
+  it('shows Starting text when tokens=0, turnCount=0 and ACTIVE', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} totalTokens={0} turnCount={0} status="ACTIVE" />);
     expect(container.textContent).toMatch(/start|启动/i);
+  });
+
+  it('shows Running text when tokens=0, turnCount>0 and ACTIVE', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} totalTokens={0} turnCount={3} status="ACTIVE" />);
+    expect(container.textContent).toMatch(/running|运行/i);
+  });
+
+  it('shows Running text when tokens>0 and turnCount>0 while ACTIVE', () => {
+    const { container, getByText } = renderWithI18n(
+      <SessionCard {...baseProps} totalTokens={3200} turnCount={3} status="ACTIVE" />,
+    );
+    expect(getByText('3.2k')).toBeDefined();
+    expect(container.textContent).toMatch(/running|运行/i);
+  });
+
+  it('does not show Starting/Running when turnCount is unknown', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} totalTokens={0} status="ACTIVE" />);
+    expect(container.textContent).not.toMatch(/start|启动|running|运行/i);
   });
 
   it('shows channel pill', () => {

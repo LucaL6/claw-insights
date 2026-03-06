@@ -42,8 +42,9 @@ export class Aggregator {
     const bucketSeconds = rangeConfig.bucketMinutes * 60;
     const startEpoch = Math.floor(new Date(startTs).getTime() / 1000);
     const endEpoch = Math.floor(new Date(endTs).getTime() / 1000);
-    const startBucket = Math.floor(startEpoch / bucketSeconds);
+    const rawStartBucket = Math.floor(startEpoch / bucketSeconds);
     const endBucket = Math.floor(endEpoch / bucketSeconds);
+    const startBucket = Math.max(rawStartBucket, endBucket - rangeConfig.bucketCount + 1);
 
     const errors = new Map(
       getBucketedEventCount(this.db, startTs, endTs, 'error', rangeConfig.bucketMinutes).map((r) => [
@@ -105,7 +106,7 @@ export class Aggregator {
     const gwEvents = getBucketedGatewayEvents(this.db, startTs, endTs, rangeConfig.bucketMinutes);
     const restartBuckets = new Set(gwEvents.filter((e) => e.type === 'gateway_restart').map((e) => e.bucket));
 
-    // Build bucket array — linear epoch-based iteration
+    // Build bucket array — capped to configured bucketCount using end-aligned window
     const buckets: Array<Record<string, unknown>> = [];
     for (let b = startBucket; b <= endBucket; b++) {
       buckets.push({

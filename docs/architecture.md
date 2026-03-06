@@ -140,6 +140,15 @@ packages/web/src/
 
 This approach minimizes subscription payload while keeping the UI responsive.
 
+## Session Hierarchy Authority
+
+- **Single source of truth:** `~/.openclaw/agents/main/sessions/sessions.json` → `spawnedBy`
+- `SessionReader.reload()` deterministically rebuilds parent/child hierarchy from `spawnedBy`
+- Log-derived spawn events are **non-authoritative** for hierarchy correctness
+- `SpawnTracker` is retained for diagnostics/telemetry and optional analysis workflows
+
+This avoids split-brain behavior between session list and drawer, and makes hierarchy reproducible across reloads.
+
 ## Screenshot API
 
 `POST /api/snapshot` renders the dashboard server-side:

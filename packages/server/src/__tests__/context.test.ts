@@ -195,6 +195,14 @@ describe('context', () => {
     expect(ctx.pipeline).toBeDefined();
   });
 
+  it('does not wire SpawnBus into SessionReader hierarchy flow', async () => {
+    const { createContext } = await import('../context');
+    const ctx = await createContext();
+
+    expect((ctx.sessionReader as unknown as Record<string, any>).setSpawnBus).not.toHaveBeenCalled();
+    expect((ctx.sessionReader as unknown as Record<string, any>).attachSubAgents).not.toHaveBeenCalled();
+  });
+
   it('startContext starts pipeline and calls init', async () => {
     const { createContext, startContext } = await import('../context');
     const ctx = await createContext();

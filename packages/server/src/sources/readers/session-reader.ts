@@ -2,12 +2,13 @@ import type { Session, SessionSortBy, SessionStatus } from '@claw-insights/share
 import { type FSWatcher, readdirSync, readFileSync, realpathSync, statSync, watch } from 'fs';
 import { basename, dirname, join, sep } from 'path';
 
-import { config } from '../../config.js';
+import { config, type SessionHierarchyMode } from '../../config.js';
 import type { Database } from '../../db/database.js';
 import { getRangeTurnCountBySession } from '../../db/message-queries.js';
 import { emitChange } from '../../events.js';
 import type { SpawnBus, SpawnLinkEvent } from '../../events/spawn-bus.js';
 import { createChildLogger } from '../../logger.js';
+import { buildBaseHierarchyFromSpawnedBy, materializeSubAgents } from './session-hierarchy.js';
 
 const log = createChildLogger('session-reader');
 
@@ -102,21 +103,52 @@ function parseSession(key: string, raw: RawSession): Session {
   };
 }
 
+export interface SessionHierarchyParity {
+  baseChildCount: number;
+  finalChildCount: number;
+  overlayOnlyCount: number;
+  missingAfterOverlayCount: number;
+}
+
+export function computeHierarchyParity(
+  baseAttachedChildKeys: Set<string>,
+  finalAttachedChildKeys: Set<string>,
+): SessionHierarchyParity {
+  let overlayOnlyCount = 0;
+  for (const childKey of finalAttachedChildKeys) {
+    if (!baseAttachedChildKeys.has(childKey)) {
+      overlayOnlyCount += 1;
+    }
+  }
+
+  let missingAfterOverlayCount = 0;
+  for (const childKey of baseAttachedChildKeys) {
+    if (!finalAttachedChildKeys.has(childKey)) {
+      missingAfterOverlayCount += 1;
+    }
+  }
+
+  return {
+    baseChildCount: baseAttachedChildKeys.size,
+    finalChildCount: finalAttachedChildKeys.size,
+    overlayOnlyCount,
+    missingAfterOverlayCount,
+  };
+}
+
 export class SessionReader {
   private sessions: Map<string, Session> = new Map();
   private rawSessions: Map<string, RawSession> = new Map();
   private attachedChildKeys: Set<string> = new Set();
   private turnCountCache: Map<string, number> = new Map();
   private db: Database | null = null;
+  private readonly sessionHierarchyMode: SessionHierarchyMode;
   private watcher: FSWatcher | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private listeners: Array<() => void> = [];
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  // SpawnBus event-driven subAgent attachment
-  private spawnBus?: SpawnBus;
+  // SpawnBus diagnostics hook (non-authoritative for hierarchy)
   private unsubSpawn?: () => void;
-  private pendingLinks = new Map<string, Set<string>>(); // parent -> children (for late-arriving sessions)
-  private eventLinks = new Map<string, Set<string>>(); // all links received via events (for reload persistence)
 
   /** Inject DB reference for turn count queries */
   setDb(db: Database): void {
@@ -144,101 +176,47 @@ export class SessionReader {
     this.refreshTurnCounts();
   }
 
-  constructor(private filePath: string = SESSIONS_PATH) {
+  constructor(
+    private filePath: string = SESSIONS_PATH,
+    options: { sessionHierarchyMode?: SessionHierarchyMode } = {},
+  ) {
+    this.sessionHierarchyMode = options.sessionHierarchyMode ?? config.sessionHierarchyMode;
     this.reload();
     this.startWatching();
   }
 
   /**
-   * Set SpawnBus for event-driven subAgent attachment.
-   * Call this after construction to enable real-time spawn link handling.
+   * Optional diagnostics hook for spawn events.
+   *
+   * Hierarchy authority is sessions.json.spawnedBy; spawn events are non-authoritative.
+   * In current runtime behavior, `single` and `dual` produce identical hierarchy output.
    */
   setSpawnBus(bus: SpawnBus): void {
     // Cleanup previous subscription if exists (safety for rewire/tests)
     this.unsubSpawn?.();
-    this.spawnBus = bus;
+
+    if (this.sessionHierarchyMode === 'single') {
+      this.unsubSpawn = undefined;
+      return;
+    }
+
+    // `dual` path is retained as compatibility/diagnostics-only subscription.
     this.unsubSpawn = bus.onLink(this.onSpawnLink.bind(this));
   }
 
   private onSpawnLink({ parent, child }: SpawnLinkEvent): void {
-    // Always record in eventLinks for reload persistence
-    let eventChildren = this.eventLinks.get(parent);
-    if (!eventChildren) {
-      eventChildren = new Set();
-      this.eventLinks.set(parent, eventChildren);
-    }
-    eventChildren.add(child);
-
-    const parentSession = this.sessions.get(parent);
-    const childSession = this.sessions.get(child);
-
-    if (parentSession && childSession) {
-      // Both exist: attach immediately
-      if (!parentSession.subAgents.some((s) => s.key === child)) {
-        parentSession.subAgents.push(childSession);
-        this.attachedChildKeys.add(child);
-        log.debug({ parent, child }, 'attached sub-agent via event');
-      }
-    } else {
-      // Store pending link for later
-      let pendingChildren = this.pendingLinks.get(parent);
-      if (!pendingChildren) {
-        pendingChildren = new Set();
-        this.pendingLinks.set(parent, pendingChildren);
-      }
-      pendingChildren.add(child);
-      log.debug({ parent, child }, 'stored pending spawn link');
-    }
+    log.debug({ parent, child }, 'received spawn link event (non-authoritative)');
   }
 
-  private applyPendingLinks(): void {
-    const toRemove: Array<{ parent: string; child: string }> = [];
-
-    for (const [parent, children] of this.pendingLinks) {
-      const parentSession = this.sessions.get(parent);
-      if (!parentSession) {
-        continue;
-      }
-
-      for (const child of children) {
-        const childSession = this.sessions.get(child);
-        if (childSession && !parentSession.subAgents.some((s) => s.key === child)) {
-          parentSession.subAgents.push(childSession);
-          this.attachedChildKeys.add(child);
-          toRemove.push({ parent, child });
-        }
-      }
+  private rebuildFromSpawnedByBase(): void {
+    for (const session of this.sessions.values()) {
+      session.subAgents = [];
     }
+    this.attachedChildKeys.clear();
 
-    // Accumulate-then-delete: avoid mutation during iteration
-    for (const { parent, child } of toRemove) {
-      const children = this.pendingLinks.get(parent);
-      children?.delete(child);
-      if (children?.size === 0) {
-        this.pendingLinks.delete(parent);
-      }
-    }
-  }
-
-  /**
-   * Reapply all event-driven links after reload.
-   * This ensures links persist across session file reloads.
-   */
-  private applyEventLinks(): void {
-    for (const [parent, children] of this.eventLinks) {
-      const parentSession = this.sessions.get(parent);
-      if (!parentSession) {
-        continue;
-      }
-
-      for (const child of children) {
-        const childSession = this.sessions.get(child);
-        if (childSession && !parentSession.subAgents.some((s) => s.key === child)) {
-          parentSession.subAgents.push(childSession);
-          this.attachedChildKeys.add(child);
-        }
-      }
-    }
+    const { parentToChildKeys } = buildBaseHierarchyFromSpawnedBy(this.rawSessions, this.sessions);
+    const { attachedChildKeys } = materializeSubAgents(this.sessions, parentToChildKeys);
+    this.attachedChildKeys = attachedChildKeys;
   }
 
   private reload() {
@@ -251,10 +229,8 @@ export class SessionReader {
         this.sessions.set(key, parseSession(key, entry));
       }
       this.refreshTurnCounts();
-      // Reapply event-driven links after reload (ensures persistence)
-      this.applyEventLinks();
-      // Apply any pending spawn links
-      this.applyPendingLinks();
+      // Deterministic hierarchy authority from sessions.json spawnedBy
+      this.rebuildFromSpawnedByBase();
     } catch (err) {
       log.error({ err }, 'failed to read sessions');
     }
@@ -336,55 +312,14 @@ export class SessionReader {
     this.listeners.push(fn);
   }
 
-  /** Attach sub-agents using both SpawnTracker map AND session.spawnedBy field */
-  attachSubAgents(parentChildMap: Map<string, string[]>) {
-    // First: use spawnedBy field from raw sessions (always available)
-    const bySpawn = new Map<string, string[]>();
-    for (const [key] of this.sessions) {
-      const raw = this.rawSessions.get(key);
-      if (raw?.spawnedBy) {
-        const parent = raw.spawnedBy;
-        if (!bySpawn.has(parent)) {
-          bySpawn.set(parent, []);
-        }
-        const list = bySpawn.get(parent);
-        if (list) {
-          list.push(key);
-        }
-      }
-    }
-
-    // Merge spawnTracker map
-    for (const [p, children] of parentChildMap) {
-      if (!bySpawn.has(p)) {
-        bySpawn.set(p, []);
-      }
-      const pList = bySpawn.get(p);
-      if (pList) {
-        for (const c of children) {
-          if (!pList.includes(c)) {
-            pList.push(c);
-          }
-        }
-      }
-    }
-
-    // Reset all subAgents first
-    for (const s of this.sessions.values()) {
-      s.subAgents = [];
-    }
-
-    // Attach
-    for (const [parentKey, childKeys] of bySpawn) {
-      const parent = this.sessions.get(parentKey);
-      if (!parent) {
-        continue;
-      }
-      parent.subAgents = childKeys.map((ck) => this.sessions.get(ck)).filter((s): s is Session => s != null);
-    }
-
-    // Record which keys are attached as children
-    this.attachedChildKeys = new Set([...bySpawn.values()].flat());
+  /**
+   * Compatibility hook retained for callers/tests.
+   *
+   * @deprecated parentChildMap is ignored; hierarchy authority is strictly
+   * sessions.json.spawnedBy.
+   */
+  attachSubAgents(_parentChildMap: Map<string, string[]>) {
+    this.rebuildFromSpawnedByBase();
   }
 
   getSessionIdToKeyMap(): Map<string, string> {

@@ -209,6 +209,9 @@
   --theme-btn-bg: rgba(39, 39, 42, 0.8);
   --theme-btn-text: #a1a1aa;
 
+  /* Sidebar */
+  --sidebar-brand-divider: linear-gradient(90deg, var(--orange-border) 0%, var(--violet-border) 50%, transparent 100%);
+
   /* ── Drawer (warm stone palette) ── */
   --dr-bg: #0c0a09;
   --dr-surface: #1c1917;
@@ -355,6 +358,9 @@
   /* Theme button */
   --theme-btn-bg: rgba(251, 191, 36, 0.1);
   --theme-btn-text: #d97706;
+
+  /* Sidebar */
+  --sidebar-brand-divider: linear-gradient(90deg, var(--orange-border) 0%, var(--violet-border) 50%, transparent 100%);
 
   /* ── Drawer (warm stone palette — light) ── */
   --dr-bg: #fafaf9;

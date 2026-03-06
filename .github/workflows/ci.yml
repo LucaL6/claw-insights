@@ -136,6 +136,33 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Session hierarchy parity gate
+        # Auth note: Server uses CLAW_INSIGHTS_API_TOKEN for both serving and check script.
+        # NO_AUTH=false means token auth is enforced; the same token is used by both the
+        # server and the check script so they always match in CI.
+        # Fixtures in sandbox/fixtures/sessions.json have 100% spawnedBy coverage.
+        env:
+          CLAW_INSIGHTS_API_TOKEN: ci-test-token-ci-test-token-ci-1234
+          CLAW_INSIGHTS_SESSIONS_PATH: ${{ github.workspace }}/sandbox/fixtures/sessions.json
+          CLAW_INSIGHTS_SERVER_PORT: '41041'
+          CLAW_INSIGHTS_NO_AUTH: 'false'
+        run: |
+          set -euo pipefail
+
+          node packages/server/dist/index.js >/tmp/claw-insights-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill ${SERVER_PID} 2>/dev/null || true' EXIT
+
+          for i in {1..30}; do
+            if curl -sf "http://127.0.0.1:${CLAW_INSIGHTS_SERVER_PORT}/health" >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -sf "http://127.0.0.1:${CLAW_INSIGHTS_SERVER_PORT}/health" >/dev/null
+          npm run -w @claw-insights/server check:session-hierarchy
+
       - name: Make mock CLI executable
         run: chmod +x sandbox/mock-openclaw/bin/openclaw
 

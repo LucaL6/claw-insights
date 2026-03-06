@@ -8,6 +8,11 @@
     "build": "tsup --config tsup.config.ts && sed -i '' 's/from \"sqlite\"/from \"node:sqlite\"/g' dist/*.js dist/**/*.js 2>/dev/null || true && cp src/schema/schema.graphql dist/schema.graphql",
     "lint": "eslint src/",
     "lint:legacy-gate": "node scripts/check-no-legacy-context-reads.mjs --mode incremental",
+    "verify:spawnedby": "node scripts/verify-openclaw-spawnedby.mjs",
+    "check:session-hierarchy": "node scripts/check-session-hierarchy-parity.mjs",
+    "audit:spawnedby-gaps": "node scripts/audit-spawnedby-gaps.mjs",
+    "backfill:spawnedby": "node scripts/backfill-spawnedby-from-logs.mjs",
+    "apply:backfill": "node scripts/apply-backfill.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:integration": "RUN_INTEGRATION=1 MOCK_SCENARIO=healthy CLAW_INSIGHTS_CLI=../../sandbox/mock-openclaw/bin/openclaw CLAW_INSIGHTS_SESSIONS_PATH=../../sandbox/fixtures/sessions.json CLAW_INSIGHTS_SERVER_PORT=4000 vitest run src/__tests__/resolvers.test.ts src/__tests__/graphql-integration.test.ts src/__tests__/data-flow-integration.test.ts src/__tests__/snapshot-integration.test.ts"

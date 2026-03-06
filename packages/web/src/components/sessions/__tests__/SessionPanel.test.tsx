@@ -10,6 +10,22 @@ vi.mock('../../../hooks/useReactiveQuery', () => ({
   useReactiveQuery: (...args: unknown[]) => mockUseReactiveQuery(...args),
 }));
 
+// Capture SessionDrawer props
+let lastDrawerProps: Record<string, unknown> | undefined;
+vi.mock('../SessionDrawer', () => ({
+  SessionDrawer: (props: Record<string, unknown>) => {
+    lastDrawerProps = props;
+    return <div data-testid="session-drawer" />;
+  },
+}));
+
+// Mock useHashRoute so we can control selected session
+const mockNavigate = vi.fn();
+let mockRoute = { page: 'dashboard' as const, params: {} as Record<string, string> };
+vi.mock('../../../hooks/useHashRoute', () => ({
+  useHashRoute: () => ({ route: mockRoute, navigate: mockNavigate }),
+}));
+
 // Import after mock
 import { SessionPanel } from '../SessionPanel';
 
@@ -33,6 +49,8 @@ function makeSession(overrides: Partial<SessionData> = {}): SessionData {
 describe('SessionPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lastDrawerProps = undefined;
+    mockRoute = { page: 'dashboard', params: {} };
   });
 
   it('renders sessions when data is available', () => {
@@ -110,6 +128,30 @@ describe('SessionPanel', () => {
     fireEvent.click(tokenBtn);
     const lastCall = mockUseReactiveQuery.mock.calls.at(-1)?.[0];
     expect(lastCall?.variables?.filter?.sortBy).toBe('TOKENS_DESC');
+  });
+
+  it('passes liveSession snapshot to SessionDrawer for selected subagent', () => {
+    const sub = makeSession({
+      key: 'sub-1',
+      displayName: 'my-subagent',
+      contextTokens: 9000,
+      totalTokens: 20000,
+      status: 'ACTIVE',
+    });
+    const sessions = [makeSession({ key: 's1', subAgents: [sub] })];
+    mockUseReactiveQuery.mockReturnValue([{ data: { sessions }, fetching: false, error: undefined }, vi.fn()]);
+    mockRoute = { page: 'dashboard', params: { session: 'sub-1' } };
+
+    renderWithI18n(<SessionPanel />);
+
+    expect(lastDrawerProps).toBeDefined();
+    expect(lastDrawerProps!.liveSession).toMatchObject({
+      key: 'sub-1',
+      contextTokens: 9000,
+      totalTokens: 20000,
+      status: 'ACTIVE',
+      displayName: 'my-subagent',
+    });
   });
 
   it('switches back to active view', () => {

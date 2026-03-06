@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '../../../test/render';
@@ -19,12 +19,14 @@ describe('Sidebar', () => {
     localStorage.removeItem('ci:sidebar-collapsed');
   });
 
-  it('renders clock in header and version in footer when expanded', () => {
+  it('renders clock in header and brand/version in footer when expanded', () => {
     renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
     // Clock: HH:mm format
     expect(screen.getByText(/\d{2}:\d{2}/)).toBeDefined();
-    // Footer version
-    expect(screen.getByText(/Claw Insights v1\.2\.3/)).toBeDefined();
+
+    const footer = screen.getByTestId('sidebar-brand-footer');
+    expect(within(footer).getByText('Claw Insights')).toBeDefined();
+    expect(within(footer).getByText(/v1\.2\.3/)).toBeDefined();
   });
 
   it('renders navigation items', () => {
@@ -56,9 +58,9 @@ describe('Sidebar', () => {
   it('renders readable brand logo in footer when expanded', () => {
     renderWithProviders(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />);
     const logo = screen.getByRole('img', { name: /claw insights logo/i });
-    expect(logo.getAttribute('width')).toBe('12');
-    expect(logo.getAttribute('height')).toBe('12');
-    expect(logo.className).toContain('opacity-80');
+    expect(logo.getAttribute('width')).toBe('16');
+    expect(logo.getAttribute('height')).toBe('16');
+    expect(logo.className).not.toContain('opacity-80');
   });
 
   it('collapses when toggle button is clicked', () => {
@@ -79,7 +81,8 @@ describe('Sidebar', () => {
     fireEvent.click(toggle);
     const expandToggle = screen.getByRole('button', { name: /expand/i });
     fireEvent.click(expandToggle);
-    expect(screen.getByText(/Claw Insights v1\.2\.3/)).toBeDefined();
+    expect(screen.getByText('Claw Insights')).toBeDefined();
+    expect(screen.getByText(/v1\.2\.3/)).toBeDefined();
   });
 
   it('has accessible nav landmark', () => {

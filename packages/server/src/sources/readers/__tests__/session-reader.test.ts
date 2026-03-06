@@ -138,7 +138,7 @@ describe('SessionReader', () => {
     reader.destroy();
   });
 
-  it('should attach sub-agents via parentChildMap', () => {
+  it('attachSubAgents keeps spawnedBy as the only hierarchy authority', () => {
     writeSessions({
       'agent:main:parent': {
         sessionId: 'p1',
@@ -153,6 +153,7 @@ describe('SessionReader', () => {
         chatType: 'direct',
         totalTokens: 1000,
         contextTokens: 200000,
+        spawnedBy: 'agent:main:parent',
       },
       'agent:main:child2': {
         sessionId: 'c2',
@@ -162,24 +163,23 @@ describe('SessionReader', () => {
         contextTokens: 200000,
       },
     });
-    const reader = new SessionReader(tmpFile);
-    const map = new Map([['agent:main:parent', ['agent:main:child1', 'agent:main:child2']]]);
+    const reader = new SessionReader(tmpFile, { sessionHierarchyMode: 'dual' });
+    const map = new Map([['agent:main:parent', ['agent:main:child2']]]);
     reader.attachSubAgents(map);
     const parent = reader.getSession('agent:main:parent');
-    expect(parent!.subAgents.length).toBe(2);
-    expect(parent!.subAgents[0].displayName).toBe('child1');
+    expect(parent!.subAgents.map((s) => s.key)).toEqual(['agent:main:child1']);
     reader.destroy();
   });
 
-  it('should handle attachSubAgents with missing child gracefully', () => {
+  it('attachSubAgents ignores missing child mappings from parentChildMap', () => {
     writeSessions({
       'agent:main:parent': { sessionId: 'p1', updatedAt: Date.now(), chatType: 'direct' },
     });
-    const reader = new SessionReader(tmpFile);
+    const reader = new SessionReader(tmpFile, { sessionHierarchyMode: 'dual' });
     const map = new Map([['agent:main:parent', ['agent:main:nonexistent']]]);
     reader.attachSubAgents(map);
     const parent = reader.getSession('agent:main:parent');
-    expect(parent!.subAgents.length).toBe(0); // Missing child filtered out
+    expect(parent!.subAgents.length).toBe(0);
     reader.destroy();
   });
 

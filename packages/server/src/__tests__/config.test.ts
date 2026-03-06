@@ -31,6 +31,7 @@ describe('config singleton', () => {
       'hourlyRetention',
       'aggregateIntervalMs',
       'noAuth',
+      'sessionHierarchyMode',
     ] as const;
     for (const k of keys) {
       expect(config).toHaveProperty(k);
@@ -142,6 +143,41 @@ describe('NODE_ENV defaults', () => {
     const { resolveConfig } = await import('../config.js');
     const cfg = resolveConfig();
     expect(cfg.noAuth).toBe(true);
+  });
+});
+
+describe('sessionHierarchyMode', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.resetModules();
+  });
+
+  it('defaults to single', async () => {
+    delete process.env.CLAW_INSIGHTS_SESSION_HIERARCHY_MODE;
+    const { resolveConfig } = await import('../config.js');
+    const cfg = resolveConfig();
+    expect(cfg.sessionHierarchyMode).toBe('single');
+  });
+
+  it('accepts env override dual | single', async () => {
+    process.env.CLAW_INSIGHTS_SESSION_HIERARCHY_MODE = 'single';
+    let { resolveConfig } = await import('../config.js');
+    let cfg = resolveConfig();
+    expect(cfg.sessionHierarchyMode).toBe('single');
+
+    process.env.CLAW_INSIGHTS_SESSION_HIERARCHY_MODE = 'dual';
+    ({ resolveConfig } = await import('../config.js'));
+    cfg = resolveConfig();
+    expect(cfg.sessionHierarchyMode).toBe('dual');
+  });
+
+  it('falls back to single for invalid env value', async () => {
+    process.env.CLAW_INSIGHTS_SESSION_HIERARCHY_MODE = 'invalid-mode';
+    const { resolveConfig } = await import('../config.js');
+    const cfg = resolveConfig();
+    expect(cfg.sessionHierarchyMode).toBe('single');
   });
 });
 

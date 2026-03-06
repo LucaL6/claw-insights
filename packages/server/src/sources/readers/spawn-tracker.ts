@@ -5,27 +5,52 @@ import { createChildLogger } from '../../logger.js';
 
 const log = createChildLogger('spawn-tracker');
 
+const RUN_ID_PATTERNS = [/\brunId\b\s*[=:]\s*"?([a-zA-Z0-9-]+)"?/i] as const;
+const SESSION_PATTERNS = [/\bsessionKey\b\s*[=:]\s*"?([\w:-]+)"?/i, /\bsession\b\s*[=:]\s*"?([\w:-]+)"?/i] as const;
+
+function extractFirst(message: string, patterns: readonly RegExp[]): string | null {
+  for (const pattern of patterns) {
+    const match = message.match(pattern);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+  return null;
+}
+
+function isParentEvent(message: string): boolean {
+  return /sessions_spawn/i.test(message);
+}
+
+function isChildEvent(message: string): boolean {
+  return /spawned session|childSession|spawnedSession/i.test(message);
+}
+
 export class SpawnTracker {
   private runToParent = new Map<string, string>();
   private runToChild = new Map<string, string>();
   private parentToChildren = new Map<string, Set<string>>();
 
+  /**
+   * spawnBus is optional and used for diagnostics/local tooling only.
+   * Runtime hierarchy authority is sessions.json.spawnedBy.
+   */
   constructor(private spawnBus?: SpawnBus) {}
 
   ingest(entry: LogEntry) {
     const msg = entry.message;
-    const runIdMatch = msg.match(/runId[=:]\s*([a-zA-Z0-9-]+)/i);
-    const sessionMatch = msg.match(/session(?:Key)?[=:]\s*([\w:-]+)/i);
-    if (!runIdMatch) {
+    const runId = extractFirst(msg, RUN_ID_PATTERNS);
+    if (!runId) {
       return;
     }
-    const runId = runIdMatch[1];
 
-    if (msg.includes('sessions_spawn') && sessionMatch) {
-      this.runToParent.set(runId, sessionMatch[1]);
+    const sessionKey = extractFirst(msg, SESSION_PATTERNS);
+
+    if (isParentEvent(msg) && sessionKey) {
+      this.runToParent.set(runId, sessionKey);
     }
-    if ((msg.includes('spawned session') || msg.includes('childSession')) && sessionMatch) {
-      this.runToChild.set(runId, sessionMatch[1]);
+    if (isChildEvent(msg) && sessionKey) {
+      this.runToChild.set(runId, sessionKey);
     }
 
     const p = this.runToParent.get(runId);

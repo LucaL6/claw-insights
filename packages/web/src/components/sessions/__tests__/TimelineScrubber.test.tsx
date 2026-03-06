@@ -150,4 +150,17 @@ describe('TimelineScrubber', () => {
     fireEvent.click(timeMarker);
     expect(onJump).toHaveBeenCalledWith(1);
   });
+
+  it('adapts marker count beyond 8 for long timelines', () => {
+    const timestamps = Array.from({ length: 30 }, (_, i) => {
+      const d = new Date(Date.UTC(2025, 0, 1, 9, i * 5));
+      return d.toISOString();
+    });
+
+    renderScrubber({ timestamps, onJump: vi.fn() });
+
+    const markerButtons = screen.getAllByTitle(/Jump to message #/);
+    expect(markerButtons.length).toBeGreaterThan(8);
+    expect(markerButtons.length).toBeLessThanOrEqual(12);
+  });
 });

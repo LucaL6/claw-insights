@@ -1,7 +1,7 @@
 import { rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { initDatabase } from '../../db/init.js';
 import { Aggregator } from '../aggregator';
@@ -23,6 +23,9 @@ function setup() {
 }
 
 describe('Aggregator branches', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   it('getMetrics returns cached result on second call', () => {
     const { agg, cleanup } = setup();
     const r1 = agg.getMetrics(undefined, 'ONE_HOUR');
@@ -55,11 +58,20 @@ describe('Aggregator branches', () => {
     cleanup();
   });
 
-  it('getMetrics returns timezone field', () => {
+  it('getMetrics returns timezone field and deterministic 15 buckets for THIRTY_MIN', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-07T03:46:00.000Z'));
+
     const { agg, cleanup } = setup();
-    const result = agg.getMetrics(undefined, 'THIRTY_MIN') as Record<string, unknown>;
+    const result = agg.getMetrics(undefined, 'THIRTY_MIN') as {
+      timezone: string;
+      bucketMinutes: number;
+      buckets: unknown[];
+    };
     expect(typeof result.timezone).toBe('string');
     expect(result.timezone).toMatch(/^UTC[+-]/);
+    expect(result.bucketMinutes).toBe(2);
+    expect(result.buckets.length).toBe(15);
     cleanup();
   });
 });

@@ -9,7 +9,7 @@ export interface RangeInfo {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const RANGE_INFO: Record<MetricsRange, RangeInfo> = {
-  THIRTY_MIN: { label: '30m', bucketLabel: '5min' },
+  THIRTY_MIN: { label: '30m', bucketLabel: '2min' },
   ONE_HOUR: { label: '1h', bucketLabel: '5min' },
   SIX_HOUR: { label: '6h', bucketLabel: '15min' },
   TWELVE_HOUR: { label: '12h', bucketLabel: '30min' },

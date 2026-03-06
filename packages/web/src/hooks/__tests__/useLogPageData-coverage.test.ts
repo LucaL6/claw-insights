@@ -63,18 +63,27 @@ describe('useLogPageData — delta coverage', () => {
 
   // 2. timeLabel: same day today → time-only
   it('timeLabel shows time-only for same-day today range', () => {
-    const now = Math.floor(Date.now() / 1000);
-    const from = now - 3600;
-    const to = now - 60;
-    const route: Route = { page: 'logs', params: { from: String(from), to: String(to) } };
-    const client = createMockClient(emptyData);
-    const { result } = renderHook(() => useLogPageData(route), { wrapper: wrapper(client) });
+    // Use fake timers at a fixed time in the middle of the day to avoid midnight boundary issues
+    vi.useFakeTimers();
+    const fixedNow = new Date('2026-03-07T12:00:00Z');
+    vi.setSystemTime(fixedNow);
 
-    expect(result.current.timeLabel).toBeDefined();
-    expect(result.current.timeLabel).toContain('→');
-    // Same day today: no month name, just HH:MM → HH:MM
-    // Should NOT contain month abbreviation
-    expect(result.current.timeLabel).toMatch(/^\d{2}:\d{2} → \d{2}:\d{2}$/);
+    try {
+      const now = Math.floor(fixedNow.getTime() / 1000);
+      const from = now - 3600; // 11:00
+      const to = now - 60; // 11:59
+      const route: Route = { page: 'logs', params: { from: String(from), to: String(to) } };
+      const client = createMockClient(emptyData);
+      const { result } = renderHook(() => useLogPageData(route), { wrapper: wrapper(client) });
+
+      expect(result.current.timeLabel).toBeDefined();
+      expect(result.current.timeLabel).toContain('→');
+      // Same day today: no month name, just HH:MM → HH:MM
+      // Should NOT contain month abbreviation
+      expect(result.current.timeLabel).toMatch(/^\d{2}:\d{2} → \d{2}:\d{2}$/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // 3. timeLabel: same day not today → date+time

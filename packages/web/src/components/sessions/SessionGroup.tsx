@@ -46,6 +46,7 @@ function SubAgentGroup({
                 usagePercent={sa.usagePercent}
                 status={sa.status}
                 updatedAt={sa.updatedAt}
+                turnCount={sa.turnCount}
                 sessionKey={sa.key}
                 onSelect={onSelect}
                 selected={selectedKey === sa.key}
@@ -81,6 +82,7 @@ export function SessionGroup({ session, onSelect, selectedKey }: SessionGroupPro
           usagePercent={session.usagePercent}
           status={session.status}
           updatedAt={session.updatedAt}
+          turnCount={session.turnCount}
           hasChildren={hasChildren}
           expanded={expanded}
           onToggle={() => {
@@ -119,6 +121,7 @@ export function SessionGroup({ session, onSelect, selectedKey }: SessionGroupPro
                   usagePercent={sa.usagePercent}
                   status={sa.status}
                   updatedAt={sa.updatedAt}
+                  turnCount={sa.turnCount}
                   sessionKey={sa.key}
                   onSelect={onSelect}
                   selected={selectedKey === sa.key}
