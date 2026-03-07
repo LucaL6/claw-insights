@@ -293,7 +293,7 @@ export const createV2Resolvers = (ctx: AppContext): Partial<Resolvers> => {
       const gatewayHealth = mapHealthStatus(gateway.running ? 'connected' : 'disconnected', 'UNHEALTHY');
 
       const totalChannels = gateway.channels.length;
-      const connectedChannels = gateway.channels.filter((c) => c.connectionStatus === 'connected').length;
+      const connectedChannels = gateway.channels.filter((c) => c.connected).length;
       const channelsHealth =
         totalChannels === 0
           ? 'DEGRADED'

@@ -43,7 +43,9 @@ const KEYWORD_MAP: Record<string, HealthStatus> = {
  * not recognised — this keeps the UI informative rather than crashing.
  */
 export function mapHealthStatus(raw: string | null | undefined, fallback: HealthStatus = 'DEGRADED'): HealthStatus {
-  if (raw == null) {return fallback;}
+  if (raw == null) {
+    return fallback;
+  }
   return KEYWORD_MAP[raw.toLowerCase().trim()] ?? fallback;
 }
 
@@ -52,9 +54,15 @@ export function mapHealthStatus(raw: string | null | undefined, fallback: Health
  * Any UNHEALTHY → UNHEALTHY; any DEGRADED → DEGRADED; else HEALTHY.
  */
 export function aggregateHealthStatus(statuses: HealthStatus[]): HealthStatus {
-  if (statuses.length === 0) {return 'DEGRADED';}
-  if (statuses.includes('UNHEALTHY')) {return 'UNHEALTHY';}
-  if (statuses.includes('DEGRADED')) {return 'DEGRADED';}
+  if (statuses.length === 0) {
+    return 'DEGRADED';
+  }
+  if (statuses.includes('UNHEALTHY')) {
+    return 'UNHEALTHY';
+  }
+  if (statuses.includes('DEGRADED')) {
+    return 'DEGRADED';
+  }
   return 'HEALTHY';
 }
 
@@ -104,10 +112,10 @@ export function mapChannels(status: Pick<GatewayStatus, 'channels'>): Array<{
   latencyMs: number | null;
 }> {
   return status.channels.map((ch) => ({
-    provider: ch.type,
+    provider: ch.provider.toLowerCase(),
     name: ch.name ?? 'unknown',
-    connected: ch.connectionStatus === 'connected',
-    latencyMs: null,
+    connected: ch.connected,
+    latencyMs: ch.latencyMs ?? null,
   }));
 }
 

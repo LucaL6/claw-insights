@@ -128,14 +128,20 @@ Auth is disabled by default in development (`NODE_ENV=development`).
 
 Priority: Environment variables > `~/.claw-insights/config.json` > NODE_ENV defaults.
 
-| Variable                           | Default                       | Description               |
-| ---------------------------------- | ----------------------------- | ------------------------- |
-| `CLAW_INSIGHTS_SERVER_PORT`        | `41041`                       | API server port           |
-| `CLAW_INSIGHTS_WEB_PORT`           | `41042`                       | Web UI port (dev only)    |
-| `CLAW_INSIGHTS_API_TOKEN`          | _(auto)_                      | Auth token (≥32 chars)    |
-| `CLAW_INSIGHTS_NO_AUTH`            | `false`                       | Disable auth              |
-| `CLAW_INSIGHTS_DB`                 | `~/.claw-insights/metrics.db` | Database path             |
-| `CLAW_INSIGHTS_RAW_RETENTION_DAYS` | `7`                           | Raw data retention (days) |
+| Variable                           | Default                       | Description                                            |
+| ---------------------------------- | ----------------------------- | ------------------------------------------------------ |
+| `CLAW_INSIGHTS_SERVER_PORT`        | `41041`                       | API server port                                        |
+| `CLAW_INSIGHTS_WEB_PORT`           | `41042`                       | Web UI port (dev only)                                 |
+| `CLAW_INSIGHTS_API_TOKEN`          | _(auto)_                      | Auth token (≥32 chars)                                 |
+| `CLAW_INSIGHTS_NO_AUTH`            | `false`                       | Disable auth                                           |
+| `CLAW_INSIGHTS_DB`                 | `~/.claw-insights/metrics.db` | Database path                                          |
+| `CLAW_INSIGHTS_RAW_RETENTION_DAYS` | `7`                           | Raw data retention (days)                              |
+| `VITE_SCHEMA_V2_ENABLED`           | `false`                       | Enable dashboard v2 query path (web build-time toggle) |
+
+**Dashboard schema rollback (current phase):**
+
+- `VITE_SCHEMA_V2_ENABLED` is a **dev/test build-level toggle**, not an instant runtime switch.
+- To rollback locally: set `VITE_SCHEMA_V2_ENABLED=false` and restart the dev server (or rebuild).
 
 → See [Configuration](docs/configuration.md) for all options, config file, and NODE_ENV defaults.
 

@@ -97,6 +97,9 @@ export type Channel = {
 
 export type ChannelProvider =
   | 'discord'
+  | 'googlechat'
+  | 'imessage'
+  | 'irc'
   | 'signal'
   | 'slack'
   | 'telegram'

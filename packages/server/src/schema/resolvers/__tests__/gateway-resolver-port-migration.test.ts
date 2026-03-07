@@ -16,12 +16,10 @@ const mockGatewayStatus: GatewayStatus = {
   securitySummary: { critical: 0, warn: 1, info: 0 },
   channels: [
     {
-      type: 'discord',
-      accountId: 'acc1',
-      protocol: 'ws',
-      profile: null,
+      provider: 'discord',
       name: 'general',
-      connectionStatus: 'connected',
+      connected: true,
+      latencyMs: null,
     },
   ],
   sessionDefaults: null,
@@ -205,6 +203,27 @@ describe('gateway.resolver - Port Migration', () => {
           name: 'general',
           connected: true,
           latencyMs: null,
+        },
+      ]);
+    });
+
+    it('maps provider/connected channel fields from gateway status payload', async () => {
+      (gatewayPortMock.getGatewayStatus as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ...mockGatewayStatus,
+        channels: [{ provider: 'discord', name: 'general', connected: true, latencyMs: 10 }],
+      } as unknown as GatewayStatus);
+
+      const resolvers = gatewayResolvers(ctx);
+      const Query = resolvers.Query!;
+
+      const result = await Query.channels!({}, {});
+
+      expect(result).toEqual([
+        {
+          provider: 'discord',
+          name: 'general',
+          connected: true,
+          latencyMs: 10,
         },
       ]);
     });

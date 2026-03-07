@@ -25,6 +25,9 @@ enum ChannelProvider {
   webchat
   signal
   whatsapp
+  irc
+  googlechat
+  imessage
 }
 
 # ── Shared Scalars / Enums (A2) ──

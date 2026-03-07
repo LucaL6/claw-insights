@@ -47,12 +47,10 @@ function createMockCtx(): AppContext {
           securitySummary: { critical: 0, warn: 1, info: 0 },
           channels: [
             {
-              type: 'discord',
-              accountId: 'acc1',
-              protocol: 'ws',
-              profile: null,
+              provider: 'discord',
               name: 'general',
-              connectionStatus: 'connected',
+              connected: true,
+              latencyMs: null,
             },
           ],
           sessionDefaults: null,

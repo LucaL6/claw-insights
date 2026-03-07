@@ -90,7 +90,16 @@ export type Channel = {
   provider: ChannelProvider;
 };
 
-export type ChannelProvider = 'discord' | 'signal' | 'slack' | 'telegram' | 'webchat' | 'whatsapp';
+export type ChannelProvider =
+  | 'discord'
+  | 'googlechat'
+  | 'imessage'
+  | 'irc'
+  | 'signal'
+  | 'slack'
+  | 'telegram'
+  | 'webchat'
+  | 'whatsapp';
 
 export type CheckStatus = 'FAIL' | 'PASS' | 'WARN';
 
@@ -595,6 +604,109 @@ export type EventCountsQueryVariables = Exact<{
 
 export type EventCountsQuery = { eventCounts: { error: number; warning: number; restart: number } };
 
+export type SystemDashboardV2QueryVariables = Exact<{
+  context?: InputMaybe<QueryContext>;
+}>;
+
+export type SystemDashboardV2Query = {
+  system: {
+    gateway: {
+      running: boolean;
+      pid?: number | null;
+      version: string;
+      appVersion: string;
+      updateAvailable?: string | null;
+      uptime: string;
+      startedAt?: string | null;
+      connectLatencyMs?: number | null;
+      latestVersion?: string | null;
+      securityCritical: number;
+      securityWarn: number;
+    };
+    resources: { cpu: number; memoryMB: number; diskMB: number; sampledAt: string };
+    channels: Array<{ provider: ChannelProvider; name: string; connected: boolean; latencyMs?: number | null }>;
+  };
+};
+
+export type SessionsV2QueryVariables = Exact<{
+  selector: SourceSelector;
+  filter?: InputMaybe<SessionFilter>;
+  context?: InputMaybe<QueryContext>;
+}>;
+
+export type SessionsV2Query = {
+  source?: {
+    sessions: Array<{
+      key: string;
+      displayName: string;
+      kind: string;
+      model: string;
+      channel?: string | null;
+      totalTokens: number;
+      contextTokens: number;
+      usagePercent: number;
+      status: SessionStatus;
+      updatedAt: number;
+      turnCount: number;
+      subAgents: Array<{
+        key: string;
+        displayName: string;
+        kind: string;
+        model: string;
+        channel?: string | null;
+        totalTokens: number;
+        contextTokens: number;
+        usagePercent: number;
+        status: SessionStatus;
+        updatedAt: number;
+        turnCount: number;
+      }>;
+    }>;
+  } | null;
+};
+
+export type MetricsV2QueryVariables = Exact<{
+  selector: SourceSelector;
+  date?: InputMaybe<Scalars['String']['input']>;
+  range?: InputMaybe<MetricsRange>;
+  context?: InputMaybe<QueryContext>;
+}>;
+
+export type MetricsV2Query = {
+  source?: {
+    metrics: {
+      date: string;
+      range: MetricsRange;
+      bucketMinutes: number;
+      timezone: string;
+      totalTokensK: number;
+      rangeTokensK: number;
+      totalTurns: number;
+      totalErrors: number;
+      totalWarnings: number;
+      uptimePercent: number;
+      warnings: Array<string>;
+      buckets: Array<{
+        bucket: number;
+        label: string;
+        epochStart: number;
+        sessions: number;
+        tokensK: number;
+        apiCalls: number;
+        toolCalls: number;
+        turns: number;
+        userTurns: number;
+        assistantTurns: number;
+        errors: number;
+        warnings: number;
+        gatewayUp: boolean;
+        restartEvent: boolean;
+        tokensByModel: Array<{ model: string; tokensK: number }>;
+      }>;
+    };
+  } | null;
+};
+
 export type GatewayQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GatewayQuery = {
@@ -976,6 +1088,341 @@ export const EventCountsDocument = {
     },
   ],
 } as unknown as DocumentNode<EventCountsQuery, EventCountsQueryVariables>;
+export const SystemDashboardV2Document = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'SystemDashboardV2' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'context' } },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'QueryContext' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'system' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'context' },
+                value: { kind: 'Variable', name: { kind: 'Name', value: 'context' } },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'InlineFragment',
+                  typeCondition: { kind: 'NamedType', name: { kind: 'Name', value: 'OpenClawSystem' } },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'gateway' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            { kind: 'Field', name: { kind: 'Name', value: 'running' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'pid' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'appVersion' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'updateAvailable' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'uptime' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'startedAt' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'connectLatencyMs' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'latestVersion' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'securityCritical' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'securityWarn' } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'resources' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            { kind: 'Field', name: { kind: 'Name', value: 'cpu' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'memoryMB' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'diskMB' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'sampledAt' } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'channels' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            { kind: 'Field', name: { kind: 'Name', value: 'provider' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'connected' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'latencyMs' } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<SystemDashboardV2Query, SystemDashboardV2QueryVariables>;
+export const SessionsV2Document = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'SessionsV2' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'selector' } },
+          type: { kind: 'NonNullType', type: { kind: 'NamedType', name: { kind: 'Name', value: 'SourceSelector' } } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'filter' } },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'SessionFilter' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'context' } },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'QueryContext' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'source' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'selector' },
+                value: { kind: 'Variable', name: { kind: 'Name', value: 'selector' } },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'context' },
+                value: { kind: 'Variable', name: { kind: 'Name', value: 'context' } },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'InlineFragment',
+                  typeCondition: { kind: 'NamedType', name: { kind: 'Name', value: 'AgentNamespace' } },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'sessions' },
+                        arguments: [
+                          {
+                            kind: 'Argument',
+                            name: { kind: 'Name', value: 'filter' },
+                            value: { kind: 'Variable', name: { kind: 'Name', value: 'filter' } },
+                          },
+                        ],
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            { kind: 'Field', name: { kind: 'Name', value: 'key' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'kind' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'model' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'channel' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'totalTokens' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'contextTokens' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'usagePercent' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'turnCount' } },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'subAgents' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  { kind: 'Field', name: { kind: 'Name', value: 'key' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'kind' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'model' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'channel' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'totalTokens' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'contextTokens' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'usagePercent' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'turnCount' } },
+                                ],
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<SessionsV2Query, SessionsV2QueryVariables>;
+export const MetricsV2Document = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'MetricsV2' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'selector' } },
+          type: { kind: 'NonNullType', type: { kind: 'NamedType', name: { kind: 'Name', value: 'SourceSelector' } } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'date' } },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'range' } },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'MetricsRange' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'context' } },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'QueryContext' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'source' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'selector' },
+                value: { kind: 'Variable', name: { kind: 'Name', value: 'selector' } },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'context' },
+                value: { kind: 'Variable', name: { kind: 'Name', value: 'context' } },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'InlineFragment',
+                  typeCondition: { kind: 'NamedType', name: { kind: 'Name', value: 'AgentNamespace' } },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'metrics' },
+                        arguments: [
+                          {
+                            kind: 'Argument',
+                            name: { kind: 'Name', value: 'date' },
+                            value: { kind: 'Variable', name: { kind: 'Name', value: 'date' } },
+                          },
+                          {
+                            kind: 'Argument',
+                            name: { kind: 'Name', value: 'range' },
+                            value: { kind: 'Variable', name: { kind: 'Name', value: 'range' } },
+                          },
+                        ],
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            { kind: 'Field', name: { kind: 'Name', value: 'date' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'range' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'bucketMinutes' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'buckets' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  { kind: 'Field', name: { kind: 'Name', value: 'bucket' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'label' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'epochStart' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'sessions' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'tokensK' } },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'tokensByModel' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        { kind: 'Field', name: { kind: 'Name', value: 'model' } },
+                                        { kind: 'Field', name: { kind: 'Name', value: 'tokensK' } },
+                                      ],
+                                    },
+                                  },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'apiCalls' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'toolCalls' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'turns' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'userTurns' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'assistantTurns' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'errors' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'warnings' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'gatewayUp' } },
+                                  { kind: 'Field', name: { kind: 'Name', value: 'restartEvent' } },
+                                ],
+                              },
+                            },
+                            { kind: 'Field', name: { kind: 'Name', value: 'totalTokensK' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'rangeTokensK' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'totalTurns' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'totalErrors' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'totalWarnings' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'uptimePercent' } },
+                            { kind: 'Field', name: { kind: 'Name', value: 'warnings' } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<MetricsV2Query, MetricsV2QueryVariables>;
 export const GatewayDocument = {
   kind: 'Document',
   definitions: [

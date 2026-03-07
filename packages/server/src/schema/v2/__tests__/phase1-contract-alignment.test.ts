@@ -92,6 +92,26 @@ describe('Phase1B schema contract', () => {
     expect(q.getFields()['context']).toBeTruthy();
     expect(q.getFields()['context'].deprecationReason).toBeTruthy();
   });
+
+  it('ChannelProvider enum includes all supported gateway channel providers', () => {
+    const channelProvider = schema.getType('ChannelProvider') as { getValues: () => Array<{ name: string }> };
+    expect(channelProvider).toBeTruthy();
+
+    const values = channelProvider.getValues().map((v) => v.name);
+    expect(values).toEqual(
+      expect.arrayContaining([
+        'telegram',
+        'slack',
+        'discord',
+        'webchat',
+        'signal',
+        'whatsapp',
+        'irc',
+        'googlechat',
+        'imessage',
+      ]),
+    );
+  });
 });
 
 // ── Resolver integration tests ──

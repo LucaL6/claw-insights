@@ -262,12 +262,10 @@ export function createTestApp(): TestApp {
           sessionDefaults: null,
           channels: [
             {
-              type: 'telegram',
-              accountId: 'default',
-              protocol: 'bot',
-              profile: null,
+              provider: 'telegram',
               name: 'main',
-              connectionStatus: 'connected',
+              connected: true,
+              latencyMs: null,
             },
           ],
         }),

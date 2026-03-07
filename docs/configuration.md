@@ -20,6 +20,20 @@ All variables use the `CLAW_INSIGHTS_` prefix. For backward compatibility, `OPEN
 | `CLAW_INSIGHTS_NO_AUTH`     | `false`            | Disable authentication entirely (`true` or `1`)                      |
 | `CLAW_INSIGHTS_SERVER_ONLY` | `false`            | Run API server without serving web UI                                |
 
+### Web Dashboard (Schema Toggle)
+
+| Variable                 | Default | Description                                                                                   |
+| ------------------------ | ------- | --------------------------------------------------------------------------------------------- |
+| `VITE_SCHEMA_V2_ENABLED` | `false` | Enable dashboard v2 query path (`system(context)` + `source(selector, context)`) in web build |
+
+> Current phase note: this is a **build-level dev/test toggle**. It is **not** an instant runtime rollback switch.
+>
+> Local rollback steps:
+>
+> 1. Set `VITE_SCHEMA_V2_ENABLED=false`
+> 2. Restart Vite dev server (or run a fresh production build)
+> 3. Reload dashboard
+
 ### Data Sources
 
 | Variable                      | Default                                          | Description                                           |

@@ -44,10 +44,10 @@ export function gatewayResolvers(ctx: AppContext): Partial<Resolvers> {
       const status = await ctx.ports.gateway.getGatewayStatus(readCtx);
       // Map ChannelInfo to GraphQL Channel type
       return status.channels.map((ch) => ({
-        provider: ch.type as ChannelProvider,
+        provider: String(ch.provider).toLowerCase() as ChannelProvider,
         name: ch.name ?? 'unknown',
-        connected: ch.connectionStatus === 'connected',
-        latencyMs: null, // Not available in ChannelInfo
+        connected: ch.connected,
+        latencyMs: ch.latencyMs ?? null,
       }));
     });
 

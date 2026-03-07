@@ -147,10 +147,14 @@ export function SessionDrawer({
   // Header stats should stay aligned with sessions list authority.
   const headerTokens = liveSession?.totalTokens;
   const headerContextUsed = useMemo(() => {
-    if (liveSession?.contextTokens === undefined || liveSession.usagePercent === undefined) {
+    const contextTokens = liveSession?.contextTokens;
+    const usagePercent = liveSession?.usagePercent;
+
+    if (contextTokens === undefined || usagePercent === undefined) {
       return undefined;
     }
-    return Math.round((liveSession.contextTokens * liveSession.usagePercent) / 100);
+
+    return Math.round((contextTokens * usagePercent) / 100);
   }, [liveSession?.contextTokens, liveSession?.usagePercent]);
   const headerContextPercent = liveSession?.usagePercent;
   const spawnPrompt = meta?.isSubAgent && meta.spawnPrompt ? meta.spawnPrompt : undefined;

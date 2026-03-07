@@ -116,12 +116,10 @@ describe('SystemAdapter', () => {
       const mapped = mapChannels({
         channels: [
           {
-            type: 'telegram',
-            accountId: 'acc',
-            protocol: 'telegram',
-            profile: null,
+            provider: 'telegram',
             name: null,
-            connectionStatus: 'connected',
+            connected: true,
+            latencyMs: null,
           },
         ],
       });

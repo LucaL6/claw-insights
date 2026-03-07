@@ -3,14 +3,14 @@ import type { ReadContext } from './shared.js';
 
 /**
  * Gateway channel information.
+ *
+ * NOTE: This contract reflects gateway status `channelSummary` parsing output.
  */
 export interface ChannelInfo {
-  type: string;
-  accountId: string;
-  protocol: string;
-  profile: string | null;
+  provider: string;
   name: string | null;
-  connectionStatus: string;
+  connected: boolean;
+  latencyMs: number | null;
 }
 
 /**

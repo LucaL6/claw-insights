@@ -91,7 +91,16 @@ export type Channel = {
   provider: ChannelProvider;
 };
 
-export type ChannelProvider = 'discord' | 'signal' | 'slack' | 'telegram' | 'webchat' | 'whatsapp';
+export type ChannelProvider =
+  | 'discord'
+  | 'googlechat'
+  | 'imessage'
+  | 'irc'
+  | 'signal'
+  | 'slack'
+  | 'telegram'
+  | 'webchat'
+  | 'whatsapp';
 
 export type CheckStatus = 'FAIL' | 'PASS' | 'WARN';
 
