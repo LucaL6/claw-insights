@@ -30,7 +30,7 @@ function collectText(node: SatoriNode | string | unknown): string[] {
 
 function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
   return {
-    gateway: { status: 'up', version: '0.9.0', uptime: '2h', cpu: 12, memoryMB: 256 },
+    gateway: { status: 'up', version: '0.1.0', uptime: '2h', cpu: 12, memoryMB: 256 },
     channels: [{ name: 'discord', provider: 'discord', connected: true, latencyMs: 50 }],
     timestamp: '2026-02-26T12:00:00Z',
     range: '6h',
@@ -55,7 +55,7 @@ function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
 describe('renderStatusStrip coverage', () => {
   it('formats memory as GB when >= 1024 MB', () => {
     const data = makeData({
-      gateway: { status: 'up', version: '0.9.0', uptime: '2h', cpu: 50, memoryMB: 2048 },
+      gateway: { status: 'up', version: '0.1.0', uptime: '2h', cpu: 50, memoryMB: 2048 },
     } as any);
     const tree = renderStatusStrip(data, 'standard', DARK)!;
     const texts = collectText(tree);
@@ -65,7 +65,7 @@ describe('renderStatusStrip coverage', () => {
 
   it('formats memory as MB when < 1024 MB', () => {
     const data = makeData({
-      gateway: { status: 'up', version: '0.9.0', uptime: '2h', cpu: 50, memoryMB: 512 },
+      gateway: { status: 'up', version: '0.1.0', uptime: '2h', cpu: 50, memoryMB: 512 },
     } as any);
     const tree = renderStatusStrip(data, 'standard', DARK)!;
     const texts = collectText(tree);

@@ -143,6 +143,57 @@ describe('SessionCard (compact)', () => {
     const { queryByText } = renderWithI18n(<SessionCard {...baseProps} channel={null} />);
     expect(queryByText('webchat')).toBeNull();
   });
+
+  it('shows Idle pill when status is IDLE', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} status="IDLE" totalTokens={82000} />);
+    expect(container.textContent).toMatch(/idle|空闲/i);
+  });
+
+  it('shows Done pill when status is DONE', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} status="DONE" totalTokens={124800} />);
+    expect(container.textContent).toMatch(/done|完成/i);
+  });
+
+  it('shows Failed pill when status is FAILED', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} status="FAILED" totalTokens={3200} />);
+    expect(container.textContent).toMatch(/failed|失败/i);
+  });
+
+  it('shows no status pill for unknown status value', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} status="UNKNOWN_STATE" totalTokens={1000} />);
+    expect(container.textContent).not.toMatch(/start|启动|running|运行|idle|空闲|done|完成|failed|失败/i);
+  });
+
+  it('shows spinner SVG only for starting state', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} status="ACTIVE" totalTokens={0} turnCount={0} />);
+    const pill = Array.from(container.querySelectorAll('span')).find((el) => el.textContent?.match(/starting|启动/i));
+    expect(pill).toBeDefined();
+    expect(pill?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('does not show spinner for running state', () => {
+    const { container } = renderWithI18n(
+      <SessionCard {...baseProps} status="ACTIVE" totalTokens={5000} turnCount={3} />,
+    );
+    const pill = Array.from(container.querySelectorAll('span')).find((el) => el.textContent?.match(/running|运行/i));
+    expect(pill).toBeDefined();
+    expect(pill?.querySelector('svg')).toBeNull();
+  });
+
+  it('does not show any status pill when active but stale', () => {
+    const nowMs = Date.now();
+    const { container } = renderWithI18n(
+      <SessionCard
+        {...baseProps}
+        status="ACTIVE"
+        turnCount={3}
+        totalTokens={45000}
+        updatedAt={nowMs - 5 * 60_000}
+        referenceNowMs={nowMs}
+      />,
+    );
+    expect(container.textContent).not.toMatch(/start|启动|running|运行|idle|空闲|done|完成|failed|失败/i);
+  });
 });
 
 describe('SessionCard (primary) - interactions', () => {

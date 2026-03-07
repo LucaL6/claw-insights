@@ -4,7 +4,7 @@ describe('health handler', () => {
   it('returns status ok with correct shape', async () => {
     const { createHealthHandler } = await import('../health.js');
     const handler = createHealthHandler({
-      version: '0.9.0',
+      version: '0.1.0',
       serverOnly: false,
       checkGateway: async () => true,
       checkDb: () => true,
@@ -16,7 +16,7 @@ describe('health handler', () => {
 
     const body = json.mock.calls[0][0];
     expect(body.status).toBe('ok');
-    expect(body.version).toBe('0.9.0');
+    expect(body.version).toBe('0.1.0');
     expect(body.mode).toBe('full');
     expect(body.gateway).toBe('connected');
     expect(body.db).toBe('ok');
@@ -26,7 +26,7 @@ describe('health handler', () => {
   it('returns server-only mode', async () => {
     const { createHealthHandler } = await import('../health.js');
     const handler = createHealthHandler({
-      version: '0.9.0',
+      version: '0.1.0',
       serverOnly: true,
       checkGateway: async () => false,
       checkDb: () => true,
@@ -44,7 +44,7 @@ describe('health handler', () => {
   it('reports db error', async () => {
     const { createHealthHandler } = await import('../health.js');
     const handler = createHealthHandler({
-      version: '0.9.0',
+      version: '0.1.0',
       serverOnly: false,
       checkGateway: async () => true,
       checkDb: () => false,
@@ -62,7 +62,7 @@ describe('health handler', () => {
     const { createHealthHandler } = await import('../health.js');
     const checkGateway = vi.fn(async () => true);
     const handler = createHealthHandler({
-      version: '0.9.0',
+      version: '0.1.0',
       serverOnly: false,
       checkGateway,
       checkDb: () => true,
@@ -82,7 +82,7 @@ describe('health handler', () => {
   it('returns gateway disconnected when checkGateway throws (L15 catch)', async () => {
     const { createHealthHandler } = await import('../health.js');
     const handler = createHealthHandler({
-      version: '0.9.0',
+      version: '0.1.0',
       serverOnly: false,
       checkGateway: async () => {
         throw new Error('connection refused');

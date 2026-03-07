@@ -154,7 +154,7 @@ export function registerMcp(app: Express, engine: SnapshotEngine, noAuth: boolea
     try {
       const server = new McpServer({
         name: 'claw-insights',
-        version: process.env.npm_package_version ?? '0.9.0',
+        version: process.env.npm_package_version ?? '0.1.0',
       });
       registerSnapshotTool(server, engine);
 

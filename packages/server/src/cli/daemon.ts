@@ -254,7 +254,7 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
   console.log('');
-  console.log(`  ✅ Claw Insights v${process.env.npm_package_version ?? '0.9.0'}    ready in ${elapsed}s`);
+  console.log(`  ✅ Claw Insights v${process.env.npm_package_version ?? '0.1.0'}    ready in ${elapsed}s`);
   console.log('');
   console.log(`  ➜  Open:  ${url}`);
   console.log(`     Auth:  ${authLine}`);

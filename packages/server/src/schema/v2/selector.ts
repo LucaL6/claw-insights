@@ -1,28 +1,36 @@
 import { GraphQLError } from 'graphql';
 
+/**
+ * Runtime literal unions aligned with SDL enum-backed fields.
+ * `category` / `status` are intentionally strict (no unbounded string).
+ */
+export type SourceCategory = 'AGENT' | 'KANBAN' | 'DASHBOARD' | 'CALENDAR' | 'INTEGRATION';
+export type SourceProvider = 'openclaw' | 'kanban' | 'google' | 'github' | (string & {});
+export type SourceStatus = 'INITIALIZING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+
 export interface SourceEntry {
   readonly id: string;
   readonly name: string;
-  readonly status: string;
+  readonly status: SourceStatus;
   readonly attributes: {
-    readonly category: string;
-    readonly provider?: string | null;
+    readonly category: SourceCategory;
+    readonly provider?: SourceProvider | null;
     readonly tags: readonly string[];
   };
 }
 
 export interface SelectorInput {
   readonly id?: string | null;
-  readonly category?: string | null;
-  readonly provider?: string | null;
+  readonly category?: SourceCategory | null;
+  readonly provider?: SourceProvider | null;
   readonly tags?: readonly string[] | null;
 }
 
 export interface FilterInput {
-  readonly category?: string | null;
-  readonly provider?: string | null;
+  readonly category?: SourceCategory | null;
+  readonly provider?: SourceProvider | null;
   readonly tags?: readonly string[] | null;
-  readonly status?: string | null;
+  readonly status?: SourceStatus | null;
 }
 
 type WarnFn = (msg: string) => void;
@@ -44,8 +52,12 @@ export const resolveSelector = (
 
   const matches = sources.filter((s) => matchesSelector(s, selector));
 
-  if (matches.length === 0) {return null;}
-  if (matches.length === 1) {return matches[0];}
+  if (matches.length === 0) {
+    return null;
+  }
+  if (matches.length === 1) {
+    return matches[0];
+  }
 
   throw new GraphQLError(`AMBIGUOUS_SELECTOR: ${matches.length} sources match selector, refine your query`, {
     extensions: { code: 'AMBIGUOUS_SELECTOR', matchedIds: matches.map((s) => s.id) },
@@ -53,23 +65,39 @@ export const resolveSelector = (
 };
 
 export const matchFilter = (sources: readonly SourceEntry[], filter?: FilterInput | null): SourceEntry[] => {
-  if (!filter) {return [...sources];}
+  if (!filter) {
+    return [...sources];
+  }
   return sources.filter((s) => {
-    if (filter.category != null && s.attributes.category !== filter.category) {return false;}
-    if (filter.provider != null && s.attributes.provider !== filter.provider) {return false;}
-    if (filter.status != null && s.status !== filter.status) {return false;}
+    if (filter.category != null && s.attributes.category !== filter.category) {
+      return false;
+    }
+    if (filter.provider != null && s.attributes.provider !== filter.provider) {
+      return false;
+    }
+    if (filter.status != null && s.status !== filter.status) {
+      return false;
+    }
     if (filter.tags != null && filter.tags.length > 0) {
-      if (!filter.tags.every((t) => s.attributes.tags.includes(t))) {return false;}
+      if (!filter.tags.every((t) => s.attributes.tags.includes(t))) {
+        return false;
+      }
     }
     return true;
   });
 };
 
 const matchesSelector = (source: SourceEntry, sel: SelectorInput): boolean => {
-  if (sel.category != null && source.attributes.category !== sel.category) {return false;}
-  if (sel.provider != null && source.attributes.provider !== sel.provider) {return false;}
+  if (sel.category != null && source.attributes.category !== sel.category) {
+    return false;
+  }
+  if (sel.provider != null && source.attributes.provider !== sel.provider) {
+    return false;
+  }
   if (sel.tags != null && sel.tags.length > 0) {
-    if (!sel.tags.every((t) => source.attributes.tags.includes(t))) {return false;}
+    if (!sel.tags.every((t) => source.attributes.tags.includes(t))) {
+      return false;
+    }
   }
   return true;
 };

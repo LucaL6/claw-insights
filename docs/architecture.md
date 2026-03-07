@@ -245,7 +245,7 @@ npm run format:check     # Check without modifying
 npm run build            # Build all packages
 
 # Release build (tarball)
-bash scripts/build-release.sh 0.9.0
+bash scripts/build-release.sh 0.1.0
 ```
 
 ### Docker Smoke Test

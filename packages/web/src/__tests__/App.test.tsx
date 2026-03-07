@@ -33,7 +33,7 @@ vi.mock('../hooks/useHashRoute', () => ({
   useHashRoute: () => mockRoute,
 }));
 vi.mock('../hooks/useTopBarData', () => ({
-  useTopBarData: () => ({ version: '0.9.0', gateway: {}, fetching: {} }),
+  useTopBarData: () => ({ version: '0.1.0', gateway: {}, fetching: {} }),
 }));
 vi.mock('../components/topbar/TopBar', () => ({
   TopBar: (props: { currentPage?: string }) => <div data-testid="topbar">{props.currentPage}</div>,

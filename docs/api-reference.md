@@ -4,46 +4,50 @@ Claw Insights exposes a GraphQL API and REST endpoints.
 
 ## GraphQL
 
-**Endpoint:** `POST /graphql` (also `GET` for playground)
-**Auth:** Bearer token or cookie ([details](./configuration.md#authentication-details))
+**Endpoint:** `POST /graphql` (also `GET` for playground)  
+**Auth:** Bearer token or cookie ([details](./configuration.md#authentication-details))  
 **Schema source:** [`packages/server/src/schema/schema.graphql`](../packages/server/src/schema/schema.graphql)
 
 ### v2 source-centric query contract
 
-> Terminology note: DEV-067 plan language uses `system`, `sources`, `source` as the v2 query list.
-> In the current schema, these are represented under `context` as:
->
-> - `context.system` (system namespace)
-> - `context.source` (source namespace)
-> - `context` (root namespace container)
+The canonical v2 entrypoints are top-level root fields:
 
-#### v2 query list (`system`, `sources`, `source`)
+| Root field                  | Returns            | Purpose                                        |
+| --------------------------- | ------------------ | ---------------------------------------------- |
+| `system(context)`           | `SystemNamespace!` | System-level status/resources/channels/gateway |
+| `sources(filter, context)`  | `[DataSource!]!`   | List registered data sources                   |
+| `source(selector, context)` | `SourceNamespace`  | Resolve one source namespace by selector       |
 
-| v2 name (plan/docs) | Schema path      | Returns            | Notes                                          |
-| ------------------- | ---------------- | ------------------ | ---------------------------------------------- |
-| `system`            | `context.system` | `SystemNamespace!` | System-level queries (`resources`, `channels`) |
-| `sources`           | `context`        | `QueryContext!`    | Namespace container (groups source/system)     |
-| `source`            | `context.source` | `SourceNamespace!` | Source-centric business queries                |
+> `Query.context` is still available as a temporary compatibility bridge and is marked `@deprecated`.
 
-> Phase 3 note: source selector routing and context defaults extraction are scaffolded in server code but not exposed as schema inputs yet. Current v2 runtime resolves the default AGENT source.
+### v2 namespace fields
 
-#### v2 namespace fields
+#### `system(context)` → `... on OpenClawSystem`
 
-| Namespace        | Field                                                 | Returns                  |
-| ---------------- | ----------------------------------------------------- | ------------------------ |
-| `context.system` | `resources`                                           | `SystemResources!`       |
-| `context.system` | `channels`                                            | `[Channel!]!`            |
-| `context.source` | `gateway`                                             | `GatewayStatus!`         |
-| `context.source` | `sessions(filter)`                                    | `[Session!]!`            |
-| `context.source` | `metrics(date, range)`                                | `MetricsSummary!`        |
-| `context.source` | `cronJobs`                                            | `[CronJob!]!`            |
-| `context.source` | `usageCost`                                           | `UsageCost!`             |
-| `context.source` | `recentLogs(count)`                                   | `[LogEntry!]!`           |
-| `context.source` | `events(from, to, types, limit)`                      | `EventsResult!`          |
-| `context.source` | `eventDensity`                                        | `[EventDensityBucket!]!` |
-| `context.source` | `eventCounts(from, to)`                               | `EventCounts!`           |
-| `context.source` | `lifetimeStats`                                       | `LifetimeStats!`         |
-| `context.source` | `sessionTranscript(sessionKey, limit, before, after)` | `SessionTranscript`      |
+| Field       | Returns            |
+| ----------- | ------------------ |
+| `health`    | `HealthStatus!`    |
+| `gateway`   | `GatewayStatus!`   |
+| `resources` | `SystemResources!` |
+| `channels`  | `[Channel!]!`      |
+
+#### `source(selector, context)` → `... on AgentNamespace`
+
+| Field                                                 | Returns                                                      |
+| ----------------------------------------------------- | ------------------------------------------------------------ |
+| `info`                                                | `DataSource!`                                                |
+| `gateway`                                             | `GatewayStatus!` (deprecated alias; prefer `system.gateway`) |
+| `sessions(filter)`                                    | `[Session!]!`                                                |
+| `session(key)`                                        | `Session`                                                    |
+| `metrics(date, range)`                                | `MetricsSummary!`                                            |
+| `cronJobs`                                            | `[CronJob!]!`                                                |
+| `usageCost`                                           | `UsageCost!`                                                 |
+| `recentLogs(count)`                                   | `[LogEntry!]!`                                               |
+| `events(from, to, types, limit)`                      | `EventsResult!`                                              |
+| `eventDensity`                                        | `[EventDensityBucket!]!`                                     |
+| `eventCounts(from, to)`                               | `EventCounts!`                                               |
+| `lifetimeStats`                                       | `LifetimeStats!`                                             |
+| `sessionTranscript(sessionKey, limit, before, after)` | `SessionTranscript`                                          |
 
 ### v1 root queries (deprecated)
 
@@ -53,7 +57,7 @@ The following root query fields are still available for compatibility but are ma
 - `sessions`, `metrics`, `cronJobs`, `usageCost`, `recentLogs`
 - `events`, `eventDensity`, `eventCounts`, `lifetimeStats`, `sessionTranscript`
 
-Use v2 namespace paths (`context.system.*`, `context.source.*`) for new clients.
+Prefer v2 root fields (`system`, `sources`, `source`) for new clients.
 
 ### v1 → v2 migration examples
 
@@ -71,10 +75,10 @@ query {
 ```
 
 ```graphql
-# v2
+# v2 canonical
 query {
-  context {
-    source {
+  source(selector: { id: "agent:main" }) {
+    ... on AgentNamespace {
       sessions(filter: { activeOnly: true }) {
         key
         displayName
@@ -99,10 +103,10 @@ query {
 ```
 
 ```graphql
-# v2
+# v2 canonical
 query {
-  context {
-    source {
+  source(selector: { id: "agent:main" }) {
+    ... on AgentNamespace {
       metrics(range: SIX_HOUR) {
         range
         totalTokensK
@@ -134,16 +138,14 @@ query {
 ```
 
 ```graphql
-# v2
+# v2 canonical
 query {
-  context {
-    source {
+  system(context: {}) {
+    ... on OpenClawSystem {
       gateway {
         running
         version
       }
-    }
-    system {
       resources {
         cpu
         memoryMB
@@ -156,6 +158,14 @@ query {
   }
 }
 ```
+
+### Compatibility bridge (`Query.context`)
+
+`Query.context` remains for migration support:
+
+- `context.source` is equivalent to the default `AgentNamespace` source
+- `context.system` is equivalent to `OpenClawSystem`
+- `context.source.gateway` is a temporary alias for system gateway data and is deprecated
 
 ### Subscriptions
 
@@ -179,8 +189,8 @@ Do not use offset-style pagination (`offset`, `hasMore`) — they are not part o
 
 ```graphql
 query TranscriptPage($sessionKey: String!, $limit: Int!, $after: String) {
-  context {
-    source {
+  source(selector: { id: "agent:main" }) {
+    ... on AgentNamespace {
       sessionTranscript(sessionKey: $sessionKey, limit: $limit, after: $after) {
         sessionKey
         totalMessages
@@ -214,8 +224,8 @@ query TranscriptPage($sessionKey: String!, $limit: Int!, $after: String) {
 
 ```graphql
 query TranscriptPageBefore($sessionKey: String!, $limit: Int!, $before: String) {
-  context {
-    source {
+  source(selector: { id: "agent:main" }) {
+    ... on AgentNamespace {
       sessionTranscript(sessionKey: $sessionKey, limit: $limit, before: $before) {
         messages {
           timestamp
@@ -234,7 +244,7 @@ query TranscriptPageBefore($sessionKey: String!, $limit: Int!, $before: String) 
 }
 ```
 
-#### v2 transcript BAD_USER_INPUT behavior (`before` + `after`)
+#### BAD_USER_INPUT behavior (`before` + `after`)
 
 `before` and `after` are mutually exclusive in the same request.
 
@@ -245,46 +255,24 @@ If both are provided, GraphQL returns an error with:
 
 > Note: this validation runs only after transcript/file resolution. If the transcript does not exist, the resolver returns `null` (v1/v2 parity) instead of raising `BAD_USER_INPUT`.
 
-Example error shape:
-
-```json
-{
-  "errors": [
-    {
-      "message": "Cannot specify both before and after",
-      "extensions": {
-        "code": "BAD_USER_INPUT"
-      }
-    }
-  ],
-  "data": {
-    "context": {
-      "source": {
-        "sessionTranscript": null
-      }
-    }
-  }
-}
-```
-
 ### cURL examples
 
-**Query gateway status (v2):**
+**Query gateway status (v2 canonical):**
 
 ```bash
 curl http://127.0.0.1:41041/graphql \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"query":"{ context { source { gateway { running version uptime pid updateAvailable } } } }"}'
+  -d '{"query":"{ system(context: {}) { ... on OpenClawSystem { gateway { running version uptime pid updateAvailable } } } }"}'
 ```
 
-**Query sessions (v2):**
+**Query sessions (v2 canonical):**
 
 ```bash
 curl http://127.0.0.1:41041/graphql \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"query":"{ context { source { sessions { key displayName model status totalTokens subAgents { key displayName status } } } } }"}'
+  -d '{"query":"{ source(selector: { id: \"agent:main\" }) { ... on AgentNamespace { sessions { key displayName model status totalTokens subAgents { key displayName status } } } } }"}'
 ```
 
 **Subscribe to data changes (SSE):**
@@ -306,7 +294,7 @@ Health check endpoint (no auth required).
 Response:
 
 ```json
-{ "status": "ok", "gateway": "connected", "db": "ok", "uptime": "2h 15m", "version": "0.9.0" }
+{ "status": "ok", "gateway": "connected", "db": "ok", "uptime": "2h 15m", "version": "0.1.0" }
 ```
 
 ### `POST /api/snapshot`

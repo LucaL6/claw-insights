@@ -184,6 +184,27 @@
   --status-done: #3b82f6;
   --status-failed: #ef4444;
 
+  /* Status pill colors */
+  --status-pill-starting-bg: rgba(16, 185, 129, 0.1);
+  --status-pill-starting-text: #34d399;
+  --status-pill-starting-border: rgba(16, 185, 129, 0.2);
+
+  --status-pill-running-bg: rgba(45, 212, 191, 0.08);
+  --status-pill-running-text: #2dd4bf;
+  --status-pill-running-border: rgba(45, 212, 191, 0.15);
+
+  --status-pill-idle-bg: rgba(113, 113, 122, 0.08);
+  --status-pill-idle-text: #71717a;
+  --status-pill-idle-border: rgba(113, 113, 122, 0.15);
+
+  --status-pill-done-bg: rgba(59, 130, 246, 0.08);
+  --status-pill-done-text: #3b82f6;
+  --status-pill-done-border: rgba(59, 130, 246, 0.15);
+
+  --status-pill-failed-bg: rgba(239, 68, 68, 0.1);
+  --status-pill-failed-text: #f87171;
+  --status-pill-failed-border: rgba(239, 68, 68, 0.2);
+
   /* Session card borders */
   --session-active-border: rgba(16, 185, 129, 0.2);
   --session-active-border-hover: rgba(16, 185, 129, 0.3);
@@ -333,6 +354,27 @@
   --status-idle: #a1a1aa;
   --status-done: #2563eb;
   --status-failed: #dc2626;
+
+  /* Status pill colors */
+  --status-pill-starting-bg: rgba(5, 150, 105, 0.06);
+  --status-pill-starting-text: #059669;
+  --status-pill-starting-border: rgba(5, 150, 105, 0.15);
+
+  --status-pill-running-bg: rgba(13, 148, 136, 0.06);
+  --status-pill-running-text: #0d9488;
+  --status-pill-running-border: rgba(13, 148, 136, 0.15);
+
+  --status-pill-idle-bg: rgba(113, 113, 122, 0.06);
+  --status-pill-idle-text: #71717a;
+  --status-pill-idle-border: rgba(113, 113, 122, 0.15);
+
+  --status-pill-done-bg: rgba(37, 99, 235, 0.06);
+  --status-pill-done-text: #2563eb;
+  --status-pill-done-border: rgba(37, 99, 235, 0.15);
+
+  --status-pill-failed-bg: rgba(220, 38, 38, 0.06);
+  --status-pill-failed-text: #dc2626;
+  --status-pill-failed-border: rgba(220, 38, 38, 0.15);
 
   /* Session card borders */
   --session-active-border: rgba(5, 150, 105, 0.2);

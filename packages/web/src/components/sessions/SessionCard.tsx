@@ -8,6 +8,8 @@ import { BORDER_BY_STATUS } from './shared/constants';
 import { InlineProgress } from './shared/InlineProgress';
 import { relativeTime } from './shared/relativeTime';
 import { StatusDot } from './shared/StatusDot';
+import type { StatusPillVariant } from './shared/StatusPill';
+import { StatusPill } from './shared/StatusPill';
 import { TagPill } from './shared/TagPill';
 
 interface Props {
@@ -156,6 +158,28 @@ export function SessionCard({
 
 const RUNNING_ACTIVITY_WINDOW_MS = 90_000;
 
+/**
+ * Derive the status pill variant for a compact (sub-agent) card.
+ * Returns undefined when no pill should be shown (active-stale state).
+ */
+function deriveStatusPill(
+  status: string,
+  turnCount: number | undefined,
+  totalTokens: number,
+  hasRecentActivity: boolean,
+): StatusPillVariant | undefined {
+  if (status === 'DONE') {return 'done';}
+  if (status === 'FAILED') {return 'failed';}
+  if (status === 'IDLE') {return 'idle';}
+  if (status === 'ACTIVE') {
+    const hasTurnCount = typeof turnCount === 'number';
+    if (hasTurnCount && turnCount === 0 && totalTokens === 0 && hasRecentActivity) {return 'starting';}
+    if (hasTurnCount && turnCount > 0 && hasRecentActivity) {return 'running';}
+    return undefined;
+  }
+  return undefined;
+}
+
 interface CompactProps {
   displayName: string;
   model: string;
@@ -193,13 +217,18 @@ function CompactCard({
 }: CompactProps) {
   const isDone = status === 'DONE' || status === 'FAILED';
   const completionMark = status === 'DONE' ? ' ✓' : status === 'FAILED' ? ' ✕' : '';
-  const hasTurnCount = typeof turnCount === 'number';
   const activityReferenceMs = referenceNowMs ?? updatedAt;
-  const hasRecentActivity = activityReferenceMs - updatedAt <= RUNNING_ACTIVITY_WINDOW_MS;
-  const isStarting = status === 'ACTIVE' && hasTurnCount && turnCount === 0 && totalTokens === 0 && hasRecentActivity;
-  const isRunning = status === 'ACTIVE' && hasTurnCount && turnCount > 0 && hasRecentActivity;
-  const showTransientState = isStarting;
-  const transientLabel = t('sessions.starting');
+  const ageMs = Math.max(0, activityReferenceMs - updatedAt);
+  const hasRecentActivity = ageMs <= RUNNING_ACTIVITY_WINDOW_MS;
+  const pillVariant = deriveStatusPill(status, turnCount, totalTokens, hasRecentActivity);
+
+  const pillLabelMap: Record<StatusPillVariant, string> = {
+    starting: t('sessions.starting'),
+    running: t('sessions.running'),
+    idle: t('sessions.idle'),
+    done: t('sessions.done'),
+    failed: t('sessions.failed'),
+  };
 
   return (
     <div
@@ -240,45 +269,33 @@ function CompactCard({
         setHovered(false);
       }}
     >
-      {showTransientState ? (
-        <div className="flex items-center gap-2">
-          <StatusDot status={status} size="sm" />
-          <span className="mono text-[13px] text-fg">{displayName}</span>
-          <span className="text-xs animate-pulse text-fg-dim">{transientLabel}</span>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-            <StatusDot status={status} size="sm" />
-            <span className={`mono text-[13px] font-medium truncate min-w-0 ${isDone ? 'text-fg-muted' : 'text-fg'}`}>
-              {displayName}
-              {completionMark}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+          <StatusDot status={status} size="sm" animate={pillVariant === 'starting'} />
+          <span className={`mono text-[13px] font-medium truncate min-w-0 ${isDone ? 'text-fg-muted' : 'text-fg'}`}>
+            {displayName}
+            {completionMark}
+          </span>
+          {pillVariant && <StatusPill variant={pillVariant} label={pillLabelMap[pillVariant]} />}
+          <TagPill variant="model" size="sm">
+            <span className="mono">{formatModel(model)}</span>
+          </TagPill>
+          {channel && (
+            <span className="hidden md:inline">
+              <TagPill variant="channel" size="sm">
+                {channel}
+              </TagPill>
             </span>
-            {isRunning && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded border border-edge-subtle text-fg-dim">
-                {t('sessions.running')}
-              </span>
-            )}
-            <TagPill variant="model" size="sm">
-              <span className="mono">{formatModel(model)}</span>
-            </TagPill>
-            {channel && (
-              <span className="hidden md:inline">
-                <TagPill variant="channel" size="sm">
-                  {channel}
-                </TagPill>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 ml-auto">
-            <span className={`mono text-xs ${isDone ? 'text-fg-dim' : 'text-fg-muted'}`}>
-              {formatTokensRaw(totalTokens)}
-            </span>
-            <InlineProgress percent={usagePercent} width={32} height={2} />
-            <span className="text-xs w-12 text-right text-fg-dim hidden md:inline">{relativeTime(updatedAt, t)}</span>
-          </div>
+          )}
         </div>
-      )}
+        <div className="flex items-center gap-2 ml-auto">
+          <span className={`mono text-xs ${isDone ? 'text-fg-dim' : 'text-fg-muted'}`}>
+            {formatTokensRaw(totalTokens)}
+          </span>
+          <InlineProgress percent={usagePercent} width={32} height={2} />
+          <span className="text-xs w-12 text-right text-fg-dim hidden md:inline">{relativeTime(updatedAt, t)}</span>
+        </div>
+      </div>
     </div>
   );
 }

@@ -8,7 +8,14 @@ const config: CodegenConfig = {
       config: {
         enumsAsTypes: true,
         skipTypename: true,
-        scalars: { Int: 'number', Float: 'number', String: 'string', Boolean: 'boolean' },
+        scalars: {
+          Int: 'number',
+          Float: 'number',
+          String: 'string',
+          Boolean: 'boolean',
+          JSON: 'unknown',
+          JSONObject: 'unknown',
+        },
       },
     },
     'packages/server/src/schema/generated/resolver-types.ts': {
@@ -18,7 +25,14 @@ const config: CodegenConfig = {
         useIndexSignature: true,
         enumsAsTypes: true,
         skipTypename: true,
-        scalars: { Int: 'number', Float: 'number', String: 'string', Boolean: 'boolean' },
+        scalars: {
+          Int: 'number',
+          Float: 'number',
+          String: 'string',
+          Boolean: 'boolean',
+          JSON: 'unknown',
+          JSONObject: 'unknown',
+        },
       },
     },
     'packages/web/src/generated/': {

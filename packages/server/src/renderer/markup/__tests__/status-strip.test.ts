@@ -30,7 +30,7 @@ function collectText(node: SatoriNode | string | unknown): string[] {
 
 function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
   return {
-    gateway: { status: 'up', version: '0.9.0', uptime: '2h', cpu: 12, memoryMB: 256 },
+    gateway: { status: 'up', version: '0.1.0', uptime: '2h', cpu: 12, memoryMB: 256 },
     channels: [
       { name: 'discord', provider: 'discord', connected: true, latencyMs: 50 },
       { name: 'telegram', provider: 'telegram', connected: false, latencyMs: null },

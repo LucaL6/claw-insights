@@ -2,7 +2,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { getAppVersion } from '../../version.js';
-import { createSystemAdapter, mapChannels, mapGateway, mapResources, mapSystemMetrics } from '../system-adapter.js';
+import {
+  aggregateHealthStatus,
+  createSystemAdapter,
+  mapChannels,
+  mapGateway,
+  mapHealthStatus,
+  mapResources,
+  mapSystemMetrics,
+} from '../system-adapter.js';
 
 describe('SystemAdapter', () => {
   function createMockService() {
@@ -137,6 +145,59 @@ describe('SystemAdapter', () => {
       expect(mapped.uptime).toMatch(/\d+s/);
       expect(mapped.platform).toBe(process.platform);
       expect(mapped.nodeVersion).toBe(process.version);
+    });
+  });
+
+  describe('mapHealthStatus', () => {
+    it.each([
+      ['ok', 'HEALTHY'],
+      ['connected', 'HEALTHY'],
+      ['PASS', 'HEALTHY'],
+      ['healthy', 'HEALTHY'],
+      ['warn', 'DEGRADED'],
+      ['WARNING', 'DEGRADED'],
+      ['pending', 'DEGRADED'],
+      ['starting', 'DEGRADED'],
+      ['degraded', 'DEGRADED'],
+      ['FAIL', 'UNHEALTHY'],
+      ['error', 'UNHEALTHY'],
+      ['disconnected', 'UNHEALTHY'],
+      ['unhealthy', 'UNHEALTHY'],
+    ])('maps %s → %s', (input, expected) => {
+      expect(mapHealthStatus(input)).toBe(expected);
+    });
+
+    it('returns DEGRADED for null/undefined', () => {
+      expect(mapHealthStatus(null)).toBe('DEGRADED');
+      expect(mapHealthStatus(undefined)).toBe('DEGRADED');
+    });
+
+    it('returns fallback for unrecognised strings', () => {
+      expect(mapHealthStatus('banana')).toBe('DEGRADED');
+      expect(mapHealthStatus('banana', 'UNHEALTHY')).toBe('UNHEALTHY');
+    });
+
+    it('trims and is case-insensitive', () => {
+      expect(mapHealthStatus('  OK  ')).toBe('HEALTHY');
+      expect(mapHealthStatus('Pass')).toBe('HEALTHY');
+    });
+  });
+
+  describe('aggregateHealthStatus', () => {
+    it('returns HEALTHY when all healthy', () => {
+      expect(aggregateHealthStatus(['HEALTHY', 'HEALTHY'])).toBe('HEALTHY');
+    });
+
+    it('returns DEGRADED when any degraded', () => {
+      expect(aggregateHealthStatus(['HEALTHY', 'DEGRADED'])).toBe('DEGRADED');
+    });
+
+    it('returns UNHEALTHY when any unhealthy', () => {
+      expect(aggregateHealthStatus(['HEALTHY', 'DEGRADED', 'UNHEALTHY'])).toBe('UNHEALTHY');
+    });
+
+    it('returns DEGRADED for empty array', () => {
+      expect(aggregateHealthStatus([])).toBe('DEGRADED');
     });
   });
 

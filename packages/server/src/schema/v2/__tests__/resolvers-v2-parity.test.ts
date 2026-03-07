@@ -84,16 +84,14 @@ function createMockCtx(): AppContext {
           .mockReturnValue([{ timestamp: 0, level: 'mystery', source: 'sampler', message: 'hello' }]),
       },
       system: {
-        getSystemMetrics: vi
-          .fn()
-          .mockResolvedValue({
-            cpu: 1,
-            memoryMB: 1,
-            diskMB: 1,
-            uptime: '1h',
-            platform: 'darwin',
-            nodeVersion: process.version,
-          }),
+        getSystemMetrics: vi.fn().mockResolvedValue({
+          cpu: 1,
+          memoryMB: 1,
+          diskMB: 1,
+          uptime: '1h',
+          platform: 'darwin',
+          nodeVersion: process.version,
+        }),
       },
       lifetime: {
         getStats: vi.fn().mockReturnValue({
@@ -112,15 +110,13 @@ function createMockCtx(): AppContext {
       },
       transcript: { getTranscriptPath: vi.fn().mockReturnValue('/tmp/not-used.jsonl') },
       usage: {
-        getUsageCost: vi
-          .fn()
-          .mockResolvedValue({
-            totalCost: 0,
-            totalTokensM: 0,
-            todayCost: 0,
-            todayTokensM: 0,
-            fetchedAt: new Date().toISOString(),
-          }),
+        getUsageCost: vi.fn().mockResolvedValue({
+          totalCost: 0,
+          totalTokensM: 0,
+          todayCost: 0,
+          todayTokensM: 0,
+          fetchedAt: new Date().toISOString(),
+        }),
       },
     },
     dataValidator: { runValidation: vi.fn().mockReturnValue([{ pass: false, message: 'validator warning' }]) },
@@ -140,8 +136,8 @@ describe('v2 resolver parity + guards', () => {
 
     const v1 = await (resolvers.Query!.sessions as any)({}, {});
     const contextRoot = await (resolvers.Query!.context as any)({}, {});
-    const sourceRoot = await (resolvers.QueryContext!.source as any)(contextRoot, {});
-    const v2 = await (resolvers.SourceNamespace!.sessions as any)(sourceRoot, {});
+    const sourceRoot = await (resolvers.LegacyContextNamespace!.source as any)(contextRoot, {});
+    const v2 = await (resolvers.AgentNamespace!.sessions as any)(sourceRoot, {});
 
     expect(v2).toEqual(v1);
   });
@@ -157,9 +153,9 @@ describe('v2 resolver parity + guards', () => {
     });
 
     const contextRoot = await (resolvers.Query!.context as any)({}, {});
-    const sourceRoot = await (resolvers.QueryContext!.source as any)(contextRoot, {});
+    const sourceRoot = await (resolvers.LegacyContextNamespace!.source as any)(contextRoot, {});
     await expect(
-      (resolvers.SourceNamespace!.sessionTranscript as any)(sourceRoot, { sessionKey: 's1', before: 'a', after: 'b' }),
+      (resolvers.AgentNamespace!.sessionTranscript as any)(sourceRoot, { sessionKey: 's1', before: 'a', after: 'b' }),
     ).rejects.toMatchObject({
       extensions: { code: 'BAD_USER_INPUT' },
     });
@@ -176,9 +172,9 @@ describe('v2 resolver parity + guards', () => {
     ).resolves.toBeNull();
 
     const contextRoot = await (resolvers.Query!.context as any)({}, {});
-    const sourceRoot = await (resolvers.QueryContext!.source as any)(contextRoot, {});
+    const sourceRoot = await (resolvers.LegacyContextNamespace!.source as any)(contextRoot, {});
     await expect(
-      (resolvers.SourceNamespace!.sessionTranscript as any)(sourceRoot, {
+      (resolvers.AgentNamespace!.sessionTranscript as any)(sourceRoot, {
         sessionKey: 'missing',
         before: 'a',
         after: 'b',
@@ -192,8 +188,8 @@ describe('v2 resolver parity + guards', () => {
 
     const v1 = await (resolvers.Query!.metrics as any)({}, { range: 'ONE_HOUR' });
     const contextRoot = await (resolvers.Query!.context as any)({}, {});
-    const sourceRoot = await (resolvers.QueryContext!.source as any)(contextRoot, {});
-    const v2 = await (resolvers.SourceNamespace!.metrics as any)(sourceRoot, { range: 'ONE_HOUR' });
+    const sourceRoot = await (resolvers.LegacyContextNamespace!.source as any)(contextRoot, {});
+    const v2 = await (resolvers.AgentNamespace!.metrics as any)(sourceRoot, { range: 'ONE_HOUR' });
 
     expect(v1.warnings).toEqual(['validator warning']);
     expect(v2.warnings).toEqual(v1.warnings);
@@ -205,8 +201,8 @@ describe('v2 resolver parity + guards', () => {
 
     const v1 = await (resolvers.Query!.recentLogs as any)({}, { count: 1 });
     const contextRoot = await (resolvers.Query!.context as any)({}, {});
-    const sourceRoot = await (resolvers.QueryContext!.source as any)(contextRoot, {});
-    const v2 = await (resolvers.SourceNamespace!.recentLogs as any)(sourceRoot, { count: 1 });
+    const sourceRoot = await (resolvers.LegacyContextNamespace!.source as any)(contextRoot, {});
+    const v2 = await (resolvers.AgentNamespace!.recentLogs as any)(sourceRoot, { count: 1 });
 
     expect(v1[0].level).toBe('INFO');
     expect(v2[0].level).toBe(v1[0].level);
@@ -223,9 +219,9 @@ describe('v2 resolver parity + guards', () => {
     });
 
     const contextRoot = await (resolvers.Query!.context as any)({}, {});
-    const sourceRoot = await (resolvers.QueryContext!.source as any)(contextRoot, {});
+    const sourceRoot = await (resolvers.LegacyContextNamespace!.source as any)(contextRoot, {});
     await expect(
-      (resolvers.SourceNamespace!.sessionTranscript as any)(sourceRoot, { sessionKey: 's1' }),
+      (resolvers.AgentNamespace!.sessionTranscript as any)(sourceRoot, { sessionKey: 's1' }),
     ).rejects.toMatchObject({
       extensions: { code: 'TRANSCRIPT_TOO_LARGE' },
     });
@@ -242,12 +238,69 @@ describe('v2 resolver parity + guards', () => {
     });
 
     const contextRoot = await (resolvers.Query!.context as any)({}, {});
-    const sourceRoot = await (resolvers.QueryContext!.source as any)(contextRoot, {});
+    const sourceRoot = await (resolvers.LegacyContextNamespace!.source as any)(contextRoot, {});
     await expect(
-      (resolvers.SourceNamespace!.sessionTranscript as any)(sourceRoot, { sessionKey: 's1' }),
+      (resolvers.AgentNamespace!.sessionTranscript as any)(sourceRoot, { sessionKey: 's1' }),
     ).rejects.toMatchObject({
       extensions: { code: 'TRANSCRIPT_READ_ERROR' },
     });
+  });
+
+  it('canonical parity: Query.source(selector) matches v1 source-root fields', async () => {
+    const ctx = createMockCtx();
+    const resolvers = createResolvers(ctx);
+    const gqlCtx = {};
+
+    const sourceRoot = await (resolvers.Query!.source as any)({}, { selector: { id: 'agent:main' } }, gqlCtx);
+    expect(sourceRoot).toBeTruthy();
+
+    const v1Sessions = await (resolvers.Query!.sessions as any)({}, {});
+    const v2Sessions = await (resolvers.AgentNamespace!.sessions as any)(sourceRoot, {}, gqlCtx);
+    expect(v2Sessions).toEqual(v1Sessions);
+
+    const v1Metrics = await (resolvers.Query!.metrics as any)({}, { range: 'ONE_HOUR' });
+    const v2Metrics = await (resolvers.AgentNamespace!.metrics as any)(sourceRoot, { range: 'ONE_HOUR' }, gqlCtx);
+    expect(v2Metrics).toEqual(v1Metrics);
+
+    const v1Logs = await (resolvers.Query!.recentLogs as any)({}, { count: 1 });
+    const v2Logs = await (resolvers.AgentNamespace!.recentLogs as any)(sourceRoot, { count: 1 }, gqlCtx);
+    expect(v2Logs).toEqual(v1Logs);
+  });
+
+  it('canonical parity: Query.system(context) matches v1 gateway/resources/channels', async () => {
+    const ctx = createMockCtx();
+    const resolvers = createResolvers(ctx);
+    const gqlCtx = {};
+
+    const systemRoot = await (resolvers.Query!.system as any)({}, {}, gqlCtx);
+
+    const v1Gateway = await (resolvers.Query!.gateway as any)({}, {}, gqlCtx);
+    const v2Gateway = await (resolvers.OpenClawSystem!.gateway as any)(systemRoot, {}, gqlCtx);
+    expect(v2Gateway).toEqual(v1Gateway);
+
+    const v1Resources = await (resolvers.Query!.resources as any)({}, {}, gqlCtx);
+    const v2Resources = await (resolvers.OpenClawSystem!.resources as any)(systemRoot, {}, gqlCtx);
+    expect(v2Resources).toEqual(v1Resources);
+
+    const v1Channels = await (resolvers.Query!.channels as any)({}, {}, gqlCtx);
+    const v2Channels = await (resolvers.OpenClawSystem!.channels as any)(systemRoot, {}, gqlCtx);
+    expect(v2Channels).toEqual(v1Channels);
+  });
+
+  it('compat alias parity: context.source.gateway and context.system.gateway share one gateway snapshot', async () => {
+    const ctx = createMockCtx();
+    const resolvers = createResolvers(ctx);
+    const gqlCtx = {};
+
+    const contextRoot = await (resolvers.Query!.context as any)({}, {}, gqlCtx);
+    const sourceRoot = await (resolvers.LegacyContextNamespace!.source as any)(contextRoot, {}, gqlCtx);
+    const systemRoot = await (resolvers.LegacyContextNamespace!.system as any)(contextRoot, {}, gqlCtx);
+
+    const aliasGateway = await (resolvers.AgentNamespace!.gateway as any)(sourceRoot, {}, gqlCtx);
+    const canonicalGateway = await (resolvers.OpenClawSystem!.gateway as any)(systemRoot, {}, gqlCtx);
+
+    expect(aliasGateway).toEqual(canonicalGateway);
+    expect(ctx.ports.gateway.getGatewayStatus).toHaveBeenCalledTimes(1);
   });
 
   it('createResolvers(ctx) production assembly smoke', async () => {
@@ -258,8 +311,8 @@ describe('v2 resolver parity + guards', () => {
     expect(typeof resolvers.Query?.context).toBe('function');
 
     const contextRoot = await (resolvers.Query!.context as any)({}, {});
-    const systemRoot = await (resolvers.QueryContext!.system as any)(contextRoot, {});
-    const resources = await (resolvers.SystemNamespace!.resources as any)(systemRoot, {});
+    const systemRoot = await (resolvers.LegacyContextNamespace!.system as any)(contextRoot, {});
+    const resources = await (resolvers.OpenClawSystem!.resources as any)(systemRoot, {});
 
     expect(resources).toMatchObject({ cpu: 1, memoryMB: 1, diskMB: 1 });
   });
