@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Snapshot errors section now hidden when error count is 0
 - Token usage in snapshot now shows per-model breakdown with colored legend
 
-## [0.1.0] - 2026-02-23
+## [0.9.0] - 2026-03-07
 
 ### Added
 

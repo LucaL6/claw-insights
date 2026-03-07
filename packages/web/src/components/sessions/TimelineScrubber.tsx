@@ -39,8 +39,14 @@ function formatHHMM(iso: string): string {
 }
 
 const MIN_MARKERS = 4;
-const MAX_MARKERS = 12;
-const MINUTES_PER_MARKER = 10;
+const MAX_MARKERS = 8;
+const MINUTES_PER_MARKER = 30;
+
+interface MarkerCandidate {
+  label: string;
+  index: number;
+  ms: number;
+}
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
@@ -51,107 +57,217 @@ function parseTimestampMs(iso: string, fallback: number): number {
   return Number.isNaN(ms) ? fallback : ms;
 }
 
-function targetMarkerCount(timestamps: string[]): number {
-  const messageCount = timestamps.length;
-  if (messageCount <= 1) {
-    return messageCount;
-  }
-  if (messageCount <= MAX_MARKERS) {
-    return messageCount;
-  }
+function dedupeByMinuteKeepEarliest(timestamps: string[]): MarkerCandidate[] {
+  const buckets = new Map<string, MarkerCandidate>();
 
-  const firstMs = parseTimestampMs(timestamps[0], 0);
-  const lastMs = parseTimestampMs(timestamps[messageCount - 1], messageCount - 1);
-  const spanMinutes = Math.max((lastMs - firstMs) / 60_000, 0);
-
-  const byTime = Math.max(2, Math.ceil(spanMinutes / MINUTES_PER_MARKER) + 1);
-  const byCount = Math.ceil(Math.sqrt(messageCount) * 2);
-  const blended = Math.round((byTime + byCount) / 2);
-
-  return clamp(Math.min(blended, messageCount), MIN_MARKERS, MAX_MARKERS);
-}
-
-function nearestUnselectedByTime(targetMs: number, timeMs: number[], selected: Set<number>): number | undefined {
-  let bestIndex: number | undefined;
-  let bestDist = Infinity;
-
-  for (let i = 0; i < timeMs.length; i += 1) {
-    if (selected.has(i)) {
+  for (let i = 0; i < timestamps.length; i += 1) {
+    const label = formatHHMM(timestamps[i]);
+    if (buckets.has(label)) {
       continue;
     }
-    const dist = Math.abs(timeMs[i] - targetMs);
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestIndex = i;
-    }
+    buckets.set(label, {
+      label,
+      index: i,
+      ms: parseTimestampMs(timestamps[i], i),
+    });
   }
 
-  return bestIndex;
+  return [...buckets.values()].sort((a, b) => a.index - b.index);
 }
 
-function nearestUnselectedByIndex(targetIndex: number, total: number, selected: Set<number>): number | undefined {
-  if (!selected.has(targetIndex) && targetIndex >= 0 && targetIndex < total) {
-    return targetIndex;
+function targetMarkerCount(candidates: MarkerCandidate[]): number {
+  const uniqueCount = candidates.length;
+  if (uniqueCount <= 1) {
+    return uniqueCount;
+  }
+  if (uniqueCount <= MAX_MARKERS) {
+    return uniqueCount;
   }
 
-  for (let offset = 1; offset < total; offset += 1) {
-    const left = targetIndex - offset;
-    const right = targetIndex + offset;
-    if (left >= 0 && !selected.has(left)) {
-      return left;
+  const firstMs = candidates[0].ms;
+  const lastMs = candidates[uniqueCount - 1].ms;
+  const spanMinutes = Math.max((lastMs - firstMs) / 60_000, 0);
+
+  const byTime = Math.max(2, Math.ceil(spanMinutes / MINUTES_PER_MARKER) + 2);
+  const byCount = Math.max(2, Math.ceil(Math.sqrt(uniqueCount)));
+  const blended = Math.round((byTime + byCount) / 2);
+
+  return clamp(blended, MIN_MARKERS, MAX_MARKERS);
+}
+
+function dynamicMinGap(rawCount: number, targetCount: number): number {
+  if (rawCount <= 1 || targetCount <= 1) {
+    return 1;
+  }
+  const avgGap = (rawCount - 1) / (targetCount - 1);
+  return Math.max(1, Math.floor(avgGap * 0.5));
+}
+
+function canSelectCandidate(
+  candidatePos: number,
+  candidates: MarkerCandidate[],
+  selected: Set<number>,
+  minGap: number,
+): boolean {
+  const candidateIndex = candidates[candidatePos].index;
+  for (const selectedPos of selected) {
+    if (Math.abs(candidates[selectedPos].index - candidateIndex) < minGap) {
+      return false;
     }
-    if (right < total && !selected.has(right)) {
-      return right;
+  }
+  return true;
+}
+
+function pickNearestCandidate(
+  candidates: MarkerCandidate[],
+  selected: Set<number>,
+  minGap: number,
+  score: (candidate: MarkerCandidate) => number,
+): number | undefined {
+  let bestPos: number | undefined;
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  for (let pos = 0; pos < candidates.length; pos += 1) {
+    if (selected.has(pos)) {
+      continue;
+    }
+    if (!canSelectCandidate(pos, candidates, selected, minGap)) {
+      continue;
+    }
+
+    const scoreValue = score(candidates[pos]);
+    if (scoreValue < bestScore) {
+      bestScore = scoreValue;
+      bestPos = pos;
     }
   }
 
-  return undefined;
+  return bestPos;
+}
+
+function fillByTimeAnchors(
+  candidates: MarkerCandidate[],
+  selected: Set<number>,
+  targetCount: number,
+  minGap: number,
+): void {
+  if (targetCount <= 2) {
+    return;
+  }
+
+  const firstMs = candidates[0].ms;
+  const lastMs = candidates[candidates.length - 1].ms;
+  const span = Math.max(lastMs - firstMs, 0);
+  if (span === 0) {
+    return;
+  }
+
+  for (let i = 1; i < targetCount - 1 && selected.size < targetCount; i += 1) {
+    const targetMs = firstMs + (span * i) / (targetCount - 1);
+    const pos = pickNearestCandidate(candidates, selected, minGap, (candidate) => {
+      const timeDelta = Math.abs(candidate.ms - targetMs);
+      return timeDelta + candidate.index / 1_000_000;
+    });
+    if (pos !== undefined) {
+      selected.add(pos);
+    }
+  }
+}
+
+function fillByMessageAnchors(
+  candidates: MarkerCandidate[],
+  selected: Set<number>,
+  targetCount: number,
+  rawMessageCount: number,
+  minGap: number,
+): void {
+  if (targetCount <= 2) {
+    return;
+  }
+
+  const lastRawIndex = rawMessageCount - 1;
+  for (let i = 1; i < targetCount - 1 && selected.size < targetCount; i += 1) {
+    const targetRawIndex = Math.round((lastRawIndex * i) / (targetCount - 1));
+    const pos = pickNearestCandidate(candidates, selected, minGap, (candidate) => {
+      const msgDelta = Math.abs(candidate.index - targetRawIndex);
+      return msgDelta + candidate.index / 1_000_000;
+    });
+    if (pos !== undefined) {
+      selected.add(pos);
+    }
+  }
+}
+
+function backfillCandidates(
+  candidates: MarkerCandidate[],
+  selected: Set<number>,
+  targetCount: number,
+  minGap: number,
+): void {
+  for (let gap = Math.max(1, minGap - 1); gap >= 1 && selected.size < targetCount; gap -= 1) {
+    for (let pos = 1; pos < candidates.length - 1 && selected.size < targetCount; pos += 1) {
+      if (selected.has(pos)) {
+        continue;
+      }
+      if (canSelectCandidate(pos, candidates, selected, gap)) {
+        selected.add(pos);
+      }
+    }
+  }
+
+  for (let pos = 1; pos < candidates.length - 1 && selected.size < targetCount; pos += 1) {
+    if (!selected.has(pos)) {
+      selected.add(pos);
+    }
+  }
 }
 
 function buildMarkers(timestamps: string[]): TimeMarker[] {
   if (timestamps.length === 0) {
     return [];
   }
-  if (timestamps.length === 1) {
-    return [{ label: formatHHMM(timestamps[0]), index: 0 }];
+
+  const deduped = dedupeByMinuteKeepEarliest(timestamps);
+  const candidates =
+    deduped.length >= 2
+      ? deduped
+      : timestamps.length >= 2
+        ? [
+            {
+              label: formatHHMM(timestamps[0]),
+              index: 0,
+              ms: parseTimestampMs(timestamps[0], 0),
+            },
+            {
+              label: formatHHMM(timestamps[timestamps.length - 1]),
+              index: timestamps.length - 1,
+              ms: parseTimestampMs(timestamps[timestamps.length - 1], timestamps.length - 1),
+            },
+          ]
+        : deduped;
+
+  if (candidates.length === 0) {
+    return [];
+  }
+  if (candidates.length === 1) {
+    return [{ label: candidates[0].label, index: candidates[0].index }];
   }
 
-  const count = targetMarkerCount(timestamps);
-  const total = timestamps.length;
-  const lastIndex = total - 1;
+  const targetCount = Math.min(targetMarkerCount(candidates), candidates.length);
+  const selected = new Set<number>([0, candidates.length - 1]);
 
-  const timeMs = timestamps.map((iso, index) => parseTimestampMs(iso, index));
-  const firstMs = timeMs[0];
-  const lastMs = timeMs[lastIndex];
-
-  const selected = new Set<number>([0, lastIndex]);
-
-  if (count > 2) {
-    const span = Math.max(lastMs - firstMs, 0);
-    if (span > 0) {
-      for (let i = 1; i < count - 1; i += 1) {
-        const targetMs = firstMs + (span * i) / (count - 1);
-        const nextIndex = nearestUnselectedByTime(targetMs, timeMs, selected);
-        if (nextIndex !== undefined) {
-          selected.add(nextIndex);
-        }
-      }
-    }
-
-    for (let i = 1; selected.size < count && i < count - 1; i += 1) {
-      const targetIndex = Math.round((lastIndex * i) / (count - 1));
-      const nextIndex = nearestUnselectedByIndex(targetIndex, total, selected);
-      if (nextIndex !== undefined) {
-        selected.add(nextIndex);
-      }
-    }
+  if (targetCount > 2) {
+    const minGap = dynamicMinGap(timestamps.length, targetCount);
+    fillByTimeAnchors(candidates, selected, targetCount, minGap);
+    fillByMessageAnchors(candidates, selected, targetCount, timestamps.length, minGap);
+    backfillCandidates(candidates, selected, targetCount, minGap);
   }
 
   return [...selected]
-    .sort((a, b) => a - b)
-    .map((index) => ({
-      label: formatHHMM(timestamps[index]),
-      index,
+    .sort((a, b) => candidates[a].index - candidates[b].index)
+    .map((pos) => ({
+      label: candidates[pos].label,
+      index: candidates[pos].index,
     }));
 }
 

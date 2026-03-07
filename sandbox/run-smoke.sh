@@ -2,7 +2,7 @@
 set -e
 cd "$(dirname "$0")/.."
 
-VERSION="${1:-0.1.0}"
+VERSION="${1:-0.9.0}"
 
 echo "🔨 Building release tarball..."
 bash scripts/build-release.sh "$VERSION"

@@ -48,7 +48,7 @@ function collectImageSrc(node: SatoriNode | string | unknown): string[] {
 
 function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
   return {
-    gateway: { status: 'up', version: '0.1.0', uptime: '2h', cpu: 5, memoryMB: 512 },
+    gateway: { status: 'up', version: '0.9.0', uptime: '2h', cpu: 5, memoryMB: 512 },
     channels: [],
     timestamp: '2026-02-26T14:30:00Z',
     range: '6h',

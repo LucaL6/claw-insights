@@ -198,19 +198,35 @@ export type PageInfo = {
 };
 
 export type Query = {
+  /** @deprecated Use context.system.channels */
   channels: Array<Channel>;
+  context: QueryContext;
+  /** @deprecated Use context.source.cronJobs */
   cronJobs: Array<CronJob>;
+  /** @deprecated Use context.source.eventCounts */
   eventCounts: EventCounts;
+  /** @deprecated Use context.source.eventDensity */
   eventDensity: Array<EventDensityBucket>;
+  /** @deprecated Use context.source.events */
   events: EventsResult;
+  /** @deprecated Use context.source.gateway */
   gateway: GatewayStatus;
+  /** @deprecated Use context.source.lifetimeStats */
   lifetimeStats: LifetimeStats;
+  /** @deprecated Use context.source.metrics */
   metrics: MetricsSummary;
+  /** @deprecated Use context.source.recentLogs */
   recentLogs: Array<LogEntry>;
+  /** @deprecated Use context.system.resources */
   resources: SystemResources;
-  /** Fetch session transcript. Returns null if session/file not found. */
+  /**
+   * Fetch session transcript. Returns null if session/file not found.
+   * @deprecated Use context.source.sessionTranscript
+   */
   sessionTranscript?: Maybe<SessionTranscript>;
+  /** @deprecated Use context.source.sessions */
   sessions: Array<Session>;
+  /** @deprecated Use context.source.usageCost */
   usageCost: UsageCost;
 };
 
@@ -250,6 +266,11 @@ export type QuerySessionTranscriptArgs = {
 
 export type QuerySessionsArgs = {
   filter?: InputMaybe<SessionFilter>;
+};
+
+export type QueryContext = {
+  source: SourceNamespace;
+  system: SystemNamespace;
 };
 
 export type Session = {
@@ -320,6 +341,59 @@ export type SessionTranscript = {
   totalTokens: Scalars['Int']['output'];
 };
 
+export type SourceNamespace = {
+  cronJobs: Array<CronJob>;
+  eventCounts: EventCounts;
+  eventDensity: Array<EventDensityBucket>;
+  events: EventsResult;
+  gateway: GatewayStatus;
+  lifetimeStats: LifetimeStats;
+  metrics: MetricsSummary;
+  recentLogs: Array<LogEntry>;
+  /** Fetch session transcript. Returns null if session/file not found. */
+  sessionTranscript?: Maybe<SessionTranscript>;
+  sessions: Array<Session>;
+  usageCost: UsageCost;
+};
+
+
+export type SourceNamespaceEventCountsArgs = {
+  from?: InputMaybe<Scalars['Int']['input']>;
+  to?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type SourceNamespaceEventsArgs = {
+  from?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  to?: InputMaybe<Scalars['Int']['input']>;
+  types?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+
+export type SourceNamespaceMetricsArgs = {
+  date?: InputMaybe<Scalars['String']['input']>;
+  range?: InputMaybe<MetricsRange>;
+};
+
+
+export type SourceNamespaceRecentLogsArgs = {
+  count?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type SourceNamespaceSessionTranscriptArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  sessionKey: Scalars['String']['input'];
+};
+
+
+export type SourceNamespaceSessionsArgs = {
+  filter?: InputMaybe<SessionFilter>;
+};
+
 export type Subscription = {
   /** Lightweight signal — client should refetch the relevant query */
   dataChanged: DataChangeSignal;
@@ -329,6 +403,11 @@ export type Subscription = {
 
 export type SubscriptionLogsArgs = {
   filter?: InputMaybe<LogFilter>;
+};
+
+export type SystemNamespace = {
+  channels: Array<Channel>;
+  resources: SystemResources;
 };
 
 /** System resource usage */

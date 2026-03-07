@@ -16,7 +16,7 @@ describe('useTopBarData', () => {
   it('returns version from gateway data', () => {
     mockUseReactiveQuery.mockReturnValueOnce([
       {
-        data: { gateway: { appVersion: '0.1.0' } },
+        data: { gateway: { appVersion: '0.9.0' } },
         fetching: false,
         error: null,
       },
@@ -24,7 +24,7 @@ describe('useTopBarData', () => {
     ]);
 
     const { result } = renderHook(() => useTopBarData());
-    expect(result.current.version).toBe('0.1.0');
+    expect(result.current.version).toBe('0.9.0');
     expect(result.current.fetching.gateway).toBe(false);
   });
 

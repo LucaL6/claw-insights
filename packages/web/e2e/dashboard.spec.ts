@@ -14,7 +14,7 @@ test.describe('P0: Dashboard First Load (T1)', () => {
   test('TopBar shows version string', async ({ page }) => {
     await page.goto('/');
     await waitForDashboard(page);
-    // Version string like "Claw Insights v0.1.0" should be somewhere in the page
+    // Version string like "Claw Insights v0.9.0" should be somewhere in the page
     await expect(page.getByText(/Claw Insights/i).first()).toBeVisible();
   });
 

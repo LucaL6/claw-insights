@@ -7,6 +7,7 @@ import { createResolvers } from '../index';
 vi.mock('../../../db/event-queries', () => ({
   queryEvents: vi.fn().mockResolvedValue([{ id: 'e1', type: 'error', message: 'boom', ts: '2025-01-01' }]),
   getEventDensity: vi.fn().mockResolvedValue([{ date: '2025-01-01', count: 5 }]),
+  getEventCounts: vi.fn().mockResolvedValue({ error: 0, warning: 0, restart: 0 }),
 }));
 
 vi.mock('../../../sources/system-info', () => ({

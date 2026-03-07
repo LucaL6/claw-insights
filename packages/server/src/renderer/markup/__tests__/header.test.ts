@@ -48,7 +48,7 @@ function collectImages(node: SatoriNode | string | unknown): SatoriNode[] {
 
 function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
   return {
-    gateway: { status: 'up', version: '0.1.0', uptime: '2h', cpu: 5, memoryMB: 512 },
+    gateway: { status: 'up', version: '0.9.0', uptime: '2h', cpu: 5, memoryMB: 512 },
     channels: [],
     timestamp: '2026-02-26T00:00:00Z',
     range: '6h',
@@ -109,7 +109,7 @@ describe('renderHeader', () => {
 
   it('shows Offline when gateway is down', () => {
     const tree = renderHeader(
-      makeData({ gateway: { status: 'down', version: '0.1.0', uptime: '0', cpu: 0, memoryMB: 0 } }),
+      makeData({ gateway: { status: 'down', version: '0.9.0', uptime: '0', cpu: 0, memoryMB: 0 } }),
       'standard',
       c,
       'en',
@@ -138,7 +138,7 @@ describe('renderHeader', () => {
 
   it('shows Chinese Offline status', () => {
     const tree = renderHeader(
-      makeData({ gateway: { status: 'down', version: '0.1.0', uptime: '0', cpu: 0, memoryMB: 0 } }),
+      makeData({ gateway: { status: 'down', version: '0.9.0', uptime: '0', cpu: 0, memoryMB: 0 } }),
       'standard',
       c,
       'zh',

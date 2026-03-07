@@ -12,12 +12,14 @@ function SubAgentGroup({
   totalTokens,
   onSelect,
   selectedKey,
+  referenceNowMs,
 }: {
   prefix: string;
   items: SessionData[];
   totalTokens: number;
   onSelect?: (key: string) => void;
   selectedKey?: string | null;
+  referenceNowMs?: number;
 }) {
   const [expanded, setExpanded] = useState(true);
   return (
@@ -47,6 +49,7 @@ function SubAgentGroup({
                 status={sa.status}
                 updatedAt={sa.updatedAt}
                 turnCount={sa.turnCount}
+                referenceNowMs={referenceNowMs}
                 sessionKey={sa.key}
                 onSelect={onSelect}
                 selected={selectedKey === sa.key}
@@ -63,9 +66,10 @@ interface SessionGroupProps {
   session: SessionData;
   onSelect?: (key: string) => void;
   selectedKey?: string | null;
+  referenceNowMs?: number;
 }
 
-export function SessionGroup({ session, onSelect, selectedKey }: SessionGroupProps) {
+export function SessionGroup({ session, onSelect, selectedKey, referenceNowMs }: SessionGroupProps) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = session.subAgents.length > 0;
   const grouped = hasChildren ? groupByPrefix<SessionData>(session.subAgents) : [];
@@ -85,6 +89,7 @@ export function SessionGroup({ session, onSelect, selectedKey }: SessionGroupPro
           turnCount={session.turnCount}
           hasChildren={hasChildren}
           expanded={expanded}
+          referenceNowMs={referenceNowMs}
           onToggle={() => {
             setExpanded(!expanded);
           }}
@@ -106,6 +111,7 @@ export function SessionGroup({ session, onSelect, selectedKey }: SessionGroupPro
                   totalTokens={g.totalTokens}
                   onSelect={onSelect}
                   selectedKey={selectedKey}
+                  referenceNowMs={referenceNowMs}
                 />
               );
             }
@@ -122,6 +128,7 @@ export function SessionGroup({ session, onSelect, selectedKey }: SessionGroupPro
                   status={sa.status}
                   updatedAt={sa.updatedAt}
                   turnCount={sa.turnCount}
+                  referenceNowMs={referenceNowMs}
                   sessionKey={sa.key}
                   onSelect={onSelect}
                   selected={selectedKey === sa.key}

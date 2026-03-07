@@ -1,7 +1,8 @@
 // src/adapters/__tests__/system-adapter.test.ts
 import { describe, expect, it, vi } from 'vitest';
 
-import { createSystemAdapter } from '../system-adapter.js';
+import { getAppVersion } from '../../version.js';
+import { createSystemAdapter, mapChannels, mapGateway, mapResources, mapSystemMetrics } from '../system-adapter.js';
 
 describe('SystemAdapter', () => {
   function createMockService() {
@@ -80,6 +81,63 @@ describe('SystemAdapter', () => {
 
     expect(result).toBeNull();
     expect(platform.process.getProcessMetrics).toHaveBeenCalledWith(99999);
+  });
+
+  describe('mapping helpers', () => {
+    it('maps gateway with v1-compatible semantics', () => {
+      const mapped = mapGateway({
+        running: true,
+        pid: 4321,
+        version: '1.2.3',
+        updateAvailable: null,
+        uptime: '2h',
+        startedAt: '2026-03-04T00:00:00.000Z',
+        channels: [],
+        connectLatencyMs: 20,
+        latestVersion: '1.2.3',
+        securitySummary: { critical: 1, warn: 2, info: 3 },
+        sessionDefaults: null,
+      });
+
+      expect(mapped.securityCritical).toBe(1);
+      expect(mapped.securityWarn).toBe(2);
+      expect(mapped.appVersion).toBe(getAppVersion());
+    });
+
+    it('maps channels with unknown fallback and connected flag', () => {
+      const mapped = mapChannels({
+        channels: [
+          {
+            type: 'telegram',
+            accountId: 'acc',
+            protocol: 'telegram',
+            profile: null,
+            name: null,
+            connectionStatus: 'connected',
+          },
+        ],
+      });
+
+      expect(mapped).toEqual([{ provider: 'telegram', name: 'unknown', connected: true, latencyMs: null }]);
+    });
+
+    it('maps resources and emits sampledAt', () => {
+      const mapped = mapResources({ cpu: 1, memoryMB: 2, diskMB: 3 });
+      expect(mapped.cpu).toBe(1);
+      expect(mapped.memoryMB).toBe(2);
+      expect(mapped.diskMB).toBe(3);
+      expect(typeof mapped.sampledAt).toBe('string');
+    });
+
+    it('maps system metrics with required contract fields', () => {
+      const mapped = mapSystemMetrics({ cpu: 10, memoryMB: 20, diskMB: 30 });
+      expect(mapped.cpu).toBe(10);
+      expect(mapped.memoryMB).toBe(20);
+      expect(mapped.diskMB).toBe(30);
+      expect(mapped.uptime).toMatch(/\d+s/);
+      expect(mapped.platform).toBe(process.platform);
+      expect(mapped.nodeVersion).toBe(process.version);
+    });
   });
 
   describe('error mapping', () => {

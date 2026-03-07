@@ -370,6 +370,46 @@ describe('SessionReader branches', () => {
     reader.destroy();
   });
 
+  it('refreshTurnCounts maps transcript sessionId rows back to session key', () => {
+    const subagentKey = 'agent:main:subagent:12345678-1234-1234-1234-1234567890ab';
+    const sessionId = '12345678-1234-1234-1234-1234567890ab';
+
+    writeSessions({
+      [subagentKey]: { sessionId, updatedAt: Date.now(), chatType: 'direct' },
+    });
+    const reader = new SessionReader(tmpFile);
+
+    const dbPath = join(tmpdir(), `sr-test-${Date.now()}-idmap.db`);
+    const db = initDatabase({ dbPath });
+    const ts = new Date(Date.now() - 1000).toISOString();
+
+    db.prepare('INSERT INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)').run(
+      ts,
+      sessionId,
+      'user',
+      `h-id-1-${Date.now()}`,
+    );
+    db.prepare('INSERT INTO message_events (timestamp, session_key, role, content_hash) VALUES (?, ?, ?, ?)').run(
+      ts,
+      sessionId,
+      'assistant',
+      `h-id-2-${Date.now()}`,
+    );
+
+    reader.setDb(db);
+    reader.refreshTurnCounts();
+
+    const session = reader.getSession(subagentKey);
+    expect(session).toBeDefined();
+    expect(session!.turnCount).toBe(2);
+
+    db.close();
+    rmSync(dbPath, { force: true });
+    rmSync(dbPath + '-wal', { force: true });
+    rmSync(dbPath + '-shm', { force: true });
+    reader.destroy();
+  });
+
   it('onChange registers a listener that fires on file change', async () => {
     writeSessions({
       'agent:main:x': { sessionId: 'x', updatedAt: Date.now(), chatType: 'direct' },

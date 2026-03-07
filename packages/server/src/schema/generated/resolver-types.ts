@@ -186,19 +186,35 @@ export type PageInfo = {
 };
 
 export type Query = {
+  /** @deprecated Use context.system.channels */
   channels: Array<Channel>;
+  context: QueryContext;
+  /** @deprecated Use context.source.cronJobs */
   cronJobs: Array<CronJob>;
+  /** @deprecated Use context.source.eventCounts */
   eventCounts: EventCounts;
+  /** @deprecated Use context.source.eventDensity */
   eventDensity: Array<EventDensityBucket>;
+  /** @deprecated Use context.source.events */
   events: EventsResult;
+  /** @deprecated Use context.source.gateway */
   gateway: GatewayStatus;
+  /** @deprecated Use context.source.lifetimeStats */
   lifetimeStats: LifetimeStats;
+  /** @deprecated Use context.source.metrics */
   metrics: MetricsSummary;
+  /** @deprecated Use context.source.recentLogs */
   recentLogs: Array<LogEntry>;
+  /** @deprecated Use context.system.resources */
   resources: SystemResources;
-  /** Fetch session transcript. Returns null if session/file not found. */
+  /**
+   * Fetch session transcript. Returns null if session/file not found.
+   * @deprecated Use context.source.sessionTranscript
+   */
   sessionTranscript?: Maybe<SessionTranscript>;
+  /** @deprecated Use context.source.sessions */
   sessions: Array<Session>;
+  /** @deprecated Use context.source.usageCost */
   usageCost: UsageCost;
 };
 
@@ -232,6 +248,11 @@ export type QuerySessionTranscriptArgs = {
 
 export type QuerySessionsArgs = {
   filter?: InputMaybe<SessionFilter>;
+};
+
+export type QueryContext = {
+  source: SourceNamespace;
+  system: SystemNamespace;
 };
 
 export type Session = {
@@ -295,6 +316,53 @@ export type SessionTranscript = {
   totalTokens: Scalars['Int']['output'];
 };
 
+export type SourceNamespace = {
+  cronJobs: Array<CronJob>;
+  eventCounts: EventCounts;
+  eventDensity: Array<EventDensityBucket>;
+  events: EventsResult;
+  gateway: GatewayStatus;
+  lifetimeStats: LifetimeStats;
+  metrics: MetricsSummary;
+  recentLogs: Array<LogEntry>;
+  /** Fetch session transcript. Returns null if session/file not found. */
+  sessionTranscript?: Maybe<SessionTranscript>;
+  sessions: Array<Session>;
+  usageCost: UsageCost;
+};
+
+export type SourceNamespaceEventCountsArgs = {
+  from?: InputMaybe<Scalars['Int']['input']>;
+  to?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type SourceNamespaceEventsArgs = {
+  from?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  to?: InputMaybe<Scalars['Int']['input']>;
+  types?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type SourceNamespaceMetricsArgs = {
+  date?: InputMaybe<Scalars['String']['input']>;
+  range?: InputMaybe<MetricsRange>;
+};
+
+export type SourceNamespaceRecentLogsArgs = {
+  count?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type SourceNamespaceSessionTranscriptArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  sessionKey: Scalars['String']['input'];
+};
+
+export type SourceNamespaceSessionsArgs = {
+  filter?: InputMaybe<SessionFilter>;
+};
+
 export type Subscription = {
   /** Lightweight signal — client should refetch the relevant query */
   dataChanged: DataChangeSignal;
@@ -303,6 +371,11 @@ export type Subscription = {
 
 export type SubscriptionLogsArgs = {
   filter?: InputMaybe<LogFilter>;
+};
+
+export type SystemNamespace = {
+  channels: Array<Channel>;
+  resources: SystemResources;
 };
 
 /** System resource usage */
@@ -459,13 +532,16 @@ export type ResolversTypes = ResolversObject<{
   ModelTokens: ResolverTypeWrapper<ModelTokens>;
   PageInfo: ResolverTypeWrapper<PageInfo>;
   Query: ResolverTypeWrapper<Record<PropertyKey, never>>;
+  QueryContext: ResolverTypeWrapper<QueryContext>;
   Session: ResolverTypeWrapper<Session>;
   SessionFilter: SessionFilter;
   SessionSortBy: SessionSortBy;
   SessionStatus: SessionStatus;
   SessionTranscript: ResolverTypeWrapper<SessionTranscript>;
+  SourceNamespace: ResolverTypeWrapper<SourceNamespace>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   Subscription: ResolverTypeWrapper<Record<PropertyKey, never>>;
+  SystemNamespace: ResolverTypeWrapper<SystemNamespace>;
   SystemResources: ResolverTypeWrapper<SystemResources>;
   TranscriptMessage: ResolverTypeWrapper<TranscriptMessage>;
   TranscriptTokenUsage: ResolverTypeWrapper<TranscriptTokenUsage>;
@@ -495,11 +571,14 @@ export type ResolversParentTypes = ResolversObject<{
   ModelTokens: ModelTokens;
   PageInfo: PageInfo;
   Query: Record<PropertyKey, never>;
+  QueryContext: QueryContext;
   Session: Session;
   SessionFilter: SessionFilter;
   SessionTranscript: SessionTranscript;
+  SourceNamespace: SourceNamespace;
   String: Scalars['String']['output'];
   Subscription: Record<PropertyKey, never>;
+  SystemNamespace: SystemNamespace;
   SystemResources: SystemResources;
   TranscriptMessage: TranscriptMessage;
   TranscriptTokenUsage: TranscriptTokenUsage;
@@ -704,6 +783,7 @@ export type QueryResolvers<
   ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query'],
 > = ResolversObject<{
   channels?: Resolver<Array<ResolversTypes['Channel']>, ParentType, ContextType>;
+  context?: Resolver<ResolversTypes['QueryContext'], ParentType, ContextType>;
   cronJobs?: Resolver<Array<ResolversTypes['CronJob']>, ParentType, ContextType>;
   eventCounts?: Resolver<ResolversTypes['EventCounts'], ParentType, ContextType, Partial<QueryEventCountsArgs>>;
   eventDensity?: Resolver<Array<ResolversTypes['EventDensityBucket']>, ParentType, ContextType>;
@@ -721,6 +801,14 @@ export type QueryResolvers<
   >;
   sessions?: Resolver<Array<ResolversTypes['Session']>, ParentType, ContextType, Partial<QuerySessionsArgs>>;
   usageCost?: Resolver<ResolversTypes['UsageCost'], ParentType, ContextType>;
+}>;
+
+export type QueryContextResolvers<
+  ContextType = AppContext,
+  ParentType extends ResolversParentTypes['QueryContext'] = ResolversParentTypes['QueryContext'],
+> = ResolversObject<{
+  source?: Resolver<ResolversTypes['SourceNamespace'], ParentType, ContextType>;
+  system?: Resolver<ResolversTypes['SystemNamespace'], ParentType, ContextType>;
 }>;
 
 export type SessionResolvers<
@@ -764,6 +852,38 @@ export type SessionTranscriptResolvers<
   totalTokens?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
+export type SourceNamespaceResolvers<
+  ContextType = AppContext,
+  ParentType extends ResolversParentTypes['SourceNamespace'] = ResolversParentTypes['SourceNamespace'],
+> = ResolversObject<{
+  cronJobs?: Resolver<Array<ResolversTypes['CronJob']>, ParentType, ContextType>;
+  eventCounts?: Resolver<
+    ResolversTypes['EventCounts'],
+    ParentType,
+    ContextType,
+    Partial<SourceNamespaceEventCountsArgs>
+  >;
+  eventDensity?: Resolver<Array<ResolversTypes['EventDensityBucket']>, ParentType, ContextType>;
+  events?: Resolver<ResolversTypes['EventsResult'], ParentType, ContextType, Partial<SourceNamespaceEventsArgs>>;
+  gateway?: Resolver<ResolversTypes['GatewayStatus'], ParentType, ContextType>;
+  lifetimeStats?: Resolver<ResolversTypes['LifetimeStats'], ParentType, ContextType>;
+  metrics?: Resolver<ResolversTypes['MetricsSummary'], ParentType, ContextType, Partial<SourceNamespaceMetricsArgs>>;
+  recentLogs?: Resolver<
+    Array<ResolversTypes['LogEntry']>,
+    ParentType,
+    ContextType,
+    Partial<SourceNamespaceRecentLogsArgs>
+  >;
+  sessionTranscript?: Resolver<
+    Maybe<ResolversTypes['SessionTranscript']>,
+    ParentType,
+    ContextType,
+    RequireFields<SourceNamespaceSessionTranscriptArgs, 'sessionKey'>
+  >;
+  sessions?: Resolver<Array<ResolversTypes['Session']>, ParentType, ContextType, Partial<SourceNamespaceSessionsArgs>>;
+  usageCost?: Resolver<ResolversTypes['UsageCost'], ParentType, ContextType>;
+}>;
+
 export type SubscriptionResolvers<
   ContextType = AppContext,
   ParentType extends ResolversParentTypes['Subscription'] = ResolversParentTypes['Subscription'],
@@ -776,6 +896,14 @@ export type SubscriptionResolvers<
     ContextType,
     Partial<SubscriptionLogsArgs>
   >;
+}>;
+
+export type SystemNamespaceResolvers<
+  ContextType = AppContext,
+  ParentType extends ResolversParentTypes['SystemNamespace'] = ResolversParentTypes['SystemNamespace'],
+> = ResolversObject<{
+  channels?: Resolver<Array<ResolversTypes['Channel']>, ParentType, ContextType>;
+  resources?: Resolver<ResolversTypes['SystemResources'], ParentType, ContextType>;
 }>;
 
 export type SystemResourcesResolvers<
@@ -840,9 +968,12 @@ export type Resolvers<ContextType = AppContext> = ResolversObject<{
   ModelTokens?: ModelTokensResolvers<ContextType>;
   PageInfo?: PageInfoResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
+  QueryContext?: QueryContextResolvers<ContextType>;
   Session?: SessionResolvers<ContextType>;
   SessionTranscript?: SessionTranscriptResolvers<ContextType>;
+  SourceNamespace?: SourceNamespaceResolvers<ContextType>;
   Subscription?: SubscriptionResolvers<ContextType>;
+  SystemNamespace?: SystemNamespaceResolvers<ContextType>;
   SystemResources?: SystemResourcesResolvers<ContextType>;
   TranscriptMessage?: TranscriptMessageResolvers<ContextType>;
   TranscriptTokenUsage?: TranscriptTokenUsageResolvers<ContextType>;

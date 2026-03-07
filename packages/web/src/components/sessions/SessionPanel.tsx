@@ -145,7 +145,13 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
         {/* Session List */}
         <div className="space-y-2">
           {sessions.map((s) => (
-            <SessionGroup key={s.key} session={s} onSelect={handleSelect} selectedKey={selectedKey} />
+            <SessionGroup
+              key={s.key}
+              session={s}
+              onSelect={handleSelect}
+              selectedKey={selectedKey}
+              referenceNowMs={lastFetchTime || undefined}
+            />
           ))}
           {result.fetching && !result.data && (
             <>

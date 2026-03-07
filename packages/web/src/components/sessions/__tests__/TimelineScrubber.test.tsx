@@ -151,16 +151,41 @@ describe('TimelineScrubber', () => {
     expect(onJump).toHaveBeenCalledWith(1);
   });
 
-  it('adapts marker count beyond 8 for long timelines', () => {
-    const timestamps = Array.from({ length: 30 }, (_, i) => {
-      const d = new Date(Date.UTC(2025, 0, 1, 9, i * 5));
+  it('caps marker count at 8 for long timelines', () => {
+    const timestamps = Array.from({ length: 40 }, (_, i) => {
+      const d = new Date(Date.UTC(2025, 0, 1, 0, i * 20));
       return d.toISOString();
     });
 
     renderScrubber({ timestamps, onJump: vi.fn() });
 
     const markerButtons = screen.getAllByTitle(/Jump to message #/);
-    expect(markerButtons.length).toBeGreaterThan(8);
-    expect(markerButtons.length).toBeLessThanOrEqual(12);
+    expect(markerButtons.length).toBeLessThanOrEqual(8);
+  });
+
+  it('deduplicates repeated HH:MM labels and keeps earliest index in the minute bucket', () => {
+    const onJump = vi.fn();
+    const timestamps = [
+      '2025-01-01T02:04:01Z',
+      '2025-01-01T03:00:01Z',
+      '2025-01-01T04:49:01Z',
+      '2025-01-01T04:49:20Z',
+      '2025-01-01T04:50:00Z',
+      '2025-01-01T04:50:40Z',
+      '2025-01-01T04:54:02Z',
+      '2025-01-01T04:54:59Z',
+      '2025-01-01T12:30:01Z',
+      '2025-01-01T12:30:58Z',
+    ];
+
+    renderScrubber({ timestamps, onJump });
+
+    const markerButtons = screen.getAllByTitle(/Jump to message #/);
+    const labels = markerButtons.map((button) => button.textContent ?? '');
+    expect(new Set(labels).size).toBe(labels.length);
+
+    const minuteMarker = screen.getByTitle('Jump to message #3');
+    fireEvent.click(minuteMarker);
+    expect(onJump).toHaveBeenLastCalledWith(2);
   });
 });

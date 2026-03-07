@@ -20,6 +20,8 @@ interface Props {
   kind?: string;
   updatedAt: number;
   turnCount?: number;
+  /** Reference time injected by parent to keep render pure */
+  referenceNowMs?: number;
   /** 'primary' = full session card, 'compact' = sub-agent row */
   variant?: 'primary' | 'compact';
   /** Primary only: number of sub-agents */
@@ -43,6 +45,7 @@ export function SessionCard({
   kind,
   updatedAt,
   turnCount,
+  referenceNowMs,
   variant = 'primary',
   subAgentCount,
   onToggle,
@@ -67,6 +70,7 @@ export function SessionCard({
           status,
           updatedAt,
           turnCount,
+          referenceNowMs,
           hovered,
           setHovered,
           t,
@@ -150,6 +154,8 @@ export function SessionCard({
 
 /* ── Compact variant (sub-agent row) ── */
 
+const RUNNING_ACTIVITY_WINDOW_MS = 90_000;
+
 interface CompactProps {
   displayName: string;
   model: string;
@@ -159,6 +165,7 @@ interface CompactProps {
   status: string;
   updatedAt: number;
   turnCount?: number;
+  referenceNowMs?: number;
   hovered: boolean;
   setHovered: (v: boolean) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -176,6 +183,7 @@ function CompactCard({
   status,
   updatedAt,
   turnCount,
+  referenceNowMs,
   hovered,
   setHovered,
   t,
@@ -186,10 +194,12 @@ function CompactCard({
   const isDone = status === 'DONE' || status === 'FAILED';
   const completionMark = status === 'DONE' ? ' ✓' : status === 'FAILED' ? ' ✕' : '';
   const hasTurnCount = typeof turnCount === 'number';
-  const isStarting = status === 'ACTIVE' && hasTurnCount && turnCount === 0 && totalTokens === 0;
-  const isRunning = status === 'ACTIVE' && hasTurnCount && turnCount > 0;
-  const showTransientState = isStarting || (isRunning && totalTokens === 0);
-  const transientLabel = isStarting ? t('sessions.starting') : t('sessions.running');
+  const activityReferenceMs = referenceNowMs ?? updatedAt;
+  const hasRecentActivity = activityReferenceMs - updatedAt <= RUNNING_ACTIVITY_WINDOW_MS;
+  const isStarting = status === 'ACTIVE' && hasTurnCount && turnCount === 0 && totalTokens === 0 && hasRecentActivity;
+  const isRunning = status === 'ACTIVE' && hasTurnCount && turnCount > 0 && hasRecentActivity;
+  const showTransientState = isStarting;
+  const transientLabel = t('sessions.starting');
 
   return (
     <div
@@ -244,7 +254,11 @@ function CompactCard({
               {displayName}
               {completionMark}
             </span>
-            {isRunning && <span className="text-[11px] text-fg-dim animate-pulse">{t('sessions.running')}</span>}
+            {isRunning && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded border border-edge-subtle text-fg-dim">
+                {t('sessions.running')}
+              </span>
+            )}
             <TagPill variant="model" size="sm">
               <span className="mono">{formatModel(model)}</span>
             </TagPill>

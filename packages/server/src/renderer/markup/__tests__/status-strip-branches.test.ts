@@ -6,20 +6,31 @@ import type { SatoriNode } from '../helpers.js';
 import { renderStatusStrip } from '../status-strip.js';
 
 function collectText(node: SatoriNode | string | unknown): string[] {
-  if (typeof node === 'string') {return [node];}
-  if (typeof node === 'number') {return [String(node)];}
-  if (!node || typeof node !== 'object') {return [];}
+  if (typeof node === 'string') {
+    return [node];
+  }
+  if (typeof node === 'number') {
+    return [String(node)];
+  }
+  if (!node || typeof node !== 'object') {
+    return [];
+  }
   const n = node as SatoriNode;
   const results: string[] = [];
   const children = n.props?.children;
-  if (typeof children === 'string') {results.push(children);}
-  else if (Array.isArray(children)) {for (const c of children) {results.push(...collectText(c));}}
+  if (typeof children === 'string') {
+    results.push(children);
+  } else if (Array.isArray(children)) {
+    for (const c of children) {
+      results.push(...collectText(c));
+    }
+  }
   return results;
 }
 
 function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
   return {
-    gateway: { status: 'up', version: '0.1.0', uptime: '2h', cpu: 12, memoryMB: 256 },
+    gateway: { status: 'up', version: '0.9.0', uptime: '2h', cpu: 12, memoryMB: 256 },
     channels: [
       { name: 'discord', provider: 'discord', connected: true, latencyMs: 50 },
       { name: 'telegram', provider: 'telegram', connected: false, latencyMs: null },
@@ -47,7 +58,7 @@ function makeData(overrides?: Partial<SnapshotData>): SnapshotData {
 describe('renderStatusStrip branches', () => {
   it('shows CPU -- when cpu is NaN/Infinity', () => {
     const data = makeData({
-      gateway: { status: 'up', version: '0.1.0', uptime: '2h', cpu: NaN, memoryMB: NaN },
+      gateway: { status: 'up', version: '0.9.0', uptime: '2h', cpu: NaN, memoryMB: NaN },
     } as any);
     const tree = renderStatusStrip(data, 'standard', DARK)!;
     const texts = collectText(tree);

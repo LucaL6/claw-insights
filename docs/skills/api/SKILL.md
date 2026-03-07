@@ -13,7 +13,7 @@ GraphQL API and REST endpoints for the OpenClaw monitoring dashboard. Base URL: 
 
 ```bash
 curl http://127.0.0.1:41041/health
-# {"status":"ok","version":"0.1.0","gateway":"connected","db":"ok",...}
+# {"status":"ok","version":"0.9.0","gateway":"connected","db":"ok",...}
 ```
 
 ### Gateway Status

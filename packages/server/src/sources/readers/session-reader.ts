@@ -161,10 +161,19 @@ export class SessionReader {
       return;
     }
     const rows = getRangeTurnCountBySession(this.db, '1970-01-01T00:00:00.000Z', new Date().toISOString());
+    const sessionIdToKey = this.getSessionIdToKeyMap();
+
     this.turnCountCache.clear();
     for (const r of rows) {
-      this.turnCountCache.set(r.sessionKey, r.turns);
+      // Transcript collector keys message_events by transcript basename (sessionId UUID).
+      // Sessions list is keyed by session key (agent:...:subagent:UUID). Map IDs back to keys.
+      const normalizedKey = this.sessions.has(r.sessionKey) ? r.sessionKey : sessionIdToKey.get(r.sessionKey);
+      if (!normalizedKey) {
+        continue;
+      }
+      this.turnCountCache.set(normalizedKey, (this.turnCountCache.get(normalizedKey) ?? 0) + r.turns);
     }
+
     // Update existing sessions
     for (const [key, session] of this.sessions) {
       session.turnCount = this.turnCountCache.get(key) ?? 0;

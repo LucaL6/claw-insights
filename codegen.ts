@@ -28,6 +28,10 @@ const config: CodegenConfig = {
         enumsAsTypes: true,
         skipTypename: true,
         useTypeImports: true,
+        scalars: {
+          JSON: 'Record<string, unknown>',
+          JSONObject: 'Record<string, unknown>',
+        },
       },
     },
   },

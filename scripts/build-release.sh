@@ -6,7 +6,7 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 RELEASE_DIR="$REPO_DIR/dist/release"
-VERSION="${1:-0.1.0}"
+VERSION="${1:-0.9.0}"
 
 echo "🔨 Building claw-insights v$VERSION release..."
 

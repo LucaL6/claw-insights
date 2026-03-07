@@ -67,7 +67,7 @@ describe('SessionCard (compact)', () => {
     totalTokens: 12800,
     usagePercent: 6.4,
     status: 'DONE',
-    updatedAt: Date.now() - 300_000,
+    updatedAt: Date.now() - 15_000,
     variant: 'compact' as const,
   };
 
@@ -112,6 +112,21 @@ describe('SessionCard (compact)', () => {
     );
     expect(getByText('3.2k')).toBeDefined();
     expect(container.textContent).toMatch(/running|运行/i);
+  });
+
+  it('does not show Running when latest activity is stale', () => {
+    const nowMs = Date.now();
+    const { container } = renderWithI18n(
+      <SessionCard
+        {...baseProps}
+        status="ACTIVE"
+        turnCount={3}
+        totalTokens={3200}
+        updatedAt={nowMs - 5 * 60_000}
+        referenceNowMs={nowMs}
+      />,
+    );
+    expect(container.textContent).not.toMatch(/running|运行/i);
   });
 
   it('does not show Starting/Running when turnCount is unknown', () => {
