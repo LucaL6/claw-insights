@@ -9,6 +9,7 @@ import express from 'express';
 import { config, generateToken, setApiToken } from './config.js';
 import { createContext, destroyContext, startContext } from './context.js';
 import { createChildLogger } from './logger.js';
+import { loggingRuntimeState } from './logging/index.js';
 import { cookieExchangeMiddleware } from './middleware/cookie-exchange.js';
 import { registerGraphQL } from './routes/graphql.js';
 import { createHealthHandler } from './routes/health.js';
@@ -96,6 +97,7 @@ app.get(
       }
     },
     checkReady: () => ctx.ports.lifetime.isReady(),
+    getLoggingHealth: () => loggingRuntimeState.snapshot(),
   }),
 );
 

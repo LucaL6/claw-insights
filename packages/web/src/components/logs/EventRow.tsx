@@ -52,13 +52,12 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
       role="listitem"
       aria-expanded={expanded}
       tabIndex={tabIndex}
-      onClick={onToggle}
       onKeyDown={onKeyDown}
-      className="cursor-pointer select-none"
+      className={`select-none ${expanded ? 'cursor-default' : 'cursor-pointer'}`}
       style={{ borderLeft: `3px solid ${style.color}` }}
     >
       {/* Compact row */}
-      <div className="flex items-center gap-2 py-1 px-2">
+      <div className="flex items-center gap-2 py-1 px-2" onClick={expanded ? undefined : onToggle}>
         <span className="mono text-xs text-fg-muted shrink-0">{fmtTime(timestamp, locale)}</span>
         <span className="mono text-[10px] font-bold shrink-0" style={{ color: style.color }}>
           {style.abbr}
@@ -66,7 +65,16 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
         <span className="mono text-[10px] px-1.5 py-0.5 rounded bg-elevated text-fg-dim border border-edge-subtle shrink-0 truncate max-w-[100px]">
           {module}
         </span>
-        <span className="mono text-xs text-fg-secondary min-w-0">{message}</span>
+        <span
+          className="mono text-xs text-fg-secondary min-w-0 select-text [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]"
+          style={{
+            overflow: 'hidden',
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {message}
+        </span>
         {repeatCount && repeatCount >= 2 && (
           <span className="mono text-[10px] text-fg-muted shrink-0">×{repeatCount}</span>
         )}
@@ -88,7 +96,7 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
             animation: 'expand 150ms ease-out',
           }}
         >
-          <pre className="mono text-xs text-fg whitespace-pre-wrap break-words m-0 leading-[1.55] tracking-[0.01em] font-medium [font-variant-ligatures:none]">
+          <pre className="mono text-xs text-fg whitespace-pre-wrap break-words m-0 leading-[1.55] tracking-[0.01em] font-medium [font-variant-ligatures:none] select-text">
             {message}
           </pre>
           <div className="flex items-center gap-4 mt-2 text-[11px] text-fg-muted mono">

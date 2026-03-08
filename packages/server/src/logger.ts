@@ -1,5 +1,8 @@
 import pino, { type Logger, type TransportTargetOptions } from 'pino';
 
+import { loggingRuntimeState } from './logging/index.js';
+import { LayeredRuntime, type MethodLevel } from './logging/runtime.js';
+
 /** Resolve log level: LOG_LEVEL env > default 'info' */
 function resolveLevel(): string {
   return process.env.LOG_LEVEL || 'info';
@@ -22,8 +25,7 @@ function hasPinoPretty(): boolean {
 
 function createLogger(): Logger {
   const level = resolveLevel();
-  const usePretty = process.env.LOG_PRETTY === 'true' ||
-    (process.env.NODE_ENV !== 'production' && hasPinoPretty());
+  const usePretty = process.env.LOG_PRETTY === 'true' || (process.env.NODE_ENV !== 'production' && hasPinoPretty());
   const logFile = resolveLogFile();
 
   const targets: TransportTargetOptions[] = [];
@@ -43,9 +45,56 @@ function createLogger(): Logger {
   return pino({ level, transport: { targets } });
 }
 
+// Layered runtime is the only mode (legacy removed in v0.10).
+const layeredRuntime = new LayeredRuntime({ runtimeState: loggingRuntimeState });
+
+function wrapChildLogger(base: Logger, module: string): Logger {
+  const proxy = new Proxy(base as unknown as Record<PropertyKey, unknown>, {
+    get(target, prop, receiver) {
+      if (prop === 'child') {
+        return (bindings: Record<string, unknown>) => {
+          const child = (target.child as (b: Record<string, unknown>) => Logger).call(target, bindings);
+          const childModule = typeof bindings.module === 'string' ? bindings.module : module;
+          return wrapChildLogger(child, childModule);
+        };
+      }
+
+      if (
+        prop === 'trace' ||
+        prop === 'debug' ||
+        prop === 'info' ||
+        prop === 'warn' ||
+        prop === 'error' ||
+        prop === 'fatal'
+      ) {
+        return (...args: unknown[]) => {
+          const level = prop as MethodLevel;
+          const fn = target[level] as (...a: unknown[]) => void;
+          const isEnabled =
+            typeof target.isLevelEnabled === 'function'
+              ? (target.isLevelEnabled as (lvl: string) => boolean).call(target, level)
+              : true;
+
+          // pino stdout/file write
+          fn.apply(target, args);
+
+          if (isEnabled) {
+            // Layered structured log write
+            layeredRuntime.write(level, module, args);
+          }
+        };
+      }
+
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+
+  return proxy as unknown as Logger;
+}
+
 export const logger = createLogger();
 
 /** Create a child logger with a module name field */
 export function createChildLogger(module: string): Logger {
-  return logger.child({ module });
+  return wrapChildLogger(logger.child({ module }), module);
 }

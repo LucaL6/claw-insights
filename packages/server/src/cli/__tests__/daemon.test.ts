@@ -1,4 +1,4 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 describe('daemon helpers', () => {
   it('getDataDir returns ~/.claw-insights', async () => {
@@ -11,7 +11,8 @@ describe('daemon helpers', () => {
     const { getDaemonPaths } = await import('../daemon.js');
     const paths = getDaemonPaths();
     expect(paths.pidFile).toMatch(/claw-insights\.pid$/);
-    expect(paths.logFile).toMatch(/server\.log$/);
+    expect(paths.logDir).toMatch(/logs$/);
+    expect('logFile' in paths).toBe(false);
     expect(paths.daemonJson).toMatch(/daemon\.json$/);
   });
 });

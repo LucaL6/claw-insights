@@ -3,7 +3,7 @@ import {
   createReadStream,
   existsSync,
   mkdirSync,
-  openSync,
+  readdirSync,
   readFileSync,
   statSync,
   unlinkSync,
@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
 import { createChildLogger } from '../logger.js';
-import { DEFAULT_ROTATE_OPTIONS, rotateIfNeeded } from './log-rotate.js';
+import { reclaimLayeredLogs } from './log-rotate.js';
 import type { CliArgs } from './parse-args.js';
 import { PidFile } from './pid.js';
 
@@ -71,10 +71,92 @@ export function getDaemonPaths() {
   return {
     dataDir,
     pidFile: join(dataDir, 'claw-insights.pid'),
-    logFile: join(dataDir, 'logs', 'server.log'),
     logDir: join(dataDir, 'logs'),
     daemonJson: join(dataDir, 'daemon.json'),
   };
+}
+
+const SERVER_LOG_RE = /^server\.log(\.\d+)?$/;
+
+export function cleanupLegacyServerLogs(logDir: string): number {
+  if (!existsSync(logDir)) {
+    return 0;
+  }
+  let removed = 0;
+  for (const name of readdirSync(logDir)) {
+    if (SERVER_LOG_RE.test(name)) {
+      try {
+        unlinkSync(join(logDir, name));
+        removed++;
+      } catch {
+        /* best effort */
+      }
+    }
+  }
+  if (removed > 0) {
+    log.info({ logDir, removed }, 'cleaned up legacy server.log files');
+  }
+  return removed;
+}
+
+interface LayeredSegment {
+  stream: 'app' | 'error' | 'debug';
+  date: string;
+  seq: number;
+  path: string;
+}
+
+const LAYERED_SEGMENT_RE = /^(app|error|debug)\.(\d{4}-\d{2}-\d{2})\.(\d+)\.log$/;
+
+function parseLayeredSegment(logDir: string, fileName: string): LayeredSegment | null {
+  const m = LAYERED_SEGMENT_RE.exec(fileName);
+  if (!m) {
+    return null;
+  }
+
+  const seq = Number.parseInt(m[3] ?? '', 10);
+  if (!Number.isFinite(seq)) {
+    return null;
+  }
+
+  return {
+    stream: m[1] as LayeredSegment['stream'],
+    date: m[2],
+    seq,
+    path: join(logDir, fileName),
+  };
+}
+
+export function selectDefaultLayeredLogFiles(logDir: string): string[] {
+  if (!existsSync(logDir)) {
+    return [];
+  }
+
+  const latestByStream = new Map<LayeredSegment['stream'], LayeredSegment>();
+  const all = readdirSync(logDir);
+  for (const name of all) {
+    const seg = parseLayeredSegment(logDir, name);
+    if (!seg) {
+      continue;
+    }
+    if (seg.stream === 'debug') {
+      continue;
+    } // default view: error + app
+
+    const existing = latestByStream.get(seg.stream);
+    if (!existing) {
+      latestByStream.set(seg.stream, seg);
+      continue;
+    }
+
+    if (seg.date > existing.date || (seg.date === existing.date && seg.seq > existing.seq)) {
+      latestByStream.set(seg.stream, seg);
+    }
+  }
+
+  return ['error', 'app']
+    .map((stream) => latestByStream.get(stream as LayeredSegment['stream'])?.path)
+    .filter((v): v is string => Boolean(v));
 }
 
 export async function daemonStart(args: CliArgs, serverEntry: string): Promise<void> {
@@ -97,8 +179,10 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   // Ensure directories
   mkdirSync(paths.logDir, { recursive: true });
 
-  // Rotate logs before starting
-  rotateIfNeeded(paths.logFile, DEFAULT_ROTATE_OPTIONS);
+  // Unified reclaim path for layered segments.
+  await reclaimLayeredLogs(paths.logDir, { retentionDays: 14, graceHours: 1 });
+
+  cleanupLegacyServerLogs(paths.logDir);
 
   // Save daemon config for restart (full snapshot + explicit tracking)
   const explicitKeys: string[] = [];
@@ -143,13 +227,10 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
     childEnv.CLAW_INSIGHTS_GATEWAY = args.gateway;
   }
 
-  // Open log file for output
-  const logFd = openSync(paths.logFile, 'a');
-
-  // Spawn detached child
+  // Spawn detached child (layered runtime persists operational logs).
   const child = spawn(process.execPath, [serverEntry], {
     detached: true,
-    stdio: ['ignore', logFd, logFd],
+    stdio: 'ignore',
     env: childEnv,
   });
 
@@ -187,27 +268,18 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
     pidFile.remove();
     console.log('  ❌ Failed to start — server exited immediately.');
     console.log('');
-    try {
-      const logContent = readFileSync(paths.logFile, 'utf-8');
-      const lines = logContent.split('\n').filter(Boolean).slice(-8);
-      const portConflict = lines.find((l) => l.includes('EADDRINUSE') || l.includes('already in use'));
-      if (portConflict) {
-        console.log(`  Reason: Port ${args.port} is already in use.`);
-        console.log('');
-        console.log('  Try:');
-        console.log(`    claw-insights start --port ${args.port + 1}    # Use a different port`);
-        console.log(`    claw-insights stop                       # Stop existing instance first`);
-      } else {
-        const meaningful = lines.filter((l) => !l.startsWith('{'));
-        if (meaningful.length) {
-          console.log('  Last output:');
-          meaningful.slice(-3).forEach((l) => {
-            console.log(`    ${l}`);
-          });
-        }
-      }
-    } catch {
-      // can't read logs
+    const hints = readRecentLayeredErrorHints(paths.logDir, 8);
+    if (hasPortConflictHint(hints)) {
+      console.log(`  Reason: Port ${args.port} is already in use.`);
+      console.log('');
+      console.log('  Try:');
+      console.log(`    claw-insights start --port ${args.port + 1}    # Use a different port`);
+      console.log(`    claw-insights stop                       # Stop existing instance first`);
+    } else if (hints.length > 0) {
+      console.log('  Last error output:');
+      hints.slice(-3).forEach((l) => {
+        console.log(`    ${l}`);
+      });
     }
     console.log('');
     console.log('  Logs: claw-insights logs --lines 30');
@@ -462,57 +534,109 @@ export async function daemonStatus(): Promise<void> {
   }
 }
 
+export function readRecentLayeredErrorHints(logDir: string, lines: number): string[] {
+  try {
+    const segments = readdirSync(logDir)
+      .map((name) => parseLayeredSegment(logDir, name))
+      .filter((segment): segment is LayeredSegment => segment !== null)
+      .filter((segment) => segment.stream === 'error')
+      .sort((a, b) => {
+        if (a.date !== b.date) {
+          return a.date.localeCompare(b.date);
+        }
+        return a.seq - b.seq;
+      });
+
+    const latestError = segments[segments.length - 1];
+    if (!latestError || !existsSync(latestError.path)) {
+      return [];
+    }
+
+    const content = readFileSync(latestError.path, 'utf-8');
+    return content.split('\n').filter(Boolean).slice(-lines);
+  } catch {
+    return [];
+  }
+}
+
+export function hasPortConflictHint(lines: string[]): boolean {
+  return lines.some((line) => line.includes('EADDRINUSE') || line.includes('already in use'));
+}
+
+function tailLinesFromFile(filePath: string, lines: number): string {
+  const content = readFileSync(filePath, 'utf-8');
+  return content.split('\n').slice(-lines).join('\n');
+}
+
+function followFile(filePath: string): void {
+  let lastSize = existsSync(filePath) ? statSync(filePath).size : 0;
+
+  const rl = createInterface({
+    input: createReadStream(filePath, { encoding: 'utf-8', start: 0 }),
+  });
+  rl.on('line', (line) => {
+    console.log(line);
+  });
+  rl.on('close', () => {
+    lastSize = existsSync(filePath) ? statSync(filePath).size : lastSize;
+  });
+
+  const watcher = setInterval(() => {
+    if (!existsSync(filePath)) {
+      return;
+    }
+    const currentSize = statSync(filePath).size;
+    if (currentSize > lastSize) {
+      const stream = createReadStream(filePath, {
+        encoding: 'utf-8',
+        start: lastSize,
+      });
+      stream.on('data', (chunk) => {
+        process.stdout.write(String(chunk));
+      });
+      lastSize = currentSize;
+    }
+  }, 500);
+
+  process.on('SIGINT', () => {
+    clearInterval(watcher);
+    process.exit(0);
+  });
+}
+
 export function daemonLogs(lines?: number): void {
   const paths = getDaemonPaths();
+  const files = selectDefaultLayeredLogFiles(paths.logDir);
 
-  if (!existsSync(paths.logFile)) {
-    console.log('No log file found.');
+  if (files.length === 0) {
+    console.log('No layered log files found.');
+    console.log(`Checked: ${paths.logDir}`);
+    console.log('Try: claw-insights status');
+    console.log('Try: claw-insights start (or restart)');
     return;
   }
 
   if (lines) {
-    // Read last N lines
-    const content = readFileSync(paths.logFile, 'utf-8');
-    const allLines = content.split('\n');
-    const tail = allLines.slice(-lines).join('\n');
-    console.log(tail);
-  } else {
-    // tail -f mode using setInterval + statSync poll
-    let lastSize = existsSync(paths.logFile) ? statSync(paths.logFile).size : 0;
+    for (const file of files) {
+      const label = file.includes('/error.') ? 'error.log' : 'app.log';
+      console.log(`\n=== ${label} (${file}) ===`);
+      console.log(tailLinesFromFile(file, lines));
+    }
+    return;
+  }
 
-    // First, stream existing content
-    const rl = createInterface({
-      input: createReadStream(paths.logFile, { encoding: 'utf-8', start: 0 }),
-    });
-    rl.on('line', (line) => {
-      console.log(line);
-    });
-    rl.on('close', () => {
-      lastSize = existsSync(paths.logFile) ? statSync(paths.logFile).size : lastSize;
-    });
+  // Default stream for follow mode: error lane first, then app lane snapshot.
+  const errorFile = files.find((f) => f.includes('/error.'));
+  const appFile = files.find((f) => f.includes('/app.'));
 
-    // Poll for new content
-    const watcher = setInterval(() => {
-      if (!existsSync(paths.logFile)) {
-        return;
-      }
-      const currentSize = statSync(paths.logFile).size;
-      if (currentSize > lastSize) {
-        const stream = createReadStream(paths.logFile, {
-          encoding: 'utf-8',
-          start: lastSize,
-        });
-        stream.on('data', (chunk) => {
-          process.stdout.write(String(chunk));
-        });
-        lastSize = currentSize;
-      }
-    }, 500);
+  if (appFile) {
+    console.log(`\n=== app.log (${appFile}) [snapshot] ===`);
+    console.log(tailLinesFromFile(appFile, 80));
+  }
 
-    process.on('SIGINT', () => {
-      clearInterval(watcher);
-      process.exit(0);
-    });
+  if (errorFile) {
+    console.log(`\n=== error.log (${errorFile}) [follow] ===`);
+    followFile(errorFile);
   }
 }
 

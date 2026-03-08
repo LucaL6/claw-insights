@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useI18n } from '../../i18n/context';
 import { EventRow } from './EventRow';
@@ -39,6 +39,7 @@ export function EventTable({ events, loading, error }: Props) {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [prevEvents, setPrevEvents] = useState(events);
 
   // Collapse when events change
@@ -51,11 +52,33 @@ export function EventTable({ events, loading, error }: Props) {
     }
   }
 
+  useEffect(() => {
+    if (expandedIdx === null) {
+      return;
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+      if (containerRef.current?.contains(target)) {
+        return;
+      }
+      setExpandedIdx(null);
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [expandedIdx]);
+
   const handleKeyDown = useCallback(
     (idx: number) => (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        setExpandedIdx((prev) => (prev === idx ? null : idx));
+        setExpandedIdx(idx);
       } else if (e.key === 'Escape') {
         setExpandedIdx(null);
       } else if (e.key === 'ArrowDown') {
@@ -74,7 +97,7 @@ export function EventTable({ events, loading, error }: Props) {
   );
 
   return (
-    <div className="rounded-lg overflow-hidden border border-edge bg-surface">
+    <div ref={containerRef} className="rounded-lg overflow-hidden border border-edge bg-surface">
       <div style={{ maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' }} className="sb" role="list">
         {loading ? (
           <div className="py-8 text-center">

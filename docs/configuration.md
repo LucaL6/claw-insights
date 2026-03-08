@@ -52,6 +52,42 @@ All variables use the `CLAW_INSIGHTS_` prefix. For backward compatibility, `OPEN
 | `CLAW_INSIGHTS_RAW_RETENTION_DAYS` | `7`         | Days to keep raw metric data                     |
 | `CLAW_INSIGHTS_HOURLY_RETENTION`   | `permanent` | Hourly aggregate retention (`permanent` or days) |
 
+### Logging (Layered Mode)
+
+Claw Insights uses a layered logging pipeline with stream-separated segments (`app`, `error`, `debug`), backpressure management, budget enforcement, and automatic retention.
+
+| Variable                              | Default  | Description                                    |
+| ------------------------------------- | -------- | ---------------------------------------------- |
+| `CLAW_INSIGHTS_LOG_BUDGET_MB`         | `1024`   | Global logging budget (MB)                     |
+| `CLAW_INSIGHTS_LOG_RETENTION_DAYS`    | `14`     | Retention window in days                       |
+| `CLAW_INSIGHTS_ERROR_FLOOR_MB`        | `300`    | Critical (`error`) minimum floor               |
+| `CLAW_INSIGHTS_ERROR_RESERVE_MB`      | `50`     | Additional emergency reserve for critical lane |
+| `CLAW_INSIGHTS_APP_SOFT_MB`           | `500`    | Soft cap for `app` stream                      |
+| `CLAW_INSIGHTS_DEBUG_SOFT_MB`         | `200`    | Soft cap for `debug` stream                    |
+| `CLAW_INSIGHTS_CRITICAL_QUEUE_MAX`    | `10000`  | Critical lane max queued entries               |
+| `CLAW_INSIGHTS_BEST_EFFORT_QUEUE_MAX` | `50000`  | Best-effort lane max queued entries            |
+| `CLAW_INSIGHTS_CRITICAL_FSYNC_MS`     | `100`    | Critical lane sync interval upper bound        |
+| `CLAW_INSIGHTS_CRITICAL_SYNC_BATCH`   | `1000`   | Critical lane sync batch upper bound           |
+| `CLAW_INSIGHTS_LOG_FILE_MODE`         | `0644`   | File mode for created log segments             |
+| `CLAW_INSIGHTS_LOG_SWEEP_INTERVAL_MS` | `600000` | TTL sweeper interval                           |
+
+Pressure/Emergency threshold controls:
+
+| Variable                                | Default |
+| --------------------------------------- | ------- |
+| `CLAW_INSIGHTS_PRESSURE_QUEUE_PCT`      | `70`    |
+| `CLAW_INSIGHTS_PRESSURE_IO_LAG_MS`      | `200`   |
+| `CLAW_INSIGHTS_PRESSURE_BUDGET_PCT`     | `85`    |
+| `CLAW_INSIGHTS_PRESSURE_FREE_SPACE_MB`  | `512`   |
+| `CLAW_INSIGHTS_EMERGENCY_QUEUE_PCT`     | `90`    |
+| `CLAW_INSIGHTS_EMERGENCY_IO_LAG_MS`     | `1000`  |
+| `CLAW_INSIGHTS_EMERGENCY_BUDGET_PCT`    | `95`    |
+| `CLAW_INSIGHTS_EMERGENCY_FREE_SPACE_MB` | `128`   |
+
+> **Note:** `CLAW_INSIGHTS_LOG_MODE` was removed in v0.10. Layered logging is now the only mode. Legacy `server.log` files are automatically cleaned up on daemon start.
+>
+> **Writer backend:** uses `pino.destination` for segment writes (`error` stream sync, `app/debug` async) while preserving router/pressure/budget/retention semantics.
+
 ### Fonts (Screenshot API)
 
 | Variable                  | Default     | Description                               |

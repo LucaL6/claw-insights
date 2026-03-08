@@ -17,12 +17,31 @@ const base = {
   onKeyDown: vi.fn(),
 };
 
+const longMessage = Array.from({ length: 6 }, (_, i) => `line ${i + 1} with long wrapped content`).join('\n');
+
 describe('EventRow', () => {
   it('renders compact row with ERR abbreviation', () => {
     render(<EventRow {...base} type="error" />);
     expect(screen.getByText('ERR')).toBeTruthy();
     expect(screen.getByText('gateway')).toBeTruthy();
     expect(screen.getByText('something happened')).toBeTruthy();
+  });
+
+  it('clamps long compact message preview to two lines', () => {
+    render(<EventRow {...base} type="error" message={longMessage} />);
+    const preview = screen.getByText(
+      (content, node) =>
+        node?.tagName.toLowerCase() === 'span' &&
+        content.includes('line 1 with long wrapped content') &&
+        content.includes('line 6 with long wrapped content'),
+    );
+    expect(preview.className).toContain('[display:-webkit-box]');
+    expect(preview.className).toContain('[-webkit-line-clamp:2]');
+    expect(preview.className).toContain('[-webkit-box-orient:vertical]');
+
+    const styleAttr = preview.getAttribute('style') ?? '';
+    expect(styleAttr).toContain('overflow: hidden;');
+    expect(styleAttr).toContain('white-space: pre-wrap;');
   });
 
   it('renders WRN for warning type', () => {
@@ -53,11 +72,20 @@ describe('EventRow', () => {
     expect(screen.getAllByText(/×5/).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('calls onToggle on click', () => {
+  it('calls onToggle when compact row content is clicked', () => {
     const onToggle = vi.fn();
-    const { container } = render(<EventRow {...base} type="error" onToggle={onToggle} />);
-    fireEvent.click(container.firstChild as HTMLElement);
+    render(<EventRow {...base} type="error" onToggle={onToggle} />);
+    fireEvent.click(screen.getByText('something happened'));
     expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onToggle when expanded detail content is clicked', () => {
+    const onToggle = vi.fn();
+    const { container } = render(<EventRow {...base} type="error" expanded onToggle={onToggle} />);
+    const detailPre = container.querySelector('[role="region"] pre');
+    expect(detailPre).toBeTruthy();
+    fireEvent.click(detailPre as HTMLElement);
+    expect(onToggle).toHaveBeenCalledTimes(0);
   });
 
   it('calls onKeyDown on keyboard event', () => {

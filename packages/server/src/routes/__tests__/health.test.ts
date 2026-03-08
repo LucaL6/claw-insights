@@ -97,4 +97,68 @@ describe('health handler', () => {
     const body = json.mock.calls[0][0];
     expect(body.gateway).toBe('disconnected');
   });
+
+  it('includes logging payload when getLoggingHealth is provided', async () => {
+    const { createHealthHandler } = await import('../health.js');
+    const handler = createHealthHandler({
+      version: '0.1.0',
+      serverOnly: false,
+      checkGateway: async () => true,
+      checkDb: () => true,
+      checkReady: () => true,
+      getLoggingHealth: () => ({
+        ts: 123,
+        pressureState: 'normal',
+        queue: { criticalDepth: 1, criticalCapacity: 10, bestEffortDepth: 2, bestEffortCapacity: 20 },
+        drops: { debug: 0, info: 0, warn: 0, error: 0 },
+        totals: { accepted: 10, dropped: 0 },
+        pressureTransitions: 0,
+        lastTransitionAt: null,
+        signals: { queueUsageCriticalPct: 10, ioLagMs: 0, budgetUsagePct: 20, freeSpaceMb: 1024 },
+      }),
+    });
+
+    const json = vi.fn();
+    await handler({} as any, { json } as any);
+
+    const body = json.mock.calls[0][0];
+    expect(body.logging).toEqual({
+      ts: 123,
+      pressureState: 'normal',
+      queue: { criticalDepth: 1, criticalCapacity: 10, bestEffortDepth: 2, bestEffortCapacity: 20 },
+      drops: { debug: 0, info: 0, warn: 0, error: 0 },
+      totals: { accepted: 10, dropped: 0 },
+      pressureTransitions: 0,
+      lastTransitionAt: null,
+      signals: { queueUsageCriticalPct: 10, ioLagMs: 0, budgetUsagePct: 20, freeSpaceMb: 1024 },
+    });
+  });
+
+  it('includes loggingFreshnessSec and keeps it <= 10s', async () => {
+    const { createHealthHandler } = await import('../health.js');
+    const nowTs = Date.now();
+    const handler = createHealthHandler({
+      version: '0.1.0',
+      serverOnly: false,
+      checkGateway: async () => true,
+      checkDb: () => true,
+      checkReady: () => true,
+      getLoggingHealth: () => ({
+        ts: nowTs - 3_000,
+        pressureState: 'normal',
+        queue: { criticalDepth: 0, criticalCapacity: 10, bestEffortDepth: 0, bestEffortCapacity: 20 },
+        drops: { debug: 0, info: 0, warn: 0, error: 0 },
+        totals: { accepted: 1, dropped: 0 },
+        pressureTransitions: 0,
+        lastTransitionAt: null,
+        signals: { queueUsageCriticalPct: 0, ioLagMs: 0, budgetUsagePct: 10, freeSpaceMb: 1024 },
+      }),
+    });
+
+    const json = vi.fn();
+    await handler({} as any, { json } as any);
+
+    const body = json.mock.calls[0][0] as { loggingFreshnessSec?: number };
+    expect(body.loggingFreshnessSec).toBeLessThanOrEqual(10);
+  });
 });

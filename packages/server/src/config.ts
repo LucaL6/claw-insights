@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -106,6 +107,40 @@ const ENV_DEFAULTS: Record<Env, EnvDefaults> = {
   },
 };
 
+export const knownKeys = new Set([
+  'serverPort',
+  'webPort',
+  'apiToken',
+  'noAuth',
+  'dbPath',
+  'logLevel',
+  'rawRetentionDays',
+  'serverOnly',
+  'hourlyRetention',
+  'transcriptsDir',
+  'deviceJsonPath',
+  'sessionHierarchyMode',
+  'logBudgetMb',
+  'logRetentionDays',
+  'errorFloorMb',
+  'errorReserveMb',
+  'appSoftMb',
+  'debugSoftMb',
+  'criticalQueueMax',
+  'bestEffortQueueMax',
+  'criticalFsyncMs',
+  'criticalSyncBatch',
+  'logFileMode',
+  'pressureQueuePct',
+  'pressureIoLagMs',
+  'pressureBudgetPct',
+  'pressureFreeSpaceMb',
+  'emergencyQueuePct',
+  'emergencyIoLagMs',
+  'emergencyBudgetPct',
+  'emergencyFreeSpaceMb',
+]);
+
 // --- Config file ---
 
 export function getDataDir(): string {
@@ -137,20 +172,6 @@ export function loadConfigFile(): Record<string, unknown> {
       return {};
     }
     // Warn about unknown keys
-    const knownKeys = new Set([
-      'serverPort',
-      'webPort',
-      'apiToken',
-      'noAuth',
-      'dbPath',
-      'logLevel',
-      'rawRetentionDays',
-      'serverOnly',
-      'hourlyRetention',
-      'transcriptsDir',
-      'deviceJsonPath',
-      'sessionHierarchyMode',
-    ]);
     for (const key of Object.keys(raw)) {
       if (!knownKeys.has(key)) {
         log.warn({ key, path: configPath }, 'unknown config key, ignoring');
@@ -185,11 +206,28 @@ export interface AppConfig {
   aggregateIntervalMs: number;
   scanTiered: boolean;
   sessionHierarchyMode: SessionHierarchyMode;
+  logBudgetMb: number;
+  logRetentionDays: number;
+  errorFloorMb: number;
+  errorReserveMb: number;
+  appSoftMb: number;
+  debugSoftMb: number;
+  criticalQueueMax: number;
+  bestEffortQueueMax: number;
+  criticalFsyncMs: number;
+  criticalSyncBatch: number;
+  logFileMode: number;
+  pressureQueuePct: number;
+  pressureIoLagMs: number;
+  pressureBudgetPct: number;
+  pressureFreeSpaceMb: number;
+  emergencyQueuePct: number;
+  emergencyIoLagMs: number;
+  emergencyBudgetPct: number;
+  emergencyFreeSpaceMb: number;
 }
 
 // --- CLI path detection (BUG-023) ---
-
-import { execFileSync } from 'node:child_process';
 
 export function detectCliPath(): string {
   // 1. Explicit env var
@@ -268,6 +306,67 @@ export function resolveConfig(): AppConfig {
       typeof file.sessionHierarchyMode === 'string'
         ? safeSessionHierarchyMode(file.sessionHierarchyMode, 'single')
         : 'single',
+    ),
+    logBudgetMb: safeInt(env('LOG_BUDGET_MB'), typeof file.logBudgetMb === 'number' ? file.logBudgetMb : 1024),
+    logRetentionDays: safeInt(
+      env('LOG_RETENTION_DAYS'),
+      typeof file.logRetentionDays === 'number' ? file.logRetentionDays : 14,
+    ),
+    errorFloorMb: safeInt(env('ERROR_FLOOR_MB'), typeof file.errorFloorMb === 'number' ? file.errorFloorMb : 300),
+    errorReserveMb: safeInt(
+      env('ERROR_RESERVE_MB'),
+      typeof file.errorReserveMb === 'number' ? file.errorReserveMb : 50,
+    ),
+    appSoftMb: safeInt(env('APP_SOFT_MB'), typeof file.appSoftMb === 'number' ? file.appSoftMb : 500),
+    debugSoftMb: safeInt(env('DEBUG_SOFT_MB'), typeof file.debugSoftMb === 'number' ? file.debugSoftMb : 200),
+    criticalQueueMax: safeInt(
+      env('CRITICAL_QUEUE_MAX'),
+      typeof file.criticalQueueMax === 'number' ? file.criticalQueueMax : 10_000,
+    ),
+    bestEffortQueueMax: safeInt(
+      env('BEST_EFFORT_QUEUE_MAX'),
+      typeof file.bestEffortQueueMax === 'number' ? file.bestEffortQueueMax : 50_000,
+    ),
+    criticalFsyncMs: safeInt(
+      env('CRITICAL_FSYNC_MS'),
+      typeof file.criticalFsyncMs === 'number' ? file.criticalFsyncMs : 100,
+    ),
+    criticalSyncBatch: safeInt(
+      env('CRITICAL_SYNC_BATCH'),
+      typeof file.criticalSyncBatch === 'number' ? file.criticalSyncBatch : 1000,
+    ),
+    logFileMode: safeInt(env('LOG_FILE_MODE'), typeof file.logFileMode === 'number' ? file.logFileMode : 0o644),
+    pressureQueuePct: safeInt(
+      env('PRESSURE_QUEUE_PCT'),
+      typeof file.pressureQueuePct === 'number' ? file.pressureQueuePct : 70,
+    ),
+    pressureIoLagMs: safeInt(
+      env('PRESSURE_IO_LAG_MS'),
+      typeof file.pressureIoLagMs === 'number' ? file.pressureIoLagMs : 200,
+    ),
+    pressureBudgetPct: safeInt(
+      env('PRESSURE_BUDGET_PCT'),
+      typeof file.pressureBudgetPct === 'number' ? file.pressureBudgetPct : 85,
+    ),
+    pressureFreeSpaceMb: safeInt(
+      env('PRESSURE_FREE_SPACE_MB'),
+      typeof file.pressureFreeSpaceMb === 'number' ? file.pressureFreeSpaceMb : 512,
+    ),
+    emergencyQueuePct: safeInt(
+      env('EMERGENCY_QUEUE_PCT'),
+      typeof file.emergencyQueuePct === 'number' ? file.emergencyQueuePct : 90,
+    ),
+    emergencyIoLagMs: safeInt(
+      env('EMERGENCY_IO_LAG_MS'),
+      typeof file.emergencyIoLagMs === 'number' ? file.emergencyIoLagMs : 1000,
+    ),
+    emergencyBudgetPct: safeInt(
+      env('EMERGENCY_BUDGET_PCT'),
+      typeof file.emergencyBudgetPct === 'number' ? file.emergencyBudgetPct : 95,
+    ),
+    emergencyFreeSpaceMb: safeInt(
+      env('EMERGENCY_FREE_SPACE_MB'),
+      typeof file.emergencyFreeSpaceMb === 'number' ? file.emergencyFreeSpaceMb : 128,
     ),
   };
 }

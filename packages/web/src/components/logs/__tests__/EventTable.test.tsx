@@ -51,12 +51,12 @@ describe('EventTable', () => {
   it('accordion: only one row expanded at a time', () => {
     render(<EventTable events={events} />);
     const items = screen.getAllByRole('listitem');
-    // Click first row
-    fireEvent.click(items[0]);
+    // Click first row compact content
+    fireEvent.click(screen.getByText('disk full'));
     expect(items[0].getAttribute('aria-expanded')).toBe('true');
     expect(items[1].getAttribute('aria-expanded')).toBe('false');
-    // Click second row
-    fireEvent.click(items[1]);
+    // Click second row compact content
+    fireEvent.click(screen.getByText('slow query'));
     expect(items[0].getAttribute('aria-expanded')).toBe('false');
     expect(items[1].getAttribute('aria-expanded')).toBe('true');
   });
@@ -64,13 +64,40 @@ describe('EventTable', () => {
   it('collapses expanded row when events change', () => {
     const { rerender } = render(<EventTable events={events} />);
     const items = screen.getAllByRole('listitem');
-    fireEvent.click(items[0]);
+    fireEvent.click(screen.getByText('disk full'));
     expect(items[0].getAttribute('aria-expanded')).toBe('true');
     // Re-render with new events ref
     const newEvents = [...events];
     rerender(<EventTable events={newEvents} />);
     const updatedItems = screen.getAllByRole('listitem');
     expect(updatedItems[0].getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('collapses expanded row on outside click', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.click(screen.getByText('disk full'));
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
+
+    const outside = document.createElement('div');
+    document.body.appendChild(outside);
+    fireEvent.pointerDown(outside);
+
+    expect(items[0].getAttribute('aria-expanded')).toBe('false');
+    outside.remove();
+  });
+
+  it('keeps expanded row open when interacting inside detail content', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.click(screen.getByText('disk full'));
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
+
+    const detailPre = document.querySelector('[role="region"] pre');
+    expect(detailPre).toBeTruthy();
+    fireEvent.pointerDown(detailPre as HTMLElement);
+
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
   });
 });
 
@@ -96,6 +123,15 @@ describe('EventTable keyboard navigation', () => {
     expect(items[0].getAttribute('aria-expanded')).toBe('true');
     fireEvent.keyDown(items[0], { key: 'Escape' });
     expect(items[0].getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('does not collapse expanded row when pressing Enter again', () => {
+    render(<EventTable events={events} />);
+    const items = screen.getAllByRole('listitem');
+    fireEvent.keyDown(items[0], { key: 'Enter' });
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
+    fireEvent.keyDown(items[0], { key: 'Enter' });
+    expect(items[0].getAttribute('aria-expanded')).toBe('true');
   });
 
   it('moves focus down with ArrowDown', () => {

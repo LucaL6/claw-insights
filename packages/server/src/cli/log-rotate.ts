@@ -1,58 +1,30 @@
-import { existsSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-
 import { createChildLogger } from '../logger.js';
+import { type RetentionStats, RetentionSweeper } from '../logging/index.js';
 
 const log = createChildLogger('cli:log-rotate');
 
-interface RotateOptions {
-  maxBytes: number; // e.g. 10 * 1024 * 1024 (10MB)
-  maxFiles: number; // e.g. 3
+export interface LayeredReclaimOptions {
+  retentionDays?: number;
+  graceHours?: number;
+  activeFiles?: Set<string> | string[];
 }
 
 /**
- * Rotate log file if it exceeds maxBytes.
- * Cascade: server.log → server.log.1 → server.log.2 → ... → drop oldest
- * Returns true if rotation occurred.
+ * Layered-mode reclaim path (unified with logging retention logic; no side-channel deletes).
  */
-export function rotateIfNeeded(logPath: string, opts: RotateOptions): boolean {
-  if (!existsSync(logPath)) {
-    return false;
+export async function reclaimLayeredLogs(logDir: string, opts: LayeredReclaimOptions = {}): Promise<RetentionStats> {
+  const sweeper = new RetentionSweeper({
+    logDir,
+    retentionDays: opts.retentionDays ?? 14,
+    graceHours: opts.graceHours ?? 1,
+    sweepIntervalMs: 600_000,
+  });
+
+  if (opts.activeFiles) {
+    sweeper.setActiveFiles(opts.activeFiles);
   }
 
-  const size = statSync(logPath).size;
-  if (size < opts.maxBytes) {
-    return false;
-  }
-
-  log.info({ logPath, sizeBytes: size, maxBytes: opts.maxBytes }, 'log rotation starting');
-
-  // Drop the oldest if at capacity
-  const oldest = `${logPath}.${opts.maxFiles}`;
-  if (existsSync(oldest)) {
-    unlinkSync(oldest);
-  }
-
-  // Cascade: .2 → .3, .1 → .2, etc.
-  for (let i = opts.maxFiles - 1; i >= 1; i--) {
-    const from = `${logPath}.${i}`;
-    const to = `${logPath}.${i + 1}`;
-    if (existsSync(from)) {
-      renameSync(from, to);
-    }
-  }
-
-  // Current → .1
-  renameSync(logPath, `${logPath}.1`);
-
-  // Create fresh empty log
-  writeFileSync(logPath, '');
-
-  log.info({ logPath }, 'log rotation completed');
-  return true;
+  const stats = await sweeper.sweep();
+  log.info({ logDir, ...stats }, 'layered log reclaim completed');
+  return stats;
 }
-
-/** Default rotation options: 10MB, keep 3 history files */
-export const DEFAULT_ROTATE_OPTIONS: RotateOptions = {
-  maxBytes: 10 * 1024 * 1024,
-  maxFiles: 3,
-};

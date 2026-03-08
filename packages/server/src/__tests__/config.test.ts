@@ -32,6 +32,25 @@ describe('config singleton', () => {
       'aggregateIntervalMs',
       'noAuth',
       'sessionHierarchyMode',
+      'logBudgetMb',
+      'logRetentionDays',
+      'errorFloorMb',
+      'errorReserveMb',
+      'appSoftMb',
+      'debugSoftMb',
+      'criticalQueueMax',
+      'bestEffortQueueMax',
+      'criticalFsyncMs',
+      'criticalSyncBatch',
+      'logFileMode',
+      'pressureQueuePct',
+      'pressureIoLagMs',
+      'pressureBudgetPct',
+      'pressureFreeSpaceMb',
+      'emergencyQueuePct',
+      'emergencyIoLagMs',
+      'emergencyBudgetPct',
+      'emergencyFreeSpaceMb',
     ] as const;
     for (const k of keys) {
       expect(config).toHaveProperty(k);
@@ -143,6 +162,33 @@ describe('NODE_ENV defaults', () => {
     const { resolveConfig } = await import('../config.js');
     const cfg = resolveConfig();
     expect(cfg.noAuth).toBe(true);
+  });
+
+  it('includes logging defaults', async () => {
+    delete process.env.CLAW_INSIGHTS_LOG_BUDGET_MB;
+    delete process.env.CLAW_INSIGHTS_PRESSURE_QUEUE_PCT;
+    const { resolveConfig } = await import('../config.js');
+    const cfg = resolveConfig();
+
+    expect(cfg.logBudgetMb).toBe(1024);
+    expect(cfg.logRetentionDays).toBe(14);
+    expect(cfg.errorFloorMb).toBe(300);
+    expect(cfg.errorReserveMb).toBe(50);
+    expect(cfg.appSoftMb).toBe(500);
+    expect(cfg.debugSoftMb).toBe(200);
+    expect(cfg.criticalQueueMax).toBe(10_000);
+    expect(cfg.bestEffortQueueMax).toBe(50_000);
+    expect(cfg.criticalFsyncMs).toBe(100);
+    expect(cfg.criticalSyncBatch).toBe(1000);
+    expect(cfg.logFileMode).toBe(0o644);
+    expect(cfg.pressureQueuePct).toBe(70);
+    expect(cfg.pressureIoLagMs).toBe(200);
+    expect(cfg.pressureBudgetPct).toBe(85);
+    expect(cfg.pressureFreeSpaceMb).toBe(512);
+    expect(cfg.emergencyQueuePct).toBe(90);
+    expect(cfg.emergencyIoLagMs).toBe(1000);
+    expect(cfg.emergencyBudgetPct).toBe(95);
+    expect(cfg.emergencyFreeSpaceMb).toBe(128);
   });
 });
 

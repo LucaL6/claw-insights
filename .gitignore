@@ -46,7 +46,6 @@ Thumbs.db
 tmp/
 .worktrees/
 .git-backup-*/
-docs/plans/
 start.sh
 audit_v3/
 

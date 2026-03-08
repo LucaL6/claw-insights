@@ -14,6 +14,11 @@ describe('logger', () => {
     expect(typeof mod.createChildLogger).toBe('function');
   });
 
+  it('exports LayeredRuntime from logging/runtime module', async () => {
+    const mod = await import('../logging/runtime.js');
+    expect(mod.LayeredRuntime).toBeTypeOf('function');
+  });
+
   it('createChildLogger returns logger with module field', async () => {
     const mod = await import('../logger.js');
     const child = mod.createChildLogger('test-module');
