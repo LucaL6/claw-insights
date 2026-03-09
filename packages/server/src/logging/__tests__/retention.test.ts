@@ -1,8 +1,8 @@
-import { mkdtemp, readdir,rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach,beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { RetentionSweeper } from '../retention.js';
 
@@ -68,6 +68,10 @@ describe('RetentionSweeper', () => {
 
   it('parseDateFromFilename works', () => {
     expect(RetentionSweeper.parseDateFromFilename('app.2025-01-15.0.log')).toEqual(new Date('2025-01-15T00:00:00Z'));
+    expect(RetentionSweeper.parseDateFromFilename('noise.2025-01-15.0.log')).toEqual(new Date('2025-01-15T00:00:00Z'));
+    expect(RetentionSweeper.parseDateFromFilename('security.2025-01-15.0.log')).toEqual(
+      new Date('2025-01-15T00:00:00Z'),
+    );
     expect(RetentionSweeper.parseDateFromFilename('not-a-log.txt')).toBeNull();
   });
 

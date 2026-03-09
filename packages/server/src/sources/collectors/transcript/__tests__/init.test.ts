@@ -122,7 +122,9 @@ describe('transcript-init', () => {
 
     mockLoadScanState.mockReturnValue(cached);
     mockClassifyFiles.mockReturnValue({
-      unchanged: new Map([[unchangedPath, { offset: 1, inode: 2, birthtimeMs: 3, partial: 'u' }]]),
+      unchanged: new Map([
+        [unchangedPath, { offset: 1, inode: 2, birthtimeMs: 3, mtimeMs: 4, partial: 'u', firstTimestampMs: null }],
+      ]),
       toScan: [],
       deleted: [],
       deferred: [{ path: deferredPath, offset: 5, partial: 'tail', prevFirstTimestampMs: 9 }],
@@ -142,8 +144,22 @@ describe('transcript-init', () => {
       sink,
     });
 
-    expect(result.fileStates.get(unchangedPath)).toEqual({ offset: 1, inode: 2, birthtimeMs: 3, partial: 'u' });
-    expect(result.fileStates.get(deferredPath)).toEqual({ offset: 5, inode: 6, birthtimeMs: 8, partial: 'tail' });
+    expect(result.fileStates.get(unchangedPath)).toEqual({
+      offset: 1,
+      inode: 2,
+      birthtimeMs: 3,
+      mtimeMs: 4,
+      partial: 'u',
+      firstTimestampMs: null,
+    });
+    expect(result.fileStates.get(deferredPath)).toEqual({
+      offset: 5,
+      inode: 6,
+      birthtimeMs: 8,
+      mtimeMs: 7,
+      partial: 'tail',
+      firstTimestampMs: 9,
+    });
   });
 
   it('deletes removed scan_state entries', async () => {
@@ -290,7 +306,7 @@ describe('transcript-init', () => {
 
   it('logs summary with scanned/total/deferred/durationMs and basename-only warn file', async () => {
     mockClassifyFiles.mockReturnValue({
-      unchanged: new Map([[ '/tmp/unchanged.jsonl', { offset: 1, inode: 1, birthtimeMs: 1, partial: '' } ]]),
+      unchanged: new Map([['/tmp/unchanged.jsonl', { offset: 1, inode: 1, birthtimeMs: 1, partial: '' }]]),
       toScan: [{ path: '/tmp/warn-me.jsonl', offset: 0, partial: '', prevFirstTimestampMs: null }],
       deleted: ['/tmp/deleted.jsonl'],
       deferred: [{ path: '/tmp/stale.jsonl', offset: 0, partial: '', prevFirstTimestampMs: null }],
@@ -313,10 +329,7 @@ describe('transcript-init', () => {
       sink,
     });
 
-    expect(mockWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ file: 'warn-me.jsonl' }),
-      'init scan file failed',
-    );
+    expect(mockWarn).toHaveBeenCalledWith(expect.objectContaining({ file: 'warn-me.jsonl' }), 'init scan file failed');
     const warnArg = mockWarn.mock.calls[0]?.[0] as { file?: string };
     expect(warnArg.file).not.toContain('/tmp/');
 

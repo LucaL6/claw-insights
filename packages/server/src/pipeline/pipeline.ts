@@ -25,7 +25,6 @@ export class Pipeline {
   private all = new Map<string, Source | Managed | Processor | Service | Port>();
   private boundHandlers: BoundHandler[] = [];
   private state: PipelineState = 'init';
-  private _startedAt?: number;
 
   // ── Port Management ───────────────────────────────────────
 
@@ -165,7 +164,6 @@ export class Pipeline {
       svc.start();
     }
     this.state = 'started';
-    this._startedAt = Date.now();
     log.info({ services: this.services.size }, 'pipeline started');
   }
 

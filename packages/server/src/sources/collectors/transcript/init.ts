@@ -3,7 +3,7 @@ import { basename } from 'node:path';
 import { RANGE_CONFIG } from '../../../db/query-utils.js';
 import { deleteScanState, loadScanState } from '../../../db/scan-state-queries.js';
 import { createChildLogger } from '../../../logger.js';
-import { type AggregatedStats,backfillFirstTimestamps, computeStats } from './persistence/lifetime-stats.js';
+import { type AggregatedStats, backfillFirstTimestamps, computeStats } from './persistence/lifetime-stats.js';
 import { classifyFiles, type FileState as ClassifiedFileState, type FileToScan } from './processing/file-classifier.js';
 import { createFileProcessor } from './processing/file-processor.js';
 import type { ProcessFileOptions } from './processing/processor.js';
@@ -54,7 +54,9 @@ export async function initScan(opts: InitScanOptions): Promise<InitScanResult> {
       offset: prev.byteOffset,
       inode: prev.inode,
       birthtimeMs: prev.birthMs,
+      mtimeMs: prev.mtimeMs,
       partial: prev.partial,
+      firstTimestampMs: prev.firstTimestampMs,
     });
   }
 
@@ -84,7 +86,9 @@ export async function initScan(opts: InitScanOptions): Promise<InitScanResult> {
           offset: newState.offset,
           inode: newState.inode,
           birthtimeMs: newState.birthtimeMs,
+          mtimeMs: newState.mtimeMs,
           partial: newState.partial,
+          firstTimestampMs: newState.firstTimestampMs,
         });
         scanned += 1;
       } catch (err) {

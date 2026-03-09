@@ -68,7 +68,9 @@ describe('classifyFiles', () => {
       offset: st.size,
       inode: st.ino,
       birthtimeMs: st.birthtimeMs,
+      mtimeMs: st.mtimeMs,
       partial: 'part',
+      firstTimestampMs: null,
     });
     expect(result.toScan).toEqual([]);
     expect(result.deleted).toEqual([]);

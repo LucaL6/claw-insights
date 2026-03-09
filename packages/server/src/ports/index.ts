@@ -15,6 +15,16 @@ export type { ReadContext, SubscribablePort, Unsubscribe } from './shared.js';
 export { createReadContext } from './shared.js';
 
 // Port interfaces
+import type { CronPort } from './cron-port.js';
+import type { GatewayPort } from './gateway-port.js';
+import type { LifetimePort } from './lifetime-port.js';
+import type { LogPort } from './log-port.js';
+import type { MetricsPort } from './metrics-port.js';
+import type { SessionPort } from './session-port.js';
+import type { SystemPort } from './system-port.js';
+import type { TranscriptPort } from './transcript-port.js';
+import type { UsagePort } from './usage-port.js';
+
 export type { CronEntry, CronPort } from './cron-port.js';
 export type { ChannelInfo, GatewayPort, GatewayStatus } from './gateway-port.js';
 export type { LifetimePort, LifetimeStats } from './lifetime-port.js';

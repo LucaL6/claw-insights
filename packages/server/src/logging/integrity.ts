@@ -27,6 +27,11 @@ export class LogIntegrity {
     this.config = config;
   }
 
+  /** Reserved — returns the log directory for future repair strategies. */
+  get logDir(): string {
+    return this.config.logDir;
+  }
+
   /**
    * Repair a single file's tail. If the last line is not valid JSON,
    * truncate the file to the last valid newline boundary.
@@ -69,7 +74,9 @@ export class LogIntegrity {
         }
       }
 
-      if (validEnd > size) {validEnd = size;}
+      if (validEnd > size) {
+        validEnd = size;
+      }
 
       const truncatedBytes = size - validEnd;
       if (truncatedBytes > 0) {

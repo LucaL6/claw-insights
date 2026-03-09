@@ -85,7 +85,7 @@ describe('renderFooter', () => {
   });
 
   it('renders Chinese version when locale is zh', () => {
-    const tree = renderFooter(makeData(), c, 'zh');
+    const tree = renderFooter(makeData(), c, 'dark', 'zh');
     const texts = collectText(tree);
     expect(texts.join(' ')).toContain('Claw Insights v');
   });

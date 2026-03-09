@@ -11,6 +11,7 @@ import { createContext, destroyContext, startContext } from './context.js';
 import { createChildLogger } from './logger.js';
 import { loggingRuntimeState } from './logging/index.js';
 import { cookieExchangeMiddleware } from './middleware/cookie-exchange.js';
+import { requestAccessMiddleware } from './middleware/request-access.js';
 import { registerGraphQL } from './routes/graphql.js';
 import { createHealthHandler } from './routes/health.js';
 import { registerMcp } from './routes/mcp.js';
@@ -67,6 +68,9 @@ app.use(express.json());
 
 // Cookie exchange (must be before auth middleware / static files)
 app.use(cookieExchangeMiddleware);
+
+// Request access logs for GraphQL/REST paths
+app.use(requestAccessMiddleware);
 
 registerGraphQL(app, ctx);
 const snapshotSources = createSnapshotSources(ctx);

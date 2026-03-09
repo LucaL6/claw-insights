@@ -95,7 +95,7 @@ interface ParsedSegment {
   fullPath: string;
 }
 
-const SEGMENT_RE = /^(app|error|debug)\.(\d{4}-\d{2}-\d{2})\.(\d+)\.log$/;
+const SEGMENT_RE = /^(app|error|debug|noise|security)\.(\d{4}-\d{2}-\d{2})\.(\d+)\.log$/;
 
 function parseSegment(logDir: string, name: string): ParsedSegment | null {
   const m = SEGMENT_RE.exec(name);
@@ -152,16 +152,18 @@ export class LayeredRuntime {
       criticalFsyncMs: safeInt(env('CRITICAL_FSYNC_MS'), 100),
       criticalSyncBatch: safeInt(env('CRITICAL_SYNC_BATCH'), 1000),
       fileMode: safeInt(env('LOG_FILE_MODE'), 0o644),
-      rotationSizeMb: { app: 64, error: 32, debug: 64 },
+      rotationSizeMb: { app: 64, error: 32, debug: 64, noise: 64, security: 32 },
     });
     this.writer.start();
 
+    const debugSoftMb = safeInt(env('DEBUG_SOFT_MB'), 200);
     this.budget = new BudgetGate({
       globalCapMb: safeInt(env('LOG_BUDGET_MB'), 1024),
       errorFloorMb: safeInt(env('ERROR_FLOOR_MB'), 300),
       errorReserveMb: safeInt(env('ERROR_RESERVE_MB'), 50),
       appSoftMb: safeInt(env('APP_SOFT_MB'), 500),
-      debugSoftMb: safeInt(env('DEBUG_SOFT_MB'), 200),
+      debugSoftMb,
+      noiseSoftMb: safeInt(env('NOISE_SOFT_MB'), debugSoftMb),
     });
     this.budget.setReclaimFn((stream) => this.reclaimOldest(stream));
 
@@ -184,7 +186,13 @@ export class LayeredRuntime {
   private repairActiveSegmentTails(): number {
     let repaired = 0;
     const today = new Date().toISOString().slice(0, 10);
-    const streams: Array<'app' | 'error' | 'debug'> = ['app', 'error', 'debug'];
+    const streams: Array<'app' | 'error' | 'debug' | 'noise' | 'security'> = [
+      'app',
+      'error',
+      'debug',
+      'noise',
+      'security',
+    ];
 
     for (const stream of streams) {
       try {
@@ -256,6 +264,7 @@ export class LayeredRuntime {
 
     const route = this.router.route({
       level: normalizedLevel,
+      module,
       message: input.msg,
       timestamp: Date.now(),
       byteSize: 0,

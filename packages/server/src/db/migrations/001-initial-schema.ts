@@ -3,7 +3,7 @@ import type { Migration } from '../migrate.js';
 const migration: Migration = {
   version: 1,
   up: `
-    -- metric_events (v1 base + v2 module + v3 category/source)
+    -- metric_events (base + module + category/source evolution)
     CREATE TABLE IF NOT EXISTS metric_events (
       id        INTEGER PRIMARY KEY AUTOINCREMENT,
       timestamp TEXT NOT NULL,

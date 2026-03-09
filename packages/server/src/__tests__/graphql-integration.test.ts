@@ -42,13 +42,15 @@ afterAll(() => {
 const gql = (query: string, variables?: Record<string, unknown>) =>
   request(t.app).post('/graphql').send({ query, variables }).set('Content-Type', 'application/json').expect(200);
 
-// ── 12 Query resolvers ──
+// ── canonical Query resolvers ──
 
-describe('GraphQL Integration Tests', () => {
-  // 1. gateway
-  it('gateway returns status fields', async () => {
-    const res = await gql('{ gateway { running pid version appVersion uptime securityCritical securityWarn } }');
-    const g = res.body.data.gateway;
+describe('GraphQL Integration Tests (canonical)', () => {
+  // 1. system → gateway
+  it('system returns gateway status fields', async () => {
+    const res = await gql(
+      '{ system { ... on OpenClawSystem { gateway { running pid version appVersion uptime securityCritical securityWarn } } } }',
+    );
+    const g = res.body.data.system.gateway;
     expect(g.running).toBe(true);
     expect(g.pid).toBe(12345);
     expect(typeof g.version).toBe('string');
@@ -57,107 +59,157 @@ describe('GraphQL Integration Tests', () => {
     expect(g.securityWarn).toBe(0);
   });
 
-  // 2. resources
-  it('resources returns system metrics', async () => {
-    const res = await gql('{ resources { cpu memoryMB diskMB sampledAt } }');
-    const r = res.body.data.resources;
+  // 2. system → resources
+  it('system returns system resources', async () => {
+    const res = await gql('{ system { ... on OpenClawSystem { resources { cpu memoryMB diskMB sampledAt } } } }');
+    const r = res.body.data.system.resources;
     expect(r.cpu).toBeCloseTo(25.5);
     expect(r.memoryMB).toBe(512);
     expect(r.diskMB).toBe(102400);
     expect(r.sampledAt).toBeTruthy();
   });
 
-  // 3. channels
-  it('channels returns channel list', async () => {
-    const res = await gql('{ channels { provider name connected latencyMs } }');
-    const c = res.body.data.channels;
+  // 3. system → channels
+  it('system returns channel list', async () => {
+    const res = await gql('{ system { ... on OpenClawSystem { channels { provider name connected latencyMs } } } }');
+    const c = res.body.data.system.channels;
     expect(c).toHaveLength(1);
     expect(c[0].provider).toBe('telegram');
     expect(c[0].connected).toBe(true);
   });
 
-  // 4. sessions
-  it('sessions returns session list', async () => {
-    const res = await gql('{ sessions { key displayName kind model status totalTokens turnCount subAgents { key } } }');
-    const s = res.body.data.sessions;
+  // 4. source → sessions
+  it('source returns session list', async () => {
+    const res = await gql(`{
+      source(selector: { id: "agent:main" }) {
+        ... on AgentNamespace {
+          sessions { key displayName kind model status totalTokens turnCount subAgents { key } }
+        }
+      }
+    }`);
+    const s = res.body.data.source.sessions;
     expect(s).toHaveLength(1);
     expect(s[0].key).toBe('session-1');
     expect(s[0].status).toBe('ACTIVE');
     expect(s[0].subAgents).toEqual([]);
   });
 
-  // 5. metrics
-  it('metrics returns summary with seeded data', async () => {
-    const res = await gql('{ metrics { date range totalTokensK rangeTokensK totalErrors totalWarnings warnings } }');
-    const m = res.body.data.metrics;
+  // 5. source → metrics
+  it('source returns metrics summary', async () => {
+    const res = await gql(`{
+      source(selector: { id: "agent:main" }) {
+        ... on AgentNamespace {
+          metrics { date range totalTokensK rangeTokensK totalErrors totalWarnings warnings }
+        }
+      }
+    }`);
+    const m = res.body.data.source.metrics;
     expect(typeof m.totalTokensK).toBe('number');
     expect(typeof m.date).toBe('string');
     expect(Array.isArray(m.warnings)).toBe(true);
   });
 
-  // 6. cronJobs
-  it('cronJobs returns job list', async () => {
-    const res = await gql('{ cronJobs { id name enabled schedule lastRunAt lastRunSuccess } }');
-    const c = res.body.data.cronJobs;
+  // 6. source → cronJobs
+  it('source returns cron jobs', async () => {
+    const res = await gql(`{
+      source(selector: { id: "agent:main" }) {
+        ... on AgentNamespace {
+          cronJobs { id name enabled schedule lastRunAt lastRunSuccess }
+        }
+      }
+    }`);
+    const c = res.body.data.source.cronJobs;
     expect(c).toHaveLength(1);
     expect(c[0].id).toBe('job-1');
     expect(c[0].enabled).toBe(true);
   });
 
-  // 7. usageCost
-  it('usageCost returns cost data', async () => {
-    const res = await gql('{ usageCost { totalCost totalTokensM todayCost todayTokensM fetchedAt } }');
-    const u = res.body.data.usageCost;
+  // 7. source → usageCost
+  it('source returns usage cost', async () => {
+    const res = await gql(`{
+      source(selector: { id: "agent:main" }) {
+        ... on AgentNamespace {
+          usageCost { totalCost totalTokensM todayCost todayTokensM fetchedAt }
+        }
+      }
+    }`);
+    const u = res.body.data.source.usageCost;
     expect(u.totalCost).toBeCloseTo(42.5);
     expect(u.todayCost).toBeCloseTo(3.1);
     expect(u.fetchedAt).toBeTruthy();
   });
 
-  // 8. recentLogs
-  it('recentLogs returns log entries', async () => {
-    const res = await gql('{ recentLogs(count: 10) { time level module message } }');
-    const logs = res.body.data.recentLogs;
+  // 8. source → recentLogs
+  it('source returns recent logs', async () => {
+    const res = await gql(`{
+      source(selector: { id: "agent:main" }) {
+        ... on AgentNamespace {
+          recentLogs(count: 10) { time level module message }
+        }
+      }
+    }`);
+    const logs = res.body.data.source.recentLogs;
     expect(logs.length).toBeGreaterThanOrEqual(1);
     expect(logs[0].level).toBe('INFO');
     expect(logs[0].module).toBe('agent');
   });
 
-  // 9. events
-  it('events returns events with counts', async () => {
-    const res = await gql(
-      '{ events(limit: 20) { events { timestamp type module message } total counts { error warning restart } } }',
-    );
-    const e = res.body.data.events;
+  // 9. source → events
+  it('source returns events with counts', async () => {
+    const res = await gql(`{
+      source(selector: { id: "agent:main" }) {
+        ... on AgentNamespace {
+          events(limit: 20) { events { timestamp type module message } total counts { error warning restart } }
+        }
+      }
+    }`);
+    const e = res.body.data.source.events;
     expect(e.events.length).toBeGreaterThan(0);
     expect(typeof e.total).toBe('number');
     expect(typeof e.counts.error).toBe('number');
   });
 
-  // 10. eventDensity
-  it('eventDensity returns density buckets', async () => {
-    const res = await gql('{ eventDensity { hour count hasError hasWarning epochStart } }');
-    const d = res.body.data.eventDensity;
+  // 10. source → eventDensity
+  it('source returns event density', async () => {
+    const res = await gql(`{
+      source(selector: { id: "agent:main" }) {
+        ... on AgentNamespace {
+          eventDensity { hour count hasError hasWarning epochStart }
+        }
+      }
+    }`);
+    const d = res.body.data.source.eventDensity;
     expect(Array.isArray(d)).toBe(true);
     expect(d.length).toBeGreaterThan(0);
     expect(typeof d[0].hour).toBe('number');
     expect(typeof d[0].count).toBe('number');
   });
 
-  // 11. eventCounts
-  it('eventCounts returns counts', async () => {
-    const res = await gql('{ eventCounts { error warning restart } }');
-    const c = res.body.data.eventCounts;
+  // 11. source → eventCounts
+  it('source returns event counts', async () => {
+    const res = await gql(`{
+      source(selector: { id: "agent:main" }) {
+        ... on AgentNamespace {
+          eventCounts { error warning restart }
+        }
+      }
+    }`);
+    const c = res.body.data.source.eventCounts;
     expect(typeof c.error).toBe('number');
     expect(typeof c.warning).toBe('number');
     expect(typeof c.restart).toBe('number');
   });
 
-  // 12. lifetimeStats
-  it('lifetimeStats returns lifetime data', async () => {
-    const res = await gql(
-      '{ lifetimeStats { isReady createdAt daysSinceCreation totalSessions totalTokens totalUserMessages totalAssistantMessages } }',
-    );
-    const l = res.body.data.lifetimeStats;
+  // 12. source → lifetimeStats
+  it('source returns lifetime stats', async () => {
+    const res = await gql(`{
+      source(selector: { id: "agent:main" }) {
+        ... on AgentNamespace {
+          lifetimeStats { isReady createdAt daysSinceCreation totalSessions totalTokens totalUserMessages totalAssistantMessages }
+        }
+      }
+    }`);
+    const l = res.body.data.source.lifetimeStats;
     expect(l.isReady).toBe(true);
     expect(l.daysSinceCreation).toBe(30);
     expect(l.totalSessions).toBe(100);

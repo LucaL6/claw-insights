@@ -417,11 +417,34 @@ describe('SessionDrawer', () => {
     expect(mockReplaceToast).toHaveBeenCalledWith(42, 'Refresh failed', 'error');
   });
 
-  it('triggers silent auto-refresh on mount', () => {
+  it('triggers silent auto-refresh on mount when initial data is cache-hit', () => {
     mockReady();
     renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
     expect(mockRefresh).toHaveBeenCalledTimes(1);
     expect(mockRefresh).toHaveBeenCalledWith({ silent: true });
+  });
+
+  it('skips silent auto-refresh after an initial network-miss load', () => {
+    const hookState = buildState({
+      meta: undefined,
+      messages: [],
+      isInitialLoading: true,
+      isFetching: true,
+      totalMessages: 0,
+    });
+    mockUseSessionTranscript.mockImplementation(() => hookState);
+
+    const { rerender } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    expect(mockRefresh).toHaveBeenCalledTimes(0);
+
+    hookState.meta = baseMeta;
+    hookState.messages = baseMessages;
+    hookState.isInitialLoading = false;
+    hookState.isFetching = false;
+    hookState.totalMessages = baseMeta.totalMessages;
+    rerender(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+
+    expect(mockRefresh).toHaveBeenCalledTimes(0);
   });
 
   it('does not duplicate auto-refresh on same-session rerender', () => {
@@ -639,26 +662,33 @@ describe('SessionDrawer', () => {
     Object.defineProperty(scrollContainer, 'scrollTop', { configurable: true, value: 980, writable: true });
     Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 100, writable: true });
     Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1080, writable: true });
-    scrollContainer.getBoundingClientRect =
-      (() => ({ top: 0, bottom: 100, left: 0, right: 100, width: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) })) as
-        typeof scrollContainer.getBoundingClientRect;
+    scrollContainer.getBoundingClientRect = (() => ({
+      top: 0,
+      bottom: 100,
+      left: 0,
+      right: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })) as typeof scrollContainer.getBoundingClientRect;
 
     const rowTops = [-120, 0, 70];
     const rows = Array.from(scrollContainer.querySelectorAll<HTMLElement>('[data-msg-index]'));
     rows.forEach((row, index) => {
       const top = rowTops[index] ?? index * 20;
-      row.getBoundingClientRect =
-        (() => ({
-          top,
-          bottom: top + 20,
-          left: 0,
-          right: 100,
-          width: 100,
-          height: 20,
-          x: 0,
-          y: top,
-          toJSON: () => ({}),
-        })) as typeof row.getBoundingClientRect;
+      row.getBoundingClientRect = (() => ({
+        top,
+        bottom: top + 20,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 20,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      })) as typeof row.getBoundingClientRect;
     });
 
     fireEvent.scroll(scrollContainer);

@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { isSchemaV2Enabled } from '../../config/feature-flags';
-import { getFallbackMode, getFallbackReasonTag, shouldFallbackToV1 } from '../../graphql/fallback-policy';
 import { SessionsQuery } from '../../graphql/queries';
-import { SessionsV2Query } from '../../graphql/queries-v2';
 import { getDashboardSourceSelector } from '../../graphql/source-selector';
 import { useHashRoute } from '../../hooks/useHashRoute';
 import { usePreference } from '../../hooks/usePreference';
@@ -42,79 +39,29 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
 
   const activeOnly = viewMode === 'active';
 
-  // --- v2 dual-path ---
-  const schemaV2 = isSchemaV2Enabled();
-  const [fallbackToV1, setFallbackToV1] = useState(false);
-  const useV2Path = schemaV2 && !fallbackToV1;
   const selector = getDashboardSourceSelector();
 
-  const [v2Result] = useReactiveQuery(
-    {
-      query: SessionsV2Query,
-      variables: { selector, filter: { activeOnly, sortBy, grouped: true } },
-      requestPolicy: 'cache-and-network',
-      pause: !useV2Path,
-    },
-    { sources: ['sessions'], debounceMs: 500 },
-  );
-
-  const [v1Result] = useReactiveQuery(
+  const [queryResult] = useReactiveQuery(
     {
       query: SessionsQuery,
-      variables: { filter: { activeOnly, sortBy, grouped: true } },
+      variables: { selector, filter: { activeOnly, sortBy, grouped: true } },
       requestPolicy: 'cache-and-network',
-      pause: useV2Path,
     },
     { sources: ['sessions'], debounceMs: 500 },
   );
 
-  // Determine v2 source data
-  const v2Source = v2Result.data?.source;
-  const v2SourceNull = useV2Path && !v2Result.fetching && v2Result.data != null && !v2Source;
-  const v2ShouldFallback = shouldFallbackToV1({
-    surface: 'source',
-    namespaceMissing: v2SourceNull,
-    error: v2Result.error,
-  });
-  const v2ReasonTag = getFallbackReasonTag({
-    surface: 'source',
-    namespaceMissing: v2SourceNull,
-    error: v2Result.error,
-  });
-
-  // Trigger fallback
-  useEffect(() => {
-    if (!schemaV2 || fallbackToV1 || !v2ShouldFallback || !v2ReasonTag) {
-      return;
-    }
-
-    setFallbackToV1(true);
-    const mode = getFallbackMode(v2ReasonTag);
-    console.warn('[SessionPanel] fallback to v1', { reasonTag: v2ReasonTag, mode, surface: 'source' });
-  }, [schemaV2, fallbackToV1, v2ShouldFallback, v2ReasonTag]);
-
-  // Reset fallback when user changes filters or selector changes
-  useEffect(() => {
-    if (schemaV2 && fallbackToV1) {
-      setFallbackToV1(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeOnly, sortBy, selector.id]);
-
-  // Pick active result — normalise v2 shape to match v1 { sessions: [...] }
-  const v2Sessions = v2Source ? v2Source.sessions : [];
-  const result = useV2Path
-    ? {
-        data: v2Result.data ? { sessions: v2Sessions } : undefined,
-        fetching: v2Result.fetching,
-        error: v2Result.error,
-      }
-    : v1Result;
+  // Normalise source-centric shape
+  const sessionsFromSource = queryResult.data?.source?.sessions ?? [];
+  const result = {
+    data: queryResult.data ? { sessions: sessionsFromSource } : undefined,
+    fetching: queryResult.fetching,
+    error: queryResult.error,
+  };
 
   useEffect(() => {
     // Sync fetch timestamp for UI display — intentional setState in effect
     if (result.data) {
-      setLastFetchTime(Date.now());
+      setLastFetchTime(Date.now()); // eslint-disable-line react-hooks/set-state-in-effect -- timestamp sync after fetch, same pattern as useMetricsData
     }
   }, [result.data]);
 

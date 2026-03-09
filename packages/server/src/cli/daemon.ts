@@ -100,13 +100,13 @@ export function cleanupLegacyServerLogs(logDir: string): number {
 }
 
 interface LayeredSegment {
-  stream: 'app' | 'error' | 'debug';
+  stream: 'app' | 'error' | 'debug' | 'noise' | 'security';
   date: string;
   seq: number;
   path: string;
 }
 
-const LAYERED_SEGMENT_RE = /^(app|error|debug)\.(\d{4}-\d{2}-\d{2})\.(\d+)\.log$/;
+const LAYERED_SEGMENT_RE = /^(app|error|debug|noise|security)\.(\d{4}-\d{2}-\d{2})\.(\d+)\.log$/;
 
 function parseLayeredSegment(logDir: string, fileName: string): LayeredSegment | null {
   const m = LAYERED_SEGMENT_RE.exec(fileName);

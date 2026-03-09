@@ -1,8 +1,7 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { SessionsV2Query } from '../../../graphql/queries-v2';
-import { I18nProvider } from '../../../i18n/context';
+import { SessionsQuery } from '../../../graphql/queries';
 import type { SessionData } from '../shared/types';
 import { renderWithI18n } from './testUtils';
 
@@ -11,35 +10,8 @@ vi.mock('../../../hooks/useReactiveQuery', () => ({
   useReactiveQuery: (...args: unknown[]) => mockUseReactiveQuery(...args),
 }));
 
-const mockIsSchemaV2Enabled = vi.fn();
-vi.mock('../../../config/feature-flags', () => ({
-  isSchemaV2Enabled: () => mockIsSchemaV2Enabled(),
-}));
-
-const mockGetDashboardSourceSelector = vi.fn();
 vi.mock('../../../graphql/source-selector', () => ({
-  getDashboardSourceSelector: () => mockGetDashboardSourceSelector(),
-}));
-
-const mockShouldFallbackToV1 = vi.fn();
-vi.mock('../../../graphql/fallback-policy', () => ({
-  shouldFallbackToV1: (...args: unknown[]) => mockShouldFallbackToV1(...args),
-  getFallbackMode: () => 'sticky',
-  getFallbackReasonTag: ({
-    namespaceMissing,
-    error,
-  }: {
-    namespaceMissing: boolean;
-    error?: { networkError?: unknown } | null;
-  }) => {
-    if (namespaceMissing) {
-      return 'source-null';
-    }
-    if (error?.networkError) {
-      return 'network-error';
-    }
-    return null;
-  },
+  getDashboardSourceSelector: () => ({ id: 'agent:main' }),
 }));
 
 let lastDrawerProps: Record<string, unknown> | undefined;
@@ -75,22 +47,12 @@ function makeSession(overrides: Partial<SessionData> = {}): SessionData {
   };
 }
 
-function setupQueryMock({
-  v2Data,
-  v1Data,
-  v2Fetching = false,
-  v1Fetching = false,
-}: {
-  v2Data?: unknown;
-  v1Data?: unknown;
-  v2Fetching?: boolean;
-  v1Fetching?: boolean;
-}) {
+function setupQueryMock({ queryData, queryFetching = false }: { queryData?: unknown; queryFetching?: boolean }) {
   mockUseReactiveQuery.mockImplementation((args: { query: unknown }) => {
-    if (args.query === SessionsV2Query) {
-      return [{ data: v2Data, fetching: v2Fetching, error: undefined }, vi.fn()];
+    if (args.query === SessionsQuery) {
+      return [{ data: queryData, fetching: queryFetching, error: undefined }, vi.fn()];
     }
-    return [{ data: v1Data, fetching: v1Fetching, error: undefined }, vi.fn()];
+    return [{ data: undefined, fetching: false, error: undefined }, vi.fn()];
   });
 }
 
@@ -99,109 +61,61 @@ describe('SessionPanel', () => {
     vi.clearAllMocks();
     lastDrawerProps = undefined;
     mockRoute = { page: 'dashboard', params: {} };
-    mockIsSchemaV2Enabled.mockReturnValue(false);
-    mockGetDashboardSourceSelector.mockReturnValue({ id: 'agent:main' });
-    mockShouldFallbackToV1.mockReturnValue(false);
   });
 
-  it('renders sessions when v1 data is available', () => {
-    setupQueryMock({ v1Data: { sessions: [makeSession({ displayName: 'session-one' })] } });
+  it('renders sessions from source-centric data', () => {
+    setupQueryMock({
+      queryData: { source: { __typename: 'AgentNamespace', sessions: [makeSession({ displayName: 'session-one' })] } },
+    });
 
     renderWithI18n(<SessionPanel />);
     expect(screen.getByText('session-one')).toBeDefined();
   });
 
-  it('uses v2 query variables with selector + filter when schema v2 is enabled', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
+  it('uses canonical query variables with selector + filter', () => {
     setupQueryMock({});
 
     renderWithI18n(<SessionPanel />);
 
-    const v2Call = mockUseReactiveQuery.mock.calls.find((call) => call[0].query === SessionsV2Query)?.[0];
-    expect(v2Call.variables).toMatchObject({
+    const queryCall = mockUseReactiveQuery.mock.calls.find((call) => call[0].query === SessionsQuery)?.[0];
+    expect(queryCall.variables).toMatchObject({
       selector: { id: 'agent:main' },
       filter: { activeOnly: true, sortBy: 'UPDATED_AT', grouped: true },
     });
   });
 
-  it('reads sessions from data.source.sessions', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
+  it('renders empty state when source returns no sessions', () => {
     setupQueryMock({
-      v2Data: { source: { __typename: 'AgentNamespace', sessions: [makeSession({ displayName: 'v2-session' })] } },
+      queryData: { source: { __typename: 'AgentNamespace', sessions: [] } },
     });
 
     renderWithI18n(<SessionPanel />);
-    expect(screen.getByText('v2-session')).toBeDefined();
+    expect(screen.getAllByText('No sessions').length).toBeGreaterThan(0);
   });
 
-  it('falls back to v1 when fallback policy says true', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    mockShouldFallbackToV1.mockReturnValue(true);
+  it('shows skeleton when fetching with no data', () => {
+    setupQueryMock({ queryFetching: true });
+
+    const { container } = renderWithI18n(<SessionPanel />);
+    // Skeleton renders animated placeholder divs
+    const skeletons = container.querySelectorAll('.animate-pulse');
+    expect(skeletons.length).toBeGreaterThan(0);
+  });
+
+  it('handles null source gracefully', () => {
     setupQueryMock({
-      v2Data: { source: null },
-      v1Data: { sessions: [makeSession({ displayName: 'legacy-session' })] },
+      queryData: { source: null },
     });
 
     renderWithI18n(<SessionPanel />);
-
-    expect(mockShouldFallbackToV1).toHaveBeenCalled();
-    expect(screen.getByText('legacy-session')).toBeDefined();
-  });
-
-  it('resets fallback when activeOnly changes', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    mockShouldFallbackToV1.mockReturnValue(true);
-    setupQueryMock({ v2Data: { source: null }, v1Data: { sessions: [] } });
-
-    renderWithI18n(<SessionPanel />);
-    fireEvent.click(screen.getAllByText('All')[0]);
-
-    const latestV2Call = mockUseReactiveQuery.mock.calls
-      .map((c) => c[0])
-      .reverse()
-      .find((call) => call.query === SessionsV2Query);
-
-    expect(latestV2Call?.variables?.filter?.activeOnly).toBe(false);
-  });
-
-  it('resets fallback when sortBy changes', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    mockShouldFallbackToV1.mockReturnValue(true);
-    setupQueryMock({ v2Data: { source: null }, v1Data: { sessions: [] } });
-
-    renderWithI18n(<SessionPanel />);
-    fireEvent.click(screen.getAllByText('Token')[0]);
-
-    const latestV2Call = mockUseReactiveQuery.mock.calls
-      .map((c) => c[0])
-      .reverse()
-      .find((call) => call.query === SessionsV2Query);
-
-    expect(latestV2Call?.variables?.filter?.sortBy).toBe('TOKENS_DESC');
-  });
-
-  it('resets fallback when selector changes', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    mockShouldFallbackToV1.mockReturnValue(true);
-    mockGetDashboardSourceSelector.mockReturnValue({ id: 'agent:main' });
-    setupQueryMock({ v2Data: { source: null }, v1Data: { sessions: [] } });
-
-    const view = renderWithI18n(<SessionPanel />);
-    mockGetDashboardSourceSelector.mockReturnValue({ id: 'agent:secondary' });
-    view.rerender(
-      <I18nProvider>
-        <SessionPanel />
-      </I18nProvider>,
-    );
-
-    const v2Calls = mockUseReactiveQuery.mock.calls.map((c) => c[0]).filter((call) => call.query === SessionsV2Query);
-
-    expect(v2Calls.some((call) => call.variables?.selector?.id === 'agent:secondary')).toBe(true);
+    expect(screen.getAllByText('No sessions').length).toBeGreaterThan(0);
   });
 
   it('passes liveSession snapshot to SessionDrawer for selected subagent', () => {
     const sub = makeSession({ key: 'sub-1', displayName: 'my-subagent', contextTokens: 9000, totalTokens: 20000 });
-    setupQueryMock({ v1Data: { sessions: [makeSession({ key: 's1', subAgents: [sub] })] } });
+    setupQueryMock({
+      queryData: { source: { __typename: 'AgentNamespace', sessions: [makeSession({ key: 's1', subAgents: [sub] })] } },
+    });
     mockRoute = { page: 'dashboard', params: { session: 'sub-1' } };
 
     renderWithI18n(<SessionPanel />);

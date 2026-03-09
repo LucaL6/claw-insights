@@ -20,7 +20,9 @@ function mockPlatform(cliExec?: Platform['cli']['exec']): Platform {
   const exec =
     cliExec ??
     vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_STATUS_JSON);}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
       return Promise.resolve('2.5.0\n');
     });
   return {
@@ -38,7 +40,9 @@ function mockPlatform(cliExec?: Platform['cli']['exec']): Platform {
 describe('gateway-cli branches', () => {
   it('returns "unknown" when --version output is empty', async () => {
     const exec = vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_STATUS_JSON);}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
       return Promise.resolve('');
     });
     const client = createGatewayClient(mockPlatform(exec as any));
@@ -48,14 +52,16 @@ describe('gateway-cli branches', () => {
 
   it('returns cached version on second call', async () => {
     const exec = vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_STATUS_JSON);}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
       return Promise.resolve('3.0.0\n');
     });
     const client = createGatewayClient(mockPlatform(exec as any));
-    const v1 = await client.getVersion();
-    const v2 = await client.getVersion();
-    expect(v1).toBe('3.0.0');
-    expect(v2).toBe('3.0.0');
+    const firstVersion = await client.getVersion();
+    const secondVersion = await client.getVersion();
+    expect(firstVersion).toBe('3.0.0');
+    expect(secondVersion).toBe('3.0.0');
     // exec called only once for version (cached)
     const versionCalls = (exec as any).mock.calls.filter(
       (c: string[][]) => !c[0].some((a: string) => a.includes('--json')),
@@ -73,7 +79,9 @@ describe('gateway-cli branches', () => {
       sessions: {},
     });
     const exec = vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(statusJson);}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(statusJson);
+      }
       return Promise.resolve('3.0.0\n');
     });
     const platform = mockPlatform(exec as any);
@@ -94,7 +102,9 @@ describe('gateway-cli branches', () => {
       sessions: {},
     });
     const exec = vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(statusJson);}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(statusJson);
+      }
       return Promise.resolve('3.0.0\n');
     });
     const client = createGatewayClient(mockPlatform(exec as any));
@@ -105,7 +115,9 @@ describe('gateway-cli branches', () => {
 
   it('handles malformed JSON gracefully', async () => {
     const exec = vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve('not json');}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve('not json');
+      }
       return Promise.resolve('3.0.0\n');
     });
     const client = createGatewayClient(mockPlatform(exec as any));
@@ -116,7 +128,9 @@ describe('gateway-cli branches', () => {
 
   it('emits change when status changes', async () => {
     const exec = vi.fn((args: string[]) => {
-      if (args.some((a: string) => a.includes('--json'))) {return Promise.resolve(MOCK_STATUS_JSON);}
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
       return Promise.resolve('2.5.0\n');
     });
     const client = createGatewayClient(mockPlatform(exec as any));

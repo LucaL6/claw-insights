@@ -17,9 +17,15 @@ describe('levelToLane', () => {
 });
 
 describe('LogRouter', () => {
-  const entry = (level: 'debug' | 'info' | 'warn' | 'error', byteSize = 100) => ({
+  const entry = (
+    level: 'debug' | 'info' | 'warn' | 'error',
+    byteSize = 100,
+    module = 'test-module',
+    message = 'test',
+  ) => ({
     level,
-    message: 'test',
+    module,
+    message,
     timestamp: Date.now(),
     byteSize,
   });
@@ -29,6 +35,46 @@ describe('LogRouter', () => {
     const result = router.route(entry('error'));
     expect(result.accepted).toBe(true);
     expect(result.stream).toBe('error');
+    expect(result.lane).toBe('critical');
+  });
+
+  it('routes configured config noise warnings to noise stream', () => {
+    const router = new LogRouter();
+    const result = router.route(entry('warn', 100, 'config', 'unknown config key, ignoring'));
+    expect(result.accepted).toBe(true);
+    expect(result.stream).toBe('noise');
+    expect(result.lane).toBe('critical');
+  });
+
+  it('routes auth rejected warnings to security stream', () => {
+    const router = new LogRouter();
+    const result = router.route(entry('warn', 100, 'middleware:auth', 'auth rejected: invalid bearer token'));
+    expect(result.accepted).toBe(true);
+    expect(result.stream).toBe('security');
+    expect(result.lane).toBe('critical');
+  });
+
+  it('routes mcp security rejects to security stream', () => {
+    const router = new LogRouter();
+    const result = router.route(entry('warn', 100, 'mcp', 'security reject: non-local access in no-auth mode'));
+    expect(result.accepted).toBe(true);
+    expect(result.stream).toBe('security');
+    expect(result.lane).toBe('critical');
+  });
+
+  it('routes mcp invalid content-type security rejects to security stream', () => {
+    const router = new LogRouter();
+    const result = router.route(entry('warn', 100, 'mcp', 'security reject: invalid content-type'));
+    expect(result.accepted).toBe(true);
+    expect(result.stream).toBe('security');
+    expect(result.lane).toBe('critical');
+  });
+
+  it('routes known noise rules by message prefix', () => {
+    const router = new LogRouter();
+    const result = router.route(entry('warn', 100, 'config', 'unknown config key, ignoring: tokenRotationEnabled'));
+    expect(result.accepted).toBe(true);
+    expect(result.stream).toBe('noise');
     expect(result.lane).toBe('critical');
   });
 

@@ -22,6 +22,7 @@ export interface MetricsResult {
   totalSessions: number;
   totalErrors: number;
   totalWarnings: number;
+  uptimePercent: number;
   totalApiCalls: number;
   totalToolCalls: number;
   totalTurns: number;

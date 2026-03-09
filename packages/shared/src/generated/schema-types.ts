@@ -21,11 +21,6 @@ export type AgentNamespace = HasSourceInfo & {
   eventCounts: EventCounts;
   eventDensity: Array<EventDensityBucket>;
   events: EventsResult;
-  /**
-   * Temporary compatibility alias. Prefer system(context) { ... on OpenClawSystem { gateway } }.
-   * @deprecated Use system(context) { ... on OpenClawSystem { gateway } }
-   */
-  gateway: GatewayStatus;
   info: DataSource;
   lifetimeStats: LifetimeStats;
   metrics: MetricsSummary;
@@ -121,6 +116,11 @@ export type CronJob = {
   schedule: Scalars['String']['output'];
 };
 
+/** Dashboard data namespace */
+export type DashboardNamespace = HasSourceInfo & {
+  info: DataSource;
+};
+
 /** Lightweight signal emitted when a data source updates */
 export type DataChangeSignal = {
   source: Scalars['String']['output'];
@@ -207,12 +207,6 @@ export type HealthLevel =
 export type HealthStatus = {
   checks: Array<HealthCheck>;
   status: HealthLevel;
-};
-
-/** Legacy context wrapper – kept for backward compatibility with Query.context */
-export type LegacyContextNamespace = {
-  source: AgentNamespace;
-  system: OpenClawSystem;
 };
 
 /**
@@ -334,84 +328,12 @@ export type PreferencesInput = {
 };
 
 export type Query = {
-  /** @deprecated Use system(context) { ... on OpenClawSystem { channels } } */
-  channels: Array<Channel>;
-  /**
-   * Legacy context wrapper – backward compat, temporary
-   * @deprecated Use system(context) / source(selector, context)
-   */
-  context: LegacyContextNamespace;
-  /** @deprecated Use source(selector, context) { ... on AgentNamespace { cronJobs } } */
-  cronJobs: Array<CronJob>;
-  /** @deprecated Use source(selector, context) { ... on AgentNamespace { eventCounts } } */
-  eventCounts: EventCounts;
-  /** @deprecated Use source(selector, context) { ... on AgentNamespace { eventDensity } } */
-  eventDensity: Array<EventDensityBucket>;
-  /** @deprecated Use source(selector, context) { ... on AgentNamespace { events } } */
-  events: EventsResult;
-  /** @deprecated Use system(context) { ... on OpenClawSystem { gateway } } */
-  gateway: GatewayStatus;
-  /** @deprecated Use source(selector, context) { ... on AgentNamespace { lifetimeStats } } */
-  lifetimeStats: LifetimeStats;
-  /** @deprecated Use source(selector, context) { ... on AgentNamespace { metrics } } */
-  metrics: MetricsSummary;
-  /** @deprecated Use source(selector, context) { ... on AgentNamespace { recentLogs } } */
-  recentLogs: Array<LogEntry>;
-  /** @deprecated Use system(context) { ... on OpenClawSystem { resources } } */
-  resources: SystemResources;
-  /**
-   * Fetch session transcript. Returns null if session/file not found.
-   * @deprecated Use source(selector, context) { ... on AgentNamespace { sessionTranscript } }
-   */
-  sessionTranscript?: Maybe<SessionTranscript>;
-  /** @deprecated Use source(selector, context) { ... on AgentNamespace { sessions } } */
-  sessions: Array<Session>;
   /** Resolve one source by selector */
   source?: Maybe<SourceNamespace>;
   /** Registered data sources */
   sources: Array<DataSource>;
   /** claw-insights system state */
   system: SystemNamespace;
-  /** @deprecated Use source(selector, context) { ... on AgentNamespace { usageCost } } */
-  usageCost: UsageCost;
-};
-
-
-export type QueryEventCountsArgs = {
-  from?: InputMaybe<Scalars['Int']['input']>;
-  to?: InputMaybe<Scalars['Int']['input']>;
-};
-
-
-export type QueryEventsArgs = {
-  from?: InputMaybe<Scalars['Int']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  to?: InputMaybe<Scalars['Int']['input']>;
-  types?: InputMaybe<Array<Scalars['String']['input']>>;
-};
-
-
-export type QueryMetricsArgs = {
-  date?: InputMaybe<Scalars['String']['input']>;
-  range?: InputMaybe<MetricsRange>;
-};
-
-
-export type QueryRecentLogsArgs = {
-  count?: InputMaybe<Scalars['Int']['input']>;
-};
-
-
-export type QuerySessionTranscriptArgs = {
-  after?: InputMaybe<Scalars['String']['input']>;
-  before?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  sessionKey: Scalars['String']['input'];
-};
-
-
-export type QuerySessionsArgs = {
-  filter?: InputMaybe<SessionFilter>;
 };
 
 
@@ -512,30 +434,32 @@ export type SessionTranscript = {
 
 export type SourceAttributes = {
   category: SourceCategory;
-  provider?: Maybe<Scalars['String']['output']>;
+  provider?: Maybe<SourceProvider>;
   tags: Array<Scalars['String']['output']>;
 };
 
 export type SourceCategory =
   | 'AGENT'
-  | 'CALENDAR'
-  | 'DASHBOARD'
-  | 'INTEGRATION'
-  | 'KANBAN';
+  | 'DASHBOARD';
 
 export type SourceFilter = {
   category?: InputMaybe<SourceCategory>;
-  provider?: InputMaybe<Scalars['String']['input']>;
+  provider?: InputMaybe<SourceProvider>;
   status?: InputMaybe<SourceStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
-export type SourceNamespace = AgentNamespace;
+export type SourceNamespace = AgentNamespace | DashboardNamespace;
+
+export type SourceProvider =
+  | 'CLAUDE_CODE'
+  | 'CODEX'
+  | 'OPENCLAW';
 
 export type SourceSelector = {
   category?: InputMaybe<SourceCategory>;
   id?: InputMaybe<Scalars['String']['input']>;
-  provider?: InputMaybe<Scalars['String']['input']>;
+  provider?: InputMaybe<SourceProvider>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 

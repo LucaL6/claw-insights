@@ -14,6 +14,32 @@ export function levelToStream(level: LogLevel): LogStream {
   }
 }
 
+const NOISE_RULES: Array<{ module: string; message: string }> = [
+  { module: 'config', message: 'unknown config key, ignoring' },
+  { module: 'log-tailer', message: 'read error' },
+  { module: 'data-validator', message: 'validation threshold exceeded' },
+];
+
+function classifyStream(module: string | undefined, message: string): LogStream | undefined {
+  if (module === 'middleware:auth' && message.startsWith('auth rejected:')) {
+    return 'security';
+  }
+
+  if (module === 'mcp' && message.startsWith('security reject:')) {
+    return 'security';
+  }
+
+  if (module) {
+    for (const rule of NOISE_RULES) {
+      if (rule.module === module && message.startsWith(rule.message)) {
+        return 'noise';
+      }
+    }
+  }
+
+  return undefined;
+}
+
 export function levelToLane(level: LogLevel): LogLane {
   switch (level) {
     case 'warn':
@@ -41,6 +67,7 @@ export const DEFAULT_ROUTER_CONFIG: RouterConfig = {
 
 export interface LogEntry {
   level: LogLevel;
+  module?: string;
   message: string;
   timestamp: number;
   /** Pre-computed byte size of the serialized entry. */
@@ -65,7 +92,7 @@ export class LogRouter {
   }
 
   route(entry: LogEntry): RouteResult {
-    const stream = levelToStream(entry.level);
+    const stream = classifyStream(entry.module, entry.message) ?? levelToStream(entry.level);
     const lane = levelToLane(entry.level);
     const q = this.queues[lane];
     const cap = this.laneCapacity(lane);

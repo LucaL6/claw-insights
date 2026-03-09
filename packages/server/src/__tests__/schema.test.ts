@@ -13,12 +13,12 @@ describe('GraphQL Schema', () => {
     const queryType = schema.getQueryType();
     expect(queryType).toBeDefined();
     const fields = Object.keys(queryType!.getFields());
-    expect(fields).toContain('gateway');
-    expect(fields).toContain('resources');
-    expect(fields).toContain('channels');
-    expect(fields).toContain('sessions');
-    expect(fields).toContain('metrics');
-    expect(fields).toContain('cronJobs');
+    expect(fields).toContain('system');
+    expect(fields).toContain('sources');
+    expect(fields).toContain('source');
+    // v1 root fields removed
+    expect(fields).not.toContain('gateway');
+    expect(fields).not.toContain('context');
   });
 
   it('should contain subscriptions', () => {

@@ -133,7 +133,7 @@ function stubLifetimeScanner() {
   return {
     state: { kind: 'complete' as const },
     init: async () => {},
-    getStats: async () => ({
+    getStats: () => ({
       isReady: true,
       createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
       daysSinceCreation: 30,

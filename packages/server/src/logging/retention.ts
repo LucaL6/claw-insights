@@ -8,7 +8,7 @@ import { readdir, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 
 // Filename pattern: <stream>.<YYYY-MM-DD>.<seq>.log
-const LOG_FILE_RE = /^(app|error|debug)\.(\d{4}-\d{2}-\d{2})\.(\d+)\.log$/;
+const LOG_FILE_RE = /^(app|error|debug|noise|security)\.(\d{4}-\d{2}-\d{2})\.(\d+)\.log$/;
 
 export interface RetentionConfig {
   logDir: string;

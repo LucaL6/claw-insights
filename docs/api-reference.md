@@ -8,9 +8,9 @@ Claw Insights exposes a GraphQL API and REST endpoints.
 **Auth:** Bearer token or cookie ([details](./configuration.md#authentication-details))  
 **Schema source:** [`packages/server/src/schema/schema.graphql`](../packages/server/src/schema/schema.graphql)
 
-### v2 source-centric query contract
+### Source-centric query contract
 
-The canonical v2 entrypoints are top-level root fields:
+The canonical entrypoints are top-level root fields:
 
 | Root field                  | Returns            | Purpose                                        |
 | --------------------------- | ------------------ | ---------------------------------------------- |
@@ -18,9 +18,7 @@ The canonical v2 entrypoints are top-level root fields:
 | `sources(filter, context)`  | `[DataSource!]!`   | List registered data sources                   |
 | `source(selector, context)` | `SourceNamespace`  | Resolve one source namespace by selector       |
 
-> `Query.context` is still available as a temporary compatibility bridge and is marked `@deprecated`.
-
-### v2 namespace fields
+### Namespace fields
 
 #### `system(context)` → `... on OpenClawSystem`
 
@@ -57,9 +55,9 @@ The following root query fields are still available for compatibility but are ma
 - `sessions`, `metrics`, `cronJobs`, `usageCost`, `recentLogs`
 - `events`, `eventDensity`, `eventCounts`, `lifetimeStats`, `sessionTranscript`
 
-Prefer v2 root fields (`system`, `sources`, `source`) for new clients.
+Prefer canonical root fields (`system`, `sources`, `source`) for new clients.
 
-### v1 → v2 migration examples
+### Legacy → canonical migration examples
 
 #### 1) sessions
 
@@ -75,7 +73,7 @@ query {
 ```
 
 ```graphql
-# v2 canonical
+# canonical
 query {
   source(selector: { id: "agent:main" }) {
     ... on AgentNamespace {
@@ -103,7 +101,7 @@ query {
 ```
 
 ```graphql
-# v2 canonical
+# canonical
 query {
   source(selector: { id: "agent:main" }) {
     ... on AgentNamespace {
@@ -138,7 +136,7 @@ query {
 ```
 
 ```graphql
-# v2 canonical
+# canonical
 query {
   system(context: {}) {
     ... on OpenClawSystem {
@@ -158,14 +156,6 @@ query {
   }
 }
 ```
-
-### Compatibility bridge (`Query.context`)
-
-`Query.context` remains for migration support:
-
-- `context.source` is equivalent to the default `AgentNamespace` source
-- `context.system` is equivalent to `OpenClawSystem`
-- `context.source.gateway` is a temporary alias for system gateway data and is deprecated
 
 ### Subscriptions
 
@@ -253,11 +243,11 @@ If both are provided, GraphQL returns an error with:
 - `message`: `Cannot specify both before and after`
 - `extensions.code`: `BAD_USER_INPUT`
 
-> Note: this validation runs only after transcript/file resolution. If the transcript does not exist, the resolver returns `null` (v1/v2 parity) instead of raising `BAD_USER_INPUT`.
+> Note: this validation runs only after transcript/file resolution. If the transcript does not exist, the resolver returns `null` (legacy/canonical parity) instead of raising `BAD_USER_INPUT`.
 
 ### cURL examples
 
-**Query gateway status (v2 canonical):**
+**Query gateway status (canonical):**
 
 ```bash
 curl http://127.0.0.1:41041/graphql \
@@ -266,7 +256,7 @@ curl http://127.0.0.1:41041/graphql \
   -d '{"query":"{ system(context: {}) { ... on OpenClawSystem { gateway { running version uptime pid updateAvailable } } } }"}'
 ```
 
-**Query sessions (v2 canonical):**
+**Query sessions (canonical):**
 
 ```bash
 curl http://127.0.0.1:41041/graphql \
@@ -319,3 +309,17 @@ curl -X POST http://127.0.0.1:41041/api/snapshot \
   -d '{"detail":"standard","theme":"dark"}' \
   -o dashboard.png
 ```
+
+---
+
+## Enums
+
+### SourceProvider
+
+| Value         | Description                 |
+| ------------- | --------------------------- |
+| `OPENCLAW`    | OpenClaw gateway agent      |
+| `CLAUDE_CODE` | Anthropic Claude Code agent |
+| `CODEX`       | OpenAI Codex agent          |
+
+> **Breaking change:** The `provider` field in `SourceAttributes`, `SourceFilter`, and `SourceSelector` changed from `String` to `SourceProvider` enum. Clients must now use one of the enum values listed above.

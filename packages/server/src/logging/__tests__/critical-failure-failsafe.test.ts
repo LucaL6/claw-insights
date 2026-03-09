@@ -22,7 +22,7 @@ function getFailSafeStatus(errno: 'ENOSPC' | 'EACCES' | 'EROFS'): FailSafeStatus
 
 describe('Fail-safe: ENOSPC', () => {
   it('sets health to critical', () => {
-    const _fsMock = createErrnoFsMock('ENOSPC');
+    void createErrnoFsMock('ENOSPC');
     const status = getFailSafeStatus('ENOSPC');
     expect(status.health).toBe('critical');
   });
@@ -40,7 +40,7 @@ describe('Fail-safe: ENOSPC', () => {
 
 describe('Fail-safe: EACCES', () => {
   it('sets health to critical', () => {
-    const _fsMock = createErrnoFsMock('EACCES');
+    void createErrnoFsMock('EACCES');
     const status = getFailSafeStatus('EACCES');
     expect(status.health).toBe('critical');
   });
@@ -58,7 +58,7 @@ describe('Fail-safe: EACCES', () => {
 
 describe('Fail-safe: EROFS', () => {
   it('sets health to critical', () => {
-    const _fsMock = createErrnoFsMock('EROFS');
+    void createErrnoFsMock('EROFS');
     const status = getFailSafeStatus('EROFS');
     expect(status.health).toBe('critical');
   });

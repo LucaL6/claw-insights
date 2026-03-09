@@ -56,10 +56,7 @@ enum CheckStatus {
 
 enum SourceCategory {
   AGENT
-  KANBAN
   DASHBOARD
-  CALENDAR
-  INTEGRATION
 }
 
 enum SourceStatus {
@@ -67,6 +64,12 @@ enum SourceStatus {
   CONNECTED
   DISCONNECTED
   ERROR
+}
+
+enum SourceProvider {
+  OPENCLAW
+  CLAUDE_CODE
+  CODEX
 }
 
 # ── Gateway ──
@@ -327,7 +330,7 @@ type SessionTranscript {
   pageInfo: PageInfo!
 }
 
-# ── Query Context / Source Contracts (v2) ──
+# ── Query Context / Source Contracts (canonical) ──
 
 input QueryContext {
   """Request tracing metadata"""
@@ -370,13 +373,13 @@ type DataSource {
 
 type SourceAttributes {
   category: SourceCategory!
-  provider: String
+  provider: SourceProvider
   tags: [String!]!
 }
 
 input SourceFilter {
   category: SourceCategory
-  provider: String
+  provider: SourceProvider
   tags: [String!]
   status: SourceStatus
 }
@@ -384,7 +387,7 @@ input SourceFilter {
 input SourceSelector {
   id: String
   category: SourceCategory
-  provider: String
+  provider: SourceProvider
   tags: [String!]
 }
 
@@ -392,7 +395,7 @@ interface HasSourceInfo {
   info: DataSource!
 }
 
-union SourceNamespace = AgentNamespace
+union SourceNamespace = AgentNamespace | DashboardNamespace
 
 interface HasSystemInfo {
   health: HealthStatus!
@@ -400,17 +403,9 @@ interface HasSystemInfo {
 
 union SystemNamespace = OpenClawSystem
 
-"""Legacy context wrapper – kept for backward compatibility with Query.context"""
-type LegacyContextNamespace {
-  source: AgentNamespace!
-  system: OpenClawSystem!
-}
-
 """Agent data namespace"""
 type AgentNamespace implements HasSourceInfo {
   info: DataSource!
-  """Temporary compatibility alias. Prefer system(context) { ... on OpenClawSystem { gateway } }."""
-  gateway: GatewayStatus! @deprecated(reason: "Use system(context) { ... on OpenClawSystem { gateway } }")
   session(key: String!): Session
   sessions(filter: SessionFilter): [Session!]!
   metrics(date: String, range: MetricsRange): MetricsSummary!
@@ -444,6 +439,11 @@ type OpenClawSystem implements HasSystemInfo {
   channels: [Channel!]!
 }
 
+"""Dashboard data namespace"""
+type DashboardNamespace implements HasSourceInfo {
+  info: DataSource!
+}
+
 # ── Root Types ──
 
 type Query {
@@ -455,37 +455,6 @@ type Query {
 
   """Resolve one source by selector"""
   source(selector: SourceSelector!, context: QueryContext): SourceNamespace
-
-  """Legacy context wrapper – backward compat, temporary"""
-  context: LegacyContextNamespace! @deprecated(reason: "Use system(context) / source(selector, context)")
-
-  gateway: GatewayStatus!
-    @deprecated(reason: "Use system(context) { ... on OpenClawSystem { gateway } }")
-  resources: SystemResources!
-    @deprecated(reason: "Use system(context) { ... on OpenClawSystem { resources } }")
-  channels: [Channel!]!
-    @deprecated(reason: "Use system(context) { ... on OpenClawSystem { channels } }")
-  sessions(filter: SessionFilter): [Session!]!
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { sessions } }")
-  metrics(date: String, range: MetricsRange): MetricsSummary!
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { metrics } }")
-  cronJobs: [CronJob!]!
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { cronJobs } }")
-  usageCost: UsageCost!
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { usageCost } }")
-  recentLogs(count: Int): [LogEntry!]!
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { recentLogs } }")
-  events(from: Int, to: Int, types: [String!], limit: Int): EventsResult!
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { events } }")
-  eventDensity: [EventDensityBucket!]!
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { eventDensity } }")
-  eventCounts(from: Int, to: Int): EventCounts!
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { eventCounts } }")
-  lifetimeStats: LifetimeStats!
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { lifetimeStats } }")
-  """Fetch session transcript. Returns null if session/file not found."""
-  sessionTranscript(sessionKey: String!, limit: Int, before: String, after: String): SessionTranscript
-    @deprecated(reason: "Use source(selector, context) { ... on AgentNamespace { sessionTranscript } }")
 }
 
 """Lightweight signal emitted when a data source updates"""

@@ -39,7 +39,7 @@ export function renderStatusStrip(
         border: `1px solid ${c.glassBorder}`,
         color: ch.connected ? c.onlineDot : c.textDim,
       },
-      ch.name,
+      ch.name ?? ch.provider,
     ),
   );
 

@@ -65,7 +65,7 @@ export function parseSnapshotRequest(body: Record<string, unknown>): SnapshotReq
 
 export interface DataSources {
   getGateway: () => Promise<{ running: boolean; version: string; uptime: string; [k: string]: unknown }>;
-  getChannels: () => Promise<{ provider: string; name: string; connected: boolean; latencyMs: number | null }[]>;
+  getChannels: () => Promise<{ provider: string; name: string | null; connected: boolean; latencyMs: number | null }[]>;
   getSessions: () => unknown[];
   getMetrics: (range: string) => {
     totalTokensK: number;
@@ -125,7 +125,7 @@ export interface SnapshotData {
     cpu: number;
     memoryMB: number;
   } | null;
-  channels: { name: string; provider: string; connected: boolean; latencyMs: number | null }[] | null;
+  channels: { name: string | null; provider: string; connected: boolean; latencyMs: number | null }[] | null;
   timestamp: string;
   range: string;
   time: string;

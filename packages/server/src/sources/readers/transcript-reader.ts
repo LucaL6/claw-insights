@@ -63,7 +63,7 @@ export async function readTranscript(
     size: stat.size,
   });
 
-  const page = paginate(parsed.messages, {
+  const page = paginate(parsed.messages as (ParsedMessage & Record<string, unknown>)[], {
     limit,
     before: options.before,
     after: options.after,

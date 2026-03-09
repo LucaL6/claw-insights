@@ -130,16 +130,36 @@ export function SessionDrawer({
   }, [sessionKey, messages.length, jumpToEnd]);
 
   // Auto-refresh on open/session switch (once per sessionKey)
+  // Only trigger when initial data came from cache (not from an in-flight network miss),
+  // otherwise we would immediately cancel the initial request with a second reexecute.
   const autoRefreshedKeyRef = useRef<string | null>(null);
+  const initialLoadUsedNetworkRef = useRef(false);
+
   useEffect(() => {
-    if (autoRefreshedKeyRef.current === sessionKey || isRefreshing) {
+    initialLoadUsedNetworkRef.current = false;
+  }, [sessionKey]);
+
+  useEffect(() => {
+    if (isInitialLoading) {
+      initialLoadUsedNetworkRef.current = true;
+    }
+  }, [isInitialLoading]);
+
+  useEffect(() => {
+    if (autoRefreshedKeyRef.current === sessionKey || isRefreshing || isInitialLoading || messages.length === 0) {
       return;
     }
+
+    if (initialLoadUsedNetworkRef.current) {
+      autoRefreshedKeyRef.current = sessionKey;
+      return;
+    }
+
     const started = refresh({ silent: true });
     if (started) {
       autoRefreshedKeyRef.current = sessionKey;
     }
-  }, [isRefreshing, refresh, sessionKey]);
+  }, [isInitialLoading, isRefreshing, messages.length, refresh, sessionKey]);
 
   const resolvedName =
     liveSession?.displayName || externalName || meta?.displayName || sessionKey.split(':').pop() || sessionKey;

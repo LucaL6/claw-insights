@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useQuery } from 'urql';
 
-import { EventsQuery } from '../graphql/events-queries';
+import type { EventsQuery as EventsQueryData, EventsQueryVariables } from '../generated/graphql';
+import { EventsQuery } from '../graphql/queries';
+import { getDashboardSourceSelector } from '../graphql/source-selector';
 import type { BucketData } from './useMetricsData';
 
 interface PreviewState {
@@ -14,10 +16,14 @@ interface PreviewState {
 
 export function usePreview(buckets: BucketData[], bucketSeconds: number) {
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const selector = getDashboardSourceSelector();
 
   const handleErrorClick = (idx: number) => {
     const b = buckets[idx];
-    if (!b?.epochStart) {return;} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- guard invalid index
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- guard out-of-bounds index
+    if (!b?.epochStart) {
+      return;
+    }
     if (preview?.bucketIndex === idx && preview.source === 'errors') {
       setPreview(null);
       return;
@@ -33,7 +39,10 @@ export function usePreview(buckets: BucketData[], bucketSeconds: number) {
 
   const handleUptimeClick = (idx: number) => {
     const b = buckets[idx];
-    if (!b?.epochStart) {return;} // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- guard invalid index
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- guard out-of-bounds index
+    if (!b?.epochStart) {
+      return;
+    }
     if (preview?.bucketIndex === idx && preview.source === 'uptime') {
       setPreview(null);
       return;
@@ -47,17 +56,24 @@ export function usePreview(buckets: BucketData[], bucketSeconds: number) {
     });
   };
 
-  const [previewResult] = useQuery({
+  const [previewResult] = useQuery<EventsQueryData, EventsQueryVariables>({
     query: EventsQuery,
-    variables: preview ? { from: preview.fromTs, to: preview.toTs, types: preview.types, limit: 3 } : { limit: 0 },
+    variables: preview
+      ? { selector, from: preview.fromTs, to: preview.toTs, types: preview.types, limit: 3 }
+      : { selector, limit: 0 },
     pause: !preview,
   });
 
+  const previewSource = previewResult.data?.source;
+  const previewEvents = previewSource && 'events' in previewSource ? previewSource.events : undefined;
+
   return {
     preview,
-    previewEvents: previewResult.data?.events,
+    previewEvents,
     handleErrorClick,
     handleUptimeClick,
-    closePreview: () => { setPreview(null); },
+    closePreview: () => {
+      setPreview(null);
+    },
   };
 }

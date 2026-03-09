@@ -1,7 +1,10 @@
 // src/platforms/__tests__/loader.test.ts
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('node:os', () => ({ platform: vi.fn() }));
+vi.mock('node:os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:os')>();
+  return { ...actual, platform: vi.fn() };
+});
 vi.mock('../../config.js', () => ({ config: { cliPath: 'openclaw' }, CLI_ENV: {} }));
 
 import { platform as osPlatform } from 'node:os';

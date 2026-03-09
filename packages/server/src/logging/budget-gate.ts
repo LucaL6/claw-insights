@@ -6,6 +6,7 @@ export interface BudgetConfig {
   errorReserveMb: number;
   appSoftMb: number;
   debugSoftMb: number;
+  noiseSoftMb: number;
 }
 
 export const DEFAULT_BUDGET_CONFIG: BudgetConfig = {
@@ -14,6 +15,7 @@ export const DEFAULT_BUDGET_CONFIG: BudgetConfig = {
   errorReserveMb: 50,
   appSoftMb: 500,
   debugSoftMb: 200,
+  noiseSoftMb: 200,
 };
 
 export interface BudgetState {
@@ -38,7 +40,7 @@ export interface BudgetHealthStatus {
 
 export class BudgetGate {
   private readonly config: BudgetConfig;
-  private readonly usedBytes: Record<LogStream, number> = { app: 0, error: 0, debug: 0 };
+  private readonly usedBytes: Record<LogStream, number> = { app: 0, error: 0, debug: 0, noise: 0, security: 0 };
   private reclaimFn: ReclaimFn | null = null;
   private _healthStatus: BudgetHealthStatus = { health: 'ok', alert: null };
   private maxOvershootBytes = 0;
@@ -67,7 +69,8 @@ export class BudgetGate {
   }
 
   state(): BudgetState {
-    const totalUsed = this.usedBytes.app + this.usedBytes.error + this.usedBytes.debug;
+    const totalUsed =
+      this.usedBytes.app + this.usedBytes.error + this.usedBytes.debug + this.usedBytes.noise + this.usedBytes.security;
     const capBytes = this.config.globalCapMb * 1024 * 1024;
     return {
       usedByStream: { ...this.usedBytes },
@@ -83,16 +86,19 @@ export class BudgetGate {
 
   /**
    * Check if an append of `bytes` to `stream` is allowed.
-   * For critical streams (error), will attempt up to 3 reclaim/retry cycles.
+   * For critical streams (error/security), attempts up to 3 reclaim/retry cycles.
    * Returns true if the append can proceed.
    */
   checkAppend(stream: LogStream, bytes: number): boolean {
-    const maxRetries = stream === 'error' ? 3 : 1;
+    const isCritical = stream === 'error' || stream === 'security';
+    const maxRetries = isCritical ? 3 : 1;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
-      if (this.canFit(stream, bytes)) {return true;}
+      if (this.canFit(stream, bytes)) {
+        return true;
+      }
       if (!this.reclaimOnce(stream)) {
-        if (stream === 'error') {
+        if (isCritical) {
           this._healthStatus = { health: 'critical', alert: `budget-exhausted:${stream}:reclaim-failed` };
         }
         return false;
@@ -100,7 +106,7 @@ export class BudgetGate {
     }
 
     const fits = this.canFit(stream, bytes);
-    if (!fits && stream === 'error') {
+    if (!fits && isCritical) {
       this._healthStatus = { health: 'critical', alert: `budget-exhausted:${stream}:retries-exhausted` };
     }
     return fits;
@@ -118,14 +124,24 @@ export class BudgetGate {
 
     // Per-stream soft cap checks.
     const streamAfter = this.usedBytes[stream] + bytes;
-    if (stream === 'app' && streamAfter > this.config.appSoftMb * 1024 * 1024) {return false;}
-    if (stream === 'debug' && streamAfter > this.config.debugSoftMb * 1024 * 1024) {return false;}
+    if (stream === 'app' && streamAfter > this.config.appSoftMb * 1024 * 1024) {
+      return false;
+    }
+    if (stream === 'debug' && streamAfter > this.config.debugSoftMb * 1024 * 1024) {
+      return false;
+    }
+    if (stream === 'noise' && streamAfter > this.config.noiseSoftMb * 1024 * 1024) {
+      return false;
+    }
 
     // Error reserve: ensure critical streams have headroom.
     const MB = 1024 * 1024;
     const reservedForCriticalBytes = (this.config.errorFloorMb + this.config.errorReserveMb) * MB;
-    const errorHeadroomBytes = Math.max(0, this.config.globalCapMb * MB - this.usedBytes.error);
-    if (stream !== 'error' && errorHeadroomBytes < reservedForCriticalBytes) {return false;}
+    const criticalUsageBytes = this.usedBytes.error + this.usedBytes.security;
+    const criticalHeadroomBytes = Math.max(0, this.config.globalCapMb * MB - criticalUsageBytes);
+    if (stream !== 'error' && stream !== 'security' && criticalHeadroomBytes < reservedForCriticalBytes) {
+      return false;
+    }
 
     return true;
   }
@@ -135,10 +151,12 @@ export class BudgetGate {
    * Returns true if space was freed.
    */
   private reclaimOnce(_requestingStream: LogStream): boolean {
-    if (!this.reclaimFn) {return false;}
+    if (!this.reclaimFn) {
+      return false;
+    }
 
     // Try debug first, then app.
-    const reclaimOrder: LogStream[] = ['debug', 'app'];
+    const reclaimOrder: LogStream[] = ['debug', 'noise', 'app'];
     for (const target of reclaimOrder) {
       const candidate = this.reclaimFn(target);
       if (candidate) {
@@ -150,6 +168,8 @@ export class BudgetGate {
   }
 
   private totalUsed(): number {
-    return this.usedBytes.app + this.usedBytes.error + this.usedBytes.debug;
+    return (
+      this.usedBytes.app + this.usedBytes.error + this.usedBytes.debug + this.usedBytes.noise + this.usedBytes.security
+    );
   }
 }

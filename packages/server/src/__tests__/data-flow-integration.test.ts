@@ -19,6 +19,9 @@ import { insertEvent } from '../db/event-queries.js';
 import type { TestApp } from './helpers/test-app.js';
 import { createTestApp } from './helpers/test-app.js';
 
+const SOURCE_EVENTS_QUERY = (innerQuery: string) =>
+  `{ source(selector: { id: "agent:main" }) { ... on AgentNamespace { ${innerQuery} } } }`;
+
 describe('Event Insert → DB → GraphQL Query', () => {
   let t: TestApp;
 
@@ -35,10 +38,10 @@ describe('Event Insert → DB → GraphQL Query', () => {
 
     const res = await request(t.app)
       .post('/graphql')
-      .send({ query: '{ events(types: ["error"]) { events { type message } total } }' });
+      .send({ query: SOURCE_EVENTS_QUERY('events(types: ["error"]) { events { type message } total }') });
 
     expect(res.status).toBe(200);
-    const { events, total } = res.body.data.events;
+    const { events, total } = res.body.data.source.events;
     expect(total).toBeGreaterThan(0);
     expect(events.some((e: { message: string }) => e.message.includes('dataflow-test-error'))).toBe(true);
   });
@@ -50,10 +53,10 @@ describe('Event Insert → DB → GraphQL Query', () => {
 
     const res = await request(t.app)
       .post('/graphql')
-      .send({ query: `{ eventCounts(from: ${now - 60}, to: ${now + 60}) { error warning restart } }` });
+      .send({ query: SOURCE_EVENTS_QUERY(`eventCounts(from: ${now - 60}, to: ${now + 60}) { error warning restart }`) });
 
     expect(res.status).toBe(200);
-    const counts = res.body.data.eventCounts;
+    const counts = res.body.data.source.eventCounts;
     expect(counts.error).toBeGreaterThan(0);
     expect(counts.warning).toBeGreaterThan(0);
   });
@@ -61,10 +64,12 @@ describe('Event Insert → DB → GraphQL Query', () => {
   it('inserted events show up in eventDensity', async () => {
     insertEvent(t.db, 'error', null, { message: 'density-test' });
 
-    const res = await request(t.app).post('/graphql').send({ query: '{ eventDensity { hour count errorCount } }' });
+    const res = await request(t.app)
+      .post('/graphql')
+      .send({ query: SOURCE_EVENTS_QUERY('eventDensity { hour count errorCount }') });
 
     expect(res.status).toBe(200);
-    const density = res.body.data.eventDensity;
+    const density = res.body.data.source.eventDensity;
     expect(density).toHaveLength(24);
     const totalErrors = density.reduce((s: number, b: { errorCount: number }) => s + b.errorCount, 0);
     expect(totalErrors).toBeGreaterThan(0);
@@ -83,8 +88,10 @@ describe('EventBus → Flush → DB → GraphQL Query', () => {
   });
 
   it('token events emitted on bus appear in metrics after flush', async () => {
-    const before = await request(t.app).post('/graphql').send({ query: '{ metrics { totalTokensK } }' });
-    const baselineTokensK = before.body.data.metrics.totalTokensK;
+    const before = await request(t.app)
+      .post('/graphql')
+      .send({ query: SOURCE_EVENTS_QUERY('metrics { totalTokensK }') });
+    const baselineTokensK = before.body.data.source.metrics.totalTokensK;
 
     // Emit a token usage event
     t.ctx.tokenBus.emit({
@@ -101,9 +108,11 @@ describe('EventBus → Flush → DB → GraphQL Query', () => {
     t.flushTokenEvents();
     t.clearAggregatorCache();
 
-    const after = await request(t.app).post('/graphql').send({ query: '{ metrics { totalTokensK } }' });
+    const after = await request(t.app)
+      .post('/graphql')
+      .send({ query: SOURCE_EVENTS_QUERY('metrics { totalTokensK }') });
 
-    expect(after.body.data.metrics.totalTokensK).toBeGreaterThan(baselineTokensK);
+    expect(after.body.data.source.metrics.totalTokensK).toBeGreaterThan(baselineTokensK);
   });
 
   it('message events emitted on bus are flushed to DB', async () => {

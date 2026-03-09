@@ -10,7 +10,9 @@ export interface FileState {
   offset: number;
   inode: number;
   birthtimeMs: number;
+  mtimeMs: number;
   partial: string;
+  firstTimestampMs: number | null;
 }
 
 export interface FileToScan {
@@ -78,7 +80,9 @@ export function classifyFiles(
         offset: prev.byteOffset,
         inode: prev.inode,
         birthtimeMs: prev.birthMs,
+        mtimeMs: prev.mtimeMs,
         partial: prev.partial,
+        firstTimestampMs: prev.firstTimestampMs,
       });
     } else if (prev && prev.inode === st.ino && st.size > prev.byteOffset) {
       toScan.push({

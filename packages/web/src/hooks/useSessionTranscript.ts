@@ -2,45 +2,48 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type CombinedError, useQuery } from 'urql';
 
 import { SessionTranscriptQuery } from '../graphql/queries';
+import { getDashboardSourceSelector } from '../graphql/source-selector';
 
 type TranscriptResult = {
-  sessionTranscript?: {
-    sessionKey: string;
-    displayName: string;
-    model: string;
-    channel?: string | null;
-    kind: string;
-    thinkingLevel?: string | null;
-    startedAt: string;
-    fileSize: number;
-    totalTokens: number;
-    contextTokens: number;
-    durationMs: number;
-    isSubAgent: boolean;
-    parentDisplayName?: string | null;
-    spawnPrompt?: string | null;
-    totalMessages: number;
-    pageInfo: {
-      startCursor: string | null;
-      endCursor: string | null;
-      hasPreviousPage: boolean;
-      hasNextPage: boolean;
-    };
-    messages: Array<{
-      timestamp: string;
-      role: string;
-      content: string;
-      contentTruncated: boolean;
-      model?: string | null;
-      usage?: {
-        input: number;
-        output: number;
-        cacheRead: number;
-        cacheWrite: number;
-      } | null;
-      toolName?: string | null;
-    }>;
-  };
+  source?: {
+    sessionTranscript?: {
+      sessionKey: string;
+      displayName: string;
+      model: string;
+      channel?: string | null;
+      kind: string;
+      thinkingLevel?: string | null;
+      startedAt: string;
+      fileSize: number;
+      totalTokens: number;
+      contextTokens: number;
+      durationMs: number;
+      isSubAgent: boolean;
+      parentDisplayName?: string | null;
+      spawnPrompt?: string | null;
+      totalMessages: number;
+      pageInfo: {
+        startCursor: string | null;
+        endCursor: string | null;
+        hasPreviousPage: boolean;
+        hasNextPage: boolean;
+      };
+      messages: Array<{
+        timestamp: string;
+        role: string;
+        content: string;
+        contentTruncated: boolean;
+        model?: string | null;
+        usage?: {
+          input: number;
+          output: number;
+          cacheRead: number;
+          cacheWrite: number;
+        } | null;
+        toolName?: string | null;
+      }>;
+    } | null;
+  } | null;
 };
 
 export interface SessionTranscriptMessage {
@@ -58,7 +61,7 @@ export interface SessionTranscriptMessage {
   toolName?: string;
 }
 
-type TranscriptPage = NonNullable<TranscriptResult['sessionTranscript']>;
+type TranscriptPage = NonNullable<NonNullable<TranscriptResult['source']>['sessionTranscript']>;
 
 /** Tracks the origin of the active refresh cycle. */
 export type RefreshMode = 'manual' | 'auto-silent' | null;
@@ -102,6 +105,7 @@ export function useSessionTranscript({
   sessionKey,
   pageSize = 200,
 }: UseSessionTranscriptOptions): UseSessionTranscriptResult {
+  const selector = getDashboardSourceSelector();
   const [pages, setPages] = useState<TranscriptPage[]>([]);
   const [beforeCursor, setBeforeCursor] = useState<string | undefined>(undefined);
   const [afterCursor, setAfterCursor] = useState<string | undefined>(undefined);
@@ -122,6 +126,7 @@ export function useSessionTranscript({
   const [result, reexecute] = useQuery<TranscriptResult>({
     query: SessionTranscriptQuery,
     variables: {
+      selector,
       sessionKey,
       limit: pageSize,
       before: afterCursor !== undefined ? null : (beforeCursor ?? null),
@@ -147,7 +152,7 @@ export function useSessionTranscript({
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [clearRefreshTimeout, sessionKey]);
 
-  const transcript = result.data?.sessionTranscript;
+  const transcript = result.data?.source?.sessionTranscript ?? undefined;
 
   useEffect(() => {
     if (!transcript || result.fetching || transcript.sessionKey !== sessionKeyRef.current) {

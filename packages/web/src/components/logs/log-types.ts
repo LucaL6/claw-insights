@@ -1,7 +1,23 @@
-export const EVENT_TYPE_MAP: Record<string, { abbr: string; color: string; bg: string; border: string }> = {
-  error: { abbr: 'ERR', color: 'var(--red)', bg: 'var(--red-bg)', border: 'var(--red-border)' },
-  warning: { abbr: 'WRN', color: 'var(--amber)', bg: 'var(--amber-bg)', border: 'var(--amber-border)' },
-  gateway_restart: { abbr: 'RST', color: 'var(--orange)', bg: 'var(--orange-bg)', border: 'var(--orange-border)' },
+export const DEFAULT_LINE_CLAMP = 2;
+
+export interface EventStyle {
+  abbr: string;
+  color: string;
+  bg: string;
+  border: string;
+  lineClamp: number;
+}
+
+export const EVENT_TYPE_MAP: Partial<Record<string, EventStyle>> & Record<'error', EventStyle> = {
+  error: { abbr: 'ERR', color: 'var(--red)', bg: 'var(--red-bg)', border: 'var(--red-border)', lineClamp: 6 },
+  warning: { abbr: 'WRN', color: 'var(--amber)', bg: 'var(--amber-bg)', border: 'var(--amber-border)', lineClamp: 4 },
+  gateway_restart: {
+    abbr: 'RST',
+    color: 'var(--orange)',
+    bg: 'var(--orange-bg)',
+    border: 'var(--orange-border)',
+    lineClamp: 2,
+  },
 };
 
 export function formatGap(seconds: number): string {

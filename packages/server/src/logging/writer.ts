@@ -10,15 +10,19 @@ export interface WriterConfig {
   criticalFsyncMs: number;
   criticalSyncBatch: number;
   fileMode: number;
+  rotationSizeMb: Partial<Record<LogStream, number>>;
+}
+
+interface ResolvedWriterConfig extends Omit<WriterConfig, 'rotationSizeMb'> {
   rotationSizeMb: Record<LogStream, number>;
 }
 
-export const DEFAULT_WRITER_CONFIG: WriterConfig = {
+export const DEFAULT_WRITER_CONFIG: ResolvedWriterConfig = {
   logDir: 'logs',
   criticalFsyncMs: 100,
   criticalSyncBatch: 1000,
   fileMode: 0o644,
-  rotationSizeMb: { app: 64, debug: 64, error: 32 },
+  rotationSizeMb: { app: 64, debug: 64, error: 32, noise: 64, security: 32 },
 };
 
 type PinoDestination = ReturnType<typeof pino.destination>;
@@ -49,7 +53,7 @@ function todayDate(): string {
 }
 
 export class LogWriter {
-  private readonly config: WriterConfig;
+  private readonly config: ResolvedWriterConfig;
   private readonly states: Map<LogStream, StreamState> = new Map();
   private syncTimer: ReturnType<typeof setInterval> | null = null;
   private closed = false;
@@ -58,7 +62,21 @@ export class LogWriter {
   readonly rotationEvents: RotationEvent[] = [];
 
   constructor(config: Partial<WriterConfig> = {}) {
-    this.config = { ...DEFAULT_WRITER_CONFIG, ...config };
+    const resolvedRotationSizeMb: Record<LogStream, number> = {
+      app: config.rotationSizeMb?.app ?? DEFAULT_WRITER_CONFIG.rotationSizeMb.app,
+      error: config.rotationSizeMb?.error ?? DEFAULT_WRITER_CONFIG.rotationSizeMb.error,
+      debug: config.rotationSizeMb?.debug ?? DEFAULT_WRITER_CONFIG.rotationSizeMb.debug,
+      noise: config.rotationSizeMb?.noise ?? DEFAULT_WRITER_CONFIG.rotationSizeMb.noise,
+      security: config.rotationSizeMb?.security ?? DEFAULT_WRITER_CONFIG.rotationSizeMb.security,
+    };
+
+    this.config = {
+      logDir: config.logDir ?? DEFAULT_WRITER_CONFIG.logDir,
+      criticalFsyncMs: config.criticalFsyncMs ?? DEFAULT_WRITER_CONFIG.criticalFsyncMs,
+      criticalSyncBatch: config.criticalSyncBatch ?? DEFAULT_WRITER_CONFIG.criticalSyncBatch,
+      fileMode: config.fileMode ?? DEFAULT_WRITER_CONFIG.fileMode,
+      rotationSizeMb: resolvedRotationSizeMb,
+    };
     mkdirSync(this.config.logDir, { recursive: true });
   }
 
@@ -82,7 +100,8 @@ export class LogWriter {
     const line = `${data}\n`;
     const bytes = Buffer.byteLength(line, 'utf-8');
 
-    const maxBytes = this.config.rotationSizeMb[stream] * 1024 * 1024;
+    const rotationSizeMb = this.config.rotationSizeMb[stream];
+    const maxBytes = rotationSizeMb * 1024 * 1024;
     const today = todayDate();
     if (state.bytesWritten + bytes > maxBytes || state.currentDate !== today) {
       this.rotate(stream, state, today, lane);
@@ -194,9 +213,12 @@ export class LogWriter {
   }
 
   private syncCriticalStreams(): void {
-    const errorState = this.states.get('error');
-    if (errorState && errorState.entriesSinceSync > 0) {
-      this.syncStream(errorState);
+    const criticalStreams: LogStream[] = ['error', 'security'];
+    for (const stream of criticalStreams) {
+      const state = this.states.get(stream);
+      if (state && state.entriesSinceSync > 0) {
+        this.syncStream(state);
+      }
     }
   }
 
@@ -219,9 +241,9 @@ export class LogWriter {
 
   private syncModeFor(stream: LogStream, _lane: LogLane): boolean {
     // Stream-level policy is explicit and stable:
-    // - error: sync (critical durability)
-    // - app/debug: async (throughput)
-    return stream === 'error';
+    // - error/security: sync (critical durability)
+    // - app/debug/noise: async (throughput)
+    return stream === 'error' || stream === 'security';
   }
 
   private flushDestination(destination: PinoDestination | null): void {

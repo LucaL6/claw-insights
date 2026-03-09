@@ -1,12 +1,10 @@
-import { act, renderHook } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DashboardConnection } from '../useConnectionStatus';
 
 let mockConnection: DashboardConnection = 'connected';
-const mockReexecuteGateway = vi.fn();
-const mockReexecuteSystemV2 = vi.fn();
-const mockIsSchemaV2Enabled = vi.fn(() => false);
+const mockReexecuteSystem = vi.fn();
 
 const queryResults: Record<string, [unknown, ...unknown[]]> = {};
 const useReactiveQueryMock = vi.fn();
@@ -26,27 +24,8 @@ const toQueryCallOptions = (call: unknown[]): QueryCallOptions | null => {
   return firstArg as QueryCallOptions;
 };
 
-const hasQueryCall = (query: string, pause?: boolean): boolean =>
-  useReactiveQueryMock.mock.calls.some((call) => {
-    const opts = toQueryCallOptions(call);
-    if (!opts || opts.query !== query) {
-      return false;
-    }
-    return pause === undefined ? true : opts.pause === pause;
-  });
-
-vi.mock('../../config/feature-flags', () => ({
-  isSchemaV2Enabled: () => mockIsSchemaV2Enabled(),
-}));
-
 vi.mock('../../graphql/queries', () => ({
-  GatewayQuery: 'GatewayQuery',
-  ResourcesQuery: 'ResourcesQuery',
-  ChannelsQuery: 'ChannelsQuery',
-}));
-
-vi.mock('../../graphql/queries-v2', () => ({
-  SystemDashboardV2Query: 'SystemDashboardV2Query',
+  SystemDashboardQuery: 'SystemDashboardQuery',
 }));
 
 vi.mock('../../utils/format', () => ({
@@ -60,11 +39,8 @@ vi.mock('../useReactiveQuery', () => ({
     const key = String(opts.query).slice(0, 80);
     for (const [k, v] of Object.entries(queryResults)) {
       if (key.includes(k)) {
-        if (k === 'Gateway') {
-          return [v[0], mockReexecuteGateway];
-        }
-        if (k === 'SystemDashboardV2') {
-          return [v[0], mockReexecuteSystemV2];
+        if (k === 'SystemDashboard') {
+          return [v[0], mockReexecuteSystem];
         }
         return v;
       }
@@ -79,19 +55,8 @@ vi.mock('../useConnectionStatus', () => ({
 
 import { useGatewayData } from '../useGatewayData';
 
-function setDefaultV1QueryResults() {
-  queryResults.Gateway = [{ data: { gateway: { running: true, startedAt: '2025-02-22T00:00:00Z' } }, fetching: false }];
-  queryResults.Resources = [{ data: { resources: { cpu: 2.1, memoryMB: 85 } }, fetching: false }];
-  queryResults.Channels = [
-    {
-      data: { channels: [{ provider: 'telegram', name: 'Telegram', connected: true, latencyMs: 12 }] },
-      fetching: false,
-    },
-  ];
-}
-
-function setDefaultV2QueryResults() {
-  queryResults.SystemDashboardV2 = [
+function setDefaultQueryResults() {
+  queryResults.SystemDashboard = [
     {
       data: {
         system: {
@@ -108,15 +73,9 @@ function setDefaultV2QueryResults() {
 }
 
 describe('useGatewayData', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
     mockConnection = 'connected';
-    mockIsSchemaV2Enabled.mockReturnValue(false);
-    mockReexecuteGateway.mockReset();
-    mockReexecuteSystemV2.mockReset();
+    mockReexecuteSystem.mockReset();
     useReactiveQueryMock.mockReset();
     vi.useFakeTimers();
     Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true, configurable: true });
@@ -127,11 +86,10 @@ describe('useGatewayData', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    consoleWarnSpy.mockRestore();
   });
 
-  it('uses v1 path by default and returns status=running when gateway.running is true', () => {
-    setDefaultV1QueryResults();
+  it('returns status=running when gateway.running is true', () => {
+    setDefaultQueryResults();
 
     const { result } = renderHook(() => useGatewayData());
     expect(result.current.status).toBe('running');
@@ -140,9 +98,8 @@ describe('useGatewayData', () => {
     expect(result.current.uptime).toBeDefined();
   });
 
-  it('uses SystemDashboardV2Query when schema v2 is enabled with trace requestId', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    setDefaultV2QueryResults();
+  it('uses SystemDashboardQuery with trace requestId', () => {
+    setDefaultQueryResults();
 
     renderHook(() => useGatewayData());
 
@@ -150,15 +107,14 @@ describe('useGatewayData', () => {
       useReactiveQueryMock.mock.calls.some((call) => {
         const opts = toQueryCallOptions(call);
         return (
-          opts?.query === 'SystemDashboardV2Query' && opts.variables?.context?.trace?.requestId === 'dashboard-topbar'
+          opts?.query === 'SystemDashboardQuery' && opts.variables?.context?.trace?.requestId === 'dashboard-topbar'
         );
       }),
     ).toBe(true);
   });
 
   it('maps OpenClawSystem payload to existing return contract', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    setDefaultV2QueryResults();
+    setDefaultQueryResults();
 
     const { result } = renderHook(() => useGatewayData());
 
@@ -168,82 +124,40 @@ describe('useGatewayData', () => {
     expect(result.current.channels).toHaveLength(1);
   });
 
-  it('falls back to v1 when v2 system payload is missing', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    queryResults.SystemDashboardV2 = [{ data: { system: null }, fetching: false, error: undefined }];
-    setDefaultV1QueryResults();
+  it('returns gateway-down when system payload is null', () => {
+    queryResults.SystemDashboard = [{ data: { system: null }, fetching: false, error: undefined }];
 
-    renderHook(() => useGatewayData());
+    const { result } = renderHook(() => useGatewayData());
 
-    expect(hasQueryCall('GatewayQuery', false)).toBe(true);
+    expect(result.current.status).toBe('gateway-down');
+    expect(result.current.gateway).toBeUndefined();
   });
 
-  it('falls back to v1 when v2 system union typename mismatches', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    queryResults.SystemDashboardV2 = [
+  it('returns connecting when fetching and no data yet', () => {
+    queryResults.SystemDashboard = [{ data: undefined, fetching: true, error: undefined }];
+
+    const { result } = renderHook(() => useGatewayData());
+
+    expect(result.current.status).toBe('connecting');
+    expect(result.current.fetching.gateway).toBe(true);
+  });
+
+  it('returns dashboard-offline when connection is reconnecting', () => {
+    mockConnection = 'reconnecting';
+    setDefaultQueryResults();
+
+    const { result } = renderHook(() => useGatewayData());
+
+    expect(result.current.status).toBe('dashboard-offline');
+  });
+
+  it('returns empty channels when system typename mismatches', () => {
+    queryResults.SystemDashboard = [
       { data: { system: { __typename: 'SystemUnavailable' } }, fetching: false, error: undefined },
     ];
-    setDefaultV1QueryResults();
 
-    renderHook(() => useGatewayData());
+    const { result } = renderHook(() => useGatewayData());
 
-    expect(hasQueryCall('GatewayQuery', false)).toBe(true);
-  });
-
-  it('falls back to v1 when v2 query hits network error', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    queryResults.SystemDashboardV2 = [
-      { data: undefined, fetching: false, error: { networkError: new Error('boom'), graphQLErrors: [] } },
-    ];
-    setDefaultV1QueryResults();
-
-    renderHook(() => useGatewayData());
-
-    expect(hasQueryCall('GatewayQuery', false)).toBe(true);
-  });
-
-  it('falls back to v1 when v2 query has whitelisted GraphQL error code', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    queryResults.SystemDashboardV2 = [
-      {
-        data: undefined,
-        fetching: false,
-        error: { networkError: undefined, graphQLErrors: [{ extensions: { code: 'SOURCE_NOT_FOUND' } }] },
-      },
-    ];
-    setDefaultV1QueryResults();
-
-    renderHook(() => useGatewayData());
-
-    expect(hasQueryCall('GatewayQuery', false)).toBe(true);
-  });
-
-  it('periodically retries v2 by clearing fallback window explicitly', () => {
-    mockIsSchemaV2Enabled.mockReturnValue(true);
-    queryResults.SystemDashboardV2 = [{ data: { system: null }, fetching: false, error: undefined }];
-    setDefaultV1QueryResults();
-
-    renderHook(() => useGatewayData());
-
-    queryResults.SystemDashboardV2 = [
-      {
-        data: {
-          system: {
-            __typename: 'OpenClawSystem',
-            gateway: { running: true, startedAt: '2025-02-22T00:00:00Z' },
-            resources: { cpu: 2.1, memoryMB: 85 },
-            channels: [],
-          },
-        },
-        fetching: false,
-        error: undefined,
-      },
-    ];
-
-    act(() => {
-      vi.advanceTimersByTime(60_000);
-    });
-
-    expect(hasQueryCall('SystemDashboardV2Query', false)).toBe(true);
+    expect(result.current.channels).toEqual([]);
   });
 });

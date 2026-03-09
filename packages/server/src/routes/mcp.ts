@@ -45,6 +45,15 @@ function isLocalRequest(req: Request): boolean {
 export function localOnlyMiddleware(noAuth: boolean) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (noAuth && !isLocalRequest(req)) {
+      log.warn(
+        {
+          method: req.method,
+          path: req.path,
+          host: req.headers.host ?? null,
+          remoteAddress: req.socket.remoteAddress ?? null,
+        },
+        'security reject: non-local access in no-auth mode',
+      );
       res.status(403).json({ error: 'Forbidden: non-local access in no-auth mode' });
       return;
     }
@@ -56,6 +65,14 @@ export function localOnlyMiddleware(noAuth: boolean) {
 export function jsonContentTypeMiddleware(req: Request, res: Response, next: NextFunction): void {
   const ct = req.headers['content-type'];
   if (!ct || !ct.includes('application/json')) {
+    log.warn(
+      {
+        method: req.method,
+        path: req.path,
+        contentType: typeof ct === 'string' ? ct : null,
+      },
+      'security reject: invalid content-type',
+    );
     res.status(415).json({ error: 'Content-Type must be application/json' });
     return;
   }

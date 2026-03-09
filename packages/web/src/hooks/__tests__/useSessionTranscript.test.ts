@@ -14,6 +14,10 @@ vi.mock('urql', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
 }));
 
+vi.mock('../../graphql/source-selector', () => ({
+  getDashboardSourceSelector: () => ({ id: 'agent:main' }),
+}));
+
 type MockPage = {
   sessionKey: string;
   displayName: string;
@@ -161,7 +165,7 @@ mockUseQuery.mockImplementation(
 
     return [
       {
-        data: page ? { sessionTranscript: page } : undefined,
+        data: page ? { source: { sessionTranscript: page } } : undefined,
         fetching: state.fetching,
         error: state.error,
       },
@@ -488,7 +492,7 @@ describe('useSessionTranscript', () => {
   it('discards stale session response', () => {
     mockUseQuery.mockImplementationOnce(() => [
       {
-        data: { sessionTranscript: staleS2ForS1 },
+        data: { source: { sessionTranscript: staleS2ForS1 } },
         fetching: false,
         error: undefined,
       },

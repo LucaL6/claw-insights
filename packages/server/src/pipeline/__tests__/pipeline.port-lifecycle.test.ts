@@ -9,7 +9,7 @@ import type { Service } from '../types';
  */
 interface MockPort {
   key: string;
-  destroy: ReturnType<typeof vi.fn>;
+  destroy: ReturnType<typeof vi.fn<() => Promise<void>>>;
   onChanged: (cb: () => void) => () => void;
   _subscriptions: Set<() => void>;
   _destroyed: boolean;
@@ -295,9 +295,15 @@ describe('Pipeline Port Lifecycle', () => {
       const port3 = createMockPort('p3');
       const destroyOrder: string[] = [];
 
-      port1.destroy = vi.fn(async () => destroyOrder.push('p1'));
-      port2.destroy = vi.fn(async () => destroyOrder.push('p2'));
-      port3.destroy = vi.fn(async () => destroyOrder.push('p3'));
+      port1.destroy = vi.fn(async () => {
+        destroyOrder.push('p1');
+      });
+      port2.destroy = vi.fn(async () => {
+        destroyOrder.push('p2');
+      });
+      port3.destroy = vi.fn(async () => {
+        destroyOrder.push('p3');
+      });
 
       pipeline.addPort('p1', port1);
       pipeline.addPort('p2', port2);

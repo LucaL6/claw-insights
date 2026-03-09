@@ -1,4 +1,4 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { groupByPrefix } from '../groupByPrefix';
 
@@ -19,9 +19,9 @@ const makeSession = (displayName: string) => ({
 describe('groupByPrefix', () => {
   it('groups items sharing a prefix (split by -)', () => {
     const items = [
-      makeSession('v2-task1-layout'),
-      makeSession('v2-task2-typography'),
-      makeSession('v2-task3-format'),
+      makeSession('design-task1-layout'),
+      makeSession('design-task2-typography'),
+      makeSession('design-task3-format'),
       makeSession('review-batch1'),
     ];
     const result = groupByPrefix(items);
@@ -29,7 +29,7 @@ describe('groupByPrefix', () => {
     const group = result.find((r) => r.type === 'group');
     expect(group).toBeDefined();
     if (group?.type === 'group') {
-      expect(group.prefix).toBe('v2');
+      expect(group.prefix).toBe('design');
       expect(group.items).toHaveLength(3);
       expect(group.totalTokens).toBe(30000);
     }

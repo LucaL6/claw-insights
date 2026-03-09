@@ -88,6 +88,7 @@
   "logs.detail.module": "Module: {name}",
   "logs.detail.repeat": "×{count} from {from} to {to}",
   "logs.detail.time": "Time: {time}",
+  "logs.detail.collapse": "Collapse",
   "logs.eventsCount": "{count} events",
   "logs.eventsFilteredCount": "{displayed} of {total} events",
   "logs.filterPlaceholder": "Filter: module:name, /regex/, or text",

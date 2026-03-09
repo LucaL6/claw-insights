@@ -20,9 +20,9 @@ vi.mock('../useHashRoute', async () => {
   };
 });
 
-function createMockClient(data: Record<string, unknown> = {}) {
+function createMockClient(sourceData: Record<string, unknown> = {}) {
   return {
-    executeQuery: () => fromValue({ data, stale: false, hasNext: false }),
+    executeQuery: () => fromValue({ data: { source: sourceData }, stale: false, hasNext: false }),
     executeMutation: () => never,
     executeSubscription: () => never,
   } as unknown as Client;

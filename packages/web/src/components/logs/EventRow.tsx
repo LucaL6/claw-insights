@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 
 import { useI18n } from '../../i18n/context';
-import { EVENT_TYPE_MAP } from './log-types';
+import { DEFAULT_LINE_CLAMP, EVENT_TYPE_MAP } from './log-types';
 export type { ProcessedEvent } from './log-types';
 
 interface EventRowProps {
@@ -43,7 +43,38 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
   const { t, lang } = useI18n();
   const locale = lang === 'zh' ? 'zh-CN' : 'en-GB';
   const style = EVENT_TYPE_MAP[type] ?? EVENT_TYPE_MAP.error;
+  const lineClamp = EVENT_TYPE_MAP[type]?.lineClamp ?? DEFAULT_LINE_CLAMP;
   const detailRef = useRef<HTMLDivElement>(null);
+  const msgRef = useRef<HTMLSpanElement>(null);
+  const [isClamped, setIsClamped] = useState(false);
+  const showFade = !expanded && isClamped;
+
+  useLayoutEffect(() => {
+    if (expanded) {
+      return;
+    }
+    const el = msgRef.current;
+    if (!el) {
+      return;
+    }
+
+    const measure = () => {
+      const clamped = el.scrollHeight > el.clientHeight;
+      setIsClamped((prev) => {
+        return prev !== clamped ? clamped : prev;
+      });
+    };
+    measure();
+
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  }, [message, expanded, lineClamp]);
 
   return (
     <div
@@ -53,11 +84,11 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
       aria-expanded={expanded}
       tabIndex={tabIndex}
       onKeyDown={onKeyDown}
-      className={`select-none ${expanded ? 'cursor-default' : 'cursor-pointer'}`}
+      className="select-none"
       style={{ borderLeft: `3px solid ${style.color}` }}
     >
       {/* Compact row */}
-      <div className="flex items-center gap-2 py-1 px-2" onClick={expanded ? undefined : onToggle}>
+      <div className="flex items-center gap-2 py-1 px-2 cursor-pointer" onClick={onToggle}>
         <span className="mono text-xs text-fg-muted shrink-0">{fmtTime(timestamp, locale)}</span>
         <span className="mono text-[10px] font-bold shrink-0" style={{ color: style.color }}>
           {style.abbr}
@@ -65,16 +96,28 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
         <span className="mono text-[10px] px-1.5 py-0.5 rounded bg-elevated text-fg-dim border border-edge-subtle shrink-0 truncate max-w-[100px]">
           {module}
         </span>
-        <span
-          className="mono text-xs text-fg-secondary min-w-0 select-text [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]"
-          style={{
-            overflow: 'hidden',
-            whiteSpace: 'pre-wrap',
-            overflowWrap: 'anywhere',
-          }}
-        >
-          {message}
-        </span>
+        <div className="relative min-w-0 flex-1">
+          <span
+            ref={msgRef}
+            data-clamp={lineClamp}
+            className="mono text-xs text-fg-secondary select-text [display:-webkit-box] [-webkit-box-orient:vertical]"
+            style={{
+              WebkitLineClamp: lineClamp,
+              overflow: 'hidden',
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {message}
+          </span>
+          {showFade && (
+            <div
+              aria-hidden
+              className="absolute bottom-0 left-0 right-0 h-4 pointer-events-none"
+              style={{ background: 'linear-gradient(transparent, var(--bg-surface-solid))' }}
+            />
+          )}
+        </div>
         {repeatCount && repeatCount >= 2 && (
           <span className="mono text-[10px] text-fg-muted shrink-0">×{repeatCount}</span>
         )}
@@ -111,6 +154,16 @@ const EventRowInner = React.forwardRef<HTMLDivElement, EventRowProps>(function E
                 })}
               </span>
             )}
+          </div>
+          <div className="flex justify-center mt-2">
+            <button
+              type="button"
+              onClick={onToggle}
+              className="mono text-[11px] px-3 py-1 rounded border border-edge-subtle text-fg-muted hover:text-fg-secondary hover:border-edge transition-colors"
+            >
+              <span aria-hidden="true">▲ </span>
+              {t('logs.detail.collapse')}
+            </button>
           </div>
         </div>
       )}

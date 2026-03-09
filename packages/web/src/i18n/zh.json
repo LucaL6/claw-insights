@@ -88,6 +88,7 @@
   "logs.detail.module": "模块: {name}",
   "logs.detail.repeat": "×{count} 从 {from} 到 {to}",
   "logs.detail.time": "时间: {time}",
+  "logs.detail.collapse": "收起",
   "logs.eventsCount": "{count} 条事件",
   "logs.eventsFilteredCount": "{displayed}/{total} 条事件",
   "logs.filterPlaceholder": "过滤: module:名称, /正则/, 或文本",

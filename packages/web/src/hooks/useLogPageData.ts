@@ -2,7 +2,16 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from 'urql';
 
 import type { ProcessedEvent } from '../components/logs/EventRow';
-import { EventCountsQuery, EventDensityQuery, EventsQuery } from '../graphql/events-queries';
+import type {
+  EventCountsQuery as EventCountsQueryData,
+  EventCountsQueryVariables,
+  EventDensityQuery as EventDensityQueryData,
+  EventDensityQueryVariables,
+  EventsQuery as EventsQueryData,
+  EventsQueryVariables,
+} from '../generated/graphql';
+import { EventCountsQuery, EventDensityQuery, EventsQuery } from '../graphql/queries';
+import { getDashboardSourceSelector } from '../graphql/source-selector';
 import { useI18n } from '../i18n/context';
 import type { Route } from './useHashRoute';
 import { useHashRoute } from './useHashRoute';
@@ -105,6 +114,8 @@ export function useLogPageData(route: Route) {
   const { lang } = useI18n();
   const locale = lang === 'zh' ? 'zh-CN' : 'en-GB';
 
+  const selector = getDashboardSourceSelector();
+
   // Parse URL params
   const urlFrom = route.params.from ? Number(route.params.from) : undefined;
   const urlTo = route.params.to ? Number(route.params.to) : undefined;
@@ -125,20 +136,29 @@ export function useLogPageData(route: Route) {
   const fromTs = urlFrom ?? defaultFrom;
   const toTs = urlTo;
 
-  // Queries
-  const [eventsResult] = useQuery({
+  // Queries — source-centric
+  const [eventsResult] = useQuery<EventsQueryData, EventsQueryVariables>({
     query: EventsQuery,
-    variables: { from: fromTs, to: toTs, types: activeTypes, limit: 200 },
+    variables: { selector, from: fromTs, to: toTs, types: activeTypes, limit: 200 },
   });
-  const [densityResult] = useQuery({ query: EventDensityQuery });
-  const [countsResult] = useQuery({
+  const [densityResult] = useQuery<EventDensityQueryData, EventDensityQueryVariables>({
+    query: EventDensityQuery,
+    variables: { selector },
+  });
+  const [countsResult] = useQuery<EventCountsQueryData, EventCountsQueryVariables>({
     query: EventCountsQuery,
-    variables: { from: fromTs, to: toTs },
+    variables: { selector, from: fromTs, to: toTs },
     requestPolicy: 'cache-and-network',
   });
 
-  const events = eventsResult.data?.events;
-  const density = densityResult.data?.eventDensity ?? [];
+  const eventsSource = eventsResult.data?.source;
+  const densitySource = densityResult.data?.source;
+  const countsSource = countsResult.data?.source;
+
+  const events = eventsSource && 'events' in eventsSource ? eventsSource.events : undefined;
+  const density = densitySource && 'eventDensity' in densitySource ? densitySource.eventDensity : [];
+  const counts =
+    countsSource && 'eventCounts' in countsSource ? countsSource.eventCounts : { error: 0, warning: 0, restart: 0 };
 
   // Toggle type filter
   const toggleType = useCallback(
@@ -220,7 +240,7 @@ export function useLogPageData(route: Route) {
     processedEvents,
     searchError: parsed.regexError,
     density,
-    counts: countsResult.data?.eventCounts ?? { error: 0, warning: 0, restart: 0 },
+    counts,
     events,
     timeLabel,
     urlFrom,

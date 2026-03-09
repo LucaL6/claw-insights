@@ -28,6 +28,12 @@ describe('BudgetGate', () => {
     expect(gate.checkAppend('debug', 1)).toBe(false);
   });
 
+  it('rejects noise when soft cap exceeded', () => {
+    const gate = new BudgetGate({ noiseSoftMb: 1, globalCapMb: 1024 });
+    gate.recordAppend('noise', 1 * MB);
+    expect(gate.checkAppend('noise', 1)).toBe(false);
+  });
+
   it('protects error floor from non-error streams', () => {
     // globalCap=10, errorFloor=8 → only 2MB available for non-error
     const gate = new BudgetGate({ globalCapMb: 10, errorFloorMb: 8, appSoftMb: 100, debugSoftMb: 100 });
@@ -122,5 +128,25 @@ describe('BudgetGate', () => {
     const health = (gate as any).healthStatus();
     expect(health.health).toBe('critical');
     expect(health.alert).toBeTruthy();
+  });
+
+  it('applies critical retry/fail-safe behavior to security stream', () => {
+    let reclaimCalls = 0;
+    const gate = new BudgetGate({ globalCapMb: 1 });
+    gate.recordAppend('app', 1 * MB);
+
+    gate.setReclaimFn((_stream) => {
+      reclaimCalls++;
+      return null;
+    });
+
+    const allowed = gate.checkAppend('security', 0.5 * MB);
+
+    expect(reclaimCalls).toBeLessThanOrEqual(3);
+    expect(allowed).toBe(false);
+
+    const health = (gate as any).healthStatus();
+    expect(health.health).toBe('critical');
+    expect(health.alert).toContain('security');
   });
 });

@@ -60,9 +60,7 @@ export function createSnapshotSources(ctx: AppContext): DataSources {
         ? (range as MetricsRangeKey)
         : 'TWENTY_FOUR_HOUR';
       const readContext = createReadContext();
-      const result = ctx.ports.metrics.getMetrics(undefined, validated, readContext) as ReturnType<
-        DataSources['getMetrics']
-      >;
+      const result = ctx.ports.metrics.getMetrics(undefined, validated, readContext);
       log.debug({ source: 'metrics', ms: Math.round(performance.now() - t0) }, 'collected');
       return result;
     },

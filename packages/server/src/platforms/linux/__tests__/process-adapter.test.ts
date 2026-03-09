@@ -2,8 +2,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }));
-vi.mock('node:fs', () => ({ readFileSync: vi.fn(), readdirSync: vi.fn() }));
-vi.mock('node:fs/promises', () => ({ readFile: vi.fn(), readdir: vi.fn(), readlink: vi.fn() }));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    readFileSync: vi.fn((...args: any[]) => (actual.readFileSync as any)(...args)),
+    readdirSync: vi.fn((...args: any[]) => (actual.readdirSync as any)(...args)),
+  };
+});
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...actual,
+    readFile: vi.fn((...args: any[]) => (actual.readFile as any)(...args)),
+    readdir: vi.fn((...args: any[]) => (actual.readdir as any)(...args)),
+    readlink: vi.fn((...args: any[]) => (actual.readlink as any)(...args)),
+  };
+});
 
 import { execFile } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';

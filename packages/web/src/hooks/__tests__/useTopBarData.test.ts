@@ -13,10 +13,10 @@ describe('useTopBarData', () => {
     vi.clearAllMocks();
   });
 
-  it('returns version from gateway data', () => {
+  it('returns version from system gateway data', () => {
     mockUseReactiveQuery.mockReturnValueOnce([
       {
-        data: { gateway: { appVersion: '0.1.0' } },
+        data: { system: { __typename: 'OpenClawSystem', gateway: { appVersion: '0.1.0' } } },
         fetching: false,
         error: null,
       },
@@ -36,10 +36,10 @@ describe('useTopBarData', () => {
     expect(result.current.fetching.gateway).toBe(true);
   });
 
-  it('returns fallback version when appVersion is missing', () => {
+  it('returns fallback version when system is null', () => {
     mockUseReactiveQuery.mockReturnValueOnce([
       {
-        data: { gateway: { appVersion: undefined } },
+        data: { system: null },
         fetching: false,
         error: null,
       },

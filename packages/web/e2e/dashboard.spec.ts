@@ -1,9 +1,262 @@
 import { expect, type Page, test } from '@playwright/test';
 
+type GraphQLOperation = {
+  operationName?: string;
+  query?: string;
+  variables?: Record<string, unknown>;
+};
+
+function parseOperations(payload: string): GraphQLOperation[] {
+  try {
+    const parsed = JSON.parse(payload) as GraphQLOperation | GraphQLOperation[];
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    const params = new URLSearchParams(payload);
+    const query = params.get('query') ?? undefined;
+    const operationName = params.get('operationName') ?? undefined;
+    const variablesRaw = params.get('variables');
+    let variables: GraphQLOperation['variables'] | undefined;
+    if (variablesRaw) {
+      try {
+        variables = JSON.parse(variablesRaw) as GraphQLOperation['variables'];
+      } catch {
+        variables = undefined;
+      }
+    }
+    if (!query && !operationName) {
+      throw new Error('Unsupported GraphQL payload format');
+    }
+    return [{ operationName, query, variables }];
+  }
+}
+
+function getOperationName(op: GraphQLOperation): string | undefined {
+  if (op.operationName) {
+    return op.operationName;
+  }
+  if (!op.query) {
+    return undefined;
+  }
+  return op.query.match(/\b(?:query|mutation|subscription)\s+([_A-Za-z][_0-9A-Za-z]*)\b/)?.[1];
+}
+
+function isOperation(op: GraphQLOperation, operationName: string): boolean {
+  return getOperationName(op) === operationName;
+}
+
+function readSessionKey(variables: Record<string, unknown> | undefined): string | null {
+  const value = variables?.sessionKey;
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
 // Helper: wait for dashboard to be loaded
 const waitForDashboard = async (page: Page) => {
   await expect(page.locator('canvas').first()).toBeVisible({ timeout: 10_000 });
 };
+
+const MOCK_SESSION_KEY = 'agent:main:e2e-test';
+const MOCK_SUBAGENT_KEY = 'agent:main:subagent:e2e-sub';
+
+function buildMockSessionsResponse() {
+  return {
+    data: {
+      source: {
+        __typename: 'AgentNamespace',
+        sessions: [
+          {
+            __typename: 'Session',
+            key: MOCK_SESSION_KEY,
+            displayName: 'E2E Test Session',
+            kind: 'direct',
+            model: 'claude-sonnet-4-20250514',
+            channel: 'webchat',
+            totalTokens: 50000,
+            contextTokens: 200000,
+            usagePercent: 25,
+            status: 'ACTIVE',
+            updatedAt: Math.floor(Date.now() / 1000) - 60,
+            turnCount: 20,
+            subAgents: [
+              {
+                __typename: 'Session',
+                key: MOCK_SUBAGENT_KEY,
+                displayName: 'Sub-agent: E2E',
+                kind: 'subagent',
+                model: 'claude-sonnet-4-20250514',
+                channel: null,
+                totalTokens: 12000,
+                contextTokens: 200000,
+                usagePercent: 6,
+                status: 'ACTIVE',
+                updatedAt: Math.floor(Date.now() / 1000) - 120,
+                turnCount: 4,
+              },
+            ],
+          },
+        ],
+      },
+    },
+  };
+}
+
+function buildMockTranscriptResponse(sessionKey: string) {
+  const isSubagent = sessionKey.includes('subagent');
+  return {
+    data: {
+      source: {
+        __typename: 'AgentNamespace',
+        sessionTranscript: {
+          sessionKey,
+          displayName: isSubagent ? 'Sub-agent: E2E' : 'E2E Test Session',
+          model: 'claude-sonnet-4-20250514',
+          channel: isSubagent ? null : 'webchat',
+          kind: isSubagent ? 'subagent' : 'direct',
+          thinkingLevel: null,
+          startedAt: new Date().toISOString(),
+          fileSize: 1024,
+          totalTokens: isSubagent ? 12000 : 50000,
+          contextTokens: 200000,
+          durationMs: 60000,
+          isSubAgent: isSubagent,
+          parentDisplayName: isSubagent ? 'E2E Test Session' : null,
+          spawnPrompt: isSubagent ? 'Test spawn prompt' : null,
+          totalMessages: 2,
+          pageInfo: {
+            startCursor: 'c1',
+            endCursor: 'c2',
+            hasPreviousPage: false,
+            hasNextPage: false,
+          },
+          messages: [
+            {
+              timestamp: new Date().toISOString(),
+              role: 'user',
+              content: 'Hello',
+              contentTruncated: false,
+              model: null,
+              usage: null,
+              toolName: null,
+            },
+            {
+              timestamp: new Date().toISOString(),
+              role: 'assistant',
+              content: 'Hi!',
+              contentTruncated: false,
+              model: 'claude-sonnet-4-20250514',
+              usage: { input: 10, output: 5, cacheRead: 0, cacheWrite: 0 },
+              toolName: null,
+            },
+          ],
+        },
+      },
+    },
+  };
+}
+
+interface TranscriptOpenAssertion {
+  sessionLabel: string;
+  expectedSessionKey: string;
+  transcriptResponseDelayMs?: number;
+}
+
+/**
+ * Verifies that opening a session emits exactly one SessionTranscript request
+ * and no cancelled/failed requests. Uses route interception to fully control test data.
+ */
+async function assertSingleTranscriptRequestOnOpen(page: Page, options: TranscriptOpenAssertion) {
+  const { sessionLabel, expectedSessionKey, transcriptResponseDelayMs = 180 } = options;
+  const transcriptRequests: string[] = [];
+  const transcriptFailures: string[] = [];
+  const pageErrors: string[] = [];
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.stack ?? error.message);
+  });
+
+  // Set up route handler BEFORE navigating
+  await page.route('**/graphql', async (route) => {
+    const request = route.request();
+    const rawPayload = request.postData() ?? '';
+    if (!rawPayload) {
+      await route.continue();
+      return;
+    }
+
+    let operations: GraphQLOperation[];
+    try {
+      operations = parseOperations(rawPayload);
+    } catch {
+      await route.continue();
+      return;
+    }
+
+    if (operations.some((op) => isOperation(op, 'Sessions'))) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildMockSessionsResponse()),
+      });
+      return;
+    }
+
+    const transcriptOp = operations.find((op) => isOperation(op, 'SessionTranscript'));
+    if (transcriptOp) {
+      const sessionKey = readSessionKey(transcriptOp.variables) ?? '__MISSING_SESSION_KEY__';
+      transcriptRequests.push(sessionKey);
+
+      // Keep the request in-flight briefly so cancellation regressions can surface.
+      if (transcriptResponseDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, transcriptResponseDelayMs));
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildMockTranscriptResponse(sessionKey)),
+      });
+      return;
+    }
+
+    await route.continue();
+  });
+
+  // Track cancelled/failed transcript requests
+  page.on('requestfailed', (request) => {
+    if (request.method() !== 'POST' || !request.url().includes('/graphql')) {
+      return;
+    }
+    const rawPayload = request.postData() ?? '';
+    if (!rawPayload) {
+      return;
+    }
+    try {
+      const operations = parseOperations(rawPayload);
+      if (operations.some((op) => isOperation(op, 'SessionTranscript'))) {
+        transcriptFailures.push(request.failure()?.errorText ?? 'cancelled');
+      }
+    } catch {
+      // ignore unparsable failed payloads
+    }
+  });
+
+  await page.goto('/');
+  await waitForDashboard(page);
+
+  const sessionElement = page.getByText(sessionLabel, { exact: true }).first();
+  await expect(sessionElement).toBeVisible({ timeout: 10_000 });
+  await sessionElement.click();
+
+  await expect(page).toHaveURL(/#dashboard\?session=/);
+  expect(pageErrors, `page errors:\n${pageErrors.join('\n')}`).toHaveLength(0);
+  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
+
+  await expect.poll(() => transcriptRequests.length, { timeout: 8_000 }).toBeGreaterThan(0);
+  await page.waitForTimeout(500);
+
+  // Must be exactly one request, and it must target the clicked session.
+  expect(transcriptRequests).toEqual([expectedSessionKey]);
+  expect(transcriptFailures).toHaveLength(0);
+}
 
 test.describe('P0: Dashboard First Load (T1)', () => {
   test('page loads and renders main UI', async ({ page }) => {
@@ -111,6 +364,22 @@ test.describe('P0: Session Interaction (T3)', () => {
     } else {
       await expect(page.getByText(/no sessions|暂无会话/i)).toBeVisible();
     }
+  });
+
+  test('opening a main session sends exactly one SessionTranscript request (no cancelled)', async ({ page }) => {
+    await assertSingleTranscriptRequestOnOpen(page, {
+      sessionLabel: 'E2E Test Session',
+      expectedSessionKey: MOCK_SESSION_KEY,
+    });
+  });
+
+  test('opening a compact sub-agent session sends exactly one SessionTranscript request (no cancelled)', async ({
+    page,
+  }) => {
+    await assertSingleTranscriptRequestOnOpen(page, {
+      sessionLabel: 'Sub-agent: E2E',
+      expectedSessionKey: MOCK_SUBAGENT_KEY,
+    });
   });
 });
 

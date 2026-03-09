@@ -34,16 +34,20 @@ describe('LogWriter', () => {
     expect(files[0]).toMatch(/^app\.\d{4}-\d{2}-\d{2}\.0001\.log$/);
   });
 
-  it('uses stream-level sync policy: error sync, app/debug async', async () => {
+  it('uses stream-level sync policy: error/security sync, app/debug/noise async', async () => {
     const writer = new LogWriter({ logDir });
 
     writer.append('error', 'critical', '{"msg":"critical"}');
+    writer.append('security', 'critical', '{"msg":"security"}');
     writer.append('app', 'bestEffort', '{"msg":"app"}');
     writer.append('debug', 'bestEffort', '{"msg":"debug"}');
+    writer.append('noise', 'bestEffort', '{"msg":"noise"}');
 
     expect(writer.streamSyncMode('error')).toBe(true);
+    expect(writer.streamSyncMode('security')).toBe(true);
     expect(writer.streamSyncMode('app')).toBe(false);
     expect(writer.streamSyncMode('debug')).toBe(false);
+    expect(writer.streamSyncMode('noise')).toBe(false);
 
     await writer.shutdown();
   });

@@ -123,51 +123,6 @@ function createMockCtx(): AppContext {
         }),
       },
     },
-    sessionReader: {
-      attachSubAgents: vi.fn(),
-      getSessions: vi.fn().mockReturnValue([{ id: 's1', label: 'test', turnCount: 5 }]),
-      destroy: vi.fn(),
-    },
-    cronReader: {
-      getJobs: vi.fn().mockReturnValue([{ name: 'cleanup', schedule: '0 * * * *' }]),
-      destroy: vi.fn(),
-    },
-    logTailer: {
-      getRecentEntries: vi.fn().mockReturnValue([{ message: 'log1' }]),
-      destroy: vi.fn(),
-      on: vi.fn(),
-    },
-    spawnTracker: {
-      getParentChildMap: vi.fn().mockReturnValue(new Map()),
-      ingest: vi.fn(),
-    },
-    aggregator: {
-      getMetrics: vi.fn().mockReturnValue({ totalTokensK: 100, totalCostUsd: 2.5 }),
-      ingestLog: vi.fn(),
-    },
-    metricsCollector: { start: vi.fn(), stop: vi.fn() },
-    gatewayClient: {
-      getGatewayStatus: vi.fn().mockResolvedValue({
-        running: true,
-        pid: 1234,
-        version: '1.0.0',
-        updateAvailable: false,
-        uptime: '2h',
-        startedAt: '2025-01-01T00:00:00Z',
-        connectLatencyMs: 42,
-        latestVersion: '1.0.0',
-        securitySummary: { critical: 0, warn: 1 },
-        channels: [{ provider: 'DISCORD', name: 'general', connected: true, latencyMs: 10 }],
-      }),
-      getVersion: vi.fn().mockResolvedValue('1.0.0'),
-      warmCache: vi.fn().mockResolvedValue(undefined),
-    },
-    systemInfoService: {
-      getSystemMetrics: vi.fn().mockResolvedValue({ cpu: 25, memoryMB: 512 }),
-      getUsageCost: vi.fn().mockResolvedValue({ totalCostUsd: 1.5, breakdown: [] }),
-      resetMetricsCache: vi.fn(),
-      resetCostCache: vi.fn(),
-    },
     dataValidator: {
       runValidation: vi.fn().mockReturnValue([
         { pass: true, message: 'ok' },
@@ -185,7 +140,7 @@ type QueryFns = Required<{
   [K in keyof NonNullable<ReturnType<typeof createResolvers>['Query']>]: (...args: any[]) => unknown;
 }>;
 
-describe('createResolvers', () => {
+describe('createResolvers (canonical)', () => {
   let ctx: AppContext;
   let resolvers: ReturnType<typeof createResolvers>;
   let Query: QueryFns;
@@ -197,129 +152,63 @@ describe('createResolvers', () => {
     Query = resolvers.Query! as unknown as QueryFns;
   });
 
-  describe('sessions', () => {
-    it('calls getSessions without filter', () => {
-      const result = Query.sessions({}, {});
-      // DESIGN-066: attachSubAgents now handled by SpawnBus event system
-      expect(ctx.ports.sessions.getSessions).toHaveBeenCalled();
-      expect(result).toEqual([{ id: 's1', label: 'test', turnCount: 5 }]);
-    });
-
-    it('calls getSessions with filter', () => {
-      Query.sessions({}, { filter: { activeOnly: true, sortBy: 'RECENT' } });
-      // Task 6: Now uses ctx.ports.sessions instead of ctx.sessionReader
-      expect(ctx.ports.sessions.getSessions).toHaveBeenCalled();
+  describe('Query.system', () => {
+    it('returns OpenClawSystem root', () => {
+      const result = Query.system({}, { context: null }, {}) as Record<string, unknown>;
+      expect(result._kind).toBe('OpenClawSystem');
     });
   });
 
-  describe('metrics', () => {
-    it('calls aggregator.getMetrics and includes warnings', () => {
-      const result = Query.metrics({}, { range: 'ONE_HOUR' });
-      // Task 6: Now uses ctx.ports.metrics instead of ctx.aggregator
-      expect(ctx.ports.metrics.getMetrics).toHaveBeenCalled();
-      expect(result).toMatchObject({ totalTokensK: 100, warnings: ['stale data'] });
+  describe('Query.sources', () => {
+    it('lists registered sources', () => {
+      const result = Query.sources({}, { filter: null, context: null }) as unknown[];
+      expect(result.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('defaults to TWENTY_FOUR_HOUR for invalid range', () => {
-      Query.metrics({}, { range: 'INVALID' });
-      // Task 6: Now uses ctx.ports.metrics instead of ctx.aggregator
-      expect(ctx.ports.metrics.getMetrics).toHaveBeenCalled();
-    });
-  });
-
-  describe('cronJobs', () => {
-    it('returns from cron port', () => {
-      const result = Query.cronJobs({}, {});
-      // Phase 2: Now uses ctx.ports.cron instead of ctx.cronReader
-      expect(ctx.ports.cron!.getCronJobs).toHaveBeenCalled();
-      expect(result).toEqual([
-        {
-          id: 'job1',
-          name: 'cleanup',
-          enabled: true,
-          schedule: '0 * * * *',
-          lastRunAt: null,
-          nextRunAt: null,
-          lastRunSuccess: null,
-        },
-      ]);
+    it('filters by category', () => {
+      const agents = Query.sources({}, { filter: { category: 'AGENT' }, context: null }) as unknown[];
+      expect(agents.length).toBe(1);
+      const dashboards = Query.sources({}, { filter: { category: 'DASHBOARD' }, context: null }) as unknown[];
+      expect(dashboards.length).toBe(1);
     });
   });
 
-  describe('events', () => {
-    it('calls queryEvents with args', async () => {
-      const { queryEvents } = await import('../../../db/event-queries');
-      const result = await Query.events({}, { from: '2025-01-01', to: '2025-01-02', types: ['error'], limit: 10 });
-      expect(queryEvents).toHaveBeenCalledWith(ctx.db, {
-        from: '2025-01-01',
-        to: '2025-01-02',
-        types: ['error'],
-        limit: 10,
-      });
-      expect(result).toHaveLength(1);
+  describe('Query.source', () => {
+    it('resolves agent by id', () => {
+      const result = Query.source({}, { selector: { id: 'agent:main' }, context: null }, {}) as Record<string, unknown>;
+      expect(result).not.toBeNull();
+      expect(result._agent).toBeDefined();
+    });
+
+    it('resolves dashboard by id', () => {
+      const result = Query.source({}, { selector: { id: 'dashboard:main' }, context: null }, {}) as Record<
+        string,
+        unknown
+      >;
+      expect(result).not.toBeNull();
+      expect(result._info).toBeDefined();
+    });
+
+    it('returns null for unknown source', () => {
+      const result = Query.source({}, { selector: { id: 'unknown:foo' }, context: null }, {});
+      expect(result).toBeNull();
     });
   });
 
-  describe('eventDensity', () => {
-    it('calls getEventDensity', async () => {
-      const result = await Query.eventDensity({}, {});
-      expect(result).toEqual([{ date: '2025-01-01', count: 5 }]);
-    });
-  });
-
-  describe('usageCost', () => {
-    it('calls getUsageCost via ctx.ports.usage', async () => {
-      const result = await Query.usageCost({}, {});
-      expect(ctx.ports.usage.getUsageCost).toHaveBeenCalled();
-      expect(result).toMatchObject({ totalCost: 1.5 });
-    });
-  });
-
-  describe('recentLogs', () => {
-    it('uses default count of 50', () => {
-      Query.recentLogs({}, {});
-      // Phase 2: Now uses ctx.ports.logs instead of ctx.logTailer
-      expect(ctx.ports.logs!.getRecentLogs).toHaveBeenCalledWith(50, expect.any(Object));
+  describe('SourceNamespace.__resolveType', () => {
+    it('resolves AgentNamespace', () => {
+      const resolveType = (resolvers as any).SourceNamespace.__resolveType;
+      expect(resolveType({ _agent: {} })).toBe('AgentNamespace');
     });
 
-    it('uses custom count', () => {
-      Query.recentLogs({}, { count: 10 });
-      // Phase 2: Now uses ctx.ports.logs instead of ctx.logTailer
-      expect(ctx.ports.logs!.getRecentLogs).toHaveBeenCalledWith(10, expect.any(Object));
+    it('resolves DashboardNamespace', () => {
+      const resolveType = (resolvers as any).SourceNamespace.__resolveType;
+      expect(resolveType({ _info: {} })).toBe('DashboardNamespace');
     });
-  });
 
-  describe('gateway', () => {
-    it('calls getGatewayStatus via ctx and maps fields', async () => {
-      const result = await Query.gateway({}, {});
-      // Task 6: Now uses ctx.ports.gateway instead of ctx.gatewayClient
-      expect(ctx.ports.gateway.getGatewayStatus).toHaveBeenCalled();
-      expect(result).toMatchObject({
-        running: true,
-        pid: 1234,
-        version: '1.0.0',
-        securityCritical: 0,
-        securityWarn: 1,
-      });
-    });
-  });
-
-  describe('channels', () => {
-    it('returns status.channels via ctx', async () => {
-      const result = await Query.channels({}, {});
-      // Task 6: Now uses ctx.ports.gateway instead of ctx.gatewayClient
-      expect(ctx.ports.gateway.getGatewayStatus).toHaveBeenCalled();
-      expect(result).toHaveLength(1);
-      expect((result as unknown[])[0]).toMatchObject({ provider: 'discord', connected: true });
-    });
-  });
-
-  describe('resources', () => {
-    it('calls getSystemMetrics via ctx.ports.system', async () => {
-      const result = await Query.resources({}, {});
-      // Phase 2: Now uses ctx.ports.system instead of ctx.systemInfoService
-      expect(ctx.ports.system!.getSystemMetrics).toHaveBeenCalled();
-      expect(result).toMatchObject({ cpu: 25, memoryMB: 512, diskMB: 1024 });
+    it('returns null for unknown', () => {
+      const resolveType = (resolvers as any).SourceNamespace.__resolveType;
+      expect(resolveType({})).toBeNull();
     });
   });
 });

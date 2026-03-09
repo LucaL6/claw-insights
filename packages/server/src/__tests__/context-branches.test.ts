@@ -212,7 +212,8 @@ describe('destroyContext', () => {
     expect(ctx.pipeline.destroy).toHaveBeenCalledTimes(1);
     expect(closeSpy).not.toHaveBeenCalled();
 
-    resolveDestroy?.();
+    expect(resolveDestroy).toBeTypeOf('function');
+    (resolveDestroy as unknown as () => void)();
     await destroyTask;
 
     expect(closeSpy).toHaveBeenCalledTimes(1);

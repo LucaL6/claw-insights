@@ -18,17 +18,21 @@ describe('daemon layered log helpers', () => {
     vi.restoreAllMocks();
   });
 
-  it('selects latest error/app files and excludes debug', () => {
+  it('selects latest error/app files and excludes debug/noise/security from default view', () => {
     writeFileSync(join(dir, 'error.2026-03-07.0001.log'), 'old-error');
     writeFileSync(join(dir, 'error.2026-03-08.0002.log'), 'new-error');
     writeFileSync(join(dir, 'app.2026-03-08.0001.log'), 'app-log');
     writeFileSync(join(dir, 'debug.2026-03-08.0001.log'), 'debug-log');
+    writeFileSync(join(dir, 'noise.2026-03-08.0001.log'), 'noise-log');
+    writeFileSync(join(dir, 'security.2026-03-08.0001.log'), 'security-log');
 
     const selected = selectDefaultLayeredLogFiles(dir);
 
     expect(selected.some((p) => p.endsWith('error.2026-03-08.0002.log'))).toBe(true);
     expect(selected.some((p) => p.endsWith('app.2026-03-08.0001.log'))).toBe(true);
     expect(selected.some((p) => p.includes('/debug.'))).toBe(false);
+    expect(selected.some((p) => p.includes('/noise.'))).toBe(false);
+    expect(selected.some((p) => p.includes('/security.'))).toBe(false);
   });
 
   it('reads hints from latest error segment', () => {

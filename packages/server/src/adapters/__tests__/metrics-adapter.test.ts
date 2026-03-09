@@ -28,6 +28,7 @@ describe('MetricsAdapter', () => {
       totalSessions: 3,
       totalErrors: 5,
       totalWarnings: 10,
+      uptimePercent: 100,
       totalApiCalls: 20,
       totalToolCalls: 15,
       totalTurns: 50,
@@ -74,9 +75,9 @@ describe('MetricsAdapter', () => {
       const aggregator = createMockAggregator();
       const adapter = createMetricsAdapter(aggregator as any);
 
-      adapter.getMetrics('2026-03-02', 'SEVEN_DAY');
+      adapter.getMetrics('2026-03-02', 'TWENTY_FOUR_HOUR');
 
-      expect(aggregator.getMetrics).toHaveBeenCalledWith('2026-03-02', 'SEVEN_DAY');
+      expect(aggregator.getMetrics).toHaveBeenCalledWith('2026-03-02', 'TWENTY_FOUR_HOUR');
     });
 
     it('should clear cache when clearCache is called', () => {

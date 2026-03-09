@@ -10,8 +10,12 @@ vi.mock('urql', () => ({
   useQuery: () => mockUseQuery(),
 }));
 
-vi.mock('../../graphql/events-queries', () => ({
-  EventsQuery: 'query Events { events { events { timestamp type } } }',
+vi.mock('../../graphql/queries', () => ({
+  EventsQuery: 'query Events { source { events { events { timestamp type } } } }',
+}));
+
+vi.mock('../../graphql/source-selector', () => ({
+  getDashboardSourceSelector: () => ({ id: 'agent:main' }),
 }));
 
 import type { BucketData } from '../useMetricsData';
@@ -29,8 +33,8 @@ const makeBuckets = (count: number): BucketData[] =>
       apiCalls: 0,
       toolCalls: 0,
       turns: 0,
-    userTurns: 0,
-    assistantTurns: 0,
+      userTurns: 0,
+      assistantTurns: 0,
       errors: 0,
       warnings: 0,
       gatewayUp: true,
@@ -107,7 +111,7 @@ describe('usePreview', () => {
   it('passes events query results when preview is set', () => {
     mockUseQuery.mockReturnValue([
       {
-        data: { events: { events: [{ timestamp: '2026-01-01', type: 'error' }], total: 1 } },
+        data: { source: { events: { events: [{ timestamp: '2026-01-01', type: 'error' }], total: 1 } } },
         fetching: false,
         error: null,
       },
