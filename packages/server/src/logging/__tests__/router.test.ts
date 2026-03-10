@@ -38,6 +38,14 @@ describe('LogRouter', () => {
     expect(result.lane).toBe('critical');
   });
 
+  it('routes http-access module logs to access stream', () => {
+    const router = new LogRouter();
+    const result = router.route(entry('info', 100, 'http-access', 'http access'));
+    expect(result.accepted).toBe(true);
+    expect(result.stream).toBe('access');
+    expect(result.lane).toBe('bestEffort');
+  });
+
   it('routes configured config noise warnings to noise stream', () => {
     const router = new LogRouter();
     const result = router.route(entry('warn', 100, 'config', 'unknown config key, ignoring'));

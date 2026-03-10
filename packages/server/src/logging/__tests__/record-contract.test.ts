@@ -78,7 +78,7 @@ describe('record-contract', () => {
     runtime.write('warn', 'middleware:auth', ['auth rejected: invalid bearer token']);
 
     const records = collectRecords();
-    const validStreams = new Set(['app', 'error', 'debug', 'noise', 'security']);
+    const validStreams = new Set(['app', 'error', 'debug', 'noise', 'security', 'access']);
     for (const rec of records) {
       expect(validStreams.has(rec.stream as string)).toBe(true);
     }

@@ -88,3 +88,13 @@ describe('getBucketedTurnCountByRole', () => {
     cleanup();
   });
 });
+
+describe('getRangeTurnCount', () => {
+  it('returns 0 when no messages exist in range', () => {
+    const { db, cleanup } = setup();
+    // Empty DB — exercises the row?.turns ?? 0 branch
+    const result = getRangeTurnCount(db, '2030-01-01T00:00:00Z', '2030-01-02T00:00:00Z');
+    expect(result).toBe(0);
+    cleanup();
+  });
+});

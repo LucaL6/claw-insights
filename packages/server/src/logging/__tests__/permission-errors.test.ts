@@ -26,11 +26,17 @@ function attemptCriticalWriteWithBudget(opts: TestRuntimeOptions): {
   // Fill budget so error writes are denied
   gate.recordAppend('app', 1 * MB);
 
-  let reclaimCalls = 0;
-  gate.setReclaimFn((_stream) => {
-    reclaimCalls++;
-    // If randSeed=42, simulate reclaim succeeding on 2nd attempt
-    if (opts.randSeed === 42 && reclaimCalls >= 2) {
+  let reclaimAttempts = 0;
+  let reclaimProbes = 0;
+  gate.setReclaimFn((stream) => {
+    reclaimProbes++;
+    // reclaimOnce iterates streams in order: debug, noise, access, app.
+    // A new attempt (round) starts when we see the first stream ('debug').
+    if (stream === 'debug') {
+      reclaimAttempts++;
+    }
+    // If randSeed=42, simulate reclaim succeeding on 2nd probe
+    if (opts.randSeed === 42 && reclaimProbes >= 2) {
       return { stream: 'app' as const, path: 'old.log', sizeBytes: 0.5 * MB };
     }
     return null;
@@ -44,7 +50,7 @@ function attemptCriticalWriteWithBudget(opts: TestRuntimeOptions): {
   }
 
   return {
-    retryCount: reclaimCalls,
+    retryCount: reclaimAttempts,
     committed: allowed,
     failSafe: state.healthStatus(),
   };

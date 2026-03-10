@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -52,6 +53,24 @@ export function parseSnapshotArgs(argv: string[]): SnapshotCmdArgs {
   };
 }
 
+/**
+ * Return the default snapshot output directory.
+ * Respects CLAW_INSIGHTS_SNAPSHOT_DIR env var, falls back to ~/.claw-insights/snapshots.
+ */
+export function defaultSnapshotDir(): string {
+  return process.env.CLAW_INSIGHTS_SNAPSHOT_DIR || join(homedir(), '.claw-insights', 'snapshots');
+}
+
+/**
+ * Generate a timestamped snapshot filename (no directory).
+ * Uses second-level precision to avoid overwrites within the same minute.
+ */
+export function generateSnapshotFilename(format: string): string {
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const ext = format === 'svg' ? 'svg' : 'png';
+  return `claw-insights-snapshot-${ts}.${ext}`;
+}
+
 function printHelp(): void {
   console.log(`Usage: claw-insights snapshot [options]
 
@@ -68,8 +87,12 @@ Options:
   --dry-run                  Print parameters without executing
   --help                     Show this help message
 
+Environment:
+  CLAW_INSIGHTS_SNAPSHOT_DIR   Override default output directory
+                               (default: ~/.claw-insights/snapshots)
+
 Examples:
-  claw-insights snapshot                        # default PNG snapshot
+  claw-insights snapshot                        # saves to ~/.claw-insights/snapshots/
   claw-insights snapshot --quick -o status.png  # quick mobile snapshot
   claw-insights snapshot --format json | jq .   # JSON to stdout
   claw-insights snapshot --dry-run              # preview parameters`);
@@ -155,11 +178,18 @@ export async function runSnapshotCmd(argv: string[]): Promise<void> {
   } else if (args.format === 'json') {
     process.stdout.write(buffer.toString('utf-8'));
   } else if (process.stdout.isTTY) {
-    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
-    const ext = args.format === 'svg' ? 'svg' : 'png';
-    const filename = `claw-insights-snapshot-${ts}.${ext}`;
-    writeFileSync(filename, buffer);
-    console.log(`Saved: ./${filename}`);
+    const dir = defaultSnapshotDir();
+    try {
+      mkdirSync(dir, { recursive: true });
+    } catch (err) {
+      log.error({ err, dir }, 'failed to create snapshot directory');
+      console.error(`Error: Cannot create snapshot directory: ${dir}`);
+      console.error(`  → Use -o <path> to specify a writable output path.`);
+      process.exit(1);
+    }
+    const outPath = join(dir, generateSnapshotFilename(args.format));
+    writeFileSync(outPath, buffer);
+    console.log(`Saved: ${outPath}`);
   } else {
     process.stdout.write(buffer);
   }

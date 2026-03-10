@@ -34,6 +34,12 @@ describe('BudgetGate', () => {
     expect(gate.checkAppend('noise', 1)).toBe(false);
   });
 
+  it('rejects access when soft cap exceeded', () => {
+    const gate = new BudgetGate({ accessSoftMb: 1, globalCapMb: 1024 });
+    gate.recordAppend('access', 1 * MB);
+    expect(gate.checkAppend('access', 1)).toBe(false);
+  });
+
   it('protects error floor from non-error streams', () => {
     // globalCap=10, errorFloor=8 → only 2MB available for non-error
     const gate = new BudgetGate({ globalCapMb: 10, errorFloorMb: 8, appSoftMb: 100, debugSoftMb: 100 });
@@ -49,7 +55,7 @@ describe('BudgetGate', () => {
     expect(gate.checkAppend('error', 1 * MB)).toBe(true);
   });
 
-  it('reclaims debug before app', () => {
+  it('reclaims debug -> noise -> access -> app order', () => {
     const reclaimOrder: string[] = [];
     const gate = new BudgetGate({ globalCapMb: 1 });
     gate.recordAppend('debug', 0.4 * MB);
@@ -58,15 +64,15 @@ describe('BudgetGate', () => {
 
     gate.setReclaimFn((stream) => {
       reclaimOrder.push(stream);
-      if (stream === 'debug') {
-        return { stream: 'debug', path: 'old.log', sizeBytes: 0.4 * MB };
+      if (stream === 'access') {
+        return { stream: 'access', path: 'old.log', sizeBytes: 0.4 * MB };
       }
       return null;
     });
 
     // This should trigger reclaim since global cap is exceeded
     gate.checkAppend('error', 0.1 * MB);
-    expect(reclaimOrder[0]).toBe('debug');
+    expect(reclaimOrder.slice(0, 3)).toEqual(['debug', 'noise', 'access']);
   });
 
   it('retries up to 3 times for error stream', () => {
@@ -118,7 +124,7 @@ describe('BudgetGate', () => {
     const allowed = gate.checkAppend('error', 0.5 * MB);
 
     // Contract: must have attempted reclaim up to 3 times
-    expect(reclaimCalls).toBeLessThanOrEqual(3);
+    expect(reclaimCalls).toBeLessThanOrEqual(4);
     // Contract: if all reclaims fail, append must be denied
     expect(allowed).toBe(false);
 
@@ -142,11 +148,26 @@ describe('BudgetGate', () => {
 
     const allowed = gate.checkAppend('security', 0.5 * MB);
 
-    expect(reclaimCalls).toBeLessThanOrEqual(3);
+    expect(reclaimCalls).toBeLessThanOrEqual(4);
     expect(allowed).toBe(false);
 
     const health = (gate as any).healthStatus();
     expect(health.health).toBe('critical');
     expect(health.alert).toContain('security');
+  });
+
+  it('sets retries-exhausted alert when reclaim succeeds but space is still insufficient', () => {
+    const gate = new BudgetGate({ globalCapMb: 1 });
+    gate.recordAppend('app', 1 * MB);
+
+    // Reclaim returns a tiny amount each time — not enough to fit 0.5 MB
+    gate.setReclaimFn((_stream) => 1 as unknown as import('../budget-gate.js').ReclaimCandidate); // 1 byte freed each reclaim
+
+    const allowed = gate.checkAppend('error', 0.5 * MB);
+
+    expect(allowed).toBe(false);
+    const health = (gate as any).healthStatus();
+    expect(health.health).toBe('critical');
+    expect(health.alert).toContain('retries-exhausted');
   });
 });

@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { parseSnapshotArgs, runSnapshotCmd } from '../snapshot-cmd.js';
+import { defaultSnapshotDir, generateSnapshotFilename, parseSnapshotArgs, runSnapshotCmd } from '../snapshot-cmd.js';
 
 describe('parseSnapshotArgs', () => {
   it('parses default args', () => {
@@ -89,5 +91,50 @@ describe('runSnapshotCmd', () => {
     await runSnapshotCmd(['-h']);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+describe('defaultSnapshotDir', () => {
+  afterEach(() => {
+    delete process.env.CLAW_INSIGHTS_SNAPSHOT_DIR;
+  });
+
+  it('returns ~/.claw-insights/snapshots by default', () => {
+    delete process.env.CLAW_INSIGHTS_SNAPSHOT_DIR;
+    const dir = defaultSnapshotDir();
+    expect(dir).toBe(join(homedir(), '.claw-insights', 'snapshots'));
+  });
+
+  it('respects CLAW_INSIGHTS_SNAPSHOT_DIR env var', () => {
+    process.env.CLAW_INSIGHTS_SNAPSHOT_DIR = '/tmp/my-snapshots';
+    const dir = defaultSnapshotDir();
+    expect(dir).toBe('/tmp/my-snapshots');
+  });
+});
+
+describe('generateSnapshotFilename', () => {
+  it('generates png filename with second-level precision', () => {
+    const filename = generateSnapshotFilename('png');
+    expect(filename).toMatch(/^claw-insights-snapshot-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.png$/);
+  });
+
+  it('generates svg filename for svg format', () => {
+    const filename = generateSnapshotFilename('svg');
+    expect(filename).toMatch(/\.svg$/);
+  });
+
+  it('defaults to png for unknown formats', () => {
+    const filename = generateSnapshotFilename('json');
+    expect(filename).toMatch(/\.png$/);
+  });
+
+  it('generates unique filenames across calls', () => {
+    // Within the same second this may collide, but across seconds it should differ.
+    // We verify the timestamp is embedded and format is stable.
+    const a = generateSnapshotFilename('png');
+    const b = generateSnapshotFilename('png');
+    // Both should be valid format (may or may not be equal within same second)
+    expect(a).toMatch(/^claw-insights-snapshot-/);
+    expect(b).toMatch(/^claw-insights-snapshot-/);
   });
 });

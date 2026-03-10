@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import express from 'express';
 
-import { config, generateToken, setApiToken } from './config.js';
+import { createRotationRunner, initializeAuthRuntime, setAuthRotationRunner } from './auth/rotation-runner.js';
+import { config, generateToken, getAuthSecretPath, getDataDir, setApiToken } from './config.js';
 import { createContext, destroyContext, startContext } from './context.js';
 import { createChildLogger } from './logger.js';
 import { loggingRuntimeState } from './logging/index.js';
@@ -55,13 +56,47 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
   }
 }
 
+const dataDir = getDataDir();
+const configPath = join(dataDir, 'config.json');
+const secretPath = getAuthSecretPath(process.env.HOME ?? '/tmp');
+const envApiToken = process.env.CLAW_INSIGHTS_API_TOKEN ?? process.env.OPENCLAW_API_TOKEN;
+
+let rotationRunner: ReturnType<typeof createRotationRunner> | null = null;
+
+if (!config.noAuth) {
+  const runtime = initializeAuthRuntime({
+    configPath,
+    secretPath,
+    envApiToken,
+    nowMs: Date.now(),
+    generateToken,
+    rotationIntervalMs: config.tokenRotationIntervalMs,
+    graceMs: config.tokenGraceMs,
+    maxPrevious: config.tokenMaxPrevious,
+  });
+
+  setApiToken(runtime.apiToken);
+
+  rotationRunner = createRotationRunner({
+    apiToken: runtime.apiToken,
+    configPath,
+    enabled: config.tokenRotationEnabled,
+    checkIntervalMs: config.tokenRotationCheckIntervalMs,
+    rotationIntervalMs: config.tokenRotationIntervalMs,
+    graceMs: config.tokenGraceMs,
+    maxPrevious: config.tokenMaxPrevious,
+    onError: (err, reason) => {
+      log.warn({ err, reason }, 'session rotation check failed');
+    },
+  });
+  setAuthRotationRunner(rotationRunner);
+  rotationRunner.start();
+} else {
+  setAuthRotationRunner(null);
+}
+
 const ctx = await createContext();
 startContext(ctx);
-
-// Token auto-generation (when auth enabled and no token configured)
-if (!config.noAuth && !config.apiToken) {
-  setApiToken(generateToken());
-}
 
 const app = express();
 app.use(express.json());
@@ -143,6 +178,8 @@ async function shutdown(signal: 'SIGTERM' | 'SIGINT'): Promise<void> {
   let exitCode = 0;
 
   try {
+    rotationRunner?.stop();
+    setAuthRotationRunner(null);
     await destroyContext(ctx);
   } catch (err) {
     exitCode = 1;

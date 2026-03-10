@@ -22,7 +22,7 @@ describe('Stage 2: layered cutover', () => {
     const { createHealthHandler } = await import('../../routes/health.js');
 
     const handler = createHealthHandler({
-      version: '0.9.0',
+      version: '0.1.0',
       serverOnly: false,
       checkGateway: async () => true,
       checkDb: () => true,
@@ -74,7 +74,7 @@ describe('Stage 2: layered cutover', () => {
     const { createHealthHandler } = await import('../../routes/health.js');
 
     const handler = createHealthHandler({
-      version: '0.9.0',
+      version: '0.1.0',
       serverOnly: false,
       checkGateway: async () => true,
       checkDb: () => true,

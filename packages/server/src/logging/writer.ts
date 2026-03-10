@@ -22,7 +22,7 @@ export const DEFAULT_WRITER_CONFIG: ResolvedWriterConfig = {
   criticalFsyncMs: 100,
   criticalSyncBatch: 1000,
   fileMode: 0o644,
-  rotationSizeMb: { app: 64, debug: 64, error: 32, noise: 64, security: 32 },
+  rotationSizeMb: { app: 64, debug: 64, error: 32, noise: 64, security: 32, access: 64 },
 };
 
 type PinoDestination = ReturnType<typeof pino.destination>;
@@ -68,6 +68,7 @@ export class LogWriter {
       debug: config.rotationSizeMb?.debug ?? DEFAULT_WRITER_CONFIG.rotationSizeMb.debug,
       noise: config.rotationSizeMb?.noise ?? DEFAULT_WRITER_CONFIG.rotationSizeMb.noise,
       security: config.rotationSizeMb?.security ?? DEFAULT_WRITER_CONFIG.rotationSizeMb.security,
+      access: config.rotationSizeMb?.access ?? DEFAULT_WRITER_CONFIG.rotationSizeMb.access,
     };
 
     this.config = {
@@ -242,7 +243,7 @@ export class LogWriter {
   private syncModeFor(stream: LogStream, _lane: LogLane): boolean {
     // Stream-level policy is explicit and stable:
     // - error/security: sync (critical durability)
-    // - app/debug/noise: async (throughput)
+    // - app/debug/noise/access: async (throughput)
     return stream === 'error' || stream === 'security';
   }
 

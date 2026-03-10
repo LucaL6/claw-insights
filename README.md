@@ -64,7 +64,7 @@ On first launch you'll see an access URL:
 🔑 http://127.0.0.1:41041/?token=abc123...
 ```
 
-Open the URL in your browser. The token is set as a cookie (valid 7 days).
+Open the URL in your browser. The token is exchanged for a rotating session cookie (max-age 7 days) backed by rotating server keys.
 
 ```bash
 claw-insights start --no-auth      # Disable authentication
@@ -96,7 +96,7 @@ claw-insights stop                 # Stop daemon
 | `gateway: disconnected`            | Ensure OpenClaw is running: `openclaw gateway start`                                                              |
 | `EADDRINUSE`                       | Port 41041 in use — set `CLAW_INSIGHTS_SERVER_PORT`                                                               |
 | Empty dashboard                    | Check OpenClaw has active sessions: `openclaw status`                                                             |
-| Token rejected                     | Clear cookies and re-open the token URL                                                                           |
+| Token rejected                     | Run `claw-insights status` and open the current URL; if still rejected, clear cookies and re-exchange session     |
 
 ## Architecture
 
@@ -115,12 +115,15 @@ claw-insights/
 
 ## Authentication
 
-Claw Insights uses URL token authentication (similar to Jupyter Notebook).
+Claw Insights uses URL token exchange (similar to Jupyter Notebook) with a fixed Bearer token + rotating browser session cookie.
 
-1. On startup, a token is generated (or use `CLAW_INSIGHTS_API_TOKEN`)
+1. On startup, Bearer token is resolved (`CLAW_INSIGHTS_API_TOKEN` preferred; otherwise local secret/fresh bootstrap)
 2. The token URL is printed: `🔑 http://127.0.0.1:41041/?token=xxx`
-3. Open the URL → cookie is set → redirected to dashboard
-4. Cookie lasts 7 days
+3. Open the URL → `claw_session=<kid>:<digest>` cookie is set → redirected to dashboard
+4. Session cookie key-ring rotates automatically (default: 24h interval + 12h grace)
+5. Bearer token remains stable for scripts and automation
+
+If needed, re-exchange browser auth via `/?token=...` (for example after long inactivity beyond rotation + grace window).
 
 Auth is disabled by default in development (`NODE_ENV=development`).
 
@@ -128,14 +131,19 @@ Auth is disabled by default in development (`NODE_ENV=development`).
 
 Priority: Environment variables > `~/.claw-insights/config.json` > NODE_ENV defaults.
 
-| Variable                           | Default                       | Description                                            |
-| ---------------------------------- | ----------------------------- | ------------------------------------------------------ |
-| `CLAW_INSIGHTS_SERVER_PORT`        | `41041`                       | API server port                                        |
-| `CLAW_INSIGHTS_WEB_PORT`           | `41042`                       | Web UI port (dev only)                                 |
-| `CLAW_INSIGHTS_API_TOKEN`          | _(auto)_                      | Auth token (≥32 chars)                                 |
-| `CLAW_INSIGHTS_NO_AUTH`            | `false`                       | Disable auth                                           |
-| `CLAW_INSIGHTS_DB`                 | `~/.claw-insights/metrics.db` | Database path                                          |
-| `CLAW_INSIGHTS_RAW_RETENTION_DAYS` | `7`                           | Raw data retention (days)                              |
+| Variable                                         | Default                       | Description                              |
+| ------------------------------------------------ | ----------------------------- | ---------------------------------------- |
+| `CLAW_INSIGHTS_SERVER_PORT`                      | `41041`                       | API server port                          |
+| `CLAW_INSIGHTS_WEB_PORT`                         | `41042`                       | Web UI port (dev only)                   |
+| `CLAW_INSIGHTS_API_TOKEN`                        | _(auto)_                      | Fixed Bearer token (≥32 chars)           |
+| `CLAW_INSIGHTS_NO_AUTH`                          | `false`                       | Disable auth                             |
+| `CLAW_INSIGHTS_TOKEN_ROTATION_ENABLED`           | `true`                        | Enable rotating session-cookie key-ring  |
+| `CLAW_INSIGHTS_TOKEN_ROTATION_INTERVAL_MS`       | `86400000`                    | Rotation interval (24h)                  |
+| `CLAW_INSIGHTS_TOKEN_GRACE_MS`                   | `43200000`                    | Previous-key grace window (12h)          |
+| `CLAW_INSIGHTS_TOKEN_ROTATION_CHECK_INTERVAL_MS` | `300000`                      | Background rotation check cadence (5min) |
+| `CLAW_INSIGHTS_TOKEN_MAX_PREVIOUS`               | `2`                           | Max retained previous keys               |
+| `CLAW_INSIGHTS_DB`                               | `~/.claw-insights/metrics.db` | Database path                            |
+| `CLAW_INSIGHTS_RAW_RETENTION_DAYS`               | `7`                           | Raw data retention (days)                |
 
 → See [Configuration](docs/configuration.md) for all options, config file, and NODE_ENV defaults.
 

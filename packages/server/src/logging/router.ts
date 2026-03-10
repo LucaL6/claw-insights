@@ -21,6 +21,10 @@ const NOISE_RULES: Array<{ module: string; message: string }> = [
 ];
 
 function classifyStream(module: string | undefined, message: string): LogStream | undefined {
+  if (module === 'http-access' && message.startsWith('http access')) {
+    return 'access';
+  }
+
   if (module === 'middleware:auth' && message.startsWith('auth rejected:')) {
     return 'security';
   }

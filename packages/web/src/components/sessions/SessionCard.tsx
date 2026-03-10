@@ -168,13 +168,23 @@ function deriveStatusPill(
   totalTokens: number,
   hasRecentActivity: boolean,
 ): StatusPillVariant | undefined {
-  if (status === 'DONE') {return 'done';}
-  if (status === 'FAILED') {return 'failed';}
-  if (status === 'IDLE') {return 'idle';}
+  if (status === 'DONE') {
+    return 'done';
+  }
+  if (status === 'FAILED') {
+    return 'failed';
+  }
+  if (status === 'IDLE') {
+    return 'idle';
+  }
   if (status === 'ACTIVE') {
     const hasTurnCount = typeof turnCount === 'number';
-    if (hasTurnCount && turnCount === 0 && totalTokens === 0 && hasRecentActivity) {return 'starting';}
-    if (hasTurnCount && turnCount > 0 && hasRecentActivity) {return 'running';}
+    if (hasTurnCount && turnCount === 0 && totalTokens === 0 && hasRecentActivity) {
+      return 'starting';
+    }
+    if (hasTurnCount && turnCount > 0 && hasRecentActivity) {
+      return 'running';
+    }
     return undefined;
   }
   return undefined;
@@ -277,9 +287,11 @@ function CompactCard({
             {completionMark}
           </span>
           {pillVariant && <StatusPill variant={pillVariant} label={pillLabelMap[pillVariant]} />}
-          <TagPill variant="model" size="sm">
-            <span className="mono">{formatModel(model)}</span>
-          </TagPill>
+          {model !== 'unknown' && (
+            <TagPill variant="model" size="sm">
+              <span className="mono">{formatModel(model)}</span>
+            </TagPill>
+          )}
           {channel && (
             <span className="hidden md:inline">
               <TagPill variant="channel" size="sm">

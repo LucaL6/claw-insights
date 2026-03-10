@@ -22,12 +22,17 @@ export default defineConfig({
         'src/ports/types.ts', // pure type definitions
         'src/renderer/satori-renderer.ts', // flaky worker crash (ISS-046)
         'src/platforms/mock/index.ts', // test-only mock platform
+        'src/sources/collectors/transcript/types.ts', // pure type definitions
+        'src/sources/collectors/transcript/index.ts', // barrel re-export (3 lines)
+        'src/schema/source/index.ts', // barrel re-export (6 lines)
+        'src/ports/transcript-port.ts', // pure interface (21 lines)
+        'src/typings/**', // ambient type declarations
       ],
       thresholds: {
-        lines: 90,
+        lines: 92,
         branches: 90,
-        functions: 90,
-        statements: 90,
+        functions: 92,
+        statements: 92,
       },
     },
   },

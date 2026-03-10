@@ -1,4 +1,6 @@
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, sep } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,6 +20,7 @@ vi.mock('node:fs', async (importOriginal) => {
   return {
     ...original,
     writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
   };
 });
 
@@ -138,7 +141,7 @@ describe('runSnapshotCmd', () => {
     Object.defineProperty(process.stdout, 'isTTY', { value: isTTYOrig, configurable: true });
   });
 
-  it('auto-generates filename on TTY without --output', async () => {
+  it('auto-generates filename on TTY without --output into ~/.claw-insights/snapshots/', async () => {
     mockSuccessfulFetch('PNG_DATA');
 
     const isTTYOrig = process.stdout.isTTY;
@@ -146,10 +149,14 @@ describe('runSnapshotCmd', () => {
 
     await runSnapshotCmd([]);
 
+    const expectedDir = join(homedir(), '.claw-insights', 'snapshots');
+    expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(expectedDir, { recursive: true });
     expect(vi.mocked(writeFileSync)).toHaveBeenCalled();
-    const filename = vi.mocked(writeFileSync).mock.calls[0][0] as string;
-    expect(filename).toMatch(/claw-insights-snapshot-.*\.png$/);
-    expect(logSpy.mock.calls.flat().join(' ')).toContain('Saved: ./');
+    const outPath = vi.mocked(writeFileSync).mock.calls[0][0] as string;
+    expect(outPath).toContain(`${sep}.claw-insights${sep}snapshots${sep}`);
+    expect(outPath).toMatch(/claw-insights-snapshot-.*\.png$/);
+    expect(logSpy.mock.calls.flat().join(' ')).toContain('Saved: ');
+    expect(logSpy.mock.calls.flat().join(' ')).not.toContain('Saved: ./');
 
     Object.defineProperty(process.stdout, 'isTTY', { value: isTTYOrig, configurable: true });
   });
@@ -162,8 +169,8 @@ describe('runSnapshotCmd', () => {
 
     await runSnapshotCmd(['--format', 'svg']);
 
-    const filename = vi.mocked(writeFileSync).mock.calls[0][0] as string;
-    expect(filename).toMatch(/\.svg$/);
+    const outPath = vi.mocked(writeFileSync).mock.calls[0][0] as string;
+    expect(outPath).toMatch(/\.svg$/);
 
     Object.defineProperty(process.stdout, 'isTTY', { value: isTTYOrig, configurable: true });
   });

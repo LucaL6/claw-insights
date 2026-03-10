@@ -57,11 +57,11 @@ describe('config singleton', () => {
     }
   });
 
-  it('source contains no hardcoded ./ paths (except allowed logger import)', async () => {
+  it('source contains no hardcoded ./ paths (except allowed sibling imports)', async () => {
     const { readFileSync } = await import('fs');
     const src = readFileSync(new URL('../config.ts', import.meta.url), 'utf-8');
-    // Filter out allowed ./ imports (logger is a sibling module)
-    const filtered = src.replace(/from\s+'\.\/logger\.js'/g, '');
+    // Filter out allowed ./ imports (re-exported sibling modules)
+    const filtered = src.replace(/from\s+'\.\/logger\.js'/g, '').replace(/from\s+'\.\/auth\/secret-store\.js'/g, '');
     expect(filtered).not.toContain('./');
   });
 

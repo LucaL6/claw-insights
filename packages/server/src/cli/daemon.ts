@@ -76,6 +76,14 @@ export function getDaemonPaths() {
   };
 }
 
+export function formatAuthModeLine(noAuth: boolean): string {
+  return noAuth ? 'Auth disabled' : 'Stable Bearer token + rotating session cookie';
+}
+
+export function formatMissingTokenUrlHint(port: number): string {
+  return `http://127.0.0.1:${port}/ (token URL file missing — run 'claw-insights restart' to recreate)`;
+}
+
 const SERVER_LOG_RE = /^server\.log(\.\d+)?$/;
 
 export function cleanupLegacyServerLogs(logDir: string): number {
@@ -100,13 +108,13 @@ export function cleanupLegacyServerLogs(logDir: string): number {
 }
 
 interface LayeredSegment {
-  stream: 'app' | 'error' | 'debug' | 'noise' | 'security';
+  stream: 'app' | 'error' | 'debug' | 'noise' | 'security' | 'access';
   date: string;
   seq: number;
   path: string;
 }
 
-const LAYERED_SEGMENT_RE = /^(app|error|debug|noise|security)\.(\d{4}-\d{2}-\d{2})\.(\d+)\.log$/;
+const LAYERED_SEGMENT_RE = /^(app|error|debug|noise|security|access)\.(\d{4}-\d{2}-\d{2})\.(\d+)\.log$/;
 
 function parseLayeredSegment(logDir: string, fileName: string): LayeredSegment | null {
   const m = LAYERED_SEGMENT_RE.exec(fileName);
@@ -304,11 +312,9 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   const mode = args.serverOnly ? 'API only' : 'Dashboard + API';
 
   let url: string;
-  let authLine: string;
 
   if (args.noAuth) {
     url = `http://127.0.0.1:${args.port}`;
-    authLine = 'Auth disabled';
   } else {
     url = `http://127.0.0.1:${args.port}`;
     const tokenFile = join(paths.dataDir, 'auth-token');
@@ -320,8 +326,8 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
     } catch {
       // token file not ready
     }
-    authLine = 'Token cookie (valid 7 days)';
   }
+  const authLine = formatAuthModeLine(args.noAuth);
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
@@ -526,7 +532,7 @@ export async function daemonStatus(): Promise<void> {
           console.log(`   🔑 URL:  http://127.0.0.1:${port}/?token=${token}`);
         }
       } catch {
-        console.log(`   URL:     http://127.0.0.1:${port}/ (token file missing — restart to regenerate)`);
+        console.log(`   URL:     ${formatMissingTokenUrlHint(port)}`);
       }
     }
   } catch {

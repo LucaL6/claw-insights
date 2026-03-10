@@ -1,8 +1,8 @@
-import { mkdtemp, readFile, rm,writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach,beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { LogIntegrity } from '../integrity.js';
 
@@ -80,5 +80,10 @@ describe('LogIntegrity', () => {
 
     expect(integrity.tailRepairCount).toBe(1);
     expect(integrity.repairResults).toHaveLength(1);
+  });
+
+  it('exposes logDir from config', () => {
+    const integrity = new LogIntegrity({ logDir: '/some/path' });
+    expect(integrity.logDir).toBe('/some/path');
   });
 });

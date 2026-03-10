@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { buildSchema, type GraphQLInputObjectType, type GraphQLObjectType, type GraphQLUnionType } from 'graphql';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../context.js';
 import { createResolvers } from '../../resolvers/index.js';
@@ -306,9 +306,8 @@ describe('Phase1B: selector/filter type contracts (canonical)', () => {
   });
 
   it('SourceCategory is strict enum-aligned union (compile-time guard)', () => {
-    // @ts-expect-error category must match schema enum literal set
-    const _invalid: SourceCategory = 'KANBAN';
-    expect(true).toBe(true);
+    // 'KANBAN' is not a valid SourceCategory — verify it's rejected at type level
+    expectTypeOf<'KANBAN'>().not.toMatchTypeOf<SourceCategory>();
   });
 
   it('SourceProvider accepts known literals', () => {

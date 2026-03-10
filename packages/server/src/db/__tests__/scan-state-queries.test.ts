@@ -11,6 +11,9 @@ import {
   loadScanState,
   queryLifetimeAggregates,
   queryMinFirstTimestamp,
+  queryMissingFirstTimestampPaths,
+  queryTotalSessionFiles,
+  updateFirstTimestamps,
   upsertScanState,
 } from '../scan-state-queries.js';
 
@@ -229,6 +232,123 @@ describe('scan-state-queries', () => {
       const state = loadScanState(db);
       expect(state.get('/a.jsonl')?.byteOffset).toBe(100);
       expect(state.get('/a.jsonl')?.firstTimestampMs).toBe(5000);
+    });
+  });
+
+  describe('queryMissingFirstTimestampPaths', () => {
+    it('returns empty array when no rows', () => {
+      expect(queryMissingFirstTimestampPaths(db)).toEqual([]);
+    });
+
+    it('returns paths where firstTimestampMs is null', () => {
+      upsertScanState(db, [
+        {
+          filePath: '/a.jsonl',
+          byteOffset: 0,
+          inode: 1,
+          mtimeMs: 1000,
+          birthMs: 500,
+          partial: '',
+          firstTimestampMs: null,
+        },
+        {
+          filePath: '/b.jsonl',
+          byteOffset: 0,
+          inode: 2,
+          mtimeMs: 1000,
+          birthMs: 500,
+          partial: '',
+          firstTimestampMs: 5000,
+        },
+        {
+          filePath: '/c.jsonl',
+          byteOffset: 0,
+          inode: 3,
+          mtimeMs: 1000,
+          birthMs: 500,
+          partial: '',
+          firstTimestampMs: null,
+        },
+      ]);
+      const paths = queryMissingFirstTimestampPaths(db);
+      expect(paths.sort()).toEqual(['/a.jsonl', '/c.jsonl']);
+    });
+  });
+
+  describe('updateFirstTimestamps', () => {
+    it('no-op for empty array', () => {
+      updateFirstTimestamps(db, []);
+      // no error thrown
+    });
+
+    it('updates first_timestamp_ms for given paths', () => {
+      upsertScanState(db, [
+        {
+          filePath: '/a.jsonl',
+          byteOffset: 0,
+          inode: 1,
+          mtimeMs: 1000,
+          birthMs: 500,
+          partial: '',
+          firstTimestampMs: null,
+        },
+        {
+          filePath: '/b.jsonl',
+          byteOffset: 0,
+          inode: 2,
+          mtimeMs: 1000,
+          birthMs: 500,
+          partial: '',
+          firstTimestampMs: null,
+        },
+      ]);
+      updateFirstTimestamps(db, [{ path: '/a.jsonl', ts: 9999 }]);
+      const state = loadScanState(db);
+      expect(state.get('/a.jsonl')?.firstTimestampMs).toBe(9999);
+      expect(state.get('/b.jsonl')?.firstTimestampMs).toBeNull();
+    });
+  });
+
+  describe('queryTotalSessionFiles', () => {
+    it('returns 0 for empty table', () => {
+      expect(queryTotalSessionFiles(db)).toBe(0);
+    });
+
+    it('returns count of scan_state rows', () => {
+      upsertScanState(db, [
+        {
+          filePath: '/a.jsonl',
+          byteOffset: 0,
+          inode: 1,
+          mtimeMs: 1000,
+          birthMs: 500,
+          partial: '',
+          firstTimestampMs: null,
+        },
+        {
+          filePath: '/b.jsonl',
+          byteOffset: 0,
+          inode: 2,
+          mtimeMs: 1000,
+          birthMs: 500,
+          partial: '',
+          firstTimestampMs: null,
+        },
+      ]);
+      expect(queryTotalSessionFiles(db)).toBe(2);
+    });
+  });
+
+  describe('upsertScanState edge cases', () => {
+    it('no-op for empty array', () => {
+      upsertScanState(db, []);
+      expect(loadScanState(db).size).toBe(0);
+    });
+  });
+
+  describe('deleteScanState edge cases', () => {
+    it('no-op for empty array', () => {
+      deleteScanState(db, []);
     });
   });
 

@@ -12,13 +12,23 @@ All variables use the `CLAW_INSIGHTS_` prefix. For backward compatibility, `OPEN
 
 ### Core
 
-| Variable                    | Default            | Description                                                          |
-| --------------------------- | ------------------ | -------------------------------------------------------------------- |
-| `CLAW_INSIGHTS_SERVER_PORT` | `41041`            | GraphQL API + web server port                                        |
-| `CLAW_INSIGHTS_WEB_PORT`    | `41042`            | Vite dev server port (development only)                              |
-| `CLAW_INSIGHTS_API_TOKEN`   | _(auto-generated)_ | Auth token (minimum 32 characters). Empty = auto-generate on startup |
-| `CLAW_INSIGHTS_NO_AUTH`     | `false`            | Disable authentication entirely (`true` or `1`)                      |
-| `CLAW_INSIGHTS_SERVER_ONLY` | `false`            | Run API server without serving web UI                                |
+| Variable                    | Default            | Description                                                                |
+| --------------------------- | ------------------ | -------------------------------------------------------------------------- |
+| `CLAW_INSIGHTS_SERVER_PORT` | `41041`            | GraphQL API + web server port                                              |
+| `CLAW_INSIGHTS_WEB_PORT`    | `41042`            | Vite dev server port (development only)                                    |
+| `CLAW_INSIGHTS_API_TOKEN`   | _(auto-generated)_ | Fixed Bearer token (minimum 32 characters). Empty = auto-generate on fresh |
+| `CLAW_INSIGHTS_NO_AUTH`     | `false`            | Disable authentication entirely (`true` or `1`)                            |
+| `CLAW_INSIGHTS_SERVER_ONLY` | `false`            | Run API server without serving web UI                                      |
+
+### Session Rotation
+
+| Variable                                         | Default    | Description                              |
+| ------------------------------------------------ | ---------- | ---------------------------------------- |
+| `CLAW_INSIGHTS_TOKEN_ROTATION_ENABLED`           | `true`     | Enable rotating session-cookie key-ring  |
+| `CLAW_INSIGHTS_TOKEN_ROTATION_INTERVAL_MS`       | `86400000` | Rotation interval (24h)                  |
+| `CLAW_INSIGHTS_TOKEN_GRACE_MS`                   | `43200000` | Previous-key grace window (12h)          |
+| `CLAW_INSIGHTS_TOKEN_ROTATION_CHECK_INTERVAL_MS` | `300000`   | Background rotation check cadence (5min) |
+| `CLAW_INSIGHTS_TOKEN_MAX_PREVIOUS`               | `2`        | Max retained previous keys in key-ring   |
 
 ### Data Sources
 
@@ -86,12 +96,13 @@ Create `~/.claw-insights/config.json`:
 
 ```json
 {
-  "serverPort": 41041,
-  "apiToken": "your-secure-token-at-least-32-characters"
+  "serverPort": 41041
 }
 ```
 
-**Security:** If the file contains `apiToken`, restrict permissions:
+`apiToken` in config file is treated as **legacy migration input only** and will be migrated into `~/.claw-insights/auth-secret` on startup.
+
+**Security:** If the file contains legacy `apiToken`, restrict permissions:
 
 ```bash
 chmod 600 ~/.claw-insights/config.json
@@ -113,10 +124,13 @@ Settings change based on `NODE_ENV`:
 
 ### Token flow
 
-1. Server starts → generates token (or reads from env/config)
+1. Server starts and resolves a **stable Bearer token** using precedence: `CLAW_INSIGHTS_API_TOKEN` → `~/.claw-insights/auth-secret` → legacy `config.json.apiToken` (migration only) → generated token (fresh install only)
 2. Prints token URL: `🔑 http://127.0.0.1:41041/?token=xxx`
-3. Browser opens URL → server sets `claw_session` cookie containing a **hash** of the token (7 days, httpOnly)
-4. Subsequent requests authenticated via cookie (automatic in browsers) or `Authorization: Bearer <token>` header
+3. Browser opens URL → server exchanges token for `claw_session=<kid>:<digest>` cookie (7 days, httpOnly)
+4. Session key-ring rotates automatically (default: every 24h, previous key valid for 12h grace)
+5. Subsequent requests authenticate via cookie (browser) or `Authorization: Bearer <token>` (scripts)
+
+If a browser session expires, is cleared, or stays idle beyond rotation + grace windows, **re-exchange cookie via `/?token=...`**.
 
 ### Programmatic access
 
@@ -127,4 +141,4 @@ curl -H "Authorization: Bearer YOUR_EXAMPLE_TOKEN # gitleaks:allow" http://127.0
   -d '{"query":"{ gateway { version uptime } }"}'
 ```
 
-> **Note:** Cookie-based auth (`claw_session`) is handled automatically by browsers after visiting the token URL. The cookie contains a hash of the token, not the raw token itself.
+> **Note:** Bearer token auth is stable across cookie rotations. Browser cookie auth (`claw_session`) uses rotating `kid:digest` values; legacy bare `64hex` cookie format is not accepted.

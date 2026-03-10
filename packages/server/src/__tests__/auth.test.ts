@@ -1,12 +1,12 @@
-import { createHash } from 'node:crypto';
-
 import type { NextFunction, Request } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createMockNext,createMockResponse } from './test-utils.js';
+import { createMockNext, createMockResponse } from './test-utils.js';
 
 const mockConfig = vi.hoisted(() => ({ apiToken: '', noAuth: false, serverPort: 41041 }));
-vi.mock('../config.js', () => ({ config: mockConfig }));
+const mockLoadOrInitTokenState = vi.hoisted(() => vi.fn());
+vi.mock('../config.js', () => ({ config: mockConfig, getDataDir: () => '/tmp/.claw-insights-test' }));
+vi.mock('../auth/token-state-store.js', () => ({ loadOrInitTokenState: mockLoadOrInitTokenState }));
 
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -19,30 +19,50 @@ function mockReq(
   return {
     headers: opts.headers ?? {},
     method: opts.method ?? 'GET',
+    path: '/graphql',
   } as unknown as Request;
+}
+
+const ACTIVE_KID = 'k-active';
+const ACTIVE_DIGEST = 'a'.repeat(64);
+const PREV_KID = 'k-prev';
+const PREV_DIGEST = 'b'.repeat(64);
+
+function tokenState(now: number, previousExpiresAtMs: number = now + 60_000) {
+  return {
+    enabled: true,
+    activeKid: ACTIVE_KID,
+    activeDigest: ACTIVE_DIGEST,
+    previous: [{ kid: PREV_KID, digest: PREV_DIGEST, expiresAtMs: previousExpiresAtMs }],
+    lastRotatedAtMs: now,
+    rotationIntervalMs: 24 * 60 * 60 * 1000,
+    graceMs: 12 * 60 * 60 * 1000,
+    maxPrevious: 2,
+    version: 1 as const,
+  };
 }
 
 describe('authMiddleware', () => {
   let next: NextFunction;
   const TOKEN = 'a'.repeat(32);
-  const COOKIE_HASH = createHash('sha256').update(TOKEN).digest('hex');
 
   beforeEach(() => {
     next = createMockNext();
     mockConfig.apiToken = TOKEN;
     mockConfig.noAuth = false;
     mockConfig.serverPort = 41041;
+    vi.restoreAllMocks();
+    const now = Date.now();
+    mockLoadOrInitTokenState.mockReturnValue(tokenState(now));
   });
 
-  // --- noAuth mode ---
   it('passes through when noAuth is true', () => {
     mockConfig.noAuth = true;
     authMiddleware(mockReq(), createMockResponse(), next);
     expect(next).toHaveBeenCalled();
   });
 
-  // --- Bearer auth ---
-  it('passes through with correct Bearer token', () => {
+  it('passes through with correct Bearer token (Bearer path unchanged)', () => {
     authMiddleware(mockReq({ headers: { authorization: `Bearer ${TOKEN}` } }), createMockResponse(), next);
     expect(next).toHaveBeenCalled();
   });
@@ -60,28 +80,66 @@ describe('authMiddleware', () => {
     expect(res.status).toHaveBeenCalledWith(401);
   });
 
-  // --- Cookie auth ---
-  it('passes through with valid cookie (GET)', () => {
+  it('accepts active cookie', () => {
     authMiddleware(
-      mockReq({ headers: { cookie: `claw_session=${COOKIE_HASH}` }, method: 'GET' }),
+      mockReq({ headers: { cookie: `claw_session=${ACTIVE_KID}:${ACTIVE_DIGEST}` }, method: 'GET' }),
       createMockResponse(),
       next,
     );
     expect(next).toHaveBeenCalled();
   });
 
-  it('returns 401 with invalid cookie', () => {
+  it('accepts previous cookie within grace and sets refreshed cookie', () => {
     const res = createMockResponse();
-    authMiddleware(mockReq({ headers: { cookie: 'claw_session=invalid' }, method: 'GET' }), res, next);
-    expect(res.status).toHaveBeenCalledWith(401);
+    authMiddleware(
+      mockReq({ headers: { cookie: `claw_session=${PREV_KID}:${PREV_DIGEST}` }, method: 'GET' }),
+      res,
+      next,
+    );
+    expect(next).toHaveBeenCalled();
+    expect(res.cookie).toHaveBeenCalledWith(
+      'claw_session',
+      `${ACTIVE_KID}:${ACTIVE_DIGEST}`,
+      expect.objectContaining({ httpOnly: true, sameSite: 'strict', path: '/' }),
+    );
   });
 
-  // --- CSRF check (cookie auth + state-changing) ---
-  it('passes CSRF check with matching Origin header on POST', () => {
+  it('rejects previous cookie after grace', () => {
+    const now = Date.now();
+    mockLoadOrInitTokenState.mockReturnValue(tokenState(now, now - 1));
+    const res = createMockResponse();
+
+    authMiddleware(
+      mockReq({ headers: { cookie: `claw_session=${PREV_KID}:${PREV_DIGEST}` }, method: 'GET' }),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed cookie values', () => {
+    for (const value of ['foo', 'kid-only', ':digest-only']) {
+      const res = createMockResponse();
+      authMiddleware(mockReq({ headers: { cookie: `claw_session=${value}` }, method: 'GET' }), res, next);
+      expect(res.status).toHaveBeenCalledWith(401);
+    }
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('rejects legacy hash cookie without kid', () => {
+    const res = createMockResponse();
+    authMiddleware(mockReq({ headers: { cookie: `claw_session=${'c'.repeat(64)}` }, method: 'GET' }), res, next);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('passes CSRF check with matching Origin header on POST (CSRF behavior unchanged)', () => {
     authMiddleware(
       mockReq({
         headers: {
-          cookie: `claw_session=${COOKIE_HASH}`,
+          cookie: `claw_session=${ACTIVE_KID}:${ACTIVE_DIGEST}`,
           origin: 'http://127.0.0.1:41041',
           host: '127.0.0.1:41041',
         },
@@ -98,7 +156,7 @@ describe('authMiddleware', () => {
     authMiddleware(
       mockReq({
         headers: {
-          cookie: `claw_session=${COOKIE_HASH}`,
+          cookie: `claw_session=${ACTIVE_KID}:${ACTIVE_DIGEST}`,
           origin: 'http://evil.com',
           host: '127.0.0.1:41041',
         },
@@ -115,7 +173,7 @@ describe('authMiddleware', () => {
     const res = createMockResponse();
     authMiddleware(
       mockReq({
-        headers: { cookie: `claw_session=${COOKIE_HASH}`, host: '127.0.0.1:41041' },
+        headers: { cookie: `claw_session=${ACTIVE_KID}:${ACTIVE_DIGEST}`, host: '127.0.0.1:41041' },
         method: 'POST',
       }),
       res,
@@ -128,7 +186,7 @@ describe('authMiddleware', () => {
     authMiddleware(
       mockReq({
         headers: {
-          cookie: `claw_session=${COOKIE_HASH}`,
+          cookie: `claw_session=${ACTIVE_KID}:${ACTIVE_DIGEST}`,
           referer: 'http://127.0.0.1:41041/dashboard',
           host: '127.0.0.1:41041',
         },
@@ -140,7 +198,6 @@ describe('authMiddleware', () => {
     expect(next).toHaveBeenCalled();
   });
 
-  // --- No credentials at all ---
   it('returns 401 with no auth at all', () => {
     const res = createMockResponse();
     authMiddleware(mockReq(), res, next);

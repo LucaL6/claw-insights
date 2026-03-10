@@ -4,7 +4,7 @@ import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { initDatabase } from '../init.js';
-import { insertTokenUsageEvent, insertTokenUsageEventBatch } from '../token-queries';
+import { getRangeTokenUsageK, insertTokenUsageEvent, insertTokenUsageEventBatch } from '../token-queries';
 
 function setup() {
   const dbPath = join(tmpdir(), `tq-br-${Date.now()}-${Math.random()}.db`);
@@ -85,6 +85,16 @@ describe('insertTokenUsageEventBatch branches', () => {
         },
       ]),
     ).toThrow();
+    cleanup();
+  });
+});
+
+describe('getRangeTokenUsageK', () => {
+  it('returns 0 when no tokens exist in range', () => {
+    const { db, cleanup } = setup();
+    // Empty DB — exercises the row?.total ?? 0 branch
+    const result = getRangeTokenUsageK(db, '2030-01-01T00:00:00Z', '2030-01-02T00:00:00Z');
+    expect(result).toBe(0);
     cleanup();
   });
 });

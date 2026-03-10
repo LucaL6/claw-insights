@@ -1,4 +1,4 @@
-export type LogStream = 'app' | 'error' | 'debug' | 'noise' | 'security';
+export type LogStream = 'app' | 'error' | 'debug' | 'noise' | 'security' | 'access';
 export type LogLane = 'critical' | 'bestEffort';
 
 export interface QueueStats {

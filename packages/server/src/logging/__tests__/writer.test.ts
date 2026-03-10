@@ -42,12 +42,14 @@ describe('LogWriter', () => {
     writer.append('app', 'bestEffort', '{"msg":"app"}');
     writer.append('debug', 'bestEffort', '{"msg":"debug"}');
     writer.append('noise', 'bestEffort', '{"msg":"noise"}');
+    writer.append('access', 'bestEffort', '{"msg":"access"}');
 
     expect(writer.streamSyncMode('error')).toBe(true);
     expect(writer.streamSyncMode('security')).toBe(true);
     expect(writer.streamSyncMode('app')).toBe(false);
     expect(writer.streamSyncMode('debug')).toBe(false);
     expect(writer.streamSyncMode('noise')).toBe(false);
+    expect(writer.streamSyncMode('access')).toBe(false);
 
     await writer.shutdown();
   });
@@ -76,7 +78,7 @@ describe('LogWriter', () => {
 
   it('rotates on size limit', async () => {
     // Set tiny size limit so second append triggers rotation.
-    const writer = new LogWriter({ logDir, rotationSizeMb: { app: 64, debug: 0.00001, error: 32 } });
+    const writer = new LogWriter({ logDir, rotationSizeMb: { app: 64, debug: 0.00001, error: 32, access: 64 } });
     writer.append('debug', 'bestEffort', 'first');
     writer.append('debug', 'bestEffort', 'second');
     await writer.shutdown();
@@ -121,7 +123,7 @@ describe('LogWriter', () => {
   it('rotates with flush->create ordering telemetry', async () => {
     const writer = new LogWriter({
       logDir,
-      rotationSizeMb: { app: 64, debug: 0.00001, error: 32 },
+      rotationSizeMb: { app: 64, debug: 0.00001, error: 32, access: 64 },
     });
 
     writer.append('debug', 'bestEffort', 'first');

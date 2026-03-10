@@ -108,6 +108,155 @@ describe('SessionAdapter', () => {
     });
   });
 
+  describe('getSessions options', () => {
+    function makeSession(overrides: Partial<Session> & { key: string }): Session {
+      return {
+        displayName: 'test',
+        kind: 'direct',
+        model: 'claude-4',
+        channel: null,
+        totalTokens: 1000,
+        contextTokens: 200000,
+        usagePercent: 0.5,
+        status: 'ACTIVE',
+        updatedAt: Date.now(),
+        turnCount: 5,
+        subAgents: [],
+        ...overrides,
+      };
+    }
+
+    it('should pass activeOnly and sortBy filter to reader', () => {
+      const reader = createMockReader();
+      reader._sessions.set('a', makeSession({ key: 'a' }));
+      const adapter = createSessionAdapter(reader as any);
+
+      adapter.getSessions({ activeOnly: true, sortBy: 'UPDATED_AT' });
+
+      expect(reader.getSessions).toHaveBeenCalledWith({
+        activeOnly: true,
+        sortBy: 'UPDATED_AT',
+      });
+    });
+
+    it('should pass undefined filter when no options given', () => {
+      const reader = createMockReader();
+      const adapter = createSessionAdapter(reader as any);
+
+      adapter.getSessions();
+
+      expect(reader.getSessions).toHaveBeenCalledWith(undefined);
+    });
+
+    it('should slice results when limit is provided', () => {
+      const reader = createMockReader();
+      for (let i = 0; i < 5; i++) {
+        reader._sessions.set(`s${i}`, makeSession({ key: `s${i}` }));
+      }
+      const adapter = createSessionAdapter(reader as any);
+
+      const result = adapter.getSessions({ limit: 2 });
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return all when limit is 0 (falsy)', () => {
+      const reader = createMockReader();
+      for (let i = 0; i < 3; i++) {
+        reader._sessions.set(`s${i}`, makeSession({ key: `s${i}` }));
+      }
+      const adapter = createSessionAdapter(reader as any);
+
+      const result = adapter.getSessions({ limit: 0 });
+
+      expect(result).toHaveLength(3);
+    });
+
+    it('should map error in getSessions', () => {
+      const reader = createMockReader();
+      reader.getSessions.mockImplementation(() => {
+        throw new Error('read fail');
+      });
+      const adapter = createSessionAdapter(reader as any);
+
+      expect(() => adapter.getSessions()).toThrow();
+    });
+  });
+
+  describe('getSessionsInRange', () => {
+    function makeSession(overrides: Partial<Session> & { key: string }): Session {
+      return {
+        displayName: 'test',
+        kind: 'direct',
+        model: 'claude-4',
+        channel: null,
+        totalTokens: 1000,
+        contextTokens: 200000,
+        usagePercent: 0.5,
+        status: 'ACTIVE',
+        updatedAt: 1000,
+        turnCount: 5,
+        subAgents: [],
+        ...overrides,
+      };
+    }
+
+    it('should filter sessions by numeric range', () => {
+      const reader = createMockReader();
+      reader._sessions.set('a', makeSession({ key: 'a', updatedAt: 500 }));
+      reader._sessions.set('b', makeSession({ key: 'b', updatedAt: 1500 }));
+      reader._sessions.set('c', makeSession({ key: 'c', updatedAt: 2500 }));
+      const adapter = createSessionAdapter(reader as any);
+
+      const result = adapter.getSessionsInRange(1000, 2000);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].key).toBe('b');
+    });
+
+    it('should parse string dates for range', () => {
+      const reader = createMockReader();
+      const t = new Date('2025-01-15T00:00:00Z').getTime();
+      reader._sessions.set('a', makeSession({ key: 'a', updatedAt: t }));
+      const adapter = createSessionAdapter(reader as any);
+
+      const result = adapter.getSessionsInRange('2025-01-01T00:00:00Z', '2025-02-01T00:00:00Z');
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('should map error in getSessionsInRange', () => {
+      const reader = createMockReader();
+      reader.getSessions.mockImplementation(() => {
+        throw new Error('fail');
+      });
+      const adapter = createSessionAdapter(reader as any);
+
+      expect(() => adapter.getSessionsInRange(0, 1000)).toThrow();
+    });
+  });
+
+  describe('getSessionCount', () => {
+    it('should return count of sessions', () => {
+      const reader = createMockReader();
+      reader._sessions.set('a', { key: 'a' } as any);
+      reader._sessions.set('b', { key: 'b' } as any);
+      const adapter = createSessionAdapter(reader as any);
+
+      expect(adapter.getSessionCount()).toBe(2);
+    });
+
+    it('should map error in getSessionCount', () => {
+      const reader = createMockReader();
+      reader.getSessions.mockImplementation(() => {
+        throw new Error('fail');
+      });
+      const adapter = createSessionAdapter(reader as any);
+
+      expect(() => adapter.getSessionCount()).toThrow();
+    });
+  });
+
   describe('error mapping', () => {
     it('should map ENOENT to NOT_FOUND', () => {
       const reader = {
@@ -132,6 +281,18 @@ describe('SessionAdapter', () => {
         expect(err.source).toBe('session-adapter');
         expect(err.retriable).toBe(false);
       }
+    });
+  });
+
+  describe('getSessionIdToKeyMap error', () => {
+    it('should map error in getSessionIdToKeyMap', () => {
+      const reader = createMockReader();
+      reader.getSessionIdToKeyMap.mockImplementation(() => {
+        throw new Error('fail');
+      });
+      const adapter = createSessionAdapter(reader as any);
+
+      expect(() => adapter.getSessionIdToKeyMap()).toThrow();
     });
   });
 

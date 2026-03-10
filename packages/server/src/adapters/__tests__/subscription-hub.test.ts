@@ -124,6 +124,18 @@ describe('SubscriptionHub', () => {
       expect(cb2).not.toHaveBeenCalled();
     });
 
+    it('should return no-op unsubscribe when subscribing after destroy', () => {
+      const hub = createSubscriptionHub();
+      hub.destroy();
+
+      const cb = vi.fn();
+      const unsub = hub.subscribe(cb);
+
+      hub.trigger();
+      expect(cb).not.toHaveBeenCalled();
+      expect(() => unsub()).not.toThrow();
+    });
+
     it('should make unsubscribe a no-op after destroy', () => {
       const hub = createSubscriptionHub();
       const cb = vi.fn();

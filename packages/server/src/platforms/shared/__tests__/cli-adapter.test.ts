@@ -55,4 +55,31 @@ describe('PosixCliAdapter', () => {
     const result = await adapter.exec(['status', '--json']);
     expect(result).toBe('status,--json');
   });
+
+  it('exec returns empty string when stdout is null', async () => {
+    (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (_cmd: string, _args: string[], _opts: unknown, cb: Function) => cb(null, { stdout: null }),
+    );
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    expect(await adapter.exec(['--version'])).toBe('');
+  });
+
+  it('exec handles error with no stderr property', async () => {
+    const err = new Error('fail');
+    // err has no 'stderr' property at all
+    (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (_cmd: string, _args: string[], _opts: unknown, cb: Function) => cb(err),
+    );
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    expect(await adapter.exec(['--version'])).toBe('');
+  });
+
+  it('exec handles error with null stderr', async () => {
+    const err = Object.assign(new Error('fail'), { stderr: null });
+    (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (_cmd: string, _args: string[], _opts: unknown, cb: Function) => cb(err),
+    );
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    expect(await adapter.exec(['--version'])).toBe('');
+  });
 });

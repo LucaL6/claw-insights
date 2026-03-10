@@ -17,6 +17,7 @@ vi.mock('../config.js', () => ({
     isDev: true,
     serverOnly: false,
   },
+  getDataDir: () => '/tmp/.claw-insights-test',
 }));
 
 // ── Mock Data Sources ──

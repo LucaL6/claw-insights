@@ -8,18 +8,19 @@ describe('AuthErrorScreen', () => {
   it('renders brand and title', () => {
     renderWithProviders(<AuthErrorScreen />);
     expect(screen.getByText('Claw Insights')).toBeDefined();
-    expect(screen.getByText('Access Token Invalid')).toBeDefined();
+    expect(screen.getByText('Authentication Expired')).toBeDefined();
   });
 
   it('renders possible causes', () => {
     renderWithProviders(<AuthErrorScreen />);
-    expect(screen.getAllByText(/tokens regenerate/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/valid for 7 days/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/old access url\/token/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/session cookie is stale/i).length).toBeGreaterThan(0);
   });
 
   it('renders recovery steps and command', () => {
     renderWithProviders(<AuthErrorScreen />);
     expect(screen.getAllByText(/run the command/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/re-exchange session cookie/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText('claw-insights status').length).toBeGreaterThan(0);
   });
 

@@ -1,6 +1,6 @@
 {
   "name": "claw-insights",
-  "version": "0.9.0",
+  "version": "0.1.0",
   "license": "MIT",
   "private": true,
   "workspaces": [
@@ -11,13 +11,17 @@
   },
   "scripts": {
     "codegen": "graphql-codegen --config codegen.ts",
+    "codegen:check": "graphql-codegen --config codegen.ts --check",
+    "codegen:verify": "node scripts/check-codegen-sync.mjs",
+    "codegen:assert-clean": "node scripts/check-codegen-sync.mjs --assert-clean",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch",
     "dev": "npm run codegen && concurrently -n codegen,server,web \"npm run codegen:watch\" \"npm run dev:server\" \"npm run dev:web\"",
     "dev:server": "npm run -w @claw-insights/server dev",
     "dev:web": "npm run -w @claw-insights/web dev",
-    "test": "npm run --workspaces test",
+    "test": "npm run --workspaces test && npm run test:scripts",
     "test:server": "npm run -w @claw-insights/server test",
     "test:web": "npm run -w @claw-insights/web test",
+    "test:scripts": "node --test scripts/__tests__/check-codegen-sync.test.mjs",
     "test:coverage": "npm run -w @claw-insights/server test -- --coverage && npm run -w @claw-insights/web test -- --coverage",
     "test:integration": "npm run -w @claw-insights/server test:integration",
     "test:e2e": "npm run -w @claw-insights/web test:e2e",

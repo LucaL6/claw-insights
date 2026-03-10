@@ -16,6 +16,15 @@ npm run -w @claw-insights/server typecheck
 echo "🔨 Build (codegen + all workspaces)..."
 npm run build
 
+echo "🧾 Verify generated GraphQL artifacts are committed..."
+if ! npm run codegen:assert-clean; then
+  echo "❌ Push blocked: generated GraphQL artifacts changed after build."
+  echo "Run: npm run codegen"
+  echo "Then: git add packages/shared/src/generated packages/server/src/schema/generated packages/web/src/generated"
+  echo "After that: git commit --amend (or new commit)"
+  exit 1
+fi
+
 echo "🧪 Unit Tests with Coverage (server)..."
 npm run -w @claw-insights/server test -- --coverage
 

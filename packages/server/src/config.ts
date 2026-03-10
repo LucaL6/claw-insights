@@ -5,6 +5,13 @@ import { join } from 'node:path';
 
 import { createChildLogger } from './logger.js';
 
+export {
+  getAuthSecretPath,
+  migrateLegacyApiTokenToSecret,
+  readAuthSecret,
+  writeAuthSecret,
+} from './auth/secret-store.js';
+
 const log = createChildLogger('config');
 
 const HOME = process.env.HOME ?? '/tmp';
@@ -25,6 +32,14 @@ export function safeInt(env: string | undefined, fallback: number): number {
   }
   const n = parseInt(env, 10);
   return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+export function safePositiveInt(env: string | undefined, fallback: number): number {
+  if (!env) {
+    return fallback;
+  }
+  const n = parseInt(env, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
 export function envBool(val: string | undefined): boolean | undefined {
@@ -111,6 +126,12 @@ export const knownKeys = new Set([
   'serverPort',
   'webPort',
   'apiToken',
+  'apiTokenState',
+  'tokenRotationEnabled',
+  'tokenRotationIntervalMs',
+  'tokenGraceMs',
+  'tokenRotationCheckIntervalMs',
+  'tokenMaxPrevious',
   'noAuth',
   'dbPath',
   'logLevel',
@@ -199,6 +220,11 @@ export interface AppConfig {
   webPort: number;
   apiToken: string;
   noAuth: boolean;
+  tokenRotationEnabled: boolean;
+  tokenRotationIntervalMs: number;
+  tokenGraceMs: number;
+  tokenRotationCheckIntervalMs: number;
+  tokenMaxPrevious: number;
   isDev: boolean;
   serverOnly: boolean;
   rawRetentionDays: number;
@@ -272,6 +298,11 @@ export function resolveConfig(): AppConfig {
   const apiToken = env('API_TOKEN') ?? (typeof file.apiToken === 'string' ? file.apiToken : undefined) ?? '';
   validateToken(apiToken);
 
+  const defaultTokenRotationIntervalMs = 24 * 60 * 60 * 1000;
+  const defaultTokenGraceMs = 12 * 60 * 60 * 1000;
+  const defaultTokenRotationCheckIntervalMs = 5 * 60 * 1000;
+  const defaultTokenMaxPrevious = 2;
+
   return {
     cliPath: detectCliPath(),
     sessionsPath: env('SESSIONS_PATH') ?? `${HOME}/.openclaw/agents/main/sessions/sessions.json`,
@@ -292,6 +323,27 @@ export function resolveConfig(): AppConfig {
     webPort: safePort(env('WEB_PORT'), typeof file.webPort === 'number' ? file.webPort : defaults.webPort),
     apiToken,
     noAuth: envBool(env('NO_AUTH')) ?? (typeof file.noAuth === 'boolean' ? file.noAuth : undefined) ?? defaults.noAuth,
+    tokenRotationEnabled:
+      envBool(env('TOKEN_ROTATION_ENABLED')) ??
+      (typeof file.tokenRotationEnabled === 'boolean' ? file.tokenRotationEnabled : true),
+    tokenRotationIntervalMs: safePositiveInt(
+      env('TOKEN_ROTATION_INTERVAL_MS'),
+      typeof file.tokenRotationIntervalMs === 'number' ? file.tokenRotationIntervalMs : defaultTokenRotationIntervalMs,
+    ),
+    tokenGraceMs: safePositiveInt(
+      env('TOKEN_GRACE_MS'),
+      typeof file.tokenGraceMs === 'number' ? file.tokenGraceMs : defaultTokenGraceMs,
+    ),
+    tokenRotationCheckIntervalMs: safePositiveInt(
+      env('TOKEN_ROTATION_CHECK_INTERVAL_MS'),
+      typeof file.tokenRotationCheckIntervalMs === 'number'
+        ? file.tokenRotationCheckIntervalMs
+        : defaultTokenRotationCheckIntervalMs,
+    ),
+    tokenMaxPrevious: safePositiveInt(
+      env('TOKEN_MAX_PREVIOUS'),
+      typeof file.tokenMaxPrevious === 'number' ? file.tokenMaxPrevious : defaultTokenMaxPrevious,
+    ),
     isDev: nodeEnv !== 'production',
     serverOnly: env('SERVER_ONLY') === 'true',
     rawRetentionDays: safeInt(

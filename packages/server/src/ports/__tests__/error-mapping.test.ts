@@ -153,5 +153,25 @@ describe('Error Mapping', () => {
       expect(portErr.code).toBe('UNAVAILABLE');
       expect(portErr.retriable).toBe(true);
     });
+
+    it('should handle HTTP 409 as INVALID_STATE', () => {
+      const err = new Error('Conflict');
+      (err as any).status = 409;
+      const portErr = mapInfraError(err, 'http');
+      expect(portErr.code).toBe('INVALID_STATE');
+    });
+
+    it('should handle HTTP 504 as TIMEOUT', () => {
+      const err = new Error('Gateway Timeout');
+      (err as any).status = 504;
+      const portErr = mapInfraError(err, 'http');
+      expect(portErr.code).toBe('TIMEOUT');
+    });
+
+    it('should handle unknown non-Error non-string values', () => {
+      const portErr = mapInfraError(12345, 'unknown');
+      expect(portErr.code).toBe('UNAVAILABLE');
+      expect(portErr.message).toContain('Unknown error type');
+    });
   });
 });

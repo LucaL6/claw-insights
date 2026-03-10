@@ -144,6 +144,11 @@ describe('SessionCard (compact)', () => {
     expect(queryByText('webchat')).toBeNull();
   });
 
+  it('hides model tag when model is unknown', () => {
+    const { queryByText } = renderWithI18n(<SessionCard {...baseProps} model="unknown" />);
+    expect(queryByText('unknown')).toBeNull();
+  });
+
   it('shows Idle pill when status is IDLE', () => {
     const { container } = renderWithI18n(<SessionCard {...baseProps} status="IDLE" totalTokens={82000} />);
     expect(container.textContent).toMatch(/idle|空闲/i);

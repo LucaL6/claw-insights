@@ -1,18 +1,20 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual } from 'node:crypto';
+import { join } from 'node:path';
 
 import { parse as parseCookies } from 'cookie';
 import type { NextFunction, Request, Response } from 'express';
 
-import { config } from '../config.js';
+import { triggerAuthRotationFallbackCheck } from '../auth/rotation-runner.js';
+import { findCookieMatch, parseSessionCookie } from '../auth/token-state.js';
+import { loadOrInitTokenState } from '../auth/token-state-store.js';
+import { config, getDataDir } from '../config.js';
 import { createChildLogger } from '../logger.js';
 
 const log = createChildLogger('middleware:auth');
 
 const COOKIE_NAME = 'claw_session';
-
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
+const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const CONFIG_PATH = join(getDataDir(), 'config.json');
 
 /** Timing-safe string comparison. Returns false if lengths differ. */
 function safeEqual(a: string, b: string): boolean {
@@ -56,6 +58,9 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     return;
   }
 
+  // Request-path fallback rotation check (throttled in runner, best-effort)
+  triggerAuthRotationFallbackCheck();
+
   // 2. Bearer header (API/programmatic access)
   const header = req.headers.authorization;
   if (header) {
@@ -77,16 +82,45 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
 
   // 3. Cookie (Web UI)
   const cookie = parseCookie(req.headers.cookie, COOKIE_NAME);
-  if (cookie && safeEqual(cookie, hashToken(config.apiToken))) {
-    // 4. CSRF check for state-changing requests
-    if (!csrfCheck(req)) {
-      log.warn({ method: req.method, path: req.path }, 'auth rejected: CSRF check failed');
-      res.status(403).json({ error: 'CSRF check failed' });
+  if (cookie) {
+    const parsed = parseSessionCookie(cookie);
+    if (parsed.kind === 'legacy') {
+      log.warn({ method: req.method, path: req.path }, 'auth rejected: legacy session cookie format');
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
-    log.debug({ method: req.method, path: req.path }, 'auth ok via cookie');
-    next();
-    return;
+    if (parsed.kind === 'malformed') {
+      log.warn({ method: req.method, path: req.path }, 'auth rejected: malformed session cookie');
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const now = Date.now();
+    const state = loadOrInitTokenState(CONFIG_PATH, config.apiToken, now);
+    const match = findCookieMatch(state, cookie, now);
+
+    if (match.kind === 'active' || match.kind === 'previous') {
+      if (match.kind === 'previous') {
+        res.cookie(COOKIE_NAME, `${state.activeKid}:${state.activeDigest}`, {
+          httpOnly: true,
+          sameSite: 'strict',
+          secure: false,
+          maxAge: COOKIE_MAX_AGE_MS,
+          path: '/',
+        });
+      }
+
+      // 4. CSRF check for state-changing requests
+      if (!csrfCheck(req)) {
+        log.warn({ method: req.method, path: req.path }, 'auth rejected: CSRF check failed');
+        res.status(403).json({ error: 'CSRF check failed' });
+        return;
+      }
+
+      log.debug({ method: req.method, path: req.path }, 'auth ok via cookie');
+      next();
+      return;
+    }
   }
 
   // 5. Reject

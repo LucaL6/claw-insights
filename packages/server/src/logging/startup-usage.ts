@@ -13,7 +13,7 @@ export interface UsageSeed {
 }
 
 // Matches: stream.log, stream.log.N, stream.YYYY-MM-DD.NNNN.log
-const LOG_FILE_RE = /^(app|error|debug|noise|security)(?:\.\d{4}-\d{2}-\d{2}\.\d+)?\.log(?:\.\d+)?$/;
+const LOG_FILE_RE = /^(app|error|debug|noise|security|access)(?:\.\d{4}-\d{2}-\d{2}\.\d+)?\.log(?:\.\d+)?$/;
 
 function streamFromFilename(name: string): LogStream | null {
   const m = LOG_FILE_RE.exec(name);

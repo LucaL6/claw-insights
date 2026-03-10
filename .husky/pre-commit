@@ -2,3 +2,11 @@
 set -e
 
 npx lint-staged
+
+if ! npm run codegen:verify; then
+  echo "❌ GraphQL generated files are stale."
+  echo "Run: npm run codegen"
+  echo "Then: git add packages/shared/src/generated packages/server/src/schema/generated packages/web/src/generated"
+  echo "After that: git commit --amend (or recommit)"
+  exit 1
+fi

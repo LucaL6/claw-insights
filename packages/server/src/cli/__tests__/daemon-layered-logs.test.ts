@@ -25,6 +25,7 @@ describe('daemon layered log helpers', () => {
     writeFileSync(join(dir, 'debug.2026-03-08.0001.log'), 'debug-log');
     writeFileSync(join(dir, 'noise.2026-03-08.0001.log'), 'noise-log');
     writeFileSync(join(dir, 'security.2026-03-08.0001.log'), 'security-log');
+    writeFileSync(join(dir, 'access.2026-03-08.0001.log'), 'access-log');
 
     const selected = selectDefaultLayeredLogFiles(dir);
 
@@ -33,6 +34,7 @@ describe('daemon layered log helpers', () => {
     expect(selected.some((p) => p.includes('/debug.'))).toBe(false);
     expect(selected.some((p) => p.includes('/noise.'))).toBe(false);
     expect(selected.some((p) => p.includes('/security.'))).toBe(false);
+    expect(selected.some((p) => p.includes('/access.'))).toBe(false);
   });
 
   it('reads hints from latest error segment', () => {
