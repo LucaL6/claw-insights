@@ -90,7 +90,7 @@ describe('SessionPanel', () => {
     });
 
     renderWithI18n(<SessionPanel />);
-    expect(screen.getAllByText('No sessions').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No active sessions').length).toBeGreaterThan(0);
   });
 
   it('shows skeleton when fetching with no data', () => {
@@ -108,7 +108,7 @@ describe('SessionPanel', () => {
     });
 
     renderWithI18n(<SessionPanel />);
-    expect(screen.getAllByText('No sessions').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No active sessions').length).toBeGreaterThan(0);
   });
 
   it('passes liveSession snapshot to SessionDrawer for selected subagent', () => {

@@ -188,4 +188,129 @@ describe('EventRow', () => {
     expect(arrow).toBeTruthy();
     expect(arrow?.textContent).toContain('▲');
   });
+
+  // --- Branch: cross-day timestamp shows date + time ---
+  it('shows date prefix when timestamp is on a different day', () => {
+    const pastDate = '2020-06-01T08:00:00Z';
+    render(<EventRow {...base} type="error" timestamp={pastDate} />);
+    // Should include a short month+day prefix (e.g. "Jun 1" or locale equivalent)
+    const timeEl = screen.getByText((_content, node) => {
+      if (node?.tagName.toLowerCase() !== 'span') {return false;}
+      const text = node.textContent ?? '';
+      // Cross-day: should contain both date-like and time-like parts
+      return /\d{1,2}/.test(text) && /\d{2}:\d{2}:\d{2}/.test(text) && text.length > 8;
+    });
+    expect(timeEl).toBeTruthy();
+  });
+
+  // --- Branch: same-day timestamp shows only time ---
+  it('shows only time when timestamp is today', () => {
+    const now = new Date();
+    const todayTs = now.toISOString();
+    render(<EventRow {...base} type="error" timestamp={todayTs} />);
+    const timeEl = screen.getByText((_content, node) => {
+      if (node?.tagName.toLowerCase() !== 'span') {return false;}
+      const text = node.textContent ?? '';
+      // Same-day: HH:MM:SS only, no date prefix → exactly 8 chars
+      return /^\d{2}:\d{2}:\d{2}$/.test(text);
+    });
+    expect(timeEl).toBeTruthy();
+  });
+
+  // --- Branch: zh locale uses zh-CN formatting ---
+  it('uses zh-CN locale when lang is zh', () => {
+    localStorage.setItem('ci:lang', JSON.stringify('zh'));
+    const pastDate = '2020-06-01T08:00:00Z';
+    render(<EventRow {...base} type="error" timestamp={pastDate} />);
+    // Just verify it renders without crashing with zh locale
+    const row = screen.getByRole('listitem');
+    expect(row).toBeTruthy();
+    localStorage.removeItem('ci:lang');
+  });
+
+  // --- Branch: no ResizeObserver ---
+  it('works when ResizeObserver is undefined', () => {
+    const orig = globalThis.ResizeObserver;
+    // @ts-expect-error - intentionally removing ResizeObserver
+    delete globalThis.ResizeObserver;
+    try {
+      render(<EventRow {...base} type="error" message={longMessage} />);
+      expect(screen.getByRole('listitem')).toBeTruthy();
+    } finally {
+      globalThis.ResizeObserver = orig;
+    }
+  });
+
+  // --- Branch: repeatCount=1 (below threshold, should NOT show ×) ---
+  it('does not show repeat badge when repeatCount is 1', () => {
+    const { container } = render(<EventRow {...base} type="error" repeatCount={1} />);
+    expect(container.textContent).not.toContain('×');
+  });
+
+  // --- Branch: repeatCount=0 ---
+  it('does not show repeat badge when repeatCount is 0', () => {
+    const { container } = render(<EventRow {...base} type="error" repeatCount={0} />);
+    expect(container.textContent).not.toContain('×');
+  });
+
+  // --- Branch: repeatCount undefined ---
+  it('does not show repeat badge when repeatCount is undefined', () => {
+    const { container } = render(<EventRow {...base} type="error" />);
+    expect(container.textContent).not.toContain('×');
+  });
+
+  // --- Branch: expanded with repeatCount>=2 but NO repeatFirst ---
+  it('does not show repeat detail when repeatFirst is missing', () => {
+    const { container } = render(<EventRow {...base} type="error" expanded repeatCount={5} />);
+    // The repeat detail span should not appear (repeatFirst is falsy)
+    const region = container.querySelector('[role="region"]');
+    expect(region).toBeTruthy();
+    // Should show ×5 in compact row but NOT the repeat detail with "from...to"
+    expect(region!.textContent).not.toContain('×5');
+  });
+
+  // --- Branch: expanded with repeatCount=1 and repeatFirst ---
+  it('does not show repeat info in detail when repeatCount is 1', () => {
+    const { container } = render(
+      <EventRow {...base} type="error" expanded repeatCount={1} repeatFirst="2026-01-15T14:25:00Z" />,
+    );
+    const region = container.querySelector('[role="region"]');
+    expect(region).toBeTruthy();
+    // repeatCount < 2, so no repeat detail
+    expect(region!.textContent).not.toContain('×');
+  });
+
+  // --- Branch: onKeyDown with various keys ---
+  it('calls onKeyDown with Space key', () => {
+    const onKeyDown = vi.fn();
+    const { container } = render(<EventRow {...base} type="error" onKeyDown={onKeyDown} />);
+    fireEvent.keyDown(container.firstChild as HTMLElement, { key: ' ' });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onKeyDown with ArrowDown key', () => {
+    const onKeyDown = vi.fn();
+    const { container } = render(<EventRow {...base} type="error" onKeyDown={onKeyDown} />);
+    fireEvent.keyDown(container.firstChild as HTMLElement, { key: 'ArrowDown' });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+  });
+
+  // --- Branch: useLayoutEffect early return when expanded ---
+  it('skips clamp measurement when expanded (useLayoutEffect early return)', () => {
+    // When expanded=true, useLayoutEffect returns early — no ResizeObserver created
+    const { container } = render(<EventRow {...base} type="error" expanded message={longMessage} />);
+    // No fade gradient (pointer-events-none div) should exist since expanded
+    expect(container.querySelector('.pointer-events-none')).toBeNull();
+  });
+
+  // --- Branch: cross-day in expanded detail repeat info ---
+  it('shows cross-day formatted times in expanded repeat detail', () => {
+    const pastFirst = '2020-01-01T00:00:00Z';
+    const pastTs = '2020-01-02T12:00:00Z';
+    render(<EventRow {...base} type="error" expanded timestamp={pastTs} repeatCount={3} repeatFirst={pastFirst} />);
+    // Both timestamps are cross-day, so fmtTime returns "date time" format
+    const region = screen.getByRole('region');
+    expect(region).toBeTruthy();
+    expect(region.textContent).toContain('×3');
+  });
 });

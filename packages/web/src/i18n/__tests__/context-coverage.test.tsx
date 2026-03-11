@@ -89,4 +89,135 @@ describe('i18n coverage delta', () => {
 
     Object.defineProperty(navigator, 'language', { value: original, configurable: true });
   });
+
+  it('toggleLang removes hash completely when lang is only param', () => {
+    localStorage.setItem('ci:lang', JSON.stringify('en'));
+    window.location.hash = '#/page?lang=en';
+
+    const { result } = renderHook(() => useI18n(), { wrapper });
+    act(() => result.current.toggleLang());
+
+    // lang was the only param — hash should just be the base
+    expect(window.location.hash).not.toContain('lang=');
+  });
+
+  it('toggleLang is no-op when hash has no query string', () => {
+    localStorage.setItem('ci:lang', JSON.stringify('en'));
+    window.location.hash = '#/page';
+
+    const { result } = renderHook(() => useI18n(), { wrapper });
+    act(() => result.current.toggleLang());
+
+    expect(result.current.lang).toBe('zh');
+    // hash should remain unchanged (no ?lang= to remove)
+    expect(window.location.hash).toBe('#/page');
+  });
+
+  it('URL hash with invalid lang value is ignored', () => {
+    localStorage.setItem('ci:lang', JSON.stringify('en'));
+    window.location.hash = '#/?lang=fr';
+
+    const { result } = renderHook(() => useI18n(), { wrapper });
+    // fr is invalid, should fall back to stored lang
+    expect(result.current.lang).toBe('en');
+  });
+
+  it('migration skips when ci:lang already exists', () => {
+    localStorage.setItem('ci:lang', JSON.stringify('en'));
+    localStorage.setItem('lang', 'zh'); // old key present but should be ignored
+
+    const { result } = renderHook(() => useI18n(), { wrapper });
+    expect(result.current.lang).toBe('en');
+    // old key should still be there (migration skipped)
+    expect(localStorage.getItem('lang')).toBe('zh');
+  });
+
+  it('migration handles JSON-wrapped invalid lang value', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    localStorage.setItem('lang', '"fr"'); // valid JSON but invalid lang
+
+    renderHook(() => useI18n(), { wrapper });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('migration skipped'));
+    expect(localStorage.getItem('lang')).toBe('"fr"');
+    warnSpy.mockRestore();
+  });
+
+  it('useI18n throws when used outside provider', () => {
+    expect(() => {
+      renderHook(() => useI18n());
+    }).toThrow('useI18n must be inside I18nProvider');
+  });
+
+  it('getUrlLang handles malformed hash gracefully', () => {
+    window.location.hash = '#/page?%invalid';
+    // Should not throw, just fall back
+    const { result } = renderHook(() => useI18n(), { wrapper });
+    expect(['en', 'zh']).toContain(result.current.lang);
+  });
+
+  it('detectBrowserLang catch branch — navigator.language throws', () => {
+    const desc =
+      Object.getOwnPropertyDescriptor(Navigator.prototype, 'language') ??
+      Object.getOwnPropertyDescriptor(navigator, 'language');
+    Object.defineProperty(navigator, 'language', {
+      get() {
+        throw new Error('blocked');
+      },
+      configurable: true,
+    });
+
+    // No stored lang, no URL lang → detectBrowserLang is called and should catch → 'en'
+    const { result } = renderHook(() => useI18n(), { wrapper });
+    expect(result.current.lang).toBe('en');
+
+    // Restore
+    if (desc) {
+      Object.defineProperty(navigator, 'language', desc);
+    } else {
+      Object.defineProperty(navigator, 'language', { value: 'en', configurable: true });
+    }
+  });
+
+  it('migrateOldLangKey catch branch — localStorage.getItem throws', () => {
+    const origGetItem = localStorage.getItem;
+    localStorage.getItem = () => {
+      throw new Error('quota');
+    };
+
+    // Should not throw — migration catch handles it
+    const { result } = renderHook(() => useI18n(), { wrapper });
+    expect(['en', 'zh']).toContain(result.current.lang);
+
+    localStorage.getItem = origGetItem;
+  });
+
+  it('toggleLang catch branch — window.location.hash getter throws', () => {
+    localStorage.setItem('ci:lang', JSON.stringify('en'));
+    const { result } = renderHook(() => useI18n(), { wrapper });
+
+    const origHash =
+      Object.getOwnPropertyDescriptor(window.location, 'hash') ??
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window.location), 'hash');
+
+    // Make .hash split throw inside toggleLang's try block
+    Object.defineProperty(window.location, 'hash', {
+      get() {
+        throw new Error('no hash');
+      },
+      set() {
+        /* noop */
+      },
+      configurable: true,
+    });
+
+    // toggleLang should catch and not throw
+    act(() => result.current.toggleLang());
+    expect(result.current.lang).toBe('zh'); // toggled via setLang before the try
+
+    // Restore
+    if (origHash) {
+      Object.defineProperty(window.location, 'hash', origHash);
+    }
+  });
 });

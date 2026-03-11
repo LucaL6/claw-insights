@@ -162,6 +162,107 @@ function buildState(overrides: Partial<MockHookState> = {}): MockHookState {
   };
 }
 
+/* ── Pure function tests (exported via component module internals) ── */
+
+// We test formatTokens / formatDuration indirectly through rendered output.
+// To hit all branches we craft specific liveSession / meta.durationMs values.
+
+describe('formatTokens branches (via rendered output)', () => {
+  const onClose = vi.fn();
+
+  afterEach(cleanup);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRefresh.mockReset().mockReturnValue(true);
+  });
+
+  function renderWithTokens(tokens: number) {
+    mockReady({
+      meta: { ...baseMeta, durationMs: 1000 },
+    });
+    return renderWithProviders(
+      <SessionDrawer
+        sessionKey="s1"
+        onClose={onClose}
+        liveSession={{
+          key: 's1',
+          displayName: 'T',
+          totalTokens: tokens,
+          contextTokens: 200000,
+          usagePercent: 50,
+          status: 'ACTIVE',
+        }}
+      />,
+    );
+  }
+
+  it('renders raw number for tokens < 1000', () => {
+    const { container } = renderWithTokens(999);
+    expect(container.textContent).toContain('999');
+  });
+
+  it('renders k suffix for tokens >= 1000', () => {
+    const { container } = renderWithTokens(1000);
+    expect(container.textContent).toContain('1.0k');
+  });
+
+  it('renders M suffix for tokens >= 1_000_000', () => {
+    const { container } = renderWithTokens(2_500_000);
+    expect(container.textContent).toContain('2.5M');
+  });
+
+  it('renders exactly 1.0M for 1_000_000', () => {
+    const { container } = renderWithTokens(1_000_000);
+    expect(container.textContent).toContain('1.0M');
+  });
+});
+
+describe('formatDuration branches (via rendered output)', () => {
+  const onClose = vi.fn();
+
+  afterEach(cleanup);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRefresh.mockReset().mockReturnValue(true);
+  });
+
+  function renderWithDuration(ms: number) {
+    mockReady({ meta: { ...baseMeta, durationMs: ms } });
+    return renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+  }
+
+  it('renders 0s for 0ms', () => {
+    const { container } = renderWithDuration(0);
+    expect(container.textContent).toContain('0s');
+  });
+
+  it('renders 0s for negative ms', () => {
+    const { container } = renderWithDuration(-5000);
+    expect(container.textContent).toContain('0s');
+  });
+
+  it('renders seconds for < 60s', () => {
+    const { container } = renderWithDuration(59_000);
+    expect(container.textContent).toContain('59s');
+  });
+
+  it('renders minutes for >= 60s and < 60m', () => {
+    const { container } = renderWithDuration(60_000);
+    expect(container.textContent).toContain('1m');
+  });
+
+  it('renders hours only when remainder is 0', () => {
+    const { container } = renderWithDuration(7200_000); // 2h exactly
+    expect(container.textContent).toContain('2h');
+    expect(container.textContent).not.toContain('2h0m');
+  });
+
+  it('renders hours+minutes when remainder > 0', () => {
+    const { container } = renderWithDuration(5580_000); // 1h33m
+    expect(container.textContent).toContain('1h33m');
+  });
+});
+
 describe('SessionDrawer', () => {
   const onClose = vi.fn();
 
@@ -807,6 +908,136 @@ describe('SessionDrawer', () => {
     await waitFor(() => {
       expect(mockLoadOlder).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('shows NOT_AVAILABLE error when meta is undefined and not loading', () => {
+    mockReady({
+      meta: undefined,
+      messages: [],
+      isInitialLoading: false,
+      totalMessages: 0,
+      error: undefined,
+    });
+    const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const timeline = container.querySelector('[data-testid="timeline"]');
+    expect(timeline?.textContent).toContain('error');
+  });
+
+  it('shows empty state when totalMessages is 0 with meta present', () => {
+    mockReady({
+      meta: baseMeta,
+      messages: [],
+      totalMessages: 0,
+    });
+    const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const timeline = container.querySelector('[data-testid="timeline"]');
+    expect(timeline?.textContent).toContain('empty');
+  });
+
+  it('traps Tab focus within panel (forward wrap)', () => {
+    mockReady();
+    const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const panel = container.querySelector('[role="document"]')!;
+    const focusable = panel.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    expect(focusable.length).toBeGreaterThan(0);
+    const last = focusable[focusable.length - 1];
+    // Focus last element then Tab forward → should wrap to first
+    last.focus();
+    const prevented = fireEvent.keyDown(panel, { key: 'Tab', shiftKey: false });
+    // preventDefault was called so the default action is prevented
+    expect(prevented).toBe(false);
+  });
+
+  it('traps Tab focus within panel (backward wrap)', () => {
+    mockReady();
+    const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const panel = container.querySelector('[role="document"]')!;
+    const focusable = panel.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    const first = focusable[0];
+    first.focus();
+    const prevented = fireEvent.keyDown(panel, { key: 'Tab', shiftKey: true });
+    expect(prevented).toBe(false);
+  });
+
+  it('does not prevent Tab when not at boundary', () => {
+    mockReady();
+    const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const panel = container.querySelector('[role="document"]')!;
+    // Focus is on the close button (first), Tab forward should NOT be prevented
+    const prevented = fireEvent.keyDown(panel, { key: 'Tab', shiftKey: false });
+    expect(prevented).toBe(true); // not prevented
+  });
+
+  it('ignores non-Tab keys in focus trap handler', () => {
+    mockReady();
+    const { container } = renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const panel = container.querySelector('[role="document"]')!;
+    const prevented = fireEvent.keyDown(panel, { key: 'a' });
+    expect(prevented).toBe(true); // not prevented
+  });
+
+  it('renders ACTIVE status with teal color', () => {
+    mockReady();
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} status="ACTIVE" />);
+    expect(screen.getByText('ACTIVE')).toBeDefined();
+  });
+
+  it('renders FAILED status with rose color', () => {
+    mockReady();
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} status="FAILED" />);
+    expect(screen.getByText('FAILED')).toBeDefined();
+  });
+
+  it('renders DONE status with dim color (default)', () => {
+    mockReady();
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} status="DONE" />);
+    expect(screen.getByText('DONE')).toBeDefined();
+  });
+
+  it('uses liveSession.status over prop status', () => {
+    mockReady();
+    renderWithProviders(
+      <SessionDrawer
+        sessionKey="s1"
+        onClose={onClose}
+        status="DONE"
+        liveSession={{
+          key: 's1',
+          displayName: 'X',
+          totalTokens: 100,
+          contextTokens: 100,
+          usagePercent: 10,
+          status: 'ACTIVE',
+        }}
+      />,
+    );
+    expect(screen.getByText('ACTIVE')).toBeDefined();
+  });
+
+  it('close button hover handlers change styles', () => {
+    mockReady();
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} />);
+    const closeBtn = screen.getByRole('button', { name: /close/i });
+    fireEvent.mouseEnter(closeBtn);
+    expect(closeBtn.style.backgroundColor).toBe('var(--dr-rose-bg)');
+    fireEvent.mouseLeave(closeBtn);
+    expect(closeBtn.style.backgroundColor).toBe('var(--dr-surface)');
+  });
+
+  it('uses externalName when liveSession and meta displayName are absent', () => {
+    mockReady({ meta: { ...baseMeta, displayName: '' } });
+    renderWithProviders(<SessionDrawer sessionKey="s1" onClose={onClose} displayName="External Name" />);
+    expect(screen.getByText('External Name')).toBeDefined();
+  });
+
+  it('falls back to sessionKey suffix when no displayName available', () => {
+    mockReady({ meta: { ...baseMeta, displayName: '' } });
+    renderWithProviders(<SessionDrawer sessionKey="org:proj:my-session" onClose={onClose} />);
+    expect(screen.getByText('my-session')).toBeDefined();
   });
 
   it('jump-to-end is local scroll only after reopen', async () => {

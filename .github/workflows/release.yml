@@ -4,8 +4,13 @@ on:
   push:
     tags: ['v*']
 
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build:
@@ -21,6 +26,9 @@ jobs:
 
       - run: npm ci
 
+      - name: 'Security gate (prod deps: high+critical)'
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Generate types
         run: npm run codegen
 
@@ -32,6 +40,19 @@ jobs:
 
       - name: Build release
         run: bash scripts/build-release.sh "${GITHUB_REF_NAME#v}"
+
+      - name: Install from tarball
+        run: npm install -g ./dist/claw-insights-*.tgz
+
+      - name: Verify CLI version
+        run: |
+          ACTUAL_RAW="$(claw-insights --version | head -n 1 | awk '{print $1}')"
+          ACTUAL="${ACTUAL_RAW#v}"
+          EXPECTED="${GITHUB_REF_NAME#v}"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Version mismatch: expected ${EXPECTED}, got ${ACTUAL_RAW}" >&2
+            exit 1
+          fi
 
       - name: Upload tgz artifact
         uses: actions/upload-artifact@v4
@@ -72,6 +93,6 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Publish to npm
-        run: npm publish claw-insights-*.tgz --access public
+        run: npm publish claw-insights-*.tgz --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

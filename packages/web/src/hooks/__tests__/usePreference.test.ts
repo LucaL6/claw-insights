@@ -1,4 +1,4 @@
-import { act,renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { usePreference } from '../usePreference';
@@ -7,10 +7,20 @@ if (!globalThis.localStorage || typeof globalThis.localStorage.getItem !== 'func
   const store: Record<string, string> = {};
   (globalThis as unknown as { localStorage: Storage }).localStorage = {
     getItem: (k: string) => store[k] ?? null,
-    setItem: (k: string, v: string) => { store[k] = v; },
-    removeItem: (k: string) => { delete store[k]; },
-    clear: () => { for (const k in store) {delete store[k];} },
-    get length() { return Object.keys(store).length; },
+    setItem: (k: string, v: string) => {
+      store[k] = v;
+    },
+    removeItem: (k: string) => {
+      delete store[k];
+    },
+    clear: () => {
+      for (const k in store) {
+        delete store[k];
+      }
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
     key: (i: number) => Object.keys(store)[i] ?? null,
   };
 }
@@ -117,6 +127,74 @@ describe('usePreference', () => {
     });
 
     expect(result.current[0]).toBe('mine');
+  });
+
+  it('resets to defaultValue when storage event has newValue === null', () => {
+    const { result } = renderHook(() => usePreference('nullable', 'default'));
+    // First set a value
+    act(() => result.current[1]('changed'));
+    expect(result.current[0]).toBe('changed');
+
+    // Simulate key removal from another tab (newValue === null)
+    act(() => {
+      const event = new StorageEvent('storage', {
+        key: 'ci:nullable',
+        newValue: null,
+        storageArea: localStorage,
+      });
+      window.dispatchEvent(event);
+    });
+
+    expect(result.current[0]).toBe('default');
+  });
+
+  it('ignores storage event when validate rejects the new value', () => {
+    const { result } = renderHook(() =>
+      usePreference('validated-sync', 'good', {
+        validate: (v) => v === 'good',
+      }),
+    );
+
+    act(() => {
+      const event = new StorageEvent('storage', {
+        key: 'ci:validated-sync',
+        newValue: JSON.stringify('bad'),
+        storageArea: localStorage,
+      });
+      window.dispatchEvent(event);
+    });
+
+    // Should stay at original value because validate rejected
+    expect(result.current[0]).toBe('good');
+  });
+
+  it('still updates state when localStorage.setItem throws', () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    const { result } = renderHook(() => usePreference('full', 'init'));
+    act(() => result.current[1]('new-val'));
+
+    // State should still update even though setItem threw
+    expect(result.current[0]).toBe('new-val');
+    setItemSpy.mockRestore();
+  });
+
+  it('ignores storage event with bad JSON (catch branch)', () => {
+    const { result } = renderHook(() => usePreference('bad-sync', 'safe'));
+
+    act(() => {
+      const event = new StorageEvent('storage', {
+        key: 'ci:bad-sync',
+        newValue: '%%%not-json%%%',
+        storageArea: localStorage,
+      });
+      window.dispatchEvent(event);
+    });
+
+    // Should remain unchanged due to catch block
+    expect(result.current[0]).toBe('safe');
   });
 
   it('cleans up storage event listener on unmount', () => {

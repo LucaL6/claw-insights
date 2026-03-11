@@ -201,6 +201,133 @@ describe('SessionCard (compact)', () => {
   });
 });
 
+describe('SessionCard - keyboard & sessionKey branches', () => {
+  const baseProps = {
+    displayName: 'test-session',
+    model: 'claude-opus-4-6',
+    channel: 'webchat' as string | null,
+    totalTokens: 50000,
+    usagePercent: 25,
+    status: 'ACTIVE',
+    kind: 'direct',
+    updatedAt: Date.now() - 300_000,
+  };
+
+  it('Enter key calls onSelect with sessionKey (primary)', () => {
+    const onSelect = vi.fn();
+    const { container } = renderWithI18n(<SessionCard {...baseProps} sessionKey="k1" onSelect={onSelect} />);
+    const card = container.firstElementChild as HTMLElement;
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onSelect).toHaveBeenCalledWith('k1');
+  });
+
+  it('Space key calls onSelect with sessionKey (primary)', () => {
+    const onSelect = vi.fn();
+    const { container } = renderWithI18n(<SessionCard {...baseProps} sessionKey="k1" onSelect={onSelect} />);
+    const card = container.firstElementChild as HTMLElement;
+    fireEvent.keyDown(card, { key: ' ' });
+    expect(onSelect).toHaveBeenCalledWith('k1');
+  });
+
+  it('Enter key does nothing when sessionKey is undefined (primary)', () => {
+    const onSelect = vi.fn();
+    const { container } = renderWithI18n(<SessionCard {...baseProps} onSelect={onSelect} />);
+    const card = container.firstElementChild as HTMLElement;
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('click does nothing when sessionKey is undefined (primary)', () => {
+    const onSelect = vi.fn();
+    const { container } = renderWithI18n(<SessionCard {...baseProps} onSelect={onSelect} />);
+    const card = container.firstElementChild as HTMLElement;
+    fireEvent.click(card);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('Enter key calls onSelect with sessionKey (compact)', () => {
+    const onSelect = vi.fn();
+    const { container } = renderWithI18n(
+      <SessionCard {...baseProps} variant="compact" sessionKey="k2" onSelect={onSelect} />,
+    );
+    const card = container.firstElementChild as HTMLElement;
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onSelect).toHaveBeenCalledWith('k2');
+  });
+
+  it('Space key does nothing when sessionKey is undefined (compact)', () => {
+    const onSelect = vi.fn();
+    const { container } = renderWithI18n(<SessionCard {...baseProps} variant="compact" onSelect={onSelect} />);
+    const card = container.firstElementChild as HTMLElement;
+    fireEvent.keyDown(card, { key: ' ' });
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('click does nothing when sessionKey is undefined (compact)', () => {
+    const onSelect = vi.fn();
+    const { container } = renderWithI18n(<SessionCard {...baseProps} variant="compact" onSelect={onSelect} />);
+    const card = container.firstElementChild as HTMLElement;
+    fireEvent.click(card);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('other keys are ignored (primary)', () => {
+    const onSelect = vi.fn();
+    const { container } = renderWithI18n(<SessionCard {...baseProps} sessionKey="k1" onSelect={onSelect} />);
+    const card = container.firstElementChild as HTMLElement;
+    fireEvent.keyDown(card, { key: 'a' });
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+});
+
+describe('SessionCard - compact boundary branches', () => {
+  const baseProps = {
+    displayName: 'sub-1',
+    model: 'claude-opus-4-6',
+    channel: 'webchat' as string | null,
+    totalTokens: 5000,
+    usagePercent: 10,
+    status: 'ACTIVE',
+    updatedAt: Date.now() - 10_000,
+    variant: 'compact' as const,
+  };
+
+  it('applies selected border in compact variant', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} sessionKey="k1" selected />);
+    const card = container.firstElementChild as HTMLElement;
+    const borderStyle = card.getAttribute('style') ?? '';
+    expect(borderStyle).toContain('var(--violet)');
+  });
+
+  it('applies selected border in primary variant', () => {
+    const { container } = renderWithI18n(
+      <SessionCard {...baseProps} variant="primary" kind="direct" sessionKey="k1" selected />,
+    );
+    const card = container.firstElementChild as HTMLElement;
+    const borderStyle = card.getAttribute('style') ?? '';
+    expect(borderStyle).toContain('var(--violet)');
+  });
+
+  it('compact FAILED uses subtle border (isDone=true) when not selected', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} status="FAILED" />);
+    const card = container.firstElementChild as HTMLElement;
+    const borderStyle = card.getAttribute('style') ?? '';
+    expect(borderStyle).toContain('var(--border-subtle)');
+  });
+
+  it('compact DONE uses subtle border and reduced opacity', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} status="DONE" />);
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.className).toContain('opacity-60');
+  });
+
+  it('compact ACTIVE (not done) does not have opacity-60', () => {
+    const { container } = renderWithI18n(<SessionCard {...baseProps} status="ACTIVE" />);
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.className).not.toContain('opacity-60');
+  });
+});
+
 describe('SessionCard (primary) - interactions', () => {
   const baseProps = {
     displayName: 'test-session',

@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultSnapshotDir, generateSnapshotFilename, parseSnapshotArgs, runSnapshotCmd } from '../snapshot-cmd.js';

@@ -208,6 +208,42 @@ describe('ConnectionHealthStore', () => {
     expect(snap1).toBe(snap2);
   });
 
+  it('unregisterSse on unknown source is a no-op', () => {
+    const listener = vi.fn();
+    store.subscribe(listener);
+    store.unregisterSse('never-registered');
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('unregisterSse triggers grace when remaining sources are unhealthy', () => {
+    store.reportFetchSuccess();
+    store.reportSseHealth('rq-1', true);
+    store.reportSseHealth('rq-2', false);
+    const listener = vi.fn();
+    store.subscribe(listener);
+    // removing the only healthy source → newAgg becomes false → grace scheduled
+    // oldAgg was true, newAgg is false → _invalidate called
+    store.unregisterSse('rq-1');
+    expect(store.getSnapshot().sseHealthy).toBe(false);
+    expect(listener).toHaveBeenCalled();
+    // grace timer should fire
+    vi.advanceTimersByTime(15_001);
+    expect(store.getSnapshot().isOffline).toBe(true);
+  });
+
+  it('_maybeScheduleGrace early-returns when already offline', () => {
+    store.reportFetchSuccess();
+    store.reportSseHealth('rq-1', false);
+    vi.advanceTimersByTime(15_001);
+    expect(store.getSnapshot().isOffline).toBe(true);
+    const listener = vi.fn();
+    store.subscribe(listener);
+    // This calls _maybeScheduleGrace but should early-return since already offline
+    store.reportFetchFailure();
+    vi.advanceTimersByTime(20_000);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it('destroy clears timer and listeners', () => {
     const listener = vi.fn();
     store.subscribe(listener);

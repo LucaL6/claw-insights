@@ -9,6 +9,7 @@ import { useI18n } from '../../i18n/context';
 import { CollapsibleSection } from '../layout/CollapsibleSection';
 import { SessionSkeleton } from '../layout/Skeleton';
 import { SessionDrawer } from './SessionDrawer';
+import { SessionEmptyState } from './SessionEmptyState';
 import { SessionGroup } from './SessionGroup';
 import { ToggleButton } from './shared/ToggleButton';
 import type { SessionData } from './shared/types';
@@ -170,9 +171,7 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
               <SessionSkeleton />
             </>
           )}
-          {!result.fetching && sessions.length === 0 && (
-            <p className="text-xs text-fg-dim">{t('sessions.noSessions')}</p>
-          )}
+          {!result.fetching && sessions.length === 0 && <SessionEmptyState mode={viewMode} />}
         </div>
       </CollapsibleSection>
       {selectedKey && (
