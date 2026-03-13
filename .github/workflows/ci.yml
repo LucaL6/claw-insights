@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -58,6 +58,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+
+      - run: npm ci
 
       - name: Verify workflow policy tests
         run: node --test scripts/__tests__/workflow-policy.test.mjs
@@ -229,14 +232,35 @@ jobs:
           SERVER_PID=$!
           trap 'kill ${SERVER_PID} 2>/dev/null || true' EXIT
 
-          for i in {1..30}; do
+          for attempt in {1..30}; do
             if curl -sf "http://127.0.0.1:${CLAW_INSIGHTS_SERVER_PORT}/health" >/dev/null; then
-              break
+              if kill -0 ${SERVER_PID} 2>/dev/null; then
+                break
+              fi
+
+              echo "::error::Server process exited; health endpoint is served by a different process"
+              echo "--- Server log ---"
+              cat /tmp/claw-insights-server.log || true
+              exit 1
             fi
+            # Check if server process is still alive
+            if ! kill -0 ${SERVER_PID} 2>/dev/null; then
+              echo "::error::Server process died during startup"
+              echo "--- Server log ---"
+              cat /tmp/claw-insights-server.log || true
+              exit 1
+            fi
+            echo "Waiting for server health endpoint (${attempt}/30)..."
             sleep 1
           done
 
-          curl -sf "http://127.0.0.1:${CLAW_INSIGHTS_SERVER_PORT}/health" >/dev/null
+          if ! curl -sf "http://127.0.0.1:${CLAW_INSIGHTS_SERVER_PORT}/health" >/dev/null; then
+            echo "::error::Server health check failed after 30 attempts"
+            echo "--- Server log ---"
+            cat /tmp/claw-insights-server.log || true
+            exit 1
+          fi
+
           npm run -w @claw-insights/server check:session-hierarchy
 
       - name: Make mock CLI executable

@@ -230,7 +230,7 @@ export class LogWriter {
   }
 
   private createDestination(filePath: string, sync: boolean): PinoDestination {
-    return pino.destination({
+    const destination = pino.destination({
       dest: filePath,
       sync,
       mkdir: true,
@@ -238,6 +238,16 @@ export class LogWriter {
       mode: this.config.fileMode,
       minLength: sync ? 0 : 4096,
     });
+
+    destination.on('error', (error: Error) => {
+      try {
+        process.stderr.write(`[claw-insights] log destination error (${filePath}): ${error.message}\n`);
+      } catch {
+        // best effort only
+      }
+    });
+
+    return destination;
   }
 
   private syncModeFor(stream: LogStream, _lane: LogLane): boolean {

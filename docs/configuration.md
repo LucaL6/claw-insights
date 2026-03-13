@@ -136,7 +136,7 @@ If a browser session expires, is cleared, or stays idle beyond rotation + grace 
 
 ```bash
 # Bearer token (recommended for scripts)
-curl -H "Authorization: Bearer YOUR_EXAMPLE_TOKEN # gitleaks:allow" http://127.0.0.1:41041/graphql \
+curl -H "Authorization: Bearer YOUR_TOKEN" # gitleaks:allow http://127.0.0.1:41041/graphql \
   -H "Content-Type: application/json" \
   -d '{"query":"{ gateway { version uptime } }"}'
 ```

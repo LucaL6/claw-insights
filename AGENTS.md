@@ -7,10 +7,7 @@ This file is for AI agents. It indexes available skills for automated interactio
 | Skill | Description | Location |
 |-------|-------------|----------|
 | **install** | Install, configure, and run the dashboard | `docs/skills/install/SKILL.md` |
-| **overview** | Architecture, tech stack, data flow | `docs/skills/overview/SKILL.md` |
-| **api** | GraphQL and REST API queries | `docs/skills/api/SKILL.md` |
-| **screenshot** | Dashboard screenshots via POST /api/snapshot | `docs/skills/screenshot/SKILL.md` |
-| **development** | Local dev setup, tests, codegen, PR workflow | `docs/skills/development/SKILL.md` |
+| **snapshot** | Dashboard screenshots via POST /api/snapshot | `docs/skills/snapshot/SKILL.md` |
 
 ## Quick Reference
 

@@ -22,6 +22,21 @@ async function advanceAndFlush(ms: number, rounds = 5) {
   }
 }
 
+async function waitForCondition(
+  check: () => boolean,
+  { timeoutMs = 2_000, stepMs = 20 }: { timeoutMs?: number; stepMs?: number } = {},
+) {
+  const steps = Math.ceil(timeoutMs / stepMs);
+  for (let i = 0; i < steps; i++) {
+    if (check()) {
+      return;
+    }
+    await advanceAndFlush(stepMs);
+  }
+
+  throw new Error(`Condition not met within ${timeoutMs}ms`);
+}
+
 function makeFile(dir: string, name: string, content: string): string {
   const p = join(dir, name);
   writeFileSync(p, content);
@@ -103,7 +118,7 @@ describe('watch.ts branch coverage', () => {
     });
 
     const w = createWatcher({ dir, fileStates, processTask, pollIntervalMs: 100, dirScanIntervalMs: 100_000 });
-    await advanceAndFlush(0);
+    await waitForCondition(() => processTask.mock.calls.length >= 1, { timeoutMs: 1_000, stepMs: 20 });
 
     // Only p1 should be processed since p2 was deleted
     expect(processTask).toHaveBeenCalledTimes(1);
@@ -169,10 +184,9 @@ describe('watch.ts branch coverage', () => {
     makeFile(dir, 'session.jsonl', '{"ts":1}\n');
 
     const w = createWatcher({ dir, fileStates, processTask, pollIntervalMs: 100_000, dirScanIntervalMs: 100 });
-    await advanceAndFlush(0);
 
     const key = join(dir, 'session.jsonl');
-    expect(fileStates.has(key)).toBe(true);
+    await waitForCondition(() => fileStates.has(key), { timeoutMs: 1_000, stepMs: 20 });
     expect(fileStates.get(key)!.offset).toBe(0);
     w.destroy();
   });
@@ -223,7 +237,7 @@ describe('watch.ts branch coverage', () => {
     });
 
     const w = createWatcher({ dir, fileStates, processTask, pollIntervalMs: 100, dirScanIntervalMs: 100_000 });
-    await advanceAndFlush(0);
+    await waitForCondition(() => processTask.mock.calls.length >= 1, { timeoutMs: 1_000, stepMs: 20 });
 
     expect(processTask.mock.calls[0][0].offset).toBe(0);
     expect(processTask.mock.calls[0][0].partial).toBe('');

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/index.ts",
-    "build": "tsup --config tsup.config.ts && sed -i '' 's/from \"sqlite\"/from \"node:sqlite\"/g' dist/*.js dist/**/*.js 2>/dev/null || true && cp src/schema/schema.graphql dist/schema.graphql",
+    "build": "tsup --config tsup.config.ts && node scripts/normalize-sqlite-imports.mjs && cp src/schema/schema.graphql dist/schema.graphql",
     "lint": "eslint src/",
     "verify:spawnedby": "node scripts/verify-openclaw-spawnedby.mjs",
     "check:session-hierarchy": "node scripts/check-session-hierarchy-parity.mjs",

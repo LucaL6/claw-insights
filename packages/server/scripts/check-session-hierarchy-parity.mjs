@@ -66,6 +66,12 @@ function resolveSessionsPath() {
   return process.env.CLAW_INSIGHTS_SESSIONS_PATH || DEFAULT_SESSIONS_PATH;
 }
 
+/** @returns {string} */
+function resolveSourceId() {
+  const sourceId = process.env.CLAW_INSIGHTS_SOURCE_ID;
+  return sourceId && sourceId.trim() ? sourceId.trim() : 'agent:main';
+}
+
 /**
  * @param {string} graphqlUrl
  * @param {string} apiToken
@@ -73,12 +79,11 @@ function resolveSessionsPath() {
  */
 async function fetchGraphqlSessions(graphqlUrl, apiToken) {
   const query = `
-    query SessionHierarchyParity {
-      sessions {
-        key
-        subAgents {
-          key
-          subAgents {
+    query SessionHierarchyParity($selector: SourceSelector!) {
+      source(selector: $selector) {
+        __typename
+        ... on AgentNamespace {
+          sessions {
             key
             subAgents {
               key
@@ -86,6 +91,12 @@ async function fetchGraphqlSessions(graphqlUrl, apiToken) {
                 key
                 subAgents {
                   key
+                  subAgents {
+                    key
+                    subAgents {
+                      key
+                    }
+                  }
                 }
               }
             }
@@ -95,13 +106,15 @@ async function fetchGraphqlSessions(graphqlUrl, apiToken) {
     }
   `;
 
+  const variables = { selector: { id: resolveSourceId() } };
+
   const response = await fetch(graphqlUrl, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       authorization: `Bearer ${apiToken}`,
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, variables }),
   });
 
   if (!response.ok) {
@@ -120,11 +133,20 @@ async function fetchGraphqlSessions(graphqlUrl, apiToken) {
   }
 
   const data = payload.data;
-  if (!isRecord(data) || !Array.isArray(data.sessions)) {
-    throw new Error('GraphQL response missing data.sessions');
+  if (!isRecord(data) || !isRecord(data.source)) {
+    throw new Error('GraphQL response missing data.source');
   }
 
-  return /** @type {Array<{ key: string, subAgents: Array<unknown> }>} */ (data.sessions);
+  const source = data.source;
+  if (source.__typename !== 'AgentNamespace') {
+    throw new Error(`GraphQL source resolved to unexpected type: ${String(source.__typename)}`);
+  }
+
+  if (!Array.isArray(source.sessions)) {
+    throw new Error('GraphQL response missing data.source.sessions');
+  }
+
+  return /** @type {Array<{ key: string, subAgents: Array<unknown> }>} */ (source.sessions);
 }
 
 /**

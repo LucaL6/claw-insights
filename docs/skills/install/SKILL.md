@@ -1,42 +1,39 @@
 ---
 name: install
-description: Install, configure, and run the Claw Insights dashboard. Use when setting up a new instance, changing configuration, or managing the service lifecycle.
+description: Install and run the Claw Insights dashboard. Use when setting up a new instance, configuring auth or port, starting/stopping the service, or upgrading.
 ---
 
-# Install & Configure Claw Insights
+# Install Claw Insights
 
-Install and run the OpenClaw monitoring dashboard. Requires Node.js ≥22.5 and a running OpenClaw gateway.
+Monitoring dashboard for OpenClaw agents. Requires Node.js ≥22.5 and a running OpenClaw gateway.
 
-## Quick Reference
+## Quick Start
 
 ```bash
-# Install (from source)
-
-git clone https://github.com/nicepkg/claw-insights.git
+git clone https://github.com/LucaL6/claw-insights.git
 cd claw-insights && npm install && npm run build && npm link
 
-# Start
-claw-insights start                   # Opens token URL in output
-claw-insights start --no-auth         # Disable authentication
-claw-insights start --port 8080       # Custom port
-
-# Verify
-curl http://127.0.0.1:41041/health     # No auth required
-
-# Upgrade (pull latest + rebuild)
-git pull && npm install && npm run build
+claw-insights start              # Opens browser, prints auth token
+claw-insights start --no-auth    # Disable authentication
+claw-insights start --port 8080  # Custom port
 ```
 
-### Key Environment Variables
+Verify: `curl http://127.0.0.1:41041/health`
 
-| Variable                    | Default            | Description                  |
-| --------------------------- | ------------------ | ---------------------------- |
-| `CLAW_INSIGHTS_SERVER_PORT` | `41041`            | Server port                  |
-| `CLAW_INSIGHTS_API_TOKEN`   | _(auto-generated)_ | Auth token (min 32 chars)    |
-| `CLAW_INSIGHTS_NO_AUTH`     | `false`            | Disable auth (`true` or `1`) |
+## Configuration
 
-## Details
+| Variable                    | Default  | Description               |
+| --------------------------- | -------- | ------------------------- |
+| `CLAW_INSIGHTS_SERVER_PORT` | `41041`  | Server port               |
+| `CLAW_INSIGHTS_API_TOKEN`   | _(auto)_ | Auth token (min 32 chars) |
+| `CLAW_INSIGHTS_NO_AUTH`     | `false`  | Disable auth              |
 
-For full documentation, see:
+## Upgrade
 
-- [Configuration](../../configuration.md) — all env vars, config file, NODE_ENV defaults, auth flow
+```bash
+cd claw-insights && git pull && npm install && npm run build
+```
+
+## Next Step
+
+Configure the `snapshot` skill for agent-driven screenshots (REST or MCP).

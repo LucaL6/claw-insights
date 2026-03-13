@@ -34,6 +34,23 @@ describe('LogWriter', () => {
     expect(files[0]).toMatch(/^app\.\d{4}-\d{2}-\d{2}\.0001\.log$/);
   });
 
+  it('handles destination error events without throwing', async () => {
+    const writer = new LogWriter({ logDir });
+    writer.append('app', 'bestEffort', '{"msg":"hello"}');
+
+    const states = (
+      writer as unknown as {
+        states: Map<string, { destination: { emit: (event: string, error: Error) => void } }>;
+      }
+    ).states;
+    const destination = states.get('app')?.destination;
+
+    expect(destination).toBeDefined();
+    expect(() => destination?.emit('error', new Error('simulated destination failure'))).not.toThrow();
+
+    await writer.shutdown();
+  });
+
   it('uses stream-level sync policy: error/security sync, app/debug/noise async', async () => {
     const writer = new LogWriter({ logDir });
 

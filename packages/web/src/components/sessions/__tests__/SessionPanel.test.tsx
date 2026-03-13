@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SessionsQuery } from '../../../graphql/queries';
@@ -109,6 +109,28 @@ describe('SessionPanel', () => {
 
     renderWithI18n(<SessionPanel />);
     expect(screen.getAllByText('No active sessions').length).toBeGreaterThan(0);
+  });
+
+  it('does not enter a render loop when session data is present', async () => {
+    setupQueryMock({
+      queryData: { source: { __typename: 'AgentNamespace', sessions: [makeSession()] } },
+    });
+
+    let now = 1_700_000_000_000;
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => {
+      now += 1;
+      return now;
+    });
+
+    try {
+      renderWithI18n(<SessionPanel />);
+
+      await waitFor(() => {
+        expect(nowSpy.mock.calls.length).toBeLessThan(200);
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it('passes liveSession snapshot to SessionDrawer for selected subagent', () => {

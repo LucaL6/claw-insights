@@ -197,10 +197,11 @@ check "auth: Bearer token → 200" \
     -H \"Authorization: Bearer ${AUTH_TOKEN}\" \
     -d '{\"format\":\"json\"}' | jq -e '.sessions'"
 
+BAD_TOKEN='wrong-token-should-be-rejected' # gitleaks:allow
 check "auth: wrong token → 403" \
   "curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:${CI_PORT}/api/snapshot \
     -H 'Content-Type: application/json' \
-    -H 'Authorization: Bearer WRONG_TOKEN_EXAMPLE # gitleaks:allow' \
+    -H \"Authorization: Bearer ${BAD_TOKEN}\" \
     -d '{\"format\":\"json\"}' | grep -q '403'"
 
 claw-insights stop 2>/dev/null || true

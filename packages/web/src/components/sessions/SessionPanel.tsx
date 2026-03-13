@@ -51,28 +51,23 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
     { sources: ['sessions'], debounceMs: 500 },
   );
 
-  // Normalise source-centric shape
+  // Normalize source-centric shape
   const sessionsFromSource = queryResult.data?.source?.sessions ?? [];
-  const result = {
-    data: queryResult.data ? { sessions: sessionsFromSource } : undefined,
-    fetching: queryResult.fetching,
-    error: queryResult.error,
-  };
 
   useEffect(() => {
     // Sync fetch timestamp for UI display — intentional setState in effect
-    if (result.data) {
+    if (queryResult.data) {
       setLastFetchTime(Date.now()); // eslint-disable-line react-hooks/set-state-in-effect -- timestamp sync after fetch, same pattern as useMetricsData
     }
-  }, [result.data]);
+  }, [queryResult.data]);
 
   useEffect(() => {
-    if (result.data && onReady) {
+    if (queryResult.data && onReady) {
       onReady();
     }
-  }, [result.data, onReady]);
+  }, [queryResult.data, onReady]);
 
-  const sessions: SessionData[] = (result.data?.sessions ?? []).map((s) => ({
+  const sessions: SessionData[] = sessionsFromSource.map((s) => ({
     ...s,
     status: s.status as string,
     subAgents: s.subAgents.map((sa) => ({
@@ -164,14 +159,14 @@ export function SessionPanel({ onReady }: { onReady?: () => void } = {}) {
               referenceNowMs={lastFetchTime || undefined}
             />
           ))}
-          {result.fetching && !result.data && (
+          {queryResult.fetching && !queryResult.data && (
             <>
               <SessionSkeleton />
               <SessionSkeleton />
               <SessionSkeleton />
             </>
           )}
-          {!result.fetching && sessions.length === 0 && <SessionEmptyState mode={viewMode} />}
+          {!queryResult.fetching && sessions.length === 0 && <SessionEmptyState mode={viewMode} />}
         </div>
       </CollapsibleSection>
       {selectedKey && (
