@@ -1,13 +1,19 @@
 ---
 name: claw-insights-snapshot
-description: Capture Claw Insights dashboard as PNG, SVG, or JSON via REST API. Use when taking dashboard screenshots, sending status images to Slack or Telegram, generating visual reports, querying metrics programmatically, or monitoring agent activity.
+description: 'Generate visual status cards for your OpenClaw agent as PNG, SVG, or JSON. The rendered cards are designed for social sharing and mobile-friendly channels — cute, compact, and informative at a glance. Use when pushing agent status to Slack, Telegram, Discord, WhatsApp, or any chat channel, generating visual reports of token usage and session activity, extracting metrics programmatically, or scheduling periodic status updates via cron.'
 ---
 
-# Dashboard Snapshot
+# Snapshot Status Cards
 
-**Announce at start:** "I'm using the claw-insights-snapshot skill to capture a dashboard screenshot."
+**Announce at start:** "I'm generating a visual status card for your OpenClaw agent."
 
-Server-side rendering via Satori — no browser needed, ~200ms response.
+## What is a Snapshot?
+
+A snapshot is a server-rendered visual status card — not a browser screenshot. Powered by Satori, it renders in ~200ms with no browser dependency.
+
+The output is designed to look great in chat: compact, readable on mobile, and visually appealing enough to share. It shows token usage, session activity, error counts, and gateway health in a single glance.
+
+Formats: PNG (default), SVG, or raw JSON for programmatic use.
 
 ## REST API
 
@@ -54,18 +60,27 @@ CLI flags: `--format`, `--detail`, `--range`, `--theme`, `--lang`, `-o <path>`, 
 
 ## Common Workflows
 
-### Screenshot → send to chat
+### Push status card to a channel
+
+Works with any messaging channel — Slack, Telegram, Discord, WhatsApp, etc.
 
 ```bash
-# 1. Capture
+# 1. Generate a compact status card
 curl -X POST http://127.0.0.1:41041/api/snapshot \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"detail":"standard","range":"6h"}' \
-  -o /tmp/dashboard.png
+  -d '{"detail":"compact","range":"6h"}' \
+  -o /tmp/status.png
 
-# 2. Send via your messaging tool / API
+# 2. Send via your channel's tool or API
+#    The compact detail level is optimized for mobile chat bubbles.
 ```
+
+**Tips:**
+
+- `compact` — best for chat messages (summary numbers only, small image)
+- `standard` — best for daily check-ins (session list + charts)
+- `full` — best for reports and archival
 
 ### Scheduled status report
 

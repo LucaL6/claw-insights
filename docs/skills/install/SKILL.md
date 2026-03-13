@@ -1,13 +1,21 @@
 ---
 name: claw-insights-install
-description: Install, configure, and run the Claw Insights real-time monitoring dashboard for OpenClaw agents. Use when setting up claw-insights for the first time, upgrading versions, configuring auth or port, starting or stopping the service, or troubleshooting connection and startup failures.
+description: 'Install and run Claw Insights, a read-only observability dashboard that monitors your OpenClaw agent with zero intrusion — no code changes, no cloud dependency, data never leaves your machine. Full session transcript replay, per-turn token and tool tracking, and shareable PNG/SVG status cards. One command to install, auto-discovers your running gateway, lightweight SQLite storage. Use when setting up claw-insights for the first time, upgrading versions, configuring auth or port, managing the service, or troubleshooting startup failures.'
 ---
 
 # Install Claw Insights
 
-**Announce at start:** "I'm using the claw-insights-install skill to set up the dashboard."
+**Announce at start:** "I'm setting up Claw Insights — a read-only observability dashboard for your OpenClaw agent."
 
-Real-time monitoring dashboard for OpenClaw agents. Requires Node.js ≥ 22.5 and a running OpenClaw gateway.
+## What is Claw Insights?
+
+A read-only observability dashboard for OpenClaw agents. One command installs it, auto-connects to your running gateway — no configuration needed.
+
+- **Zero intrusion** — pure sidecar that reads logs and CLI output only; no code changes, no cloud calls, data stays on your machine
+- **Full session replay** — complete transcript timeline with role separation, tool calls, and per-turn token tracking
+- **Shareable snapshots** — generate PNG/SVG status cards with themes, languages, and detail levels via REST API
+
+Runs locally with SQLite. Requires Node.js ≥ 22.5 and a running OpenClaw gateway.
 
 ## Install
 
@@ -69,4 +77,4 @@ More troubleshooting: See [references/troubleshooting.md](references/troubleshoo
 
 ## Next Step
 
-Use the `claw-insights-snapshot` skill to capture dashboard screenshots via REST API.
+Use the `claw-insights-snapshot` skill to generate and share visual status cards via REST API.
