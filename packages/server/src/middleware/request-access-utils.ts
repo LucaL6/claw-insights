@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { Kind, parse } from 'graphql';
 
-export type AccessEndpoint = 'graphql' | 'snapshot' | 'api' | 'mcp' | 'unknown';
+export type AccessEndpoint = 'graphql' | 'snapshot' | 'api' | 'unknown';
 
 export interface GraphqlOperationMetadata {
   operationName: string;
@@ -55,10 +55,6 @@ export function classifyEndpoint(urlPath: string): AccessEndpoint {
     return 'graphql';
   }
 
-  if (path === '/mcp' || path.startsWith('/mcp/')) {
-    return 'mcp';
-  }
-
   if (path === '/api/snapshot' || path.startsWith('/api/snapshot/')) {
     return 'snapshot';
   }
@@ -97,9 +93,9 @@ export function statusClass(status: number): '2xx' | '3xx' | '4xx' | '5xx' | 'un
 }
 
 export function extractGraphqlOperation(body: unknown): GraphqlOperationMetadata {
-  const query = typeof body === 'object' && body !== null && 'query' in body ? (body.query) : undefined;
+  const query = typeof body === 'object' && body !== null && 'query' in body ? body.query : undefined;
   const operationName =
-    typeof body === 'object' && body !== null && 'operationName' in body ? (body.operationName) : undefined;
+    typeof body === 'object' && body !== null && 'operationName' in body ? body.operationName : undefined;
 
   const normalizedClientOperationName = typeof operationName === 'string' ? operationName.trim() : '';
   const queryText = typeof query === 'string' ? query : '';

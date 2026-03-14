@@ -2,7 +2,6 @@ import express from 'express';
 import request from 'supertest';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { registerMcp } from '../routes/mcp.js';
 import { registerSnapshot } from '../routes/snapshot.js';
 import { SnapshotEngine } from '../services/snapshot-engine.js';
 import type { DataSources } from '../services/snapshot-types.js';
@@ -66,7 +65,6 @@ function createTestApp() {
   app.use(express.json());
   const engine = new SnapshotEngine(mockSources);
   registerSnapshot(app, engine);
-  registerMcp(app, engine, true); // noAuth for tests
   return app;
 }
 
@@ -141,91 +139,67 @@ describe('Snapshot Integration', () => {
 
   // ── 7. Rate limiting triggers 429 after 30 requests ──
   it('rate limiting triggers 429 after 30 requests', async () => {
-    // Fresh app with its own rate limiter
-    const rateLimitApp = createTestApp();
+    // Freeze Date.now to avoid refill timing flakiness in slow CI runs.
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+    try {
+      // Fresh app with its own rate limiter
+      const rateLimitApp = createTestApp();
 
-    const results: number[] = [];
-    for (let i = 0; i < 35; i++) {
-      const res = await request(rateLimitApp).post('/api/snapshot').send({ format: 'json' });
-      results.push(res.status);
+      const results: number[] = [];
+      for (let i = 0; i < 35; i++) {
+        const res = await request(rateLimitApp).post('/api/snapshot').send({ format: 'json' });
+        results.push(res.status);
+      }
+
+      const okCount = results.filter((s) => s === 200).length;
+      const rateLimited = results.filter((s) => s === 429).length;
+
+      expect(okCount).toBe(30);
+      expect(rateLimited).toBeGreaterThanOrEqual(1);
+
+      // Check 429 response format
+      const lastRes = await request(rateLimitApp).post('/api/snapshot').send({ format: 'json' });
+      if (lastRes.status === 429) {
+        expect(lastRes.body).toHaveProperty('code', 'RATE_LIMITED');
+        expect(lastRes.headers['retry-after']).toBeDefined();
+      }
+    } finally {
+      nowSpy.mockRestore();
     }
+  }, 15_000);
 
-    const okCount = results.filter((s) => s === 200).length;
-    const rateLimited = results.filter((s) => s === 429).length;
-
-    expect(okCount).toBe(30);
-    expect(rateLimited).toBeGreaterThanOrEqual(1);
-
-    // Check 429 response format
-    const lastRes = await request(rateLimitApp).post('/api/snapshot').send({ format: 'json' });
-    if (lastRes.status === 429) {
-      expect(lastRes.body).toHaveProperty('code', 'RATE_LIMITED');
-      expect(lastRes.headers['retry-after']).toBeDefined();
-    }
-  });
-
-  // ── 8. MCP POST /mcp works (tool list) ──
-  it('POST /mcp → initializes and lists tools', async () => {
-    const res = await request(app)
-      .post('/mcp')
-      .set('Content-Type', 'application/json')
-      .send({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '2025-03-26',
-          capabilities: {},
-          clientInfo: { name: 'test', version: '1.0' },
-        },
-      });
-
-    // MCP may return 200 or other valid status depending on transport
-    // The key assertion is that it doesn't 404/405 (POST is accepted)
-    expect([200, 202, 406]).toContain(res.status);
-    // If 406, the MCP SDK may not accept the request format — that's still a valid integration test
-    // showing the route is registered and POST is handled (not 404/405)
-  });
-
-  // ── 9. MCP GET /mcp returns 405 ──
-  it('GET /mcp → 405 Method Not Allowed', async () => {
-    const res = await request(app).get('/mcp').set('Content-Type', 'application/json');
-
-    expect(res.status).toBe(405);
-    expect(res.headers['allow']).toBe('POST');
-    expect(res.body).toHaveProperty('error');
-  });
-
-  it('DELETE /mcp → 405 Method Not Allowed', async () => {
-    const res = await request(app).delete('/mcp').set('Content-Type', 'application/json');
-
-    expect(res.status).toBe(405);
-  });
-
-  // ── 10. Shared rate limiter across /api/snapshot and /mcp ──
+  // ── 8. Rate limiter enforces 30 req/min on /api/snapshot ──
   it('rate limiter enforces 30 req/min on /api/snapshot', async () => {
-    const sharedApp = createTestApp();
+    // Freeze Date.now so the 31st request cannot pass due to token refill drift.
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_700_000_100_000);
+    try {
+      const sharedApp = createTestApp();
 
-    // Exhaust 30 requests via /api/snapshot
-    for (let i = 0; i < 30; i++) {
-      await request(sharedApp).post('/api/snapshot').send({ format: 'json' });
+      // Exhaust 30 requests via /api/snapshot
+      for (let i = 0; i < 30; i++) {
+        await request(sharedApp).post('/api/snapshot').send({ format: 'json' });
+      }
+
+      // The 31st request via /api/snapshot should be 429
+      const apiRes = await request(sharedApp).post('/api/snapshot').send({ format: 'json' });
+      expect(apiRes.status).toBe(429);
+    } finally {
+      nowSpy.mockRestore();
     }
-
-    // The 31st request via /api/snapshot should be 429
-    const apiRes = await request(sharedApp).post('/api/snapshot').send({ format: 'json' });
-    expect(apiRes.status).toBe(429);
-  });
+  }, 15_000);
 
   // ── 11. Concurrent /api/snapshot requests respect render pool ──
   it('concurrent requests are queued and all complete', async () => {
     const concApp = createTestApp();
-    const promises = Array.from({ length: 5 }, () =>
+    // Keep > render concurrency (3) so queue path is exercised,
+    // but avoid unnecessary CI/coverage slowdown from larger fan-out.
+    const promises = Array.from({ length: 4 }, () =>
       request(concApp).post('/api/snapshot').send({ format: 'png', detail: 'compact' }),
     );
     const results = await Promise.all(promises);
     const successes = results.filter((r) => r.status === 200);
-    expect(successes.length).toBe(5);
-  });
+    expect(successes.length).toBe(4);
+  }, 15_000);
 
   // ── 12. theme param: dark (default) and light ──
   it('POST /api/snapshot theme=dark → 200', async () => {
@@ -281,5 +255,35 @@ describe('Snapshot Integration', () => {
     const res = await request(app).post('/api/snapshot').set('Host', 'evil.com').send({ format: 'json' });
 
     expect(res.status).toBe(403);
+  });
+
+  // ── 17. API-only app: unknown endpoints should return 404 ──
+  it.each([
+    { method: 'get', path: '/test-123' },
+    { method: 'post', path: '/test-123' },
+    { method: 'get', path: '/not-found/' },
+    { method: 'post', path: '/not-found/' },
+    { method: 'get', path: '/not-found/anything' },
+    { method: 'post', path: '/not-found/anything' },
+  ] as const)('$method $path -> 404', async ({ method, path }) => {
+    const res =
+      method === 'post' ? await request(app).post(path).send({ format: 'json' }) : await request(app).get(path);
+
+    expect(res.status).toBe(404);
+  });
+
+  // ── 18. API-only app: /mcp* should follow unknown-endpoint semantics (404) ──
+  it.each([
+    { method: 'get', path: '/mcp' },
+    { method: 'post', path: '/mcp' },
+    { method: 'get', path: '/mcp/' },
+    { method: 'post', path: '/mcp/' },
+    { method: 'get', path: '/mcp/anything' },
+    { method: 'post', path: '/mcp/anything' },
+  ] as const)('$method $path -> 404 (API-only)', async ({ method, path }) => {
+    const res =
+      method === 'post' ? await request(app).post(path).send({ format: 'json' }) : await request(app).get(path);
+
+    expect(res.status).toBe(404);
   });
 });

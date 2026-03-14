@@ -173,43 +173,36 @@ claw-insights snapshot --format svg --range 1h --detail full --theme light
 claw-insights snapshot --format json > status.json
 ```
 
-### MCP Integration
+### Snapshot API Integration
 
-The server exposes a Streamable HTTP MCP endpoint at `/mcp` (port 41041) with a single `snapshot` tool.
+The server exposes a local REST endpoint at `/api/snapshot` (default port `41041`).
 
-**OpenClaw** (`~/.openclaw/config.yaml`):
+**Auth enabled (Bearer token):**
 
-```yaml
-mcp:
-  claw-insights:
-    url: http://127.0.0.1:41041/mcp
+```bash
+curl -sS -X POST "http://127.0.0.1:41041/api/snapshot" \
+  -H "Authorization: Bearer $CLAW_INSIGHTS_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"format":"json","detail":"standard","range":"6h","theme":"dark","lang":"en"}'
 ```
 
-**Claude Code** (`~/.claude/settings.json`):
+**No-auth mode (local requests only):**
 
-```json
-{
-  "mcpServers": {
-    "claw-insights": {
-      "type": "url",
-      "url": "http://127.0.0.1:41041/mcp"
-    }
-  }
-}
+```bash
+curl -sS -X POST "http://127.0.0.1:41041/api/snapshot" \
+  -H "Content-Type: application/json" \
+  -d '{"format":"png","detail":"compact","range":"1h","theme":"light","lang":"zh"}' \
+  --output snapshot.png
 ```
 
-**Cursor** (`.cursor/mcp.json`):
+**Request parameters (core):**
+- `detail`: `compact` | `standard` | `full`
+- `format`: `png` | `svg` | `json`
+- `range`: `30m` | `1h` | `6h` | `12h` | `24h`
+- `theme`: `dark` | `light`
+- `lang`: `en` | `zh`
 
-```json
-{
-  "mcpServers": {
-    "claw-insights": {
-      "type": "url",
-      "url": "http://127.0.0.1:41041/mcp"
-    }
-  }
-}
-```
+See `src/services/snapshot-types.ts` for the authoritative runtime validation.
 
 ### `section` Parameter
 

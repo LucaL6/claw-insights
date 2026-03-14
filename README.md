@@ -88,6 +88,29 @@ claw-insights stop                 # Stop daemon
 
 3. **GraphQL Playground:** Navigate to `http://127.0.0.1:41041/graphql` for the interactive API explorer.
 
+### Snapshot API Quick Start
+
+```bash
+# JSON snapshot
+curl -sS -X POST "http://127.0.0.1:41041/api/snapshot" \
+  -H "Content-Type: application/json" \
+  -d '{"format":"json","detail":"standard","range":"6h","theme":"dark","lang":"en"}'
+
+# PNG snapshot
+curl -sS -X POST "http://127.0.0.1:41041/api/snapshot" \
+  -H "Content-Type: application/json" \
+  -d '{"format":"png","detail":"compact","range":"1h","theme":"light","lang":"zh"}' \
+  --output snapshot.png
+```
+
+If auth is enabled, add:
+
+```bash
+-H "Authorization: Bearer $CLAW_INSIGHTS_API_TOKEN"
+```
+
+See server docs for full options and error semantics: [`packages/server/README.md`](packages/server/README.md#snapshot-api-integration).
+
 ### Common Issues
 
 | Problem                            | Solution                                                                                                          |

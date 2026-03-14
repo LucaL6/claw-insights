@@ -40,11 +40,11 @@ describe('request-access-utils', () => {
   });
 
   describe('classifyEndpoint', () => {
-    it('classifies graphql, mcp, snapshot, api and unknown', () => {
+    it('classifies graphql, snapshot, api and unknown', () => {
       expect(classifyEndpoint('/graphql')).toBe('graphql');
       expect(classifyEndpoint('/graphql/')).toBe('graphql');
-      expect(classifyEndpoint('/mcp')).toBe('mcp');
-      expect(classifyEndpoint('/mcp/tools')).toBe('mcp');
+      expect(classifyEndpoint('/legacy')).toBe('unknown');
+      expect(classifyEndpoint('/legacy/tools')).toBe('unknown');
       expect(classifyEndpoint('/api/snapshot')).toBe('snapshot');
       expect(classifyEndpoint('/api/snapshot/run')).toBe('snapshot');
       expect(classifyEndpoint('/api/devices')).toBe('api');

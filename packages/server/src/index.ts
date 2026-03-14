@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-deprecated -- Phase 2: legacy ctx.* refs not yet migrated to ports */
 import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname, extname, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import express from 'express';
@@ -15,8 +15,8 @@ import { cookieExchangeMiddleware } from './middleware/cookie-exchange.js';
 import { requestAccessMiddleware } from './middleware/request-access.js';
 import { registerGraphQL } from './routes/graphql.js';
 import { createHealthHandler } from './routes/health.js';
-import { registerMcp } from './routes/mcp.js';
 import { registerSnapshot } from './routes/snapshot.js';
+import { mountSpaFallbackRoutes } from './routes/spa-fallback.js';
 import { SnapshotEngine } from './services/snapshot-engine.js';
 import { createSnapshotSources } from './services/snapshot-sources.js';
 
@@ -111,7 +111,6 @@ registerGraphQL(app, ctx);
 const snapshotSources = createSnapshotSources(ctx);
 const snapshotEngine = new SnapshotEngine(snapshotSources);
 registerSnapshot(app, snapshotEngine);
-registerMcp(app, snapshotEngine, config.noAuth);
 
 // Health check — no auth, no GraphQL dependency
 app.get(
@@ -150,24 +149,7 @@ if (!config.isDev && !config.serverOnly && !existsSync(webDistPath)) {
 }
 if (!config.isDev && !config.serverOnly && existsSync(webDistPath)) {
   log.info({ webDistPath }, 'serving web UI');
-  app.use(express.static(webDistPath, { index: 'index.html' }));
-  // SPA fallback — serve index.html for non-API, non-file routes
-  const serveIndex = (_req: express.Request, res: express.Response) => {
-    res.type('html').send(readFileSync(resolve(webDistPath, 'index.html'), 'utf-8'));
-  };
-  app.get('/', serveIndex);
-  app.get('/{*path}', (req, res, next) => {
-    if (req.path.startsWith('/graphql') || req.path.startsWith('/api') || req.path.startsWith('/health')) {
-      next();
-      return;
-    }
-    // Don't serve index.html for requests with file extensions (e.g. /foo.js, /bar.css)
-    if (extname(req.path)) {
-      next();
-      return;
-    }
-    serveIndex(req, res);
-  });
+  mountSpaFallbackRoutes(app, webDistPath);
 }
 
 // PID file path for daemon mode cleanup

@@ -29,7 +29,7 @@ function classifyStream(module: string | undefined, message: string): LogStream 
     return 'security';
   }
 
-  if (module === 'mcp' && message.startsWith('security reject:')) {
+  if (message.startsWith('security reject:')) {
     return 'security';
   }
 

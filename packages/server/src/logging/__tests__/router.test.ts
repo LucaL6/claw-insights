@@ -62,17 +62,11 @@ describe('LogRouter', () => {
     expect(result.lane).toBe('critical');
   });
 
-  it('routes mcp security rejects to security stream', () => {
+  it('routes security reject prefix to security stream regardless module', () => {
     const router = new LogRouter();
-    const result = router.route(entry('warn', 100, 'mcp', 'security reject: non-local access in no-auth mode'));
-    expect(result.accepted).toBe(true);
-    expect(result.stream).toBe('security');
-    expect(result.lane).toBe('critical');
-  });
-
-  it('routes mcp invalid content-type security rejects to security stream', () => {
-    const router = new LogRouter();
-    const result = router.route(entry('warn', 100, 'mcp', 'security reject: invalid content-type'));
+    const result = router.route(
+      entry('warn', 100, 'security:local-only', 'security reject: non-local access in no-auth mode'),
+    );
     expect(result.accepted).toBe(true);
     expect(result.stream).toBe('security');
     expect(result.lane).toBe('critical');

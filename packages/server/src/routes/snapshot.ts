@@ -5,7 +5,7 @@ import { config } from '../config.js';
 import { createChildLogger } from '../logger.js';
 import { authMiddleware } from '../middleware/auth.js';
 import type { SnapshotEngine } from '../services/snapshot-engine.js';
-import { localOnlyMiddleware } from './mcp.js';
+import { localOnlyMiddleware } from './local-only.js';
 import { createSnapshotHandler } from './snapshot-handler.js';
 
 const log = createChildLogger('snapshot');

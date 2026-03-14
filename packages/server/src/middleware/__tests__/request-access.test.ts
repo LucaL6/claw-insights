@@ -140,12 +140,12 @@ describe('requestAccessMiddleware', () => {
   it('includes statusClass for non-2xx responses', async () => {
     const app = express();
     app.use(requestAccessMiddleware);
-    app.get('/mcp', (_req, res) => res.status(404).json({ error: 'not found' }));
+    app.get('/api/legacy', (_req, res) => res.status(404).json({ error: 'not found' }));
 
-    await request(app).get('/mcp').expect(404);
+    await request(app).get('/api/legacy').expect(404);
 
     expect(mockWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ endpoint: 'mcp', urlPath: '/mcp', status: 404, statusClass: '4xx' }),
+      expect.objectContaining({ endpoint: 'api', urlPath: '/api/legacy', status: 404, statusClass: '4xx' }),
       'http access',
     );
   });
@@ -178,7 +178,7 @@ describe('requestAccessMiddleware', () => {
     app.use(express.json());
     app.use(requestAccessMiddleware);
     app.post('/graphql', (_req, res) => res.status(200).json({ ok: true }));
-    app.get('/mcp', (_req, res) => res.status(404).json({ error: 'not found' }));
+    app.get('/api/legacy', (_req, res) => res.status(404).json({ error: 'not found' }));
 
     const droppedRequestId = findRequestId(false);
 
@@ -189,9 +189,9 @@ describe('requestAccessMiddleware', () => {
       .expect(200);
     expect(mockInfo).not.toHaveBeenCalled();
 
-    await request(app).get('/mcp').set('x-request-id', droppedRequestId).expect(404);
+    await request(app).get('/api/legacy').set('x-request-id', droppedRequestId).expect(404);
     expect(mockWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ endpoint: 'mcp', statusClass: '4xx' }),
+      expect.objectContaining({ endpoint: 'api', statusClass: '4xx' }),
       'http access',
     );
   });
