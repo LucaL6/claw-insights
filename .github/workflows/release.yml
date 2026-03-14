@@ -46,7 +46,7 @@ jobs:
 
       - name: Verify CLI version
         run: |
-          ACTUAL_RAW="$(claw-insights --version | head -n 1 | awk '{print $1}')"
+          ACTUAL_RAW="$(claw-insights --version | head -n 1 | awk '{print $NF}')"
           ACTUAL="${ACTUAL_RAW#v}"
           EXPECTED="${GITHUB_REF_NAME#v}"
           if [ "$ACTUAL" != "$EXPECTED" ]; then
