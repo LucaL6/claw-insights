@@ -136,7 +136,13 @@ If a browser session expires, is cleared, or stays idle beyond rotation + grace 
 
 ```bash
 # Bearer token (recommended for scripts)
-curl -H "Authorization: Bearer YOUR_TOKEN" http://127.0.0.1:41041/graphql \
+TOKEN="${CLAW_INSIGHTS_API_TOKEN:-$(cat ~/.claw-insights/auth-secret 2>/dev/null)}"
+test -n "$TOKEN" || {
+  echo "No token found. Set CLAW_INSIGHTS_API_TOKEN or ~/.claw-insights/auth-secret";
+  exit 1;
+}
+
+curl -H "Authorization: Bearer ${TOKEN}" http://127.0.0.1:41041/graphql \
   -H "Content-Type: application/json" \
   -d '{"query":"{ system(context: {}) { ... on OpenClawSystem { gateway { version uptime } } } }"}'
 ```
