@@ -93,6 +93,13 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Publish to npm
-        run: npm publish claw-insights-*.tgz --access public --provenance
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          NPM_TAG="latest"
+          if [[ "$VERSION" == *-* ]]; then
+            NPM_TAG="rc"
+          fi
+          echo "Publishing claw-insights@$VERSION to dist-tag '$NPM_TAG'"
+          npm publish claw-insights-*.tgz --access public --provenance --tag "$NPM_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
