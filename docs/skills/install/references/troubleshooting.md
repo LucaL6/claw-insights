@@ -53,14 +53,15 @@ ls ~/.openclaw/agents/main/sessions/sessions.json
 
 ```bash
 # Check configured token
-echo $CLAW_INSIGHTS_API_TOKEN
+echo "$CLAW_INSIGHTS_API_TOKEN"
 # Or check auth-secret file
 cat ~/.claw-insights/auth-secret 2>/dev/null
 
 # Test token against an authenticated endpoint
+TOKEN="${CLAW_INSIGHTS_API_TOKEN:-$(cat ~/.claw-insights/auth-secret 2>/dev/null)}"
 curl -s -o /dev/null -w "%{http_code}" \
   -X POST http://127.0.0.1:41041/api/snapshot \
-  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{}'
 # → 200 = token valid, 401 = token invalid
