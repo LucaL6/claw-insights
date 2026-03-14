@@ -5,14 +5,14 @@ Thank you for considering contributing! Here's how to get started.
 ## Development Setup
 
 ```bash
-git clone https://github.com/nicepkg/claw-insights.git
+git clone https://github.com/LucaL6/claw-insights.git
 cd claw-insights
 npm install
 npm run dev
-# Web: http://localhost:3200 | API: http://localhost:4000
+# Starts 3 processes: codegen (watch) + server (41041) + web (41042)
 ```
 
-Prerequisites: Node.js ≥22.5 (`nvm use` reads `.nvmrc`), npm ≥10
+Prerequisites: Node.js ≥22.5 (`nvm use` reads `.nvmrc`)
 
 ## Making Changes
 
@@ -39,31 +39,34 @@ Prerequisites: Node.js ≥22.5 (`nvm use` reads `.nvmrc`), npm ≥10
 ## Code Style
 
 - TypeScript strict mode, no `any`
-- Prettier for formatting (`npm run format`)
+- Prettier for formatting (`npm run format` / `npm run format:check`)
 - Use existing patterns — check neighboring files
 
 ## Project Structure
 
 ```
 packages/
-├── server/   Express + GraphQL Yoga + SQLite + Satori
+├── server/   Express + GraphQL Yoga + SQLite + Satori renderer
 ├── web/      React 19 + Vite + Tailwind + ECharts + urql
-└── shared/   Shared TypeScript types (codegen)
+└── shared/   Codegen TypeScript types (shared between server & web)
 ```
+
+GraphQL schema lives in `packages/server/src/schema/schema.graphql`. After editing, run `npm run codegen` to regenerate types.
 
 ## Testing
 
 ```bash
-npm test                    # All tests
+npm test                    # All unit tests (server + web + scripts)
 npm run test:server         # Server unit tests (vitest)
 npm run test:web            # Web unit tests (vitest)
+npm run test:integration    # Integration tests
 npm run test:e2e            # E2E tests (Playwright)
 npm run test:coverage       # Coverage report
 ```
 
 ## Reporting Bugs
 
-Use the [Bug Report](https://github.com/nicepkg/claw-insights/issues/new?template=bug_report.md) template. Include:
+Use the [Bug Report](https://github.com/LucaL6/claw-insights/issues/new?template=bug_report.md) template. Include:
 - Environment (OS, Node version, OpenClaw version)
 - Steps to reproduce
 - Expected vs actual behavior
@@ -71,11 +74,11 @@ Use the [Bug Report](https://github.com/nicepkg/claw-insights/issues/new?templat
 
 ## Feature Requests
 
-Open an [Issue](https://github.com/nicepkg/claw-insights/issues/new?template=feature_request.md) describing:
+Open an [Issue](https://github.com/LucaL6/claw-insights/issues/new?template=feature_request.md) describing:
 - Use case and motivation
 - Proposed solution
 - Alternatives considered
 
 ## Questions
 
-Open a [Discussion](https://github.com/nicepkg/claw-insights/discussions) for usage questions.
+Open a [Discussion](https://github.com/LucaL6/claw-insights/discussions) for usage questions.

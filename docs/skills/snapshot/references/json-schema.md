@@ -44,7 +44,7 @@ interface SnapshotData {
     percent: number;
   }> | null;
 
-  tokensTrend?: string; // e.g. "+12%" or "-5%"
+  tokensTrend?: string; // e.g. "↑12%" or "↓5%" (⚠️ prefix when >100%)
 
   buckets?: Array<{
     sessions?: number;
@@ -95,7 +95,7 @@ interface SnapshotData {
 
 | Field           | When null              | Notes                                                                                                                                           |
 | --------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gateway`       | Gateway unreachable    | Includes CPU/memory of the gateway process                                                                                                      |
+| `gateway`       | Gateway unreachable    | `version` is the Claw Insights app version (not gateway CLI version). Includes CPU/memory of the gateway process.                               |
 | `channels`      | No channels configured | Provider names: telegram, discord, slack, etc.                                                                                                  |
 | `summary`       | No data for range      | `tokensDisplay` is pre-formatted (e.g. "1.2k")                                                                                                  |
 | `tokensByModel` | No token data          | Sorted by usage descending, `percent` sums to 100                                                                                               |
@@ -134,7 +134,7 @@ interface SnapshotData {
     { "model": "anthropic/claude-opus-4-5", "modelDisplay": "Claude Opus 4.5", "tokensK": 28.3, "percent": 67 },
     { "model": "anthropic/claude-sonnet-4", "modelDisplay": "Claude Sonnet 4", "tokensK": 13.8, "percent": 33 }
   ],
-  "tokensTrend": "+12%",
+  "tokensTrend": "↑12%",
   "companionDays": 42,
   "totalConversations": 1580
 }

@@ -22,7 +22,7 @@ OpenClaw Gateway
     ├── Log files (/tmp/openclaw/)
     │       │
     │       ▼
-    │   log-tailer.ts ──► parse + classify ──► SQLite
+    │   collectors/log/tailer.ts ──► parse + classify ──► SQLite
     │
     ├── CLI / RPC (openclaw status --json)
     │       │
@@ -32,15 +32,15 @@ OpenClaw Gateway
     └── sessions.json
             │
             ▼
-        session-reader.ts ──► session tree with sub-agents
+        readers/session-reader.ts ──► session tree with sub-agents
 
-SQLite ◄── metrics-collector.ts (periodic aggregation)
+SQLite ◄── collectors/metrics/collector.ts (periodic aggregation)
   │
   ▼
 GraphQL Resolvers ──► GraphQL Yoga ──► Express
   │                                       │
   ▼                                       ▼
-WebSocket Subscriptions              REST endpoints
+SSE Subscriptions                    REST endpoints
   │                                  (/api/snapshot, /health)
   ▼
 urql + graphql-sse (Server-Sent Events)
@@ -56,39 +56,66 @@ React 19 Dashboard (ECharts, Tailwind)
 ```
 packages/server/src/
 ├── routes/          HTTP entry points (Express)
-│   ├── graphql.ts       GraphQL Yoga endpoint (/graphql)
-│   ├── snapshot.ts      Screenshot API (POST /api/snapshot)
-│   └── health.ts        Health check (GET /health)
+│   ├── graphql.ts           GraphQL Yoga endpoint (/graphql)
+│   ├── snapshot.ts          Screenshot API mount (POST /api/snapshot)
+│   ├── snapshot-handler.ts  Screenshot request handler
+│   ├── health.ts            Health check (GET /health)
+│   ├── local-only.ts        Local-only access guard
+│   └── spa-fallback.ts      SPA fallback for web UI
 ├── schema/          GraphQL schema + resolvers
-│   ├── schema.graphql   Type definitions
-│   └── resolvers/       Query, Mutation, Subscription resolvers
-├── services/        Business logic
+│   ├── schema.graphql       Type definitions
+│   ├── source/              Source-centric resolvers + adapters
+│   └── resolvers/           Subscription resolvers
+├── services/        Business logic (snapshot pipeline)
 │   ├── snapshot-service.ts    Assemble snapshot data
+│   ├── snapshot-engine.ts     Render orchestration + timeouts
 │   ├── snapshot-types.ts      Request parsing + validation
-│   └── metrics-service.ts     Metrics aggregation queries
+│   ├── snapshot-formatters.ts Data formatting helpers
+│   └── snapshot-sources.ts    Source data collection
 ├── sources/         Data adapters (external I/O)
-│   ├── gateway-cli.ts         OpenClaw CLI wrapper
-│   ├── session-reader.ts      Session file parser
-│   ├── log-tailer.ts          Log file tail + parse
-│   └── cron-reader.ts         Cron jobs file reader
+│   ├── gateway-cli.ts              OpenClaw CLI wrapper
+│   ├── aggregator.ts               Metrics aggregation
+│   ├── companion-days.ts           Companion days calculator
+│   ├── data-retention.ts           Hourly aggregation + cleanup
+│   ├── data-validator.ts           Outlier detection
+│   ├── system-info.ts              System resource info
+│   ├── readers/                    File-based readers
+│   │   ├── session-reader.ts       Session file parser
+│   │   ├── cron-reader.ts          Cron jobs file reader
+│   │   ├── transcript-reader.ts    Transcript file reader
+│   │   └── spawn-tracker.ts        Sub-agent spawn tracker
+│   └── collectors/                 Active data collectors
+│       ├── log/tailer.ts           Log file tail + parse
+│       ├── metrics/collector.ts    Periodic metrics collection
+│       └── transcript/             Transcript processing pipeline
 ├── renderer/        Screenshot rendering (Satori)
 │   ├── satori-renderer.ts     SVG → PNG pipeline
 │   ├── fonts.ts               Font loading + cache
 │   └── markup/                Satori JSX builders
-│       ├── header.ts, footer.ts, metrics.ts
+│       ├── header.ts, footer.ts, token-usage.ts
 │       ├── sessions.ts, charts.ts, errors.ts
-│       ├── colors.ts, helpers.ts, icons.ts
+│       ├── status-strip.ts, colors.ts, helpers.ts
 │       └── index.ts           Assembles all sections
 ├── db/              SQLite database
-│   ├── init.ts                Schema creation + migrations
-│   └── queries/               Parameterized SQL queries
-├── middleware/      Express middleware (auth, error handling)
-├── pipeline/        Data processing pipeline
+│   ├── init.ts                Schema creation
+│   ├── migrate.ts             Migration runner
+│   ├── sqlite-provider.ts     SQLite connection provider
+│   ├── event-queries.ts       Event query functions
+│   ├── token-queries.ts       Token query functions
+│   ├── message-queries.ts     Message query functions
+│   └── scan-state-queries.ts  Scan state persistence
+├── adapters/        Port adapters (bridge sources → GraphQL)
+├── ports/           Port interfaces (dependency inversion)
+├── pipeline/        Data processing pipeline orchestration
+├── platforms/       OS-specific adapters (darwin/linux)
+├── logging/         Layered logging system (pino)
+├── auth/            Token auth + session rotation
+├── middleware/      Express middleware (auth, access control)
 ├── cli/             CLI entry point + argument parsing
 ├── config.ts        Configuration loader
 ├── context.ts       GraphQL context factory
-├── events.ts        Event system
-├── logger.ts        Structured logger
+├── events.ts        Event bus (dataBus)
+├── logger.ts        Structured logger (pino)
 ├── index.ts         Server entry point
 └── __tests__/       Test files
 ```
@@ -97,7 +124,7 @@ packages/server/src/
 
 - **No ORM** — Raw SQL via `node:sqlite` (Node.js built-in). Simple, fast, zero dependencies.
 - **Satori for screenshots** — Server-side rendering without browser. Converts JSX-like objects → SVG → PNG via resvg.
-- **GraphQL subscriptions** — `dataChanged` signal triggers selective client refetch (debounced), not full data push.
+- **SSE subscriptions** — `dataChanged` signal via Server-Sent Events (graphql-sse) triggers selective client refetch (debounced), not full data push.
 - **Codegen** — Single `schema.graphql` generates typed resolvers (server), typed operations (web), and shared types.
 
 ## Web Architecture
@@ -107,18 +134,19 @@ packages/server/src/
 ```
 packages/web/src/
 ├── components/      UI components
-├── hooks/           Custom hooks (useScreenshot, etc.)
-├── graphql/         GraphQL operations (queries, mutations, subscriptions)
+├── hooks/           Custom hooks (useSnapshot, useLogPageData, etc.)
+├── graphql/         GraphQL operations (queries, subscriptions)
+├── generated/       GraphQL codegen output (do not edit)
+├── context/         React context providers
 ├── i18n/            Internationalization (en/zh)
 ├── theme/           Theme system (dark/light)
 ├── styles/          Global styles
-├── lib/             Utility libraries
-├── utils/           Helper functions
-├── assets/          Static assets
+├── lib/             Utility libraries (urql client, connection health)
+├── utils/           Helper functions (format, groupByPrefix)
 ├── App.tsx          Root component
 ├── main.tsx         Entry point
 ├── index.css        Base styles
-├── test/            Test utilities
+├── test/            Test utilities (setup, mocks)
 └── __tests__/       Test files
 ```
 

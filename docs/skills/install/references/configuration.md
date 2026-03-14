@@ -46,7 +46,9 @@ All variables use the `CLAW_INSIGHTS_` prefix. For backward compatibility, `OPEN
 
 Path: `~/.claw-insights/config.json`
 
-Supports all the same keys as environment variables (without the `CLAW_INSIGHTS_` prefix, camelCase). Environment variables take precedence over config file values.
+Supports a subset of configuration keys in camelCase (without the `CLAW_INSIGHTS_` prefix). Environment variables take precedence over config file values. Unknown keys are logged as warnings and ignored.
+
+Supported keys: `serverPort`, `webPort`, `apiToken`, `noAuth`, `dbPath`, `logLevel`, `serverOnly`, `tokenRotationEnabled`, `tokenRotationIntervalMs`, `tokenGraceMs`, `tokenMaxPrevious`, `rawRetentionDays`, `hourlyRetention`, `transcriptsDir`, `deviceJsonPath`, `sessionHierarchyMode`, and logging/pressure-related keys. See `knownKeys` in `config.ts` for the complete list.
 
 Example:
 

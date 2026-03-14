@@ -34,7 +34,6 @@ The canonical entrypoints are top-level root fields:
 | Field                                                 | Returns                                                      |
 | ----------------------------------------------------- | ------------------------------------------------------------ |
 | `info`                                                | `DataSource!`                                                |
-| `gateway`                                             | `GatewayStatus!` (deprecated alias; prefer `system.gateway`) |
 | `sessions(filter)`                                    | `[Session!]!`                                                |
 | `session(key)`                                        | `Session`                                                    |
 | `metrics(date, range)`                                | `MetricsSummary!`                                            |
@@ -47,122 +46,12 @@ The canonical entrypoints are top-level root fields:
 | `lifetimeStats`                                       | `LifetimeStats!`                                             |
 | `sessionTranscript(sessionKey, limit, before, after)` | `SessionTranscript`                                          |
 
-### v1 root queries (deprecated)
-
-The following root query fields are still available for compatibility but are marked `@deprecated` in schema:
-
-- `gateway`, `resources`, `channels`
-- `sessions`, `metrics`, `cronJobs`, `usageCost`, `recentLogs`
-- `events`, `eventDensity`, `eventCounts`, `lifetimeStats`, `sessionTranscript`
-
-Prefer canonical root fields (`system`, `sources`, `source`) for new clients.
-
-### Legacy → canonical migration examples
-
-#### 1) sessions
-
-```graphql
-# v1 (deprecated)
-query {
-  sessions(filter: { activeOnly: true }) {
-    key
-    displayName
-    status
-  }
-}
-```
-
-```graphql
-# canonical
-query {
-  source(selector: { id: "agent:main" }) {
-    ... on AgentNamespace {
-      sessions(filter: { activeOnly: true }) {
-        key
-        displayName
-        status
-      }
-    }
-  }
-}
-```
-
-#### 2) metrics
-
-```graphql
-# v1 (deprecated)
-query {
-  metrics(range: SIX_HOUR) {
-    range
-    totalTokensK
-    totalErrors
-  }
-}
-```
-
-```graphql
-# canonical
-query {
-  source(selector: { id: "agent:main" }) {
-    ... on AgentNamespace {
-      metrics(range: SIX_HOUR) {
-        range
-        totalTokensK
-        totalErrors
-      }
-    }
-  }
-}
-```
-
-#### 3) gateway + resources + channels
-
-```graphql
-# v1 (deprecated)
-query {
-  gateway {
-    running
-    version
-  }
-  resources {
-    cpu
-    memoryMB
-  }
-  channels {
-    provider
-    connected
-  }
-}
-```
-
-```graphql
-# canonical
-query {
-  system(context: {}) {
-    ... on OpenClawSystem {
-      gateway {
-        running
-        version
-      }
-      resources {
-        cpu
-        memoryMB
-      }
-      channels {
-        provider
-        connected
-      }
-    }
-  }
-}
-```
-
 ### Subscriptions
 
-| Subscription  | Returns             | Transport | Description                       |
-| ------------- | ------------------- | --------- | --------------------------------- |
-| `dataChanged` | `DataChangeSignal!` | SSE       | Notifies when data sources update |
-| `logs`        | `LogBatch!`         | SSE       | Live log stream                   |
+| Subscription  | Returns             | Transport                  | Description                       |
+| ------------- | ------------------- | -------------------------- | --------------------------------- |
+| `dataChanged` | `DataChangeSignal!` | SSE (via GraphQL Yoga)     | Notifies when data sources update |
+| `logs`        | `LogBatch!`         | SSE (via GraphQL Yoga)     | Live log stream                   |
 
 ### Transcript API (cursor pagination)
 
@@ -265,10 +154,10 @@ curl http://127.0.0.1:41041/graphql \
   -d '{"query":"{ source(selector: { id: \"agent:main\" }) { ... on AgentNamespace { sessions { key displayName model status totalTokens subAgents { key displayName status } } } } }"}'
 ```
 
-**Subscribe to data changes (SSE):**
+**Subscribe to data changes (SSE via GraphQL Yoga):**
 
 ```bash
-curl -N http://127.0.0.1:41041/graphql/stream \
+curl -N http://127.0.0.1:41041/graphql \
   -H "Authorization: Bearer TOKEN" \
   -H "Accept: text/event-stream" \
   -H "Content-Type: application/json" \
@@ -284,8 +173,20 @@ Health check endpoint (no auth required).
 Response:
 
 ```json
-{ "status": "ok", "gateway": "connected", "db": "ok", "uptime": "2h 15m", "version": "0.1.0" }
+{
+  "status": "ok",
+  "version": "0.1.0",
+  "uptime": 8100,
+  "mode": "full",
+  "gateway": "connected",
+  "db": "ok"
+}
 ```
+
+- `status`: `"ok"` | `"starting"` (during startup)
+- `uptime`: seconds since server start (integer)
+- `mode`: `"full"` | `"server-only"`
+- `gateway`: `"connected"` | `"disconnected"` | `"pending"` (during startup)
 
 ### `POST /api/snapshot`
 
@@ -293,12 +194,13 @@ Render dashboard as PNG image.
 
 **Auth:** Required (Bearer token or cookie)
 
-| Parameter | Type   | Default      | Description                                 |
-| --------- | ------ | ------------ | ------------------------------------------- |
-| `detail`  | string | `"standard"` | Detail level: `compact`, `standard`, `full` |
-| `theme`   | string | `"dark"`     | Theme: `dark`, `light`                      |
-| `range`   | string | `"6h"`       | Time range: `1h`, `6h`, `12h`, `24h`        |
-| `lang`    | string | `"en"`       | Language: `en`, `zh`                        |
+| Parameter | Type   | Default      | Description                                        |
+| --------- | ------ | ------------ | -------------------------------------------------- |
+| `detail`  | string | `"standard"` | Detail level: `compact`, `standard`, `full`        |
+| `format`  | string | `"png"`      | Output format: `png`, `json`, `svg`                |
+| `theme`   | string | `"dark"`     | Theme: `dark`, `light`                             |
+| `range`   | string | `"24h"`      | Time range: `30m`, `1h`, `6h`, `12h`, `24h`        |
+| `lang`    | string | `"en"`       | Language: `en`, `zh`                               |
 
 Example:
 

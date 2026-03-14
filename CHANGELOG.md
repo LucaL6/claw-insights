@@ -5,60 +5,142 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.0] - 2026-03-14
 
-### Added
+Initial release — full-featured observability dashboard for OpenClaw agents.
 
-- 30-minute time range option for snapshots (`?range=30m`)
-- Per-model token usage breakdown with stacked progress bar in snapshot
-- Session turn count display (`💬 N turns`) from persistent message event tracking
-- Token usage trend indicator (`↑/↓ N%` vs previous period, `⚠️` for spikes >100%)
+### Core Dashboard
+
+- Real-time monitoring dashboard with two-panel layout (sessions + metrics)
+- Collapsible sidebar with Dashboard / Logs navigation
+- Responsive layout with mobile detection (`useIsBelowMd`)
+- TopBar with gateway status, channels, CPU/MEM, and snapshot button
+- Dark / Light theme with CSS variable theming and runtime toggle
+- English and Chinese (中文) i18n with runtime switching and browser detection
+
+### Session Management
+
+- Live session viewer with sub-agent tree and token usage progress
+- Session hierarchy with `spawnedBy` parent-child relationships
+- Sub-agent status tags (Active / Idle / Done) with model badges
+- Session Detail Drawer with full transcript replay
+- TranscriptTimeline: role separation (user/assistant/tool), Markdown rendering, code highlighting
+- Per-turn token tracking (in/out/cache) and model name display
+- Cursor-based transcript pagination with server LRU cache
+- TimelineScrubber for timeline navigation and jump-to-end
+- SpawnPromptBox for sub-agent spawn prompt display
+- Incremental transcript refresh (append-only, no full reload)
+
+### Metrics & Charts
+
+- Metrics charts: tokens (per-model stacked area), sessions (bar), errors (bar), uptime (strip)
+- Time range selector: 30m / 1h / 6h / 12h / 24h
+- Per-model token breakdown with colored legend and model selector
+- ECharts-based chart system with custom dark/light theme
+- Lifetime stats with background scanner
+
+### Event Logs
+
+- Structured event log viewer (LogPage) with type filtering and search
+- Density heatmap strip (DensityStrip) for 24h event distribution
+- Event counts summary (error / warning / restart)
+
+### Snapshot API
+
+- `POST /api/snapshot` — server-rendered status cards (zero browser dependency)
+- `claw-insights snapshot` — CLI command for quick captures
+- Output formats: PNG (Satori + resvg @2x), SVG, JSON
+- Detail levels: compact, standard, full (auto-degradation on oversized output)
+- Themes: dark, light | Languages: en, zh
+- 30-minute time range option (`?range=30m`)
+- Per-model token usage breakdown with stacked progress bar
+- Session turn count display from persistent message event tracking
+- Token usage trend indicator (↑/↓ % vs previous period, ⚠️ for spikes >100%)
+- Companion days counter and total conversations
+- V2 visual design: Inter font (5 weights), 390px mobile-first viewport, indigo/violet palette, glass card styling
+- Rate limiting (token bucket) and request coalescing for identical params
+- Render pool with concurrency control and queue management
+
+### Data Pipeline
+
 - `message_events` table for persistent per-message tracking (DB migration v8)
-- `MessageEventBus` for message event pipeline (mirrors `TokenEventBus` pattern)
+- `MessageEventBus` for message event pipeline
+- Token usage event sourcing with delta aggregation (SUM)
+- Incremental scanner with tiered startup (recent → full)
+- TranscriptWatcher for real-time log observation
+- Database init with dependency injection and migration compression
 
-### Changed
+### Architecture
 
-- **Snapshot Visual Rework (V2 Glassmorphism)**
-  - New Inter font (replacing IBM Plex Sans) with 5 weights (400–800)
-  - Unified 390px viewport for all detail levels (mobile-first)
-  - Indigo/violet color scheme with gradient progress bars
-  - Glass card styling (`backdrop-filter` inspired, Satori-compatible)
-  - Merged gateway banner + metrics into compact status strip
-  - Header: OpenClaw brand with companion time (`陪伴 N 天`) and online/offline status
-  - Footer: version left, full datetime right (removed uptime display)
-  - Default snapshot range changed from 6h to 24h
-  - New data fields: `companionDays`, `hostname`, `totalConversations`
-- Snapshot metrics section condensed from 4-card grid to single-line summary
-- Snapshot charts (sparklines, uptime bar) replaced with stacked token usage bar
-- Snapshot errors section now hidden when error count is 0
-- Token usage in snapshot now shows per-model breakdown with colored legend
+- Hexagonal port/adapter architecture (gateway, sessions, metrics, logs, cron, system)
+- Source-centric GraphQL schema v2 with `AgentNamespace` / `DashboardNamespace`
+- `SourceRegistry` + `SourceAdapter` pattern for extensible data sources
+- `RequestMemo` (WeakMap) for per-request gateway snapshot deduplication
+- Platform abstraction layer for cross-platform support
 
-## [0.1.0] - 2026-02-23
+### API & Auth
 
-### Added
-
-- Real-time monitoring dashboard for OpenClaw gateway
-- Live session viewer with sub-agent tree, token usage, and context progress
-- Metrics charts: sessions, tokens (per-model), errors, uptime over 1h/6h/12h/24h
-- Structured event log viewer with density heatmap, type filtering, and search
-- Gateway control operations: restart, update
-- Screenshot API: `POST /api/snapshot` — capture dashboard as PNG
-  - Detail levels: compact, standard, full
-  - Themes: dark, light
-  - Languages: en, zh
-  - Server-side rendering via Satori + resvg (zero browser dependency)
-- GraphQL API with subscriptions for real-time data
-- Token-based authentication (auto-generated, URL-based like Jupyter)
-- Dark / Light theme with CSS variable theming
-- English and Chinese (中文) i18n
-- SQLite-based metrics storage with configurable retention
+- GraphQL API (graphql-yoga) with SSE subscriptions (`dataChanged`, `logs`)
+- `useReactiveQuery` hook for subscription-driven auto-refresh
+- Token-based authentication with auto-generated secrets
+- Cookie-based session with 7-day expiry and auto-refresh on rotation
+- Auth session rotation runner with configurable intervals
+- Request access logging with endpoint classification and sampling
+- Cookie exchange middleware (`?token=` → `claw_session`)
 - Health endpoint: `GET /health`
+- Local-only binding (`127.0.0.1`) with Host header validation
+
+### CLI
+
+- `claw-insights start` — daemon mode with background process management
+- `claw-insights stop` / `restart` / `status` / `logs` — service management
+- `claw-insights snapshot` — standalone snapshot without full server
+- `claw-insights run` — foreground server mode
+- `--open` flag for auto-opening browser on start
+- CLI spinner during startup with ready detection
+- Saved args persistence for restart without explicit flags
+- Default ports: server 41041, web dev 41042
+
+### Developer Experience
+
+- Layered logging system (pino stages 1–3) with log page text selection
+- Typography unification (IBM Plex Sans / Inter / JetBrains Mono)
+- Project logo and model-specific color mapping
+- Responsive chart layout with `@tanstack/react-virtual` for large lists
+- GraphQL codegen with 3 targets (shared types, resolver types, web client preset)
+- TypeScript strict mode, ESLint strictification (eqeqeq, curly, import-sort)
+- Prettier formatting with format/format:check scripts
+- Local CI simulation scripts
+
+### AI Agent Integration
+
+- `AGENTS.md` — structured skill index for AI agents
+- `docs/skills/install/SKILL.md` — installation and configuration skill
+- `docs/skills/snapshot/SKILL.md` — snapshot capture skill
+- Skills aligned with three-pillar positioning (zero intrusion, full replay, shareable snapshots)
+
+### Testing
+
+- 2600+ test cases across 296 test files
+- Server unit tests (vitest) with branch coverage 93%+
+- Web unit tests (vitest + @testing-library/react + happy-dom)
+- Integration tests for snapshot pipeline
+- E2E tests (Playwright)
 - Docker smoke test suite (25 checks across 5 phases)
-- Comprehensive test suite: 1370+ tests across server and web packages
+
+### Documentation
+
+- README with hero montage, three-pillar badges, and bilingual support (EN / 中文)
+- `docs/configuration.md` — all env vars, config file, auth model
+- `docs/architecture.md` — system design, data flow, directory structure
+- `docs/api-reference.md` — GraphQL + REST endpoint signatures
+- `CONTRIBUTING.md` — development setup, PR guidelines, code conventions
+- `SECURITY.md` — vulnerability reporting and security model
+- Issue templates (bug report, feature request) and PR template
 
 ### Security
 
-- Auth enabled by default in production (auto-generated token)
-- API token minimum 32 characters enforced
-- Cookie-based session with 7-day expiry
-- No-auth mode requires explicit opt-in
+- Auth enabled by default (auto-generated token, minimum 32 characters)
+- No-auth mode requires explicit opt-in (`--no-auth`)
+- Local-only API binding with loopback address enforcement
+- Gitleaks integration for secret scanning

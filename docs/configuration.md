@@ -136,9 +136,9 @@ If a browser session expires, is cleared, or stays idle beyond rotation + grace 
 
 ```bash
 # Bearer token (recommended for scripts)
-curl -H "Authorization: Bearer YOUR_TOKEN" # gitleaks:allow http://127.0.0.1:41041/graphql \
+curl -H "Authorization: Bearer YOUR_TOKEN" http://127.0.0.1:41041/graphql \
   -H "Content-Type: application/json" \
-  -d '{"query":"{ gateway { version uptime } }"}'
+  -d '{"query":"{ system(context: {}) { ... on OpenClawSystem { gateway { version uptime } } } }"}'
 ```
 
 > **Note:** Bearer token auth is stable across cookie rotations. Browser cookie auth (`claw_session`) uses rotating `kid:digest` values; legacy bare `64hex` cookie format is not accepted.
