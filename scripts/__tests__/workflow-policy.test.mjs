@@ -125,6 +125,15 @@ test('release verifies tarball install and version before publish', () => {
   assert.match(verifyNode23Step.run ?? '', /claw-insights --version/);
 });
 
+test('release smoke-tests snapshot subcommand from installed tarball on both node versions', () => {
+  const buildJob = getJob(release, 'build');
+  const snapshotNode22Step = getStepByName(buildJob, 'Smoke test installed CLI snapshot subcommand (Node 22)');
+  const snapshotNode23Step = getStepByName(buildJob, 'Smoke test installed CLI snapshot subcommand (Node 23)');
+
+  assert.equal(snapshotNode22Step.run, 'bash scripts/ci/smoke-release-snapshot.sh 41151');
+  assert.equal(snapshotNode23Step.run, 'bash scripts/ci/smoke-release-snapshot.sh 41153');
+});
+
 test('release npm publish uses provenance', () => {
   const publishJob = getJob(release, 'publish-npm');
   const publishStep = getStepByName(publishJob, 'Publish to npm');

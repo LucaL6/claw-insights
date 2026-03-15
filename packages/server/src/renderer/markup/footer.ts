@@ -2,10 +2,10 @@ import type { SnapshotData } from '../../services/snapshot-types.js';
 import { getAppVersion } from '../../version.js';
 import { t } from '../i18n/index.js';
 import type { ColorScheme } from './colors.js';
+import type { BrandTheme } from './embedded-assets.js';
+import { getFooterLogoDataUri } from './embedded-assets.js';
 import type { SatoriNode } from './helpers.js';
 import { div, span } from './helpers.js';
-import type { BrandTheme } from './logo-assets.js';
-import { getFooterBrandLogoFile, loadLogoDataUri } from './logo-assets.js';
 
 export function renderFooter(
   data: SnapshotData,
@@ -14,7 +14,7 @@ export function renderFooter(
   locale: string = 'en',
 ): SatoriNode {
   const datetime = data.timestamp.slice(0, 16).replace('T', ' ') + ' UTC';
-  const logoSrc = loadLogoDataUri(getFooterBrandLogoFile(theme));
+  const logoSrc = getFooterLogoDataUri(theme);
 
   return div(
     {

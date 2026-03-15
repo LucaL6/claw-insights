@@ -63,6 +63,9 @@ jobs:
             exit 1
           fi
 
+      - name: Smoke test installed CLI snapshot subcommand (Node 22)
+        run: bash scripts/ci/smoke-release-snapshot.sh 41151
+
       - uses: actions/setup-node@v4
         with:
           node-version: 23
@@ -83,6 +86,9 @@ jobs:
             echo "Version mismatch: expected ${EXPECTED}, got ${ACTUAL_RAW}" >&2
             exit 1
           fi
+
+      - name: Smoke test installed CLI snapshot subcommand (Node 23)
+        run: bash scripts/ci/smoke-release-snapshot.sh 41153
 
       - name: Upload tgz artifact
         uses: actions/upload-artifact@v4

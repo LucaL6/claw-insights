@@ -6,6 +6,7 @@ import satori, { type SatoriOptions } from 'satori';
 
 import { createChildLogger } from '../logger.js';
 import type { SnapshotData } from '../services/snapshot-types.js';
+import { serializeError } from '../utils/error-serializer.js';
 import { loadFonts } from './fonts.js';
 import { buildMarkup, type MarkupOptions, VIEWPORT_WIDTH } from './markup/index.js';
 
@@ -47,7 +48,7 @@ export async function renderSnapshot(data: SnapshotData, opts: MarkupOptions): P
     log.debug({ ms: Math.round(performance.now() - start), bytes: buf.length }, 'renderSnapshot done');
     return buf;
   } catch (err) {
-    log.error({ err, ms: Math.round(performance.now() - start) }, 'renderSnapshot failed');
+    log.error({ err: serializeError(err), ms: Math.round(performance.now() - start) }, 'renderSnapshot failed');
     throw err;
   }
 }

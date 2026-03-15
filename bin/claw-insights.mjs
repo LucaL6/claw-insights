@@ -9,19 +9,41 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkgPath = resolve(__dirname, '..', 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 
+function serverArtifactCandidates(relativePath) {
+  // [0] monorepo dev layout, [1] npm release layout.
+  return [
+    resolve(__dirname, '..', 'packages', 'server', 'dist', relativePath),
+    resolve(__dirname, '..', 'server', relativePath),
+  ];
+}
+
+function findExistingPath(candidates) {
+  return candidates.find((candidate) => existsSync(candidate));
+}
+
+function resolveExistingPath(label, candidates) {
+  const found = findExistingPath(candidates);
+  if (found) {
+    return found;
+  }
+
+  throw new Error(`${label} not found. Tried:\n- ${candidates.join('\n- ')}`);
+}
+
 async function main() {
   // Early detect 'snapshot' subcommand — handled separately, doesn't need full server
   if (process.argv[2] === 'snapshot') {
-    const { runSnapshotCmd } = await import(
-      resolve(__dirname, '..', 'packages', 'server', 'dist', 'cli', 'snapshot-cmd.js')
+    const snapshotCmdPath = resolveExistingPath(
+      'snapshot command module',
+      serverArtifactCandidates('cli/snapshot-cmd.js'),
     );
+    const { runSnapshotCmd } = await import(snapshotCmdPath);
     await runSnapshotCmd(process.argv.slice(3));
     return;
   }
 
-  const { parseCliArgs } = await import(
-    resolve(__dirname, '..', 'packages', 'server', 'dist', 'cli', 'parse-args.js')
-  );
+  const parseArgsPath = resolveExistingPath('CLI parser module', serverArtifactCandidates('cli/parse-args.js'));
+  const { parseCliArgs } = await import(parseArgsPath);
   const args = parseCliArgs(process.argv.slice(2));
 
   if (args.version) {
@@ -34,14 +56,21 @@ async function main() {
     process.exit(0);
   }
 
-  const serverEntry = resolve(__dirname, '..', 'packages', 'server', 'dist', 'index.js');
-  if (!existsSync(serverEntry)) {
-    console.error(`❌ Build not found at ${serverEntry}`);
+  const serverEntryCandidates = serverArtifactCandidates('index.js');
+  const serverEntry = findExistingPath(serverEntryCandidates);
+  if (!serverEntry) {
+    console.error('❌ Build not found at any known location:');
+    for (const candidate of serverEntryCandidates) {
+      console.error(`   - ${candidate}`);
+    }
     console.error(`   Run 'npm run build' first, or use 'npm run dev' for development.`);
     process.exit(1);
   }
 
-  const runtimeHelperPath = resolve(__dirname, '..', 'packages', 'server', 'dist', 'cli', 'node-runtime.js');
+  const runtimeHelperPath = resolveExistingPath(
+    'node runtime helper module',
+    serverArtifactCandidates('cli/node-runtime.js'),
+  );
   // RUNTIME_POLICY_BLOCK_START
   const { buildNodeArgsForServer, assertSupportedNodeVersion } = await import(runtimeHelperPath);
   assertSupportedNodeVersion(process.versions.node);
@@ -68,9 +97,8 @@ async function main() {
   if (args.open) process.env.CLAW_INSIGHTS_OPEN = 'true';
   if (args.gateway) process.env.CLAW_INSIGHTS_GATEWAY = args.gateway;
 
-  const { daemonStart, daemonStop, daemonStatus, daemonLogs, daemonRestart } = await import(
-    resolve(__dirname, '..', 'packages', 'server', 'dist', 'cli', 'daemon.js')
-  );
+  const daemonCliPath = resolveExistingPath('daemon CLI module', serverArtifactCandidates('cli/daemon.js'));
+  const { daemonStart, daemonStop, daemonStatus, daemonLogs, daemonRestart } = await import(daemonCliPath);
 
   switch (args.command) {
     case 'start':

@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Smoke script isolation: temp home dir, random ports, port-conflict abort guard
   - CI/release gates: tarball asset checks, runtime parity, smoke tests
 
+- Harden release packaging and CLI parity guard:
+  - Release package now copies canonical `bin/claw-insights.mjs` (single source of truth), removing handwritten release-bin drift risk
+  - CLI entrypoint resolves both monorepo (`packages/server/dist/...`) and release (`server/...`) layouts for `snapshot`, parser, runtime, and daemon modules
+  - Release workflow snapshot smoke now runs on both Node 22 and Node 23, with workflow-policy test coverage to prevent silent step regressions
+  - Parity guard now ignores comment-only spoof lines, supports both `$REPO_DIR` and `${REPO_DIR}` variable styles, and rejects non-canonical rewrites of `dist/release/bin/claw-insights`
+
 ## [0.1.0] - 2026-03-14
 
 Initial release — full-featured observability dashboard for OpenClaw agents.

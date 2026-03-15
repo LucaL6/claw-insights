@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { SnapshotData } from '../../../services/snapshot-types.js';
 import { DARK } from '../colors.js';
-import { _resetLobsterCache, getLobsterDataUri, renderHeader, resolveLobsterAssetPath } from '../header.js';
+import { renderHeader } from '../header.js';
 import type { SatoriNode } from '../helpers.js';
 
 function collectText(node: SatoriNode | string | unknown): string[] {
@@ -79,54 +79,6 @@ describe('renderHeader', () => {
     expect(texts.join(' ')).not.toContain('Claw Insights');
   });
 
-  it('resolves lobster asset path for bundled dist output', () => {
-    const distChunkDir = '/repo/packages/server/dist';
-    const expectedPath = '/repo/packages/server/assets/openclaw-lobster.svg';
-    const resolved = resolveLobsterAssetPath(distChunkDir, (candidate) => candidate === expectedPath);
-    expect(resolved).toBe(expectedPath);
-  });
-
-  it('returns null when lobster asset cannot be resolved', () => {
-    const resolved = resolveLobsterAssetPath('/repo/packages/server/dist', () => false);
-    expect(resolved).toBeNull();
-  });
-
-  it('builds fallback svg data uri when asset file is unavailable', () => {
-    const uri = getLobsterDataUri({
-      moduleDir: '/repo/packages/server/dist',
-      pathExists: () => false,
-      warn: () => {},
-    });
-    expect(uri.startsWith('data:image/svg+xml;base64,')).toBe(true);
-    const decoded = Buffer.from(uri.replace('data:image/svg+xml;base64,', ''), 'base64').toString('utf8');
-    expect(decoded).toContain('fallback-lobster');
-  });
-
-  it('falls back when asset exists but read fails', () => {
-    const warn = vi.fn();
-    const uri = getLobsterDataUri({
-      moduleDir: '/repo/packages/server/dist',
-      pathExists: () => true,
-      readText: () => {
-        throw new Error('EACCES');
-      },
-      warn,
-    });
-    const decoded = Buffer.from(uri.replace('data:image/svg+xml;base64,', ''), 'base64').toString('utf8');
-    expect(decoded).toContain('fallback-lobster');
-    expect(warn).toHaveBeenCalled();
-  });
-
-  it('getLobsterDataUri returns a valid data URI', () => {
-    _resetLobsterCache();
-    const uri = getLobsterDataUri({ warn: () => {} });
-    expect(uri).toMatch(/^data:image\/svg\+xml;base64,/);
-    const decoded = Buffer.from(uri.replace('data:image/svg+xml;base64,', ''), 'base64').toString('utf8');
-    // Should contain either the real asset or the fallback
-    expect(decoded).toContain('<svg');
-    _resetLobsterCache();
-  });
-
   it('uses the lobster asset styling in snapshot header icon with fixed 32x32 size', () => {
     const tree = renderHeader(makeData(), 'standard', c, 'en');
     const images = collectImages(tree);
@@ -140,6 +92,16 @@ describe('renderHeader', () => {
     const encoded = String(lobsterImage?.props?.src).replace('data:image/svg+xml;base64,', '');
     const decoded = Buffer.from(encoded, 'base64').toString('utf8');
     expect(decoded).toContain('lobster-gradient');
+  });
+
+  it('lobster src is a valid data:image/svg+xml;base64, URI', () => {
+    const tree = renderHeader(makeData(), 'standard', c, 'en');
+    const images = collectImages(tree);
+    const lobsterImage = images.find((img) =>
+      typeof img.props?.src === 'string' ? img.props.src.startsWith('data:image/svg+xml;base64,') : false,
+    );
+    expect(lobsterImage).toBeDefined();
+    expect(lobsterImage?.props?.src).toMatch(/^data:image\/svg\+xml;base64,/);
   });
 
   it('shows Online when gateway is up', () => {

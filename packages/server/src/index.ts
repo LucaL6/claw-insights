@@ -98,6 +98,18 @@ if (!config.noAuth) {
 const ctx = await createContext();
 startContext(ctx);
 
+// ISS-081: Eagerly validate font availability (fail fast with clear log)
+{
+  const { loadFonts } = await import('./renderer/fonts.js');
+  const { serializeError } = await import('./utils/error-serializer.js');
+  try {
+    loadFonts();
+    log.info('font precheck passed');
+  } catch (err) {
+    log.warn({ err: serializeError(err) }, 'font precheck failed — snapshot rendering may be unavailable');
+  }
+}
+
 const app = express();
 app.use(express.json());
 

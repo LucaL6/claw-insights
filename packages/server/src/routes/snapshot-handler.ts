@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { createChildLogger } from '../logger.js';
 import type { SnapshotEngine } from '../services/snapshot-engine.js';
 import { parseSnapshotRequest } from '../services/snapshot-types.js';
+import { serializeError } from '../utils/error-serializer.js';
 import {
   CollectTimeoutError,
   ErrorCodes,
@@ -155,7 +156,7 @@ export function createSnapshotHandler(engine: SnapshotEngine) {
           t0,
         );
       } else {
-        log.error({ err }, 'snapshot render failed');
+        log.error({ err: serializeError(err) }, 'snapshot render failed');
         sendError(
           res,
           500,
