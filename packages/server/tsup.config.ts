@@ -5,7 +5,13 @@ import { defineConfig } from 'tsup';
 const nodeExternals = builtinModules.flatMap((m) => [m, `node:${m}`]);
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/cli/parse-args.ts', 'src/cli/daemon.ts', 'src/cli/snapshot-cmd.ts'],
+  entry: [
+    'src/index.ts',
+    'src/cli/parse-args.ts',
+    'src/cli/daemon.ts',
+    'src/cli/snapshot-cmd.ts',
+    'src/cli/node-runtime.ts',
+  ],
   format: ['esm'],
   dts: true,
   splitting: true,

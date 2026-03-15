@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Stabilize startup and isolate smoke tests:
+  - Lazy asset loading with fallback to prevent startup crash on missing files
+  - Node runtime policy wiring for daemon and foreground modes
+  - Centralize data directory via `paths.ts` with `CLAW_INSIGHTS_HOME` env var override
+  - Smoke script isolation: temp home dir, random ports, port-conflict abort guard
+  - CI/release gates: tarball asset checks, runtime parity, smoke tests
+
 ## [0.1.0] - 2026-03-14
 
 Initial release — full-featured observability dashboard for OpenClaw agents.

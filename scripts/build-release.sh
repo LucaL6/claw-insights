@@ -6,9 +6,12 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 RELEASE_DIR="$REPO_DIR/dist/release"
-VERSION="${1:-0.9.0}"
+VERSION="${1:-0.1.0}"
 
 echo "🔨 Building claw-insights v$VERSION release..."
+
+# Step 0: Guard root/release runtime policy parity before packaging
+node "$REPO_DIR/scripts/check-cli-runtime-policy-parity.mjs"
 
 # Step 1: Clean
 rm -rf "$RELEASE_DIR"
@@ -32,6 +35,7 @@ echo "  Copying font assets..."
 mkdir -p "$RELEASE_DIR/assets/fonts"
 cp packages/server/assets/fonts/*.ttf "$RELEASE_DIR/assets/fonts/"
 cp packages/server/assets/fonts/OFL-LICENSE.txt "$RELEASE_DIR/assets/fonts/"
+cp packages/server/assets/openclaw-lobster.svg "$RELEASE_DIR/assets/openclaw-lobster.svg"
 
 # Step 5: Generate package.json (auto-extract runtime deps from server)
 echo "  Extracting runtime dependencies from packages/server/package.json..."
@@ -83,6 +87,7 @@ echo "  Extracted $DEP_COUNT runtime dependencies"
 cat > "$RELEASE_DIR/bin/claw-insights" << 'ENTRY'
 #!/usr/bin/env node
 
+import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -113,6 +118,13 @@ async function main() {
     process.exit(1);
   }
 
+  const runtimeHelperPath = resolve(__dirname, '..', 'server', 'cli', 'node-runtime.js');
+  // RUNTIME_POLICY_BLOCK_START
+  const { buildNodeArgsForServer, assertSupportedNodeVersion } = await import(runtimeHelperPath);
+  assertSupportedNodeVersion(process.versions.node);
+  const nodeArgs = buildNodeArgsForServer(serverEntry, process.versions.node);
+  // RUNTIME_POLICY_BLOCK_END
+
   if (args.serverOnly && process.argv.includes('--web-port')) {
     console.warn('⚠️  --web-port is ignored in server-only mode.');
   }
@@ -133,7 +145,7 @@ async function main() {
       await daemonStart(args, serverEntry);
       break;
     case 'stop':
-      daemonStop();
+      await daemonStop();
       break;
     case 'status':
       await daemonStatus();
@@ -145,9 +157,28 @@ async function main() {
       await daemonRestart(args, serverEntry);
       break;
     case 'run':
+      if (nodeArgs.length > 1) {
+        await runForegroundChild(process.execPath, nodeArgs);
+        break;
+      }
       await import(serverEntry);
       break;
   }
+}
+
+async function runForegroundChild(execPath, args) {
+  await new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(execPath, args, { stdio: 'inherit', env: process.env });
+    child.on('error', rejectPromise);
+    child.on('exit', (code, signal) => {
+      if (signal) {
+        process.kill(process.pid, signal);
+        return;
+      }
+      process.exitCode = code ?? 0;
+      resolvePromise(code ?? 0);
+    });
+  });
 }
 
 function printUsage(version) {

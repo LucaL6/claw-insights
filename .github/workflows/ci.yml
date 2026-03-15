@@ -333,7 +333,7 @@ jobs:
     name: Build Release Package
     runs-on: ubuntu-latest
     needs: test
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -344,11 +344,34 @@ jobs:
 
       - run: npm ci
 
+      - name: Verify CLI runtime policy parity
+        run: node scripts/check-cli-runtime-policy-parity.mjs
+
       - name: Build release
         run: bash scripts/build-release.sh 0.0.0-ci
 
-      - name: Install from tarball
+      - name: Verify release tarball contents
+        run: node scripts/check-release-tarball-assets.mjs ./dist/claw-insights-*.tgz
+
+      - name: Install from tarball (Node 22)
         run: npm install -g ./dist/claw-insights-*.tgz
 
-      - name: Verify CLI
+      - name: Smoke test installed CLI startup (Node 22)
+        run: bash scripts/ci/smoke-release-install.sh 41141
+
+      - name: Verify CLI (Node 22)
+        run: claw-insights --version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 23
+          cache: npm
+
+      - name: Install from tarball (Node 23)
+        run: npm install -g ./dist/claw-insights-*.tgz
+
+      - name: Smoke test installed CLI startup (Node 23)
+        run: bash scripts/ci/smoke-release-install.sh 41143
+
+      - name: Verify CLI (Node 23)
         run: claw-insights --version

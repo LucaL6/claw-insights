@@ -13,13 +13,15 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
 import { createChildLogger } from '../logger.js';
+import { getDataDir } from '../paths.js';
 import { reclaimLayeredLogs } from './log-rotate.js';
+import { buildNodeArgsForServer } from './node-runtime.js';
 import type { CliArgs } from './parse-args.js';
 import { PidFile } from './pid.js';
 
-const log = createChildLogger('cli:daemon');
+export { getDataDir } from '../paths.js';
 
-const HOME = process.env.HOME ?? '/tmp';
+const log = createChildLogger('cli:daemon');
 
 /* ── CLI Spinner ── */
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -60,10 +62,6 @@ function createSpinner(message: string) {
       process.stdout.write(`\x1b[2K\r  ${finalMessage}\n`);
     },
   };
-}
-
-export function getDataDir(): string {
-  return join(HOME, '.claw-insights');
 }
 
 export function getDaemonPaths() {
@@ -167,6 +165,29 @@ export function selectDefaultLayeredLogFiles(logDir: string): string[] {
     .filter((v): v is string => Boolean(v));
 }
 
+interface SpawnDaemonProcessOptions {
+  spawnProcess?: typeof spawn;
+  execPath?: string;
+  nodeVersion?: string;
+}
+
+export function spawnDaemonProcess(
+  serverEntry: string,
+  childEnv: Record<string, string>,
+  options: SpawnDaemonProcessOptions = {},
+) {
+  const spawnProcess = options.spawnProcess ?? spawn;
+  const execPath = options.execPath ?? process.execPath;
+  const nodeVersion = options.nodeVersion ?? process.versions.node;
+  const nodeArgs = buildNodeArgsForServer(serverEntry, nodeVersion);
+
+  return spawnProcess(execPath, nodeArgs, {
+    detached: true,
+    stdio: 'ignore',
+    env: childEnv,
+  });
+}
+
 export async function daemonStart(args: CliArgs, serverEntry: string): Promise<void> {
   const paths = getDaemonPaths();
   const pidFile = new PidFile(paths.pidFile);
@@ -236,11 +257,7 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
   }
 
   // Spawn detached child (layered runtime persists operational logs).
-  const child = spawn(process.execPath, [serverEntry], {
-    detached: true,
-    stdio: 'ignore',
-    env: childEnv,
-  });
+  const child = spawnDaemonProcess(serverEntry, childEnv);
 
   // Keep ref during startup to detect early crashes, unref after health check
   if (!child.pid) {

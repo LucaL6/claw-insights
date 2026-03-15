@@ -61,7 +61,10 @@ describe('config singleton', () => {
     const { readFileSync } = await import('fs');
     const src = readFileSync(new URL('../config.ts', import.meta.url), 'utf-8');
     // Filter out allowed ./ imports (re-exported sibling modules)
-    const filtered = src.replace(/from\s+'\.\/logger\.js'/g, '').replace(/from\s+'\.\/auth\/secret-store\.js'/g, '');
+    const filtered = src
+      .replace(/from\s+'\.\/logger\.js'/g, '')
+      .replace(/from\s+'\.\/auth\/secret-store\.js'/g, '')
+      .replace(/from\s+'\.\/paths\.js'/g, '');
     expect(filtered).not.toContain('./');
   });
 
@@ -229,21 +232,31 @@ describe('sessionHierarchyMode', () => {
 
 describe('loadConfigFile', () => {
   const testDir = join(tmpdir(), 'claw-insights-config-test-' + Date.now());
+  const testDataDir = join(testDir, '.claw-insights');
   const originalHome = process.env.HOME;
+  const originalCIHome = process.env.CLAW_INSIGHTS_HOME;
 
   beforeEach(() => {
-    mkdirSync(join(testDir, '.claw-insights'), { recursive: true });
+    mkdirSync(testDataDir, { recursive: true });
     process.env.HOME = testDir;
+    process.env.CLAW_INSIGHTS_HOME = testDataDir;
   });
 
   afterEach(() => {
     process.env.HOME = originalHome;
+    if (originalCIHome === undefined) {
+      delete process.env.CLAW_INSIGHTS_HOME;
+    } else {
+      process.env.CLAW_INSIGHTS_HOME = originalCIHome;
+    }
     rmSync(testDir, { recursive: true, force: true });
     vi.resetModules();
   });
 
   it('returns empty object when no config file', async () => {
-    process.env.HOME = join(tmpdir(), 'nonexistent-' + Date.now());
+    const nonexistent = join(tmpdir(), 'nonexistent-' + Date.now());
+    process.env.HOME = nonexistent;
+    process.env.CLAW_INSIGHTS_HOME = join(nonexistent, '.claw-insights');
     const { loadConfigFile } = await import('../config.js');
     expect(loadConfigFile()).toEqual({});
   });

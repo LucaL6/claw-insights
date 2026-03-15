@@ -38,13 +38,43 @@ jobs:
       - name: Unit Tests (web)
         run: npm run -w @claw-insights/web test
 
+      - name: Verify CLI runtime policy parity
+        run: node scripts/check-cli-runtime-policy-parity.mjs
+
       - name: Build release
         run: bash scripts/build-release.sh "${GITHUB_REF_NAME#v}"
 
-      - name: Install from tarball
+      - name: Verify release tarball contents
+        run: node scripts/check-release-tarball-assets.mjs ./dist/claw-insights-*.tgz
+
+      - name: Install from tarball (Node 22)
         run: npm install -g ./dist/claw-insights-*.tgz
 
-      - name: Verify CLI version
+      - name: Smoke test installed CLI startup (Node 22)
+        run: bash scripts/ci/smoke-release-install.sh 41141
+
+      - name: Verify CLI version (Node 22)
+        run: |
+          ACTUAL_RAW="$(claw-insights --version | head -n 1 | awk '{print $NF}')"
+          ACTUAL="${ACTUAL_RAW#v}"
+          EXPECTED="${GITHUB_REF_NAME#v}"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Version mismatch: expected ${EXPECTED}, got ${ACTUAL_RAW}" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 23
+          cache: npm
+
+      - name: Install from tarball (Node 23)
+        run: npm install -g ./dist/claw-insights-*.tgz
+
+      - name: Smoke test installed CLI startup (Node 23)
+        run: bash scripts/ci/smoke-release-install.sh 41143
+
+      - name: Verify CLI version (Node 23)
         run: |
           ACTUAL_RAW="$(claw-insights --version | head -n 1 | awk '{print $NF}')"
           ACTUAL="${ACTUAL_RAW#v}"

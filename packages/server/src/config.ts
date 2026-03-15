@@ -4,7 +4,9 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { createChildLogger } from './logger.js';
+import { getDataDir } from './paths.js';
 
+export { getDataDir };
 export {
   getAuthSecretPath,
   migrateLegacyApiTokenToSecret,
@@ -163,10 +165,6 @@ export const knownKeys = new Set([
 ]);
 
 // --- Config file ---
-
-export function getDataDir(): string {
-  return join(HOME, '.claw-insights');
-}
 
 export function loadConfigFile(): Record<string, unknown> {
   const configPath = join(getDataDir(), 'config.json');

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +40,13 @@ async function main() {
     console.error(`   Run 'npm run build' first, or use 'npm run dev' for development.`);
     process.exit(1);
   }
+
+  const runtimeHelperPath = resolve(__dirname, '..', 'packages', 'server', 'dist', 'cli', 'node-runtime.js');
+  // RUNTIME_POLICY_BLOCK_START
+  const { buildNodeArgsForServer, assertSupportedNodeVersion } = await import(runtimeHelperPath);
+  assertSupportedNodeVersion(process.versions.node);
+  const nodeArgs = buildNodeArgsForServer(serverEntry, process.versions.node);
+  // RUNTIME_POLICY_BLOCK_END
 
   if (args.serverOnly && process.argv.includes('--web-port')) {
     console.warn('⚠️  --web-port is ignored in server-only mode.');
@@ -81,9 +89,28 @@ async function main() {
       await daemonRestart(args, serverEntry);
       break;
     case 'run':
+      if (nodeArgs.length > 1) {
+        await runForegroundChild(process.execPath, nodeArgs);
+        break;
+      }
       await import(serverEntry);
       break;
   }
+}
+
+async function runForegroundChild(execPath, args) {
+  await new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(execPath, args, { stdio: 'inherit', env: process.env });
+    child.on('error', rejectPromise);
+    child.on('exit', (code, signal) => {
+      if (signal) {
+        process.kill(process.pid, signal);
+        return;
+      }
+      process.exitCode = code ?? 0;
+      resolvePromise(code ?? 0);
+    });
+  });
 }
 
 function printUsage(version) {

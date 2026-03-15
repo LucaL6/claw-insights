@@ -153,7 +153,7 @@ if (!config.isDev && !config.serverOnly && existsSync(webDistPath)) {
 }
 
 // PID file path for daemon mode cleanup
-const pidPath = join(process.env.HOME ?? '/tmp', '.claw-insights', 'claw-insights.pid');
+const pidPath = join(getDataDir(), 'claw-insights.pid');
 
 // Graceful shutdown
 async function shutdown(signal: 'SIGTERM' | 'SIGINT'): Promise<void> {
@@ -208,7 +208,7 @@ const server = app.listen(PORT, '127.0.0.1', () => {
     } else {
       // Daemon mode — write token to file (user-only readable), print hint
       try {
-        const dataDir = join(process.env.HOME ?? '/tmp', '.claw-insights');
+        const dataDir = getDataDir();
         mkdirSync(dataDir, { recursive: true });
         const tokenFile = join(dataDir, 'auth-token');
         writeFileSync(tokenFile, config.apiToken, { mode: 0o600 });

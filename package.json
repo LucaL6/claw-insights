@@ -21,7 +21,7 @@
     "test": "npm run --workspaces test && npm run test:scripts",
     "test:server": "npm run -w @claw-insights/server test",
     "test:web": "npm run -w @claw-insights/web test",
-    "test:scripts": "node --test scripts/__tests__/check-codegen-sync.test.mjs",
+    "test:scripts": "node --test scripts/__tests__/check-codegen-sync.test.mjs scripts/__tests__/check-cli-runtime-policy-parity.test.mjs scripts/__tests__/check-release-tarball-assets.test.mjs",
     "test:coverage": "npm run -w @claw-insights/server test -- --coverage && npm run -w @claw-insights/web test -- --coverage",
     "test:integration": "npm run -w @claw-insights/server test:integration",
     "test:e2e": "npm run -w @claw-insights/web test:e2e",
