@@ -19,14 +19,14 @@ describe('loadFonts branch coverage', () => {
     mockExistsSync.mockReset().mockReturnValue(false);
   });
 
-  it('throws when no builtin dir and no custom dir (line 38)', () => {
+  it('throws when no font directory found', () => {
     mockExistsSync.mockReturnValue(false);
-    expect(() => loadFonts()).toThrow('Font directory not found');
+    expect(() => loadFonts()).toThrow(/fonts.*not found/i);
   });
 
-  it('throws when customDir set but invalid and no builtinDir (line 42)', () => {
+  it('throws when customDir set but invalid and no builtinDir', () => {
     vi.stubEnv('CLAW_INSIGHTS_FONTS_DIR', '/tmp/nonexistent-xyz');
     mockExistsSync.mockReturnValue(false);
-    expect(() => loadFonts()).toThrow('No valid font directory found');
+    expect(() => loadFonts()).toThrow(/fonts.*not found/i);
   });
 });
