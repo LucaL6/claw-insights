@@ -27,6 +27,15 @@ function getStepByUses(job, prefix) {
   return step;
 }
 
+function getStepsByUses(job, prefix) {
+  const steps =
+    job.steps?.filter((entry) =>
+      typeof entry.uses === 'string' ? entry.uses.startsWith(prefix) : false,
+    ) ?? [];
+  assert.ok(steps.length > 0, `Missing step using: ${prefix}`);
+  return steps;
+}
+
 function getChangeFilters(ciWorkflow) {
   const changesJob = getJob(ciWorkflow, 'changes');
   const filterStep = getStepByUses(changesJob, 'dorny/paths-filter@v3');
@@ -101,6 +110,37 @@ test('ci audit blocks critical and reports high non-blocking', () => {
 
 test('release has id-token permission for provenance', () => {
   assert.equal(release.permissions?.['id-token'], 'write');
+});
+
+test('release only runs for tags that point to commits on the release base branch', () => {
+  const buildJob = getJob(release, 'build');
+  const checkoutSteps = getStepsByUses(buildJob, 'actions/checkout@v4');
+  const checkoutStep = checkoutSteps[0];
+  const guardStep = getStepByName(buildJob, 'Ensure tag commit is on release base branch');
+  const guardStepIndex = buildJob.steps?.findIndex((entry) => entry.name === guardStep.name) ?? -1;
+  const npmCiStepIndex = buildJob.steps?.findIndex((entry) => entry.run === 'npm ci') ?? -1;
+  const buildReleaseStepIndex = buildJob.steps?.findIndex((entry) => entry.name === 'Build release') ?? -1;
+
+  assert.equal(checkoutSteps.length, 1, 'Expected a single checkout step in release build job');
+  assert.equal(checkoutStep.with?.['fetch-depth'], 0);
+  assert.equal(guardStep.env?.RELEASE_BASE_BRANCH, '${{ github.event.repository.default_branch || \'main\' }}');
+  assert.match(
+    guardStep.run ?? '',
+    /git fetch --no-tags origin "\+refs\/heads\/\$\{BASE_BRANCH\}:refs\/remotes\/origin\/\$\{BASE_BRANCH\}"/,
+  );
+  assert.match(
+    guardStep.run ?? '',
+    /git merge-base --is-ancestor "\$GITHUB_SHA" "origin\/\$\{BASE_BRANCH\}"/,
+  );
+  assert.match(
+    guardStep.run ?? '',
+    /Tag .* does not point to a commit on origin\/\$\{BASE_BRANCH\}/,
+  );
+  assert.ok(guardStepIndex >= 0, 'Guard step not found in release build job');
+  assert.ok(npmCiStepIndex >= 0, 'npm ci step not found in release build job');
+  assert.ok(buildReleaseStepIndex >= 0, 'Build release step not found in release build job');
+  assert.ok(guardStepIndex < npmCiStepIndex, 'Guard step must run before npm ci');
+  assert.ok(guardStepIndex < buildReleaseStepIndex, 'Guard step must run before Build release');
 });
 
 test('release blocks on high vulnerability audit', () => {
