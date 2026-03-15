@@ -21,12 +21,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Ensure tag commit is on origin/main
+      - name: Ensure tag commit is on release base branch
+        env:
+          RELEASE_BASE_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
         run: |
-          git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/main"; then
-            echo "Tag ${GITHUB_REF_NAME} does not point to a commit on origin/main." >&2
-            echo "Merge to main first, then retag from main and rerun release." >&2
+          BASE_BRANCH="${RELEASE_BASE_BRANCH:-main}"
+          # Validate against current remote base-branch history.
+          # Reruns for old tags may fail if base branch history was rewritten.
+          git fetch --no-tags origin "+refs/heads/${BASE_BRANCH}:refs/remotes/origin/${BASE_BRANCH}"
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/${BASE_BRANCH}"; then
+            echo "Tag ${GITHUB_REF_NAME} does not point to a commit on origin/${BASE_BRANCH}." >&2
+            echo "Merge to ${BASE_BRANCH} first, then retag from ${BASE_BRANCH} and rerun release." >&2
             exit 1
           fi
 
