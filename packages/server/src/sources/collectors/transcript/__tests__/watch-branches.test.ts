@@ -37,6 +37,28 @@ async function waitForCondition(
   throw new Error(`Condition not met within ${timeoutMs}ms`);
 }
 
+async function waitForConditionReal(
+  check: () => boolean,
+  { timeoutMs = 2_000, stepMs = 25 }: { timeoutMs?: number; stepMs?: number } = {},
+) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (check()) {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, stepMs);
+    });
+  }
+
+  if (check()) {
+    return;
+  }
+
+  throw new Error(`Condition not met within ${timeoutMs}ms`);
+}
+
 function makeFile(dir: string, name: string, content: string): string {
   const p = join(dir, name);
   writeFileSync(p, content);
@@ -178,6 +200,11 @@ describe('watch.ts branch coverage', () => {
 
   // ── dirScan: discovers new .jsonl file ──
   it('dirScan discovers new .jsonl file and adds to fileStates', async () => {
+    // This branch relies on fs/promises I/O. Under fake timers + heavy CI load,
+    // the mocked clock can advance faster than real I/O completion and flake.
+    // Use real timers in this test to wait on actual wall-clock progress.
+    vi.useRealTimers();
+
     const fileStates = new Map<string, FileState>();
     const processTask = vi.fn<(task: FileTask) => Promise<FileState>>();
 
@@ -186,9 +213,12 @@ describe('watch.ts branch coverage', () => {
     const w = createWatcher({ dir, fileStates, processTask, pollIntervalMs: 100_000, dirScanIntervalMs: 100 });
 
     const key = join(dir, 'session.jsonl');
-    await waitForCondition(() => fileStates.has(key), { timeoutMs: 1_000, stepMs: 20 });
-    expect(fileStates.get(key)!.offset).toBe(0);
-    w.destroy();
+    try {
+      await waitForConditionReal(() => fileStates.has(key), { timeoutMs: 3_000, stepMs: 25 });
+      expect(fileStates.get(key)!.offset).toBe(0);
+    } finally {
+      w.destroy();
+    }
   });
 
   // ── dirScan: stat fails for new file (catch branch line 162-174) ──
