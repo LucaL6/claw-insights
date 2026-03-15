@@ -58,7 +58,7 @@ export function MetricsSection({ range, onRangeChange, navigate, onReady }: Metr
     buckets,
     bucketSeconds,
   );
-  const validationWarnings = useMetricsValidation(buckets);
+  const validationWarnings = useMetricsValidation(buckets, uptimePct);
 
   if (fetching) {
     return (

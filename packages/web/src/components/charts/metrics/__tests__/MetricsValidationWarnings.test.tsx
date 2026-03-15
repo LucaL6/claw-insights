@@ -1,5 +1,5 @@
-import { cleanup,screen } from '@testing-library/react';
-import { afterEach,describe, expect, it } from 'vitest';
+import { cleanup, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { renderWithProviders } from '../../../../test/render';
 import { MetricsValidationWarnings } from '../MetricsValidationWarnings';
@@ -12,18 +12,29 @@ describe('MetricsValidationWarnings', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('renders a single warning', () => {
-    renderWithProviders(<MetricsValidationWarnings warnings={['Data may be stale']} />);
-    expect(screen.getByText('Data may be stale')).toBeDefined();
+  it('renders a warn-level message with amber style', () => {
+    renderWithProviders(<MetricsValidationWarnings warnings={[{ text: 'Gateway was offline', level: 'warn' }]} />);
+    expect(screen.getByText('Gateway was offline')).toBeDefined();
     expect(screen.getByText('⚠️')).toBeDefined();
   });
 
-  it('renders multiple warnings', () => {
-    const warnings = ['Warning one', 'Warning two', 'Warning three'];
+  it('renders an info-level message with muted style', () => {
+    renderWithProviders(
+      <MetricsValidationWarnings warnings={[{ text: 'No activity in this time window', level: 'info' }]} />,
+    );
+    expect(screen.getByText('No activity in this time window')).toBeDefined();
+    expect(screen.getByText('ℹ️')).toBeDefined();
+  });
+
+  it('renders multiple messages with correct icons', () => {
+    const warnings = [
+      { text: 'Warning one', level: 'warn' as const },
+      { text: 'Info one', level: 'info' as const },
+    ];
     renderWithProviders(<MetricsValidationWarnings warnings={warnings} />);
-    warnings.forEach((w) => {
-      expect(screen.getByText(w)).toBeDefined();
-    });
-    expect(screen.getAllByText('⚠️')).toHaveLength(3);
+    expect(screen.getByText('Warning one')).toBeDefined();
+    expect(screen.getByText('Info one')).toBeDefined();
+    expect(screen.getByText('⚠️')).toBeDefined();
+    expect(screen.getByText('ℹ️')).toBeDefined();
   });
 });
