@@ -103,6 +103,17 @@ test('release has id-token permission for provenance', () => {
   assert.equal(release.permissions?.['id-token'], 'write');
 });
 
+test('release only runs for tags that point to commits on origin/main', () => {
+  const buildJob = getJob(release, 'build');
+  const checkoutStep = getStepByUses(buildJob, 'actions/checkout@v4');
+  const guardStep = getStepByName(buildJob, 'Ensure tag commit is on origin/main');
+
+  assert.equal(checkoutStep.with?.['fetch-depth'], 0);
+  assert.match(guardStep.run ?? '', /git fetch --no-tags origin main/);
+  assert.match(guardStep.run ?? '', /git merge-base --is-ancestor "\$GITHUB_SHA" "origin\/main"/);
+  assert.match(guardStep.run ?? '', /Tag .* does not point to a commit on origin\/main/);
+});
+
 test('release blocks on high vulnerability audit', () => {
   const buildJob = getJob(release, 'build');
   const gateStep = getStepByName(buildJob, 'Security gate (prod deps: high+critical)');
