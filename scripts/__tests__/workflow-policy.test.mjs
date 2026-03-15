@@ -111,12 +111,18 @@ test('release blocks on high vulnerability audit', () => {
 
 test('release verifies tarball install and version before publish', () => {
   const buildJob = getJob(release, 'build');
-  const installStep = getStepByName(buildJob, 'Install from tarball');
-  const verifyStep = getStepByName(buildJob, 'Verify CLI version');
+  const installNode22Step = getStepByName(buildJob, 'Install from tarball (Node 22)');
+  const verifyNode22Step = getStepByName(buildJob, 'Verify CLI version (Node 22)');
+  const installNode23Step = getStepByName(buildJob, 'Install from tarball (Node 23)');
+  const verifyNode23Step = getStepByName(buildJob, 'Verify CLI version (Node 23)');
 
-  assert.equal(installStep.run, 'npm install -g ./dist/claw-insights-*.tgz');
-  assert.match(verifyStep.run ?? '', /EXPECTED="\$\{GITHUB_REF_NAME#v\}"/);
-  assert.match(verifyStep.run ?? '', /claw-insights --version/);
+  assert.equal(installNode22Step.run, 'npm install -g ./dist/claw-insights-*.tgz');
+  assert.equal(installNode23Step.run, 'npm install -g ./dist/claw-insights-*.tgz');
+
+  assert.match(verifyNode22Step.run ?? '', /EXPECTED="\$\{GITHUB_REF_NAME#v\}"/);
+  assert.match(verifyNode22Step.run ?? '', /claw-insights --version/);
+  assert.match(verifyNode23Step.run ?? '', /EXPECTED="\$\{GITHUB_REF_NAME#v\}"/);
+  assert.match(verifyNode23Step.run ?? '', /claw-insights --version/);
 });
 
 test('release npm publish uses provenance', () => {
