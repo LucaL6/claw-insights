@@ -8,6 +8,13 @@ import type { CliAdapter } from '../../ports/types.js';
 const execFileAsync = promisify(execFile);
 const log = createChildLogger('cli-adapter');
 
+const DEFAULT_TIMEOUT_MS = 8_000;
+const STATUS_JSON_TIMEOUT_MS = 15_000;
+
+function resolveTimeoutMs(argv: string[]): number {
+  return argv[0] === 'status' && argv.includes('--json') ? STATUS_JSON_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+}
+
 /** Platform-agnostic CLI adapter — same execFile behavior on macOS and Linux. */
 export class PosixCliAdapter implements CliAdapter {
   constructor(
@@ -19,7 +26,7 @@ export class PosixCliAdapter implements CliAdapter {
     try {
       log.debug({ argv }, 'CLI exec');
       const { stdout, stderr: _stderr } = await execFileAsync(this.cliPath, argv, {
-        timeout: 8000,
+        timeout: resolveTimeoutMs(argv),
         encoding: 'utf-8',
         env: this.env,
       });
@@ -30,7 +37,9 @@ export class PosixCliAdapter implements CliAdapter {
       let stderr: string | undefined;
       if (typeof err === 'object' && err !== null && 'stderr' in err) {
         const raw = (err as Record<string, unknown>).stderr;
-        if (raw != null) {stderr = String(raw);}
+        if (raw != null) {
+          stderr = String(raw);
+        }
       }
       log.warn({ err: err instanceof Error ? err : String(err), argv, stderr }, 'CLI call failed');
       return '';

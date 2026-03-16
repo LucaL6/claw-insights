@@ -23,6 +23,11 @@ test('required entries include release runtime chain files', () => {
   assert.ok(REQUIRED_ENTRIES.includes('package/server/cli/node-runtime.js'));
 });
 
+test('required entries include package docs', () => {
+  assert.ok(REQUIRED_ENTRIES.includes('package/README.md'));
+  assert.ok(REQUIRED_ENTRIES.includes('package/LICENSE'));
+});
+
 function createTarball({ omit = [], empty = [] } = {}) {
   const base = mkdtempSync(resolve(tmpdir(), 'release-tarball-'));
   const pkgDir = resolve(base, 'package');
@@ -51,6 +56,15 @@ test('passes for tarball containing all required non-empty entries', () => {
 test('fails when required entry is missing', () => {
   const missing = 'package/assets/openclaw-lobster.svg';
   const ctx = createTarball({ omit: [missing] });
+  try {
+    assert.throws(() => assertReleaseTarballAssets(ctx.tarPath), /Missing required entries/);
+  } finally {
+    rmSync(ctx.base, { recursive: true, force: true });
+  }
+});
+
+test('fails when README is missing', () => {
+  const ctx = createTarball({ omit: ['package/README.md'] });
   try {
     assert.throws(() => assertReleaseTarballAssets(ctx.tarPath), /Missing required entries/);
   } finally {

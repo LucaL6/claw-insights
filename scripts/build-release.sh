@@ -42,7 +42,11 @@ mkdir -p "$RELEASE_DIR/assets/logo"
 cp packages/web/public/logo/icon-dark.svg "$RELEASE_DIR/assets/logo/"
 cp packages/web/public/logo/icon-light.svg "$RELEASE_DIR/assets/logo/"
 
-# Step 5: Generate package.json (auto-extract runtime deps from server)
+# Step 5: Copy package docs
+cp "$REPO_DIR/README.md" "$RELEASE_DIR/README.md"
+cp "$REPO_DIR/LICENSE" "$RELEASE_DIR/LICENSE"
+
+# Step 6: Generate package.json (auto-extract runtime deps from server)
 echo "  Extracting runtime dependencies from packages/server/package.json..."
 SERVER_DEPS=$(node -e "
   const pkg = require('./packages/server/package.json');
@@ -63,7 +67,7 @@ cat > "$RELEASE_DIR/package.json" << EOF
   "bin": {
     "claw-insights": "./bin/claw-insights"
   },
-  "files": ["bin/", "server/", "web/", "assets/"],
+  "files": ["bin/", "server/", "web/", "assets/", "README.md", "LICENSE"],
   "engines": { "node": ">=22" },
   "license": "MIT",
   "author": "Luca Liao",

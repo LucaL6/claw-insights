@@ -1,7 +1,7 @@
 <div align="center">
   <img src="packages/web/public/logo/icon-dark.svg" width="80" alt="Claw Insights" />
   <h1>Claw Insights</h1>
-  <p><strong>Observability dashboard for <a href="https://github.com/openclaw/openclaw">OpenClaw</a> agents</strong></p>
+  <p><strong>Replay, metrics, logs &amp; shareable snapshots for <a href="https://github.com/openclaw/openclaw">OpenClaw</a> agents</strong></p>
   <p>
     <img src="https://img.shields.io/badge/%F0%9F%94%8C_Zero_Intrusion-read--only_sidecar-10b981" alt="Zero Intrusion" />
     <img src="https://img.shields.io/badge/%F0%9F%94%8D_Full_Replay-session_transcripts-6366f1" alt="Full Replay" />
@@ -69,9 +69,9 @@ claw-insights start --no-auth # Disable authentication
 
 Ships with structured resources for AI agents — see **[AGENTS.md](AGENTS.md)** for the full index:
 
-| Skill | Use case |
-|-------|----------|
-| [install](docs/skills/install/SKILL.md) | Install, configure, and launch |
+| Skill                                     | Use case                                          |
+| ----------------------------------------- | ------------------------------------------------- |
+| [install](docs/skills/install/SKILL.md)   | Install, configure, and launch                    |
 | [snapshot](docs/skills/snapshot/SKILL.md) | Capture dashboard as PNG/SVG/JSON via REST or CLI |
 
 ## Architecture
@@ -92,12 +92,12 @@ claw-insights/
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
+| Document                               | Description                           |
+| -------------------------------------- | ------------------------------------- |
 | [Configuration](docs/configuration.md) | All env vars, config file, auth model |
-| [Architecture](docs/architecture.md) | System design, dev setup, testing |
-| [API Reference](docs/api-reference.md) | GraphQL + REST endpoint signatures |
-| [AGENTS.md](AGENTS.md) | AI agent skill index |
+| [Architecture](docs/architecture.md)   | System design, dev setup, testing     |
+| [API Reference](docs/api-reference.md) | GraphQL + REST endpoint signatures    |
+| [AGENTS.md](AGENTS.md)                 | AI agent skill index                  |
 
 ## Contributing
 

@@ -82,4 +82,49 @@ describe('PosixCliAdapter', () => {
     const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
     expect(await adapter.exec(['--version'])).toBe('');
   });
+
+  it('uses 15000ms timeout for status --json', async () => {
+    (execFile as any).mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
+      cb(null, { stdout: '{}' });
+    });
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    await adapter.exec(['status', '--json']);
+    expect((execFile as any).mock.calls[0][2].timeout).toBe(15000);
+  });
+
+  it('keeps default timeout for status without --json', async () => {
+    (execFile as any).mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
+      cb(null, { stdout: 'ok' });
+    });
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    await adapter.exec(['status']);
+    expect((execFile as any).mock.calls[0][2].timeout).toBe(8000);
+  });
+
+  it('uses 15000ms for status --json with extra flags', async () => {
+    (execFile as any).mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
+      cb(null, { stdout: '{}' });
+    });
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    await adapter.exec(['status', '--json', '--verbose']);
+    expect((execFile as any).mock.calls[0][2].timeout).toBe(15000);
+  });
+
+  it('keeps default timeout when argv[0] is not status (even if --json exists)', async () => {
+    (execFile as any).mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
+      cb(null, { stdout: 'ok' });
+    });
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    await adapter.exec(['--json']);
+    expect((execFile as any).mock.calls[0][2].timeout).toBe(8000);
+  });
+
+  it('keeps default timeout for non-status commands', async () => {
+    (execFile as any).mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
+      cb(null, { stdout: 'ok' });
+    });
+    const adapter = new PosixCliAdapter('/usr/bin/openclaw', {});
+    await adapter.exec(['gateway', 'usage-cost']);
+    expect((execFile as any).mock.calls[0][2].timeout).toBe(8000);
+  });
 });

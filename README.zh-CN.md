@@ -1,7 +1,7 @@
 <div align="center">
   <img src="packages/web/public/logo/icon-dark.svg" width="80" alt="Claw Insights" />
   <h1>Claw Insights</h1>
-  <p><strong><a href="https://github.com/openclaw/openclaw">OpenClaw</a> Agent 可观测仪表盘</strong></p>
+  <p><strong>面向 <a href="https://github.com/openclaw/openclaw">OpenClaw</a> Agent 的回放、指标、日志与可分享快照</strong></p>
   <p>
     <img src="https://img.shields.io/badge/%F0%9F%94%8C_%E9%9B%B6%E4%BE%B5%E5%85%A5-read--only_sidecar-10b981" alt="零侵入" />
     <img src="https://img.shields.io/badge/%F0%9F%94%8D_%E5%AE%8C%E6%95%B4%E5%9B%9E%E6%94%BE-session_transcripts-6366f1" alt="完整回放" />
@@ -69,9 +69,9 @@ claw-insights start --no-auth # 禁用认证
 
 内置 AI agent 结构化资源——完整索引见 **[AGENTS.md](AGENTS.md)**：
 
-| Skill | 用途 |
-|-------|------|
-| [install](docs/skills/install/SKILL.md) | 安装、配置、启动 |
+| Skill                                     | 用途                                    |
+| ----------------------------------------- | --------------------------------------- |
+| [install](docs/skills/install/SKILL.md)   | 安装、配置、启动                        |
 | [snapshot](docs/skills/snapshot/SKILL.md) | 通过 REST 或 CLI 生成 PNG/SVG/JSON 快照 |
 
 ## 架构
@@ -92,12 +92,12 @@ claw-insights/
 
 ## 文档
 
-| 文档 | 说明 |
-|------|------|
+| 文档                              | 说明                             |
+| --------------------------------- | -------------------------------- |
 | [配置参考](docs/configuration.md) | 所有环境变量、配置文件、认证模型 |
-| [架构说明](docs/architecture.md) | 系统设计、开发环境、测试 |
-| [API 参考](docs/api-reference.md) | GraphQL + REST 接口签名 |
-| [AGENTS.md](AGENTS.md) | AI agent 技能索引 |
+| [架构说明](docs/architecture.md)  | 系统设计、开发环境、测试         |
+| [API 参考](docs/api-reference.md) | GraphQL + REST 接口签名          |
+| [AGENTS.md](AGENTS.md)            | AI agent 技能索引                |
 
 ## 参与贡献
 

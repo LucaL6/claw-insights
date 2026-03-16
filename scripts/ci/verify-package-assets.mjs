@@ -20,6 +20,8 @@ const REQUIRED_ASSETS = [
   'server/schema.graphql',
   'web/index.html',
   'bin/claw-insights',
+  'README.md',
+  'LICENSE',
   'package.json',
 ];
 

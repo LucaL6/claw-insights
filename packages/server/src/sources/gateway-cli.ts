@@ -24,6 +24,8 @@ const CACHE_TTL = 10_000; // 10s
 const FAIL_CACHE_TTL = 3_000; // 3s — short TTL for failed results to avoid request storms
 const VERSION_CACHE_TTL = 60_000; // 1min
 const VERSION_FAIL_CACHE_TTL = 5_000; // 5s
+// 30s balances smoothing transient CLI status parse/timeouts vs delaying real-down detection too long.
+const STATUS_STALE_FALLBACK_MS = 30_000;
 
 export interface ParsedStatus {
   running: boolean;
@@ -38,6 +40,8 @@ export interface ParsedStatus {
   securitySummary: { critical: number; warn: number; info: number };
   sessionDefaults: { model: string; contextTokens: number } | null;
 }
+
+type StatusParseResult = { ok: true; data: ParsedStatus } | { ok: false; reason: 'empty' | 'invalid-json' };
 
 export interface GatewayClient {
   getGatewayStatus(): Promise<ParsedStatus>;
@@ -88,6 +92,8 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
   let versionCache: CachedResult<string> | null = null;
   let statusInFlight: Promise<ParsedStatus> | null = null;
   let lastStatusJson = ''; // Track last status independently of cache for change detection
+  // In 0.1.1, stale fallback is internal-only (no API field yet).
+  let lastSuccessfulStatus: { data: ParsedStatus; ts: number } | null = null;
 
   async function getVersion(): Promise<string> {
     if (isCacheValid(versionCache)) {
@@ -99,65 +105,101 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
     return version;
   }
 
-  async function parseStatusJson(json: string, version: string): Promise<ParsedStatus> {
-    try {
-      const d = JSON.parse(json);
-      const gw = d?.gateway ?? {};
-      const svc = d?.gatewayService ?? {};
-      const channelSummary = d?.channelSummary ?? [];
-      const update = d?.update ?? {};
+  async function parseStatusJson(json: string, version: string): Promise<StatusParseResult> {
+    if (json.trim() === '') {
+      return { ok: false, reason: 'empty' };
+    }
 
-      const pidMatch = svc?.runtimeShort?.match(/pid\s+(\d+)/);
+    let d: Record<string, unknown>;
+    try {
+      d = JSON.parse(json) as Record<string, unknown>;
+    } catch {
+      return { ok: false, reason: 'invalid-json' };
+    }
+
+    try {
+      const gw = (d.gateway ?? {}) as Record<string, unknown>;
+      const svc = (d.gatewayService ?? {}) as Record<string, unknown>;
+      const channelSummary = (d.channelSummary ?? []) as string[];
+      const update = (d.update ?? {}) as Record<string, unknown>;
+      const updateRegistry = (update.registry ?? {}) as Record<string, unknown>;
+      const securityAudit = (d.securityAudit ?? {}) as Record<string, unknown>;
+      const secAudit = (securityAudit.summary ?? { critical: 0, warn: 0, info: 0 }) as Record<string, unknown>;
+      const sessions = (d.sessions ?? {}) as Record<string, unknown>;
+
+      const runtimeShort = typeof svc.runtimeShort === 'string' ? svc.runtimeShort : '';
+      const pidMatch = runtimeShort.match(/pid\s+(\d+)/);
       let pid = pidMatch ? Number(pidMatch[1]) : null;
-      const running = Boolean(gw?.reachable) || svc?.runtimeShort?.includes('running');
+      const running = gw.reachable === true || runtimeShort.includes('running');
 
       // Fallback: find gateway PID via platform adapter
       if (!pid && running) {
-        pid = await platform.process.findPidByPort(gw?.port ?? 18789);
+        const port = typeof gw.port === 'number' ? gw.port : 18789;
+        pid = await platform.process.findPidByPort(port);
       }
 
-      const latest = update?.registry?.latestVersion ?? update?.latestVersion ?? null;
+      const latestFromRegistry = typeof updateRegistry.latestVersion === 'string' ? updateRegistry.latestVersion : null;
+      const latestFromUpdate = typeof update.latestVersion === 'string' ? update.latestVersion : null;
+      const latest = latestFromRegistry ?? latestFromUpdate;
       const updateAvailable = latest && latest !== version ? latest : null;
 
-      const connectLatencyMs = gw?.connectLatencyMs ?? null;
-      const latestVersion = update?.registry?.latestVersion ?? update?.latestVersion ?? null;
-      const secAudit = d?.securityAudit?.summary ?? { critical: 0, warn: 0, info: 0 };
-      const sessionDefaults = d?.sessions?.defaults ?? null;
+      const connectLatencyMs = typeof gw.connectLatencyMs === 'number' ? gw.connectLatencyMs : null;
+      const latestVersion = latestFromRegistry ?? latestFromUpdate;
+
+      const rawSessionDefaults = sessions.defaults as Record<string, unknown> | null | undefined;
+      const sessionDefaults =
+        rawSessionDefaults &&
+        typeof rawSessionDefaults.model === 'string' &&
+        typeof rawSessionDefaults.contextTokens === 'number'
+          ? { model: rawSessionDefaults.model, contextTokens: rawSessionDefaults.contextTokens }
+          : null;
+
+      const critical = typeof secAudit.critical === 'number' ? secAudit.critical : 0;
+      const warn = typeof secAudit.warn === 'number' ? secAudit.warn : 0;
+      const info = typeof secAudit.info === 'number' ? secAudit.info : 0;
 
       const startedAt = pid ? await getStartedAtFromLog(pid) : null;
 
       return {
-        running: Boolean(running),
-        pid,
-        version: version ?? 'unknown',
-        updateAvailable,
-        uptime: pid ? await platform.process.getUptime(pid) : 'unknown',
-        startedAt,
-        channels: parseChannels(channelSummary),
-        connectLatencyMs,
-        latestVersion,
-        securitySummary: {
-          critical: secAudit.critical ?? 0,
-          warn: secAudit.warn ?? 0,
-          info: secAudit.info ?? 0,
+        ok: true,
+        data: {
+          running,
+          pid,
+          version: version ?? 'unknown',
+          updateAvailable,
+          uptime: pid ? await platform.process.getUptime(pid) : 'unknown',
+          startedAt,
+          channels: parseChannels(channelSummary),
+          connectLatencyMs,
+          latestVersion,
+          securitySummary: {
+            critical,
+            warn,
+            info,
+          },
+          sessionDefaults,
         },
-        sessionDefaults,
       };
     } catch {
-      return {
-        running: false,
-        pid: null,
-        version: 'unknown',
-        updateAvailable: null,
-        uptime: 'unknown',
-        startedAt: null,
-        channels: [],
-        connectLatencyMs: null,
-        latestVersion: null,
-        securitySummary: { critical: 0, warn: 0, info: 0 },
-        sessionDefaults: null,
-      };
+      // Treat structurally-invalid JSON payloads the same as parse failures.
+      return { ok: false, reason: 'invalid-json' };
     }
+  }
+
+  function unavailableStatus(): ParsedStatus {
+    return {
+      running: false,
+      pid: null,
+      version: 'unknown',
+      updateAvailable: null,
+      uptime: 'unknown',
+      startedAt: null,
+      channels: [],
+      connectLatencyMs: null,
+      latestVersion: null,
+      securitySummary: { critical: 0, warn: 0, info: 0 },
+      sessionDefaults: null,
+    };
   }
 
   async function getGatewayStatus(): Promise<ParsedStatus> {
@@ -171,9 +213,28 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
     statusInFlight = (async () => {
       try {
         const [raw, version] = await Promise.all([platform.cli.exec(['status', '--json']), getVersion()]);
-        const status = await parseStatusJson(raw, version);
+        const parsed = await parseStatusJson(raw, version);
+        let status: ParsedStatus;
+        let ttl: number;
+
+        if (parsed.ok) {
+          status = parsed.data;
+          lastSuccessfulStatus = { data: status, ts: Date.now() };
+          ttl = status.running ? CACHE_TTL : FAIL_CACHE_TTL;
+        } else {
+          const staleAge = lastSuccessfulStatus ? Date.now() - lastSuccessfulStatus.ts : Number.POSITIVE_INFINITY;
+          if (lastSuccessfulStatus && staleAge <= STATUS_STALE_FALLBACK_MS) {
+            // Intentionally do NOT refresh lastSuccessfulStatus.ts here:
+            // stale window is anchored to the last real successful parse.
+            status = lastSuccessfulStatus.data;
+            ttl = FAIL_CACHE_TTL;
+          } else {
+            status = unavailableStatus();
+            ttl = FAIL_CACHE_TTL;
+          }
+        }
+
         const curJson = JSON.stringify(status);
-        const ttl = status.running ? CACHE_TTL : FAIL_CACHE_TTL;
         statusCache = { data: status, ts: Date.now(), ttl };
         if (curJson !== lastStatusJson) {
           lastStatusJson = curJson;

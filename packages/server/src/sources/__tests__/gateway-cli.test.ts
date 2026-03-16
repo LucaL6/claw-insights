@@ -175,4 +175,85 @@ describe('cache TTL behavior', () => {
     // Should NOT emit again since status is identical
     expect(emitChange).toHaveBeenCalledTimes(1);
   });
+
+  it('returns stale status on empty stdout within 30s and uses short retry TTL', async () => {
+    let statusCall = 0;
+    const cliExec = vi.fn((args: string[]) => {
+      if (!args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve('2.5.0\n');
+      }
+      statusCall += 1;
+      if (statusCall === 1) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
+      if (statusCall === 2) {
+        return Promise.resolve('');
+      }
+      return Promise.resolve(MOCK_STATUS_JSON);
+    });
+
+    const client = createGatewayClient(mockPlatform({ cliExec }));
+    const first = await client.getGatewayStatus();
+    vi.advanceTimersByTime(11_000);
+    const stale = await client.getGatewayStatus();
+    expect(stale.running).toBe(first.running);
+    expect(stale.pid).toBe(first.pid);
+
+    vi.advanceTimersByTime(3_100);
+    await client.getGatewayStatus();
+    expect(statusCall).toBe(3);
+  });
+
+  it('returns stale status on malformed JSON within 30s without extra emit when unchanged', async () => {
+    let statusCall = 0;
+    const cliExec = vi.fn((args: string[]) => {
+      if (!args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve('2.5.0\n');
+      }
+      statusCall += 1;
+      if (statusCall === 1) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
+      return Promise.resolve('{bad json');
+    });
+
+    const client = createGatewayClient(mockPlatform({ cliExec }));
+    const first = await client.getGatewayStatus();
+    expect(emitChange).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(11_000);
+    const stale = await client.getGatewayStatus();
+    expect(stale.running).toBe(first.running);
+    expect(stale.pid).toBe(first.pid);
+    expect(emitChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns stale status when JSON is valid but structurally invalid within 30s', async () => {
+    const structurallyInvalidJson = JSON.stringify({
+      gateway: { reachable: true },
+      gatewayService: { runtimeShort: 'running pid 9999' },
+      channelSummary: {},
+      update: { latestVersion: '3.0.0' },
+    });
+
+    let statusCall = 0;
+    const cliExec = vi.fn((args: string[]) => {
+      if (!args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve('2.5.0\n');
+      }
+      statusCall += 1;
+      if (statusCall === 1) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
+      return Promise.resolve(structurallyInvalidJson);
+    });
+
+    const client = createGatewayClient(mockPlatform({ cliExec }));
+    const first = await client.getGatewayStatus();
+
+    vi.advanceTimersByTime(11_000);
+    const stale = await client.getGatewayStatus();
+    expect(stale.running).toBe(first.running);
+    expect(stale.pid).toBe(first.pid);
+  });
 });

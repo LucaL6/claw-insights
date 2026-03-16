@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Platform } from '../../ports/types.js';
 import { createGatewayClient } from '../gateway-cli.js';
@@ -38,6 +38,14 @@ function mockPlatform(cliExec?: Platform['cli']['exec']): Platform {
 }
 
 describe('gateway-cli branches', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   it('returns "unknown" when --version output is empty', async () => {
     const exec = vi.fn((args: string[]) => {
       if (args.some((a: string) => a.includes('--json'))) {
@@ -126,6 +134,26 @@ describe('gateway-cli branches', () => {
     expect(status.version).toBe('unknown');
   });
 
+  it('handles structurally invalid JSON gracefully', async () => {
+    const structurallyInvalid = JSON.stringify({
+      gateway: { reachable: true },
+      gatewayService: { runtimeShort: 'running pid 9999' },
+      channelSummary: {},
+      update: { latestVersion: '3.1.0' },
+    });
+
+    const exec = vi.fn((args: string[]) => {
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(structurallyInvalid);
+      }
+      return Promise.resolve('3.0.0\n');
+    });
+    const client = createGatewayClient(mockPlatform(exec as any));
+    const status = await client.getGatewayStatus();
+    expect(status.running).toBe(false);
+    expect(status.version).toBe('unknown');
+  });
+
   it('emits change when status changes', async () => {
     const exec = vi.fn((args: string[]) => {
       if (args.some((a: string) => a.includes('--json'))) {
@@ -137,6 +165,103 @@ describe('gateway-cli branches', () => {
     await client.getGatewayStatus();
     // Second call with same status should not crash
     await client.getGatewayStatus();
+  });
+
+  it('age > 30s with malformed output returns unavailable/down status', async () => {
+    let statusCall = 0;
+    const exec = vi.fn((args: string[]) => {
+      if (!args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve('2.5.0\n');
+      }
+      statusCall += 1;
+      if (statusCall === 1) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
+      return Promise.resolve('not json');
+    });
+    const client = createGatewayClient(mockPlatform(exec as any));
+    await client.getGatewayStatus();
+    vi.advanceTimersByTime(41_000);
+    const status = await client.getGatewayStatus();
+    expect(status.running).toBe(false);
+  });
+
+  it('valid stopped JSON is not overridden by stale status', async () => {
+    const stoppedJson = JSON.stringify({
+      gateway: { reachable: false },
+      gatewayService: { runtimeShort: 'stopped' },
+      channelSummary: [],
+      update: {},
+      securityAudit: {},
+      sessions: {},
+    });
+    let statusCall = 0;
+    const exec = vi.fn((args: string[]) => {
+      if (!args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve('2.5.0\n');
+      }
+      statusCall += 1;
+      if (statusCall === 1) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
+      return Promise.resolve(stoppedJson);
+    });
+    const client = createGatewayClient(mockPlatform(exec as any));
+    await client.getGatewayStatus();
+    vi.advanceTimersByTime(11_000);
+    const status = await client.getGatewayStatus();
+    expect(status.running).toBe(false);
+  });
+
+  it('deduplicates concurrent calls during stale fallback path', async () => {
+    const exec = vi
+      .fn((args: string[]) =>
+        args.some((a: string) => a.includes('--json')) ? Promise.resolve(MOCK_STATUS_JSON) : Promise.resolve('2.5.0\n'),
+      )
+      .mockImplementationOnce((args: string[]) =>
+        args.some((a: string) => a.includes('--json')) ? Promise.resolve(MOCK_STATUS_JSON) : Promise.resolve('2.5.0\n'),
+      )
+      .mockImplementationOnce(() => Promise.resolve('not json'));
+    const client = createGatewayClient(mockPlatform(exec as any));
+    await client.getGatewayStatus();
+    vi.advanceTimersByTime(11_000);
+    const [a, b] = await Promise.all([client.getGatewayStatus(), client.getGatewayStatus()]);
+    expect(a).toEqual(b);
+    const statusCalls = (exec as any).mock.calls.filter(([argv]: [string[]]) => argv.includes('--json'));
+    expect(statusCalls.length).toBe(2);
+  });
+
+  it('recovery path: stale fallback then fresh valid JSON resumes updates', async () => {
+    const changedJson = JSON.stringify({
+      gateway: { reachable: true, connectLatencyMs: 40 },
+      gatewayService: { runtimeShort: 'running pid 7777' },
+      channelSummary: ['Telegram: connected'],
+      update: { latestVersion: '3.1.0' },
+      securityAudit: { summary: { critical: 0, warn: 0, info: 0 } },
+      sessions: { defaults: { model: 'sonnet', contextTokens: 128000 } },
+    });
+    let statusCall = 0;
+    const exec = vi.fn((args: string[]) => {
+      if (!args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve('2.5.0\n');
+      }
+      statusCall += 1;
+      if (statusCall === 1) {
+        return Promise.resolve(MOCK_STATUS_JSON);
+      }
+      if (statusCall === 2) {
+        return Promise.resolve('');
+      }
+      return Promise.resolve(changedJson);
+    });
+    const client = createGatewayClient(mockPlatform(exec as any));
+    const first = await client.getGatewayStatus();
+    vi.advanceTimersByTime(11_000);
+    const stale = await client.getGatewayStatus();
+    expect(stale.pid).toBe(first.pid);
+    vi.advanceTimersByTime(3_100);
+    const recovered = await client.getGatewayStatus();
+    expect(recovered.pid).toBe(7777);
   });
 
   it('warmCache swallows errors silently', async () => {

@@ -11,6 +11,8 @@ export const REQUIRED_ENTRIES = [
   'package/server/index.js',
   'package/server/cli/node-runtime.js',
   'package/web/index.html',
+  'package/README.md',
+  'package/LICENSE',
 ];
 
 export function findMissingEntries(entries, required = REQUIRED_ENTRIES) {
