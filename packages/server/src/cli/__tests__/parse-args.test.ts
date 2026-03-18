@@ -28,6 +28,17 @@ describe('parseCliArgs', () => {
     expect(result.command).toBe('status');
   });
 
+  it('parses status --json', () => {
+    const result = parseCliArgs(['status', '--json']);
+    expect(result.command).toBe('status');
+    expect(result.json).toBe(true);
+  });
+
+  it('defaults json to false', () => {
+    const result = parseCliArgs(['status']);
+    expect(result.json).toBe(false);
+  });
+
   it('parses logs subcommand', () => {
     const result = parseCliArgs(['logs']);
     expect(result.command).toBe('logs');

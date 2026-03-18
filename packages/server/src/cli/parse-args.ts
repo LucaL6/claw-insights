@@ -19,6 +19,7 @@ export interface CliArgs {
   logDir: string | undefined;
   lines: number | undefined;
   open: boolean;
+  json: boolean;
   help: boolean;
   version: boolean;
 }
@@ -49,6 +50,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       'log-dir': { type: 'string' },
       lines: { type: 'string', short: 'n' },
       open: { type: 'boolean', default: false },
+      json: { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
       version: { type: 'boolean', short: 'v', default: false },
     },
@@ -67,6 +69,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     logDir: values['log-dir'] as string | undefined,
     lines: values.lines ? parseInt(values.lines as string, 10) : undefined,
     open: (values.open as boolean) ?? false,
+    json: (values.json as boolean) ?? false,
     help: (values.help as boolean) ?? false,
     version: (values.version as boolean) ?? false,
   };

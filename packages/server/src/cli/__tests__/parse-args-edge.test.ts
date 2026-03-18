@@ -29,6 +29,14 @@ describe('parseCliArgs edge branches', () => {
     expect(parseCliArgs(['--open']).open).toBe(true);
   });
 
+  it('parses --json flag', () => {
+    expect(parseCliArgs(['status', '--json']).json).toBe(true);
+  });
+
+  it('defaults --json to false', () => {
+    expect(parseCliArgs(['status']).json).toBe(false);
+  });
+
   it('parses --help and --version', () => {
     expect(parseCliArgs(['--help']).help).toBe(true);
     expect(parseCliArgs(['--version']).version).toBe(true);

@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkgPath = resolve(__dirname, '..', 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+process.env.CLAW_INSIGHTS_VERSION = pkg.version;
 
 function serverArtifactCandidates(relativePath) {
   // [0] monorepo dev layout, [1] npm release layout.
@@ -108,7 +109,7 @@ async function main() {
       await daemonStop();
       break;
     case 'status':
-      await daemonStatus();
+      await daemonStatus({ json: args.json });
       break;
     case 'logs':
       daemonLogs(args.lines);
@@ -160,6 +161,7 @@ function printUsage(version) {
     --open                Open dashboard in browser after start
     --gateway <url>       OpenClaw gateway URL
     --log-dir <dir>       Log directory
+    --json                For 'status': output machine-readable JSON only
     --help, -h            Show this help
     --version, -v         Show version
 

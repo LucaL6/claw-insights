@@ -72,7 +72,37 @@ if ! wait_for_health "$PORT"; then
   echo "Smoke check failed: daemon start health endpoint not reachable" >&2
   exit 1
 fi
+# 1b) status --json contract validation (while daemon is running)
+STATUS_JSON=$("$CLI_BIN" status --json)
+if ! echo "$STATUS_JSON" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+assert d['schemaVersion'] == 1, 'schemaVersion must be 1'
+for k in ('schemaVersion','version','server','web','auth','health'):
+    assert k in d, f'missing required key: {k}'
+assert d['server']['state'] in ('running','degraded'), 'invalid running-state contract'
+print('status --json contract: OK')
+" 2>&1; then
+  echo "Smoke check failed: status --json contract validation" >&2
+  echo "Raw output: $STATUS_JSON" >&2
+  exit 1
+fi
+
 "$CLI_BIN" stop >/dev/null 2>&1 || true
+
+# 1c) status --json stopped contract (daemon not running)
+STOPPED_JSON=$("$CLI_BIN" status --json)
+if ! echo "$STOPPED_JSON" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+assert d['schemaVersion'] == 1
+assert d['server']['state'] == 'stopped'
+assert d['server']['pid'] is None
+print('status --json stopped contract: OK')
+" 2>&1; then
+  echo "Smoke check failed: status --json stopped contract" >&2
+  exit 1
+fi
 
 # 2) Foreground default path (claw-insights ... => run)
 if command -v setsid >/dev/null 2>&1; then
