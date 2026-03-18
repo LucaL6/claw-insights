@@ -9,7 +9,7 @@ describe('buildStatusJson', () => {
         version: '0.1.1',
         server: { state: 'running', pid: 123, port: 41041, url: 'http://localhost:41041' },
         web: { enabled: true, port: 41042, url: 'http://localhost:41042' },
-        auth: { mode: 'token-cookie', tokenUrlPresent: true },
+        auth: { mode: 'token-cookie', tokenUrlPresent: true, accessUrl: 'http://localhost:41041/?token=abc' },
         health: { ok: true, ready: true, gateway: 'connected', db: 'ok', warnings: [] },
       }),
     ).toMatchObject({
@@ -17,7 +17,7 @@ describe('buildStatusJson', () => {
       version: '0.1.1',
       server: { state: 'running', pid: 123, port: 41041, url: 'http://localhost:41041' },
       web: { enabled: true, port: 41042, url: 'http://localhost:41042' },
-      auth: { mode: 'token-cookie', tokenUrlPresent: true },
+      auth: { mode: 'token-cookie', tokenUrlPresent: true, accessUrl: 'http://localhost:41041/?token=abc' },
       health: { ok: true, ready: true, gateway: 'connected', db: 'ok', warnings: [] },
     });
   });
@@ -28,7 +28,7 @@ describe('buildStatusJson', () => {
         version: '0.1.1',
         server: { state: 'degraded', pid: 123, port: 41041, url: 'http://localhost:41041' },
         web: { enabled: false, port: 41042, url: 'http://localhost:41042' },
-        auth: { mode: 'token-cookie', tokenUrlPresent: false },
+        auth: { mode: 'token-cookie', tokenUrlPresent: false, accessUrl: null },
         health: { ok: false, ready: false, gateway: 'disconnected', db: 'error', warnings: [] },
       }).server.state,
     ).toBe('degraded');
@@ -38,7 +38,7 @@ describe('buildStatusJson', () => {
         version: '0.1.1',
         server: { state: 'stopped', pid: null, port: 41041, url: 'http://localhost:41041' },
         web: { enabled: false, port: 41042, url: 'http://localhost:41042' },
-        auth: { mode: 'token-cookie', tokenUrlPresent: false },
+        auth: { mode: 'token-cookie', tokenUrlPresent: false, accessUrl: null },
         health: { ok: false, ready: false, gateway: 'disconnected', db: 'unknown', warnings: [] },
       }).server.state,
     ).toBe('stopped');
@@ -49,7 +49,7 @@ describe('buildStatusJson', () => {
       version: 'unknown',
       server: { state: 'running', pid: 123, port: 41041, url: 'http://localhost:41041' },
       web: { enabled: true, port: 41042, url: 'http://localhost:41042' },
-      auth: { mode: 'token-cookie', tokenUrlPresent: true },
+      auth: { mode: 'token-cookie', tokenUrlPresent: true, accessUrl: 'http://localhost:41041/?token=abc' },
       health: { ok: true, ready: true, gateway: 'connected', db: 'ok', warnings: [] },
     });
 
@@ -61,7 +61,7 @@ describe('buildStatusJson', () => {
       version: '0.1.1',
       server: { state: 'running', pid: 123, port: 41041, url: 'http://localhost:41041' },
       web: { enabled: true, port: 41042, url: 'http://localhost:41042' },
-      auth: { mode: 'token-cookie', tokenUrlPresent: true },
+      auth: { mode: 'token-cookie', tokenUrlPresent: true, accessUrl: 'http://localhost:41041/?token=abc' },
       health: { ok: true, ready: true, gateway: 'connected', db: 'ok', warnings: [] },
     }) as unknown as Record<string, unknown>;
 
