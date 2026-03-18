@@ -73,6 +73,7 @@ describe('daemonStatus --json', () => {
       expect(parsed.schemaVersion).toBe(1);
       expect(parsed.server.state).toBe('stopped');
       expect(parsed.server.pid).toBeNull();
+      expect(parsed.auth.accessUrl).toBeNull();
       expect(parsed.health.ok).toBe(false);
     });
 
@@ -102,6 +103,7 @@ describe('daemonStatus --json', () => {
 
       // Write daemon.json with port config
       writeFileSync(join(tempDir, 'daemon.json'), JSON.stringify({ port: 41041 }));
+      writeFileSync(join(tempDir, 'auth-token'), 'abc123');
 
       vi.doMock('../../paths.js', () => ({
         getDataDir: () => tempDir,
@@ -128,6 +130,7 @@ describe('daemonStatus --json', () => {
       expect(parsed.schemaVersion).toBe(1);
       expect(parsed.server.state).toBe('running');
       expect(parsed.server.pid).toBe(process.pid);
+      expect(parsed.auth.accessUrl).toBe('http://127.0.0.1:41041/?token=abc123');
       expect(parsed.health.ok).toBe(true);
 
       vi.unstubAllGlobals();

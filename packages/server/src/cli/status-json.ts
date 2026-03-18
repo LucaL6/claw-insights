@@ -17,6 +17,7 @@ export interface StatusJsonPayload {
   auth: {
     mode: string;
     tokenUrlPresent: boolean;
+    accessUrl: string | null;
   };
   health: {
     ok: boolean;

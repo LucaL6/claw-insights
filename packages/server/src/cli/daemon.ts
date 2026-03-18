@@ -543,7 +543,11 @@ export async function daemonStatus(options: DaemonStatusOptions = {}): Promise<v
         version,
         server: { state: 'stopped', pid: null, port, url: `http://127.0.0.1:${port}` },
         web: { enabled: !serverOnly, port: webPort, url: `http://127.0.0.1:${webPort}` },
-        auth: { mode: noAuth ? 'none' : 'token-cookie', tokenUrlPresent: false },
+        auth: {
+          mode: noAuth ? 'none' : 'token-cookie',
+          tokenUrlPresent: false,
+          accessUrl: noAuth ? `http://127.0.0.1:${port}/` : null,
+        },
         health: { ok: false, ready: false, gateway: 'unknown', db: 'unknown' },
       });
       console.log(JSON.stringify(payload));
@@ -570,12 +574,27 @@ export async function daemonStatus(options: DaemonStatusOptions = {}): Promise<v
     const version = resolveCliVersion(process.env);
     const isOk = healthResponseOk && healthData?.status === 'ok';
     const state = healthResponseOk ? (isOk ? 'running' : 'degraded') : 'degraded';
-    const tokenUrlPresent = existsSync(join(paths.dataDir, 'auth-token'));
+    const tokenFile = join(paths.dataDir, 'auth-token');
+    let token: string | null = null;
+    if (!noAuth) {
+      try {
+        const rawToken = readFileSync(tokenFile, 'utf-8').trim();
+        if (rawToken) {
+          token = rawToken;
+        }
+      } catch {
+        token = null;
+      }
+    }
+
+    const tokenUrlPresent = token !== null;
+    const accessUrl = noAuth ? `http://127.0.0.1:${port}/` : token ? `http://127.0.0.1:${port}/?token=${token}` : null;
+
     const payload = buildStatusJson({
       version,
       server: { state, pid, port, url: `http://127.0.0.1:${port}` },
       web: { enabled: !serverOnly, port: webPort, url: `http://127.0.0.1:${webPort}` },
-      auth: { mode: noAuth ? 'none' : 'token-cookie', tokenUrlPresent },
+      auth: { mode: noAuth ? 'none' : 'token-cookie', tokenUrlPresent, accessUrl },
       health: {
         ok: isOk,
         ready: isOk,

@@ -59,8 +59,23 @@ Open the URL — token is exchanged for a session cookie, and you're in.
 
 ```bash
 claw-insights status          # Show current access URL
+claw-insights status --json   # Machine-readable status (includes auth.accessUrl)
 claw-insights stop            # Stop daemon
 claw-insights start --no-auth # Disable authentication
+```
+
+Example (`status --json`, trimmed):
+
+```json
+{
+  "schemaVersion": 1,
+  "server": { "port": 41041, "url": "http://127.0.0.1:41041" },
+  "auth": {
+    "mode": "token-cookie",
+    "tokenUrlPresent": true,
+    "accessUrl": "http://127.0.0.1:41041/?token=..."
+  }
+}
 ```
 
 → Full install options, snapshot API, and troubleshooting: [docs/configuration.md](docs/configuration.md)

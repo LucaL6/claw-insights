@@ -132,6 +132,8 @@ Settings change based on `NODE_ENV`:
 
 If a browser session expires, is cleared, or stays idle beyond rotation + grace windows, **re-exchange cookie via `/?token=...`**.
 
+For automation, `claw-insights status --json` also exposes `auth.accessUrl` (tokenized URL when available).
+
 ### Programmatic access
 
 ```bash
