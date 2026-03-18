@@ -20,8 +20,14 @@ import type { CliArgs } from './parse-args.js';
 import { PidFile } from './pid.js';
 
 export { getDataDir } from '../paths.js';
+import { buildStatusJson } from './status-json.js';
+export { buildStatusJson } from './status-json.js';
 
 const log = createChildLogger('cli:daemon');
+
+export function resolveCliVersion(env: NodeJS.ProcessEnv): string {
+  return env.CLAW_INSIGHTS_VERSION ?? env.npm_package_version ?? 'unknown';
+}
 
 /* ── CLI Spinner ── */
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -348,8 +354,10 @@ export async function daemonStart(args: CliArgs, serverEntry: string): Promise<v
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
+  const cliVersion = resolveCliVersion(process.env);
+
   console.log('');
-  console.log(`  ✅ Claw Insights v${process.env.npm_package_version ?? '0.1.0'}    ready in ${elapsed}s`);
+  console.log(`  ✅ Claw Insights v${cliVersion}    ready in ${elapsed}s`);
   console.log('');
   console.log(`  ➜  Open:  ${url}`);
   console.log(`     Auth:  ${authLine}`);
@@ -501,20 +509,17 @@ async function waitForHealth(port: number, timeoutMs: number, earlyExit?: () => 
   }
 }
 
-export async function daemonStatus(): Promise<void> {
+export interface DaemonStatusOptions {
+  json?: boolean;
+}
+
+export async function daemonStatus(options: DaemonStatusOptions = {}): Promise<void> {
   const paths = getDaemonPaths();
   const pidFile = new PidFile(paths.pidFile);
   const pid = pidFile.read();
+  const jsonMode = options.json === true;
 
-  if (pid === null || !pidFile.isAlive()) {
-    console.log('💡 Claw Insights is not running.');
-    if (pid !== null) {
-      pidFile.cleanStale();
-    }
-    return;
-  }
-
-  // Try health check
+  // Load config
   let config: Record<string, unknown> = {};
   if (existsSync(paths.daemonJson)) {
     try {
@@ -523,37 +528,92 @@ export async function daemonStatus(): Promise<void> {
       /* ignore */
     }
   }
-
   const port = (config.port as number) ?? 41041;
+  const webPort = (config.webPort as number) ?? port + 1;
+  const noAuth = config.noAuth === true;
+  const serverOnly = config.serverOnly === true;
 
+  if (pid === null || !pidFile.isAlive()) {
+    if (pid !== null) {
+      pidFile.cleanStale();
+    }
+    if (jsonMode) {
+      const version = resolveCliVersion(process.env);
+      const payload = buildStatusJson({
+        version,
+        server: { state: 'stopped', pid: null, port, url: `http://127.0.0.1:${port}` },
+        web: { enabled: !serverOnly, port: webPort, url: `http://127.0.0.1:${webPort}` },
+        auth: { mode: noAuth ? 'none' : 'token-cookie', tokenUrlPresent: false },
+        health: { ok: false, ready: false, gateway: 'unknown', db: 'unknown' },
+      });
+      console.log(JSON.stringify(payload));
+      return;
+    }
+    console.log('💡 Claw Insights is not running.');
+    return;
+  }
+
+  // Process is alive — try health check
+  let healthData: Record<string, unknown> | null = null;
+  let healthResponseOk = false;
   try {
     const res = await fetch(`http://127.0.0.1:${port}/health`);
-    const health = (await res.json()) as Record<string, unknown>;
-    console.log(`💡 Claw Insights is running`);
-    console.log(`   PID:     ${pid}`);
-    console.log(`   Port:    ${port}`);
-    console.log(`   Mode:    ${health.mode ?? 'unknown'}`);
-    console.log(`   Uptime:  ${health.uptime ?? '?'}s`);
-    console.log(`   Gateway: ${health.gateway ?? 'unknown'}`);
-    console.log(`   DB:      ${health.db ?? 'unknown'}`);
-
-    // Show access URL
-    const noAuth = config.noAuth === true;
-    if (noAuth) {
-      console.log(`   URL:     http://127.0.0.1:${port}/`);
-    } else {
-      const tokenFile = join(paths.dataDir, 'auth-token');
-      try {
-        const token = readFileSync(tokenFile, 'utf-8').trim();
-        if (token) {
-          console.log(`   🔑 URL:  http://127.0.0.1:${port}/?token=${token}`);
-        }
-      } catch {
-        console.log(`   URL:     ${formatMissingTokenUrlHint(port)}`);
-      }
+    if (res.ok) {
+      healthData = (await res.json()) as Record<string, unknown>;
+      healthResponseOk = true;
     }
   } catch {
+    // health check failed — degraded
+  }
+
+  if (jsonMode) {
+    const version = resolveCliVersion(process.env);
+    const isOk = healthResponseOk && healthData?.status === 'ok';
+    const state = healthResponseOk ? (isOk ? 'running' : 'degraded') : 'degraded';
+    const tokenUrlPresent = existsSync(join(paths.dataDir, 'auth-token'));
+    const payload = buildStatusJson({
+      version,
+      server: { state, pid, port, url: `http://127.0.0.1:${port}` },
+      web: { enabled: !serverOnly, port: webPort, url: `http://127.0.0.1:${webPort}` },
+      auth: { mode: noAuth ? 'none' : 'token-cookie', tokenUrlPresent },
+      health: {
+        ok: isOk,
+        ready: isOk,
+        gateway: String(healthData?.gateway ?? 'unknown'),
+        db: String(healthData?.db ?? 'unknown'),
+      },
+    });
+    console.log(JSON.stringify(payload));
+    return;
+  }
+
+  // Human mode
+  if (!healthResponseOk || !healthData) {
     console.log(`💡 Claw Insights is running (PID ${pid}), but health check failed on :${port}`);
+    return;
+  }
+
+  console.log(`💡 Claw Insights is running`);
+  console.log(`   PID:     ${pid}`);
+  console.log(`   Port:    ${port}`);
+  console.log(`   Mode:    ${healthData.mode ?? 'unknown'}`);
+  console.log(`   Uptime:  ${healthData.uptime ?? '?'}s`);
+  console.log(`   Gateway: ${healthData.gateway ?? 'unknown'}`);
+  console.log(`   DB:      ${healthData.db ?? 'unknown'}`);
+
+  // Show access URL
+  if (noAuth) {
+    console.log(`   URL:     http://127.0.0.1:${port}/`);
+  } else {
+    const tokenFile = join(paths.dataDir, 'auth-token');
+    try {
+      const token = readFileSync(tokenFile, 'utf-8').trim();
+      if (token) {
+        console.log(`   🔑 URL:  http://127.0.0.1:${port}/?token=${token}`);
+      }
+    } catch {
+      console.log(`   URL:     ${formatMissingTokenUrlHint(port)}`);
+    }
   }
 }
 

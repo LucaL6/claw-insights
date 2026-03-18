@@ -148,3 +148,34 @@ curl -H "Authorization: Bearer ${TOKEN}" http://127.0.0.1:41041/graphql \
 ```
 
 > **Note:** Bearer token auth is stable across cookie rotations. Browser cookie auth (`claw_session`) uses rotating `kid:digest` values; legacy bare `64hex` cookie format is not accepted.
+
+## Machine-Readable Status (`--json`)
+
+`claw-insights status --json` outputs a single JSON object to **stdout** and nothing else (all human-readable text goes to stderr in JSON mode, though currently none is emitted).
+
+### Contract (schemaVersion 1)
+
+```json
+{
+  "schemaVersion": 1,
+  "version": "0.1.1",
+  "server": { "state": "running|degraded|stopped", "pid": 123, "port": 41041, "url": "..." },
+  "web": { "enabled": true, "port": 41042, "url": "..." },
+  "auth": { "mode": "token-cookie|none", "tokenUrlPresent": true },
+  "health": { "ok": true, "ready": true, "gateway": "connected", "db": "ok", "warnings": [] }
+}
+```
+
+### Exit codes
+
+| State    | Exit code | Meaning                        |
+| -------- | --------- | ------------------------------ |
+| running  | 0         | Daemon running, health OK      |
+| degraded | 0         | PID alive, health check failed |
+| stopped  | 0         | No daemon running              |
+
+### Consumer parsing rules
+
+- Parse stdout as JSON; ignore stderr.
+- Check `schemaVersion === 1` before accessing fields.
+- Tolerate unknown additive keys (forward compatibility).

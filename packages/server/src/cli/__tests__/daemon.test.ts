@@ -27,4 +27,11 @@ describe('daemon helpers', () => {
     expect(formatMissingTokenUrlHint(41041)).toContain('restart');
     expect(formatMissingTokenUrlHint(41041)).not.toContain('regenerate');
   });
+
+  it('resolves cli version from environment', async () => {
+    const { resolveCliVersion } = await import('../daemon.js');
+    expect(resolveCliVersion({ CLAW_INSIGHTS_VERSION: '0.1.1' })).toBe('0.1.1');
+    expect(resolveCliVersion({ npm_package_version: '0.1.0' })).toBe('0.1.0');
+    expect(resolveCliVersion({})).toBe('unknown');
+  });
 });

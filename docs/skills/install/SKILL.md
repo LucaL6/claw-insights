@@ -64,6 +64,19 @@ curl -fsSL https://claw-insights.com/install.sh | sh
 
 Full configuration reference: See [references/configuration.md](references/configuration.md)
 
+## Machine-Readable Status
+
+```bash
+claw-insights status --json
+# stdout: single JSON object (schemaVersion 1)
+# stderr: empty (no human text in json mode)
+# exit 0 for all states (running / degraded / stopped)
+```
+
+The JSON contract includes `server.state`, `health.ok`, version, port, and auth info. Consumers should check `schemaVersion === 1` and tolerate unknown additive keys.
+
+**Installer fallback:** If `status --json` is unavailable (older version), the installer should fall back to parsing human-readable output or checking the `/health` HTTP endpoint directly.
+
 ## Troubleshooting
 
 | Symptom                     | Cause                        | Fix                                                |
