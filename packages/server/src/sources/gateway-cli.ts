@@ -118,6 +118,61 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
     }
 
     try {
+      // Handle new format from 'openclaw gateway status' command (v2026.3.13+)
+      // Example: { service: {...}, config: {...}, gateway: {...}, port: {...}, rpc: {...} }
+      const isNewFormat = d.service !== undefined && d.gateway !== undefined && d.port !== undefined;
+
+      if (isNewFormat) {
+        const svc = (d.service ?? {}) as Record<string, unknown>;
+        const gwCfg = (d.gateway ?? {}) as Record<string, unknown>;
+        const portInfo = (d.port ?? {}) as Record<string, unknown>;
+        const rpcInfo = (d.rpc ?? {}) as Record<string, unknown>;
+
+        // Extract running status from service.runtime.status
+        const runtime = (svc.runtime ?? {}) as Record<string, unknown>;
+        const running = runtime.status === 'running' || runtime.state === 'running';
+        const pid = typeof runtime.pid === 'number' ? runtime.pid : null;
+
+        // Gateway port and URL info
+        const port = typeof gwCfg.port === 'number' ? gwCfg.port : 18789;
+        const rpcOk = rpcInfo.ok === true;
+
+        // Channels: not available in this format, return empty array
+        const channels: ChannelInfo[] = [];
+
+        // Connect latency and other fields: not available in new format
+        const connectLatencyMs: number | null = null;
+        const latestVersion: string | null = null;
+        const updateAvailable: string | null = null;
+        const sessionDefaults: { model: string; contextTokens: number } | null = null;
+
+        // Get uptime from process if running
+        const uptime = running && pid ? await platform.process.getUptime(pid) : 'unknown';
+        const startedAt = pid ? await getStartedAtFromLog(pid) : null;
+
+        return {
+          ok: true,
+          data: {
+            running,
+            pid,
+            version: version ?? 'unknown',
+            updateAvailable,
+            uptime,
+            startedAt,
+            channels,
+            connectLatencyMs,
+            latestVersion,
+            securitySummary: {
+              critical: 0,
+              warn: 0,
+              info: 0,
+            },
+            sessionDefaults,
+          },
+        };
+      }
+
+      // Handle old format from 'openclaw status' command (pre-v2026.3.13)
       const gw = (d.gateway ?? {}) as Record<string, unknown>;
       const svc = (d.gatewayService ?? {}) as Record<string, unknown>;
       const channelSummary = (d.channelSummary ?? []) as string[];

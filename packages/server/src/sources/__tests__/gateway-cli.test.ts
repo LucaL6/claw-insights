@@ -257,3 +257,88 @@ describe('cache TTL behavior', () => {
     expect(stale.pid).toBe(first.pid);
   });
 });
+
+describe('gateway-cli new format (openclaw gateway status v2026.3.13+)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('parses new openclaw gateway status format correctly', async () => {
+    const newFormatJson = JSON.stringify({
+      service: {
+        label: 'LaunchAgent',
+        loaded: true,
+        runtime: {
+          status: 'running',
+          state: 'running',
+          pid: 12480,
+        },
+      },
+      config: {
+        cli: { path: '/path', exists: true, valid: true },
+        daemon: { path: '/path', exists: true, valid: true },
+      },
+      gateway: {
+        bindMode: 'loopback',
+        bindHost: '127.0.0.1',
+        port: 18789,
+        portSource: 'service args',
+      },
+      port: {
+        port: 18789,
+        status: 'busy',
+        listeners: [{ pid: 12480, command: 'node', address: '127.0.0.1:18789' }],
+      },
+      rpc: {
+        ok: true,
+        url: 'ws://127.0.0.1:18789',
+      },
+    });
+
+    const cliExec = vi.fn((args: string[]) => {
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(newFormatJson);
+      }
+      return Promise.resolve('2.5.0\n');
+    });
+
+    const client = createGatewayClient(mockPlatform({ cliExec }));
+    const status = await client.getGatewayStatus();
+
+    expect(status.running).toBe(true);
+    expect(status.pid).toBe(12480);
+    expect(status.version).toBe('2.5.0');
+    expect(status.channels).toEqual([]);
+    expect(status.uptime).toBe('5m 30s'); // from mock
+  });
+
+  it('handles new format with gateway not running', async () => {
+    const newFormatJsonDown = JSON.stringify({
+      service: {
+        label: 'LaunchAgent',
+        loaded: false,
+        runtime: {
+          status: 'stopped',
+          state: 'stopped',
+          pid: null,
+        },
+      },
+      gateway: { port: 18789 },
+      rpc: { ok: false },
+    });
+
+    const cliExec = vi.fn((args: string[]) => {
+      if (args.some((a: string) => a.includes('--json'))) {
+        return Promise.resolve(newFormatJsonDown);
+      }
+      return Promise.resolve('2.5.0\n');
+    });
+
+    const client = createGatewayClient(mockPlatform({ cliExec }));
+    const status = await client.getGatewayStatus();
+
+    expect(status.running).toBe(false);
+    expect(status.pid).toBeNull();
+    expect(status.uptime).toBe('unknown');
+  });
+});
