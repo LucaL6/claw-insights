@@ -32,7 +32,23 @@ describe('DarwinProcessAdapter', () => {
       expect(await adapter.getPid()).toBeNull();
     });
 
-    it('returns null on launchctl failure', async () => {
+    it('returns PID from ps grep fallback when launchctl fails', async () => {
+      const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
+      let callCount = 0;
+      mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, cb: Function) => {
+        callCount++;
+        if (callCount === 1) {
+          // First call: launchctl fails
+          cb(new Error('launchctl not available'));
+        } else {
+          // Second call: ps grep succeeds
+          cb(null, { stdout: '  99999' });
+        }
+      });
+      expect(await adapter.getPid()).toBe(99999);
+    });
+
+    it('returns null on both launchctl and ps grep failure', async () => {
       (execFile as unknown as ReturnType<typeof vi.fn>).mockImplementation(
         (_cmd: string, _args: string[], _opts: unknown, cb: Function) => cb(new Error('fail')),
       );

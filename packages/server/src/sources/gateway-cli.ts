@@ -212,7 +212,7 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
 
     statusInFlight = (async () => {
       try {
-        const [raw, version] = await Promise.all([platform.cli.exec(['status', '--json']), getVersion()]);
+        const [raw, version] = await Promise.all([platform.cli.exec(['gateway', 'status', '--json']), getVersion()]);
         const parsed = await parseStatusJson(raw, version);
         let status: ParsedStatus;
         let ttl: number;

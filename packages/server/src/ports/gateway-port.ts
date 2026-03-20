@@ -40,7 +40,7 @@ export interface GatewayStatus {
 export interface GatewayPort {
   /**
    * Get current gateway status.
-   * Executes `openclaw status --json` and parses the output.
+   * Executes `openclaw gateway status --json` and parses the output.
    *
    * @consistency eventual
    * @mode async

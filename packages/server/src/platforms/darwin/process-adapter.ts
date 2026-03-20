@@ -12,15 +12,34 @@ const execFileAsync = promisify(execFile);
 
 export class DarwinProcessAdapter extends PosixProcessAdapter {
   async getPid(): Promise<number | null> {
+    // First try launchctl
     try {
       const { stdout } = await execFileAsync('launchctl', ['list'], { encoding: 'utf-8' });
       const pid = parseLaunchctlOutput(stdout);
-      log.debug({ pid }, 'getPid via launchctl');
-      return pid;
+      if (pid) {
+        log.debug({ pid }, 'getPid via launchctl');
+        return pid;
+      }
     } catch (err) {
-      log.warn({ err }, 'getPid launchctl failed');
-      return null;
+      log.debug({ err }, 'getPid launchctl failed, will try ps fallback');
     }
+
+    // Fallback: use ps grep to find openclaw-gateway process
+    try {
+      const { stdout } = await execFileAsync('sh', ['-c', 'ps -ef | grep "openclaw-gateway" | grep -v grep | awk \'{print $2}\''], { encoding: 'utf-8' });
+      const pidStr = stdout.trim();
+      if (pidStr) {
+        const pid = parseInt(pidStr, 10);
+        if (!isNaN(pid)) {
+          log.debug({ pid }, 'getPid via ps grep fallback');
+          return pid;
+        }
+      }
+    } catch (err) {
+      log.warn({ err }, 'getPid ps grep fallback also failed');
+    }
+
+    return null;
   }
 
   findPidByPort(_port: number): Promise<number | null> {
