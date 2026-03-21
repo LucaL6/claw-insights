@@ -110,9 +110,19 @@ export function createGatewayClient(platform: Platform, options?: { gatewayLogPa
       return { ok: false, reason: 'empty' };
     }
 
+    // Strip ANSI escape codes and non-JSON preamble (e.g., plugin logs)
+    // Find the first '{' which marks the start of the actual JSON object
+    const jsonStartIdx = json.indexOf('{');
+    if (jsonStartIdx === -1) {
+      return { ok: false, reason: 'invalid-json' };
+    }
+
+    // Extract JSON from the first '{' onwards
+    const cleanedJson = json.substring(jsonStartIdx);
+
     let d: Record<string, unknown>;
     try {
-      d = JSON.parse(json) as Record<string, unknown>;
+      d = JSON.parse(cleanedJson) as Record<string, unknown>;
     } catch {
       return { ok: false, reason: 'invalid-json' };
     }
