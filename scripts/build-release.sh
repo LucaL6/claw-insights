@@ -62,7 +62,7 @@ cat > "$RELEASE_DIR/package.json" << EOF
 {
   "name": "claw-insights",
   "version": "$VERSION",
-  "description": "Real-time monitoring dashboard for OpenClaw gateway",
+  "description": "Open-source agent observability — replay, metrics, logs & shareable snapshots",
   "type": "module",
   "bin": {
     "claw-insights": "./bin/claw-insights"
